@@ -1,7 +1,15 @@
+import { RecommendedLessons } from "@/components/learn/recommended-lessons";
+import { getPrismaClient } from "@/lib/prisma";
 import { extractLearnSignalsFromBlueprint } from "@/modules/learn/blueprint-bridge";
 import { resolveLearnRecommendations } from "@/modules/learn/recommendation-engine";
-import { getPrismaClient } from "@/lib/prisma";
-import { RecommendedLessons } from "@/components/learn/recommended-lessons";
+
+function shouldUseSeededLearnFallback(error: unknown) {
+  return (
+    error instanceof Error &&
+    (error.message === "DATABASE_URL is not configured for Prisma runtime access." ||
+      error.name.startsWith("PrismaClient"))
+  );
+}
 
 async function getLearnRecommendations() {
   try {
@@ -21,7 +29,7 @@ async function getLearnRecommendations() {
 
     const blueprintJson =
       typeof latestBlueprint.blueprintJson === "object" &&
-      latestBlueprint.blueprintJson !== null
+        latestBlueprint.blueprintJson !== null
         ? latestBlueprint.blueprintJson
         : {};
 
@@ -35,10 +43,7 @@ async function getLearnRecommendations() {
       ),
     );
   } catch (error) {
-    if (
-      error instanceof Error &&
-      error.message === "DATABASE_URL is not configured for Prisma runtime access."
-    ) {
+    if (shouldUseSeededLearnFallback(error)) {
       return resolveLearnRecommendations({
         learnModuleKeys: [],
         priorityStack: ["cover_essentials"],

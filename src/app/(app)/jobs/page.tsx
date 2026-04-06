@@ -1,5 +1,5 @@
-import { JobsFilterPanel } from "@/components/jobs/jobs-filter-panel";
 import { JobCard } from "@/components/jobs/job-card";
+import { JobsFilterPanel } from "@/components/jobs/jobs-filter-panel";
 import { getPrismaClient } from "@/lib/prisma";
 import { extractJobSignalsFromBlueprint } from "@/modules/jobs/blueprint-bridge";
 import { listJobs } from "@/modules/jobs/job-catalog";
@@ -13,6 +13,14 @@ const defaultFilters: JobSearchFilters = {
   fitGoals: ["raise_income_fast", "stabilize_schedule"],
 };
 
+function shouldUseSeededJobFallback(error: unknown) {
+  return (
+    error instanceof Error &&
+    (error.message === "DATABASE_URL is not configured for Prisma runtime access." ||
+      error.name.startsWith("PrismaClient"))
+  );
+}
+
 async function getRecommendedJobs() {
   try {
     const prisma = getPrismaClient();
@@ -23,8 +31,8 @@ async function getRecommendedJobs() {
 
     const blueprintJson =
       latestBlueprint &&
-      typeof latestBlueprint.blueprintJson === "object" &&
-      latestBlueprint.blueprintJson !== null
+        typeof latestBlueprint.blueprintJson === "object" &&
+        latestBlueprint.blueprintJson !== null
         ? latestBlueprint.blueprintJson
         : {};
 
@@ -44,10 +52,7 @@ async function getRecommendedJobs() {
       jobs: listJobs(),
     });
   } catch (error) {
-    if (
-      error instanceof Error &&
-      error.message === "DATABASE_URL is not configured for Prisma runtime access."
-    ) {
+    if (shouldUseSeededJobFallback(error)) {
       return scoreJobsForBlueprint({
         blueprint: {
           priorityStack: ["cover_essentials", "stabilize_cash_flow"],

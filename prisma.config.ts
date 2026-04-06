@@ -13,6 +13,10 @@ loadEnvFileIfPresent(".env");
 
 const databaseUrl = process.env.DATABASE_URL;
 const directUrl = process.env.DIRECT_URL;
+const prismaCommand = process.argv.slice(2).join(" ");
+const isGenerateCommand = prismaCommand.includes("generate");
+const installTimeFallbackDatabaseUrl =
+  "postgresql://placeholder:placeholder@localhost:5432/budgetbitch";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -20,7 +24,12 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: directUrl ?? databaseUrl ?? env("DATABASE_URL"),
+    url:
+      directUrl ??
+      databaseUrl ??
+      (isGenerateCommand
+        ? installTimeFallbackDatabaseUrl
+        : env("DATABASE_URL")),
     shadowDatabaseUrl: process.env.SHADOW_DATABASE_URL,
   },
 });
