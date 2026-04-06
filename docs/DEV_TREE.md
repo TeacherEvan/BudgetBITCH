@@ -15,11 +15,20 @@ flowchart TD
   A --> H[src/inngest]
 
   B --> B1[page.tsx\nwelcome + landing flow]
+  B --> B1a[(app)/start-smart\nMoney Survival Blueprint wizard]
+  B --> B1b[(app)/learn\nLearn hub + lessons]
+  B --> B1c[(app)/jobs\nJobs hub + detail]
   B --> B2[(app)/dashboard]
   B --> B3[(app)/settings/integrations]
   B --> B4[api/v1]
 
   B4 --> B41[budgets/health/route.ts]
+  B4 --> B46[learn/recommendations/route.ts]
+  B4 --> B47[learn/modules/[slug]/route.ts]
+  B4 --> B48[jobs/search/route.ts]
+  B4 --> B49[jobs/recommendations/route.ts]
+  B4 --> B44[start-smart/regional-data/route.ts]
+  B4 --> B45[start-smart/blueprint/route.ts]
   B4 --> B42[integrations/connect/route.ts]
   B4 --> B43[integrations/revoke/route.ts]
 
@@ -29,15 +38,20 @@ flowchart TD
   C --> C4[calendar]
   C --> C5[email]
   C --> C6[integrations]
+  C --> C11[start-smart]
+  C --> C12[learn]
   C --> C7[jobs]
   C --> C8[notifications]
   C --> C9[privacy]
   C --> C10[workspaces]
 
   D --> D1[integrations UI primitives]
+  D --> D2[start-smart UI primitives]
+  D --> D3[learn UI primitives]
+  D --> D4[jobs UI primitives]
   E --> E1[schema.prisma]
   E --> E2[migrations]
-  F --> F1[dashboard + wizard journeys]
+  F --> F1[dashboard + wizard journeys + Start Smart + Learn + Jobs]
   G --> G1[route-guard]
   H --> H1[Inngest client]
 ```
@@ -64,6 +78,9 @@ flowchart TD
 │   │   ├── layout.tsx
 │   │   ├── globals.css
 │   │   ├── (app)/
+│   │   │   ├── learn/
+│   │   │   ├── jobs/
+│   │   │   ├── start-smart/
 │   │   │   ├── dashboard/
 │   │   │   │   ├── page.tsx
 │   │   │   │   └── page.test.tsx
@@ -78,11 +95,23 @@ flowchart TD
 │   │   └── api/
 │   │       └── v1/
 │   │           ├── budgets/health/route.ts
+│   │           ├── jobs/
+│   │           │   ├── recommendations/route.ts
+│   │           │   └── search/route.ts
+│   │           ├── learn/
+│   │           │   ├── recommendations/route.ts
+│   │           │   └── modules/[slug]/route.ts
+│   │           ├── start-smart/
+│   │           │   ├── blueprint/route.ts
+│   │           │   └── regional-data/route.ts
 │   │           └── integrations/
 │   │               ├── connect/route.ts
 │   │               └── revoke/route.ts
 │   ├── components/
-│   │   └── integrations/
+│   │   ├── integrations/
+│   │   ├── jobs/
+│   │   ├── learn/
+│   │   └── start-smart/
 │   ├── inngest/
 │   │   └── client.ts
 │   ├── lib/
@@ -94,6 +123,7 @@ flowchart TD
 │   │   ├── calendar/
 │   │   ├── email/
 │   │   ├── integrations/
+│   │   ├── learn/
 │   │   ├── jobs/
 │   │   ├── notifications/
 │   │   ├── privacy/
@@ -123,4 +153,7 @@ flowchart TD
 - **Schema or migration change:** start in `prisma/schema.prisma`
 - **Auth gate change:** start in `middleware.ts` and `src/lib/auth/route-guard.ts`
 - **Integration wizard change:** start in `src/app/(app)/settings/integrations/**` and `src/components/integrations/**`
+- **Start Smart onboarding change:** start in `src/app/(app)/start-smart/**`, then check `src/components/start-smart/**` and `src/modules/start-smart/**`
+- **Learn! lesson or recommendation change:** start in `src/app/(app)/learn/**`, then check `src/components/learn/**` and `src/modules/learn/**`
+- **Jobs listing or fit change:** start in `src/app/(app)/jobs/**`, then check `src/components/jobs/**` and `src/modules/jobs/**`
 - **Regression verification:** use `src/**/*.test.ts[x]` and `tests/e2e/*.spec.ts`

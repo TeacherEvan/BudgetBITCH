@@ -9,10 +9,13 @@ export function ProviderCard({ provider }: ProviderCardProps) {
     return (
         <article className="rounded-4xl border border-white/10 bg-black/20 p-6 backdrop-blur">
             <div className="flex items-center justify-between gap-4">
-                <h2 className="text-2xl font-semibold text-white">{provider.label}</h2>
-                <span className="text-sm text-emerald-50/80">
-                    Risk: {provider.riskLevel}
-                </span>
+                <div>
+                    <p className="text-xs uppercase tracking-[0.25em] text-yellow-200">
+                        {provider.category.replaceAll("_", " ")}
+                    </p>
+                    <h2 className="mt-2 text-2xl font-semibold text-white">{provider.label}</h2>
+                </div>
+                <span className="text-sm text-emerald-50/80">Risk: {provider.riskLevel}</span>
             </div>
 
             <p className="mt-3 text-sm text-emerald-50/80">
@@ -25,12 +28,21 @@ export function ProviderCard({ provider }: ProviderCardProps) {
             </div>
 
             <div className="mt-6 flex flex-wrap gap-3 text-sm">
-                <a
-                    className="rounded-full border border-emerald-200/20 px-4 py-2 text-emerald-50 transition hover:bg-white/10"
-                    href={`/settings/integrations/${provider.id}`}
-                >
-                    Open setup wizard
-                </a>
+                {provider.setupPath ? (
+                    <a
+                        className="rounded-full border border-emerald-200/20 px-4 py-2 text-emerald-50 transition hover:bg-white/10"
+                        href={provider.setupPath}
+                    >
+                        Open setup wizard
+                    </a>
+                ) : (
+                    <a
+                        className="rounded-full border border-emerald-200/20 px-4 py-2 text-emerald-50 transition hover:bg-white/10"
+                        href={provider.officialDocsUrl}
+                    >
+                        Guidance only
+                    </a>
+                )}
                 <a
                     className="rounded-full border border-white/10 px-4 py-2 text-white transition hover:bg-white/10"
                     href={provider.officialLoginUrl}

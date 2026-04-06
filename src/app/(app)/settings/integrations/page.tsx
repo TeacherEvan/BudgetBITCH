@@ -1,8 +1,30 @@
 import { ProviderCard } from "@/components/integrations/provider-card";
 import { providerRegistry } from "@/modules/integrations/provider-registry";
 
+const categoryLabels = {
+  ai: "AI copilots",
+  banking: "Banking rails",
+  investing: "Investing",
+  payroll: "Payroll",
+  tax: "Tax and accounting",
+  finance_ops: "Finance operations",
+} as const;
+
 export default function IntegrationsPage() {
-    const providers = Object.values(providerRegistry);
+    const providersByCategory = Object.values(providerRegistry).reduce(
+        (groups, provider) => {
+            groups[provider.category].push(provider);
+            return groups;
+        },
+        {
+            ai: [],
+            banking: [],
+            investing: [],
+            payroll: [],
+            tax: [],
+            finance_ops: [],
+        } as Record<keyof typeof categoryLabels, Array<(typeof providerRegistry)[keyof typeof providerRegistry]>>,
+    );
 
     return (
         <main className="min-h-screen px-6 py-10 text-white">
@@ -20,10 +42,21 @@ export default function IntegrationsPage() {
                     </p>
                 </div>
 
-                <div className="mt-8 grid gap-6 lg:grid-cols-2">
-                    {providers.map((provider) => (
-                        <ProviderCard key={provider.id} provider={provider} />
-                    ))}
+                <div className="mt-8 grid gap-10">
+                    {Object.entries(providersByCategory).map(([category, providers]) =>
+                        providers.length > 0 ? (
+                            <section key={category}>
+                                <h2 className="text-2xl font-semibold text-white">
+                                    {categoryLabels[category as keyof typeof categoryLabels]}
+                                </h2>
+                                <div className="mt-4 grid gap-6 lg:grid-cols-2">
+                                    {providers.map((provider) => (
+                                        <ProviderCard key={provider.id} provider={provider} />
+                                    ))}
+                                </div>
+                            </section>
+                        ) : null,
+                    )}
                 </div>
             </section>
         </main>
