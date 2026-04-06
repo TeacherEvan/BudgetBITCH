@@ -1,0 +1,22 @@
+import { OfficialLinkList } from "@/components/integrations/official-link-list";
+import { PrivacyDisclosurePanel } from "@/components/integrations/privacy-disclosure-panel";
+import { ProviderWizardShell } from "@/components/integrations/provider-wizard-shell";
+import { providerRegistry } from "@/modules/integrations/provider-registry";
+
+export default function ClaudeIntegrationPage() {
+    const provider = providerRegistry.claude;
+
+    return (
+        <ProviderWizardShell
+            eyebrow="Claude Setup"
+            title="Connect Claude"
+            description="Use the official Anthropic path, review the privacy shield, and only then add the credential for this workspace."
+        >
+            <PrivacyDisclosurePanel providerLabel={provider.label} />
+            <OfficialLinkList
+                loginUrl={provider.officialLoginUrl}
+                docsUrl={provider.officialDocsUrl}
+            />
+        </ProviderWizardShell>
+    );
+}

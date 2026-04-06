@@ -1,0 +1,190 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum WorkspaceType {
+  personal
+  household
+  business
+}
+
+enum WorkspaceRole {
+  owner
+  editor
+  approver
+  read_only
+}
+
+enum AuditAction {
+  workspace_created
+  workspace_member_added
+  budget_category_created
+  bill_created
+  reminder_created
+  notification_sent
+  api_token_created
+  webhook_delivered
+  integration_connected
+  integration_revoked
+  consent_recorded
+}
+
+model UserProfile {
+  id          String            @id @default(cuid())
+  clerkUserId String            @unique
+  email       String            @unique
+  displayName String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  memberships WorkspaceMember[]
+  auditEvents AuditEvent[]
+}
+
+model Workspace {
+  id            String                   @id @default(cuid())
+  name          String
+  type          WorkspaceType
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  members       WorkspaceMember[]
+  accounts      Account[]
+  categories    BudgetCategory[]
+  bills         Bill[]
+  reminderRules ReminderRule[]
+  notifications NotificationPreference[]
+  auditEvents   AuditEvent[]
+  apiTokens     ApiToken[]
+  integrations  IntegrationConnection[]
+  consents      ConsentReceipt[]
+}
+
+model WorkspaceMember {
+  id          String        @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        WorkspaceRole
+  createdAt   DateTime      @default(now())
+
+  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+}
+
+model Account {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  balance     Decimal  @db.Decimal(12, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model BudgetCategory {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  name         String
+  monthlyLimit Decimal  @db.Decimal(12, 2)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model Bill {
+  id             String   @id @default(cuid())
+  workspaceId    String
+  title          String
+  amount         Decimal  @db.Decimal(12, 2)
+  dueDate        DateTime
+  recurrenceRule String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model ReminderRule {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  triggerType String
+  actionType  String
+  offsetDays  Int?
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model NotificationPreference {
+  id          String   @id @default(cuid())
+  workspaceId String
+  inApp       Boolean  @default(true)
+  email       Boolean  @default(true)
+  push        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model ApiToken {
+  id          String   @id @default(cuid())
+  workspaceId String
+  label       String
+  tokenHash   String
+  scopes      String[]
+  createdAt   DateTime @default(now())
+  lastUsedAt  DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model IntegrationConnection {
+  id                String   @id @default(cuid())
+  workspaceId       String
+  provider          String
+  displayName       String
+  authType          String
+  encryptedSecret   String?
+  secretFingerprint String?
+  status            String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  revokedAt         DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model ConsentReceipt {
+  id                String   @id @default(cuid())
+  workspaceId       String
+  provider          String
+  disclosureVersion String
+  disclosuresJson   Json
+  acceptedAt        DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model AuditEvent {
+  id           String      @id @default(cuid())
+  workspaceId  String
+  actorUserId  String
+  action       AuditAction
+  targetType   String
+  targetId     String
+  metadataJson Json
+  createdAt    DateTime    @default(now())
+
+  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  actor     UserProfile @relation(fields: [actorUserId], references: [id], onDelete: Cascade)
+}
