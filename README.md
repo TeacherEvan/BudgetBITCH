@@ -2,6 +2,11 @@
 
 BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.js App Router, Prisma, Clerk, Inngest, Resend, and Playwright.
 
+## Navigation docs
+
+- `docs/DEV_TREE.md` — project tree graph and quick orientation map
+- `docs/CODEBASE_INDEX.md` — route/module/component index for future navigation
+
 ## Features in Phase 1
 
 - protected dashboard routes
@@ -27,6 +32,15 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 - Vitest
 - Playwright
 
+## Codebase shape
+
+- `src/app/**` contains routes, route groups, layouts, and API handlers
+- `src/modules/**` contains business/domain logic grouped by capability
+- `src/components/integrations/**` contains reusable UI for the connection hub and provider wizards
+- `prisma/**` contains the schema and checked-in migration history
+- `tests/e2e/**` contains Playwright journeys for the landing flow, dashboard, and provider wizards
+- `budgetbitch/` is a separate nested Convex prototype/reference subtree and is **not** the primary app being built from the repo root
+
 ## Local setup
 
 1. Copy environment values from `.env.example` into `.env.local`.
@@ -45,6 +59,8 @@ The project has been verified in this workspace with:
 - `npm run test:e2e`
 - `npm run db:generate`
 - `npm run build`
+
+For deeper orientation, start with `docs/DEV_TREE.md`, then use `docs/CODEBASE_INDEX.md` to jump to the right route, module, or test.
 
 ## Database notes
 
