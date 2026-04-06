@@ -1,8 +1,15 @@
+import { existsSync } from "node:fs";
 import process from "node:process";
 import { defineConfig, env } from "prisma/config";
 
-process.loadEnvFile(".env.local");
-process.loadEnvFile(".env");
+const loadEnvFileIfPresent = (path: string) => {
+  if (existsSync(path)) {
+    process.loadEnvFile(path);
+  }
+};
+
+loadEnvFileIfPresent(".env.local");
+loadEnvFileIfPresent(".env");
 
 const databaseUrl = process.env.DATABASE_URL;
 const directUrl = process.env.DIRECT_URL;
