@@ -9,6 +9,11 @@ describe("IntegrationsPage", () => {
         expect(screen.getByText("OpenAI")).toBeInTheDocument();
         expect(screen.getByText("GitHub Copilot")).toBeInTheDocument();
         expect(screen.getByText("OpenClaw")).toBeInTheDocument();
-        expect(screen.getAllByText("No silent sharing")).toHaveLength(4);
+        expect(screen.getByText("Plaid")).toBeInTheDocument();
+        expect(screen.getByText("Vanguard")).toBeInTheDocument();
+        expect(screen.getByText("Stripe")).toBeInTheDocument();
+        expect(screen.getByText("Ramp")).toBeInTheDocument();
+        expect(screen.getByText("Gusto")).toBeInTheDocument();
+        expect(screen.getAllByText("No silent sharing")).toHaveLength(10);
     });
 });

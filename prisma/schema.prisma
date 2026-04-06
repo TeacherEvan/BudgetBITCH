@@ -33,6 +33,18 @@ enum AuditAction {
   consent_recorded
 }
 
+enum StartSmartStatus {
+  draft
+  generated
+  accepted
+}
+
+enum ConfidenceLabel {
+  verified
+  estimated
+  user_entered
+}
+
 model UserProfile {
   id          String            @id @default(cuid())
   clerkUserId String            @unique
@@ -60,6 +72,62 @@ model Workspace {
   apiTokens     ApiToken[]
   integrations  IntegrationConnection[]
   consents      ConsentReceipt[]
+  startSmartProfiles   StartSmartProfile[]
+  regionalSnapshots    RegionalSnapshot[]
+  moneyBlueprints      MoneyBlueprintSnapshot[]
+}
+
+model StartSmartProfile {
+  id                String                  @id @default(cuid())
+  workspaceId       String
+  templateId        String?
+  regionKey         String
+  householdKind     String
+  status            StartSmartStatus        @default(draft)
+  profileJson       Json
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  regionalSnapshots RegionalSnapshot[]
+  blueprintSnapshots MoneyBlueprintSnapshot[]
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status])
+  @@index([regionKey])
+}
+
+model RegionalSnapshot {
+  id             String           @id @default(cuid())
+  workspaceId    String
+  profileId      String
+  regionKey      String
+  confidence     ConfidenceLabel @default(estimated)
+  assumptionsJson Json
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  workspace Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  profile   StartSmartProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, regionKey])
+}
+
+model MoneyBlueprintSnapshot {
+  id            String                  @id @default(cuid())
+  workspaceId   String
+  profileId     String
+  regionKey     String
+  householdKind String
+  status        StartSmartStatus        @default(generated)
+  blueprintJson Json
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+
+  workspace Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  profile   StartSmartProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status])
+  @@index([regionKey])
 }
 
 model WorkspaceMember {

@@ -1,0 +1,6 @@
+{
+  "unwantedRecommendations": [
+    "denoland.vscode-deno",
+    "svelte.svelte-vscode"
+  ]
+}

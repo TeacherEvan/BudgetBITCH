@@ -12,5 +12,11 @@ describe("providerRegistry", () => {
     expect(providerRegistry.copilot.officialLoginUrl).toContain("github.com");
     expect(providerRegistry.openclaw.officialDocsUrl).toContain("openclaw.ai");
     expect(providerRegistry.openclaw.riskLevel).toBe("high");
+    expect(providerRegistry.plaid.label).toBe("Plaid");
+    expect(providerRegistry.vanguard.label).toBe("Vanguard");
+    expect(providerRegistry.vanguard.category).toBe("investing");
+    expect(providerRegistry.stripe.label).toBe("Stripe");
+    expect(providerRegistry.ramp.label).toBe("Ramp");
+    expect(providerRegistry.gusto.label).toBe("Gusto");
   });
 });
