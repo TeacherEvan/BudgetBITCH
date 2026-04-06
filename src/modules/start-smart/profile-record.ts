@@ -1,11 +1,16 @@
-import type { Prisma } from "@prisma/client";
+type JsonInput =
+  | string
+  | number
+  | boolean
+  | { [key: string]: JsonInput | null }
+  | (JsonInput | null)[];
 
 type StartSmartProfileInput = {
   workspaceId: string;
   templateId?: string;
   regionKey: string;
   householdKind: string;
-  profile: Prisma.InputJsonValue;
+  profile: JsonInput;
 };
 
 export function buildProfileRecord(input: StartSmartProfileInput) {

@@ -1,4 +1,3 @@
-import { Prisma } from "@prisma/client";
 import { buildProfileRecord } from "@/modules/start-smart/profile-record";
 import {
   normalizeStartSmartProfile,
@@ -11,6 +10,13 @@ import { getRegionalSeed } from "@/modules/start-smart/regional-seed";
 import { getPrismaClient } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+
+type JsonInput =
+  | string
+  | number
+  | boolean
+  | { [key: string]: JsonInput | null }
+  | (JsonInput | null)[];
 
 const blueprintRequestSchema = z.object({
   workspaceId: z.string().trim().min(1),
@@ -47,32 +53,32 @@ export async function POST(request: Request) {
     const prisma = getPrismaClient();
 
     const savedProfile = await prisma.startSmartProfile.create({
-      data: {
-        ...profileRecord,
-        profileJson: profileRecord.profileJson as Prisma.InputJsonValue,
-      },
-    });
+        data: {
+          ...profileRecord,
+          profileJson: profileRecord.profileJson as JsonInput,
+        },
+      });
 
     await prisma.regionalSnapshot.create({
-      data: {
-        workspaceId: input.workspaceId,
-        profileId: savedProfile.id,
-        regionKey: regional.regionKey,
-        confidence: "verified",
-        assumptionsJson: regional as Prisma.InputJsonValue,
-      },
-    });
+        data: {
+          workspaceId: input.workspaceId,
+          profileId: savedProfile.id,
+          regionKey: regional.regionKey,
+          confidence: "verified",
+          assumptionsJson: regional as JsonInput,
+        },
+      });
 
     await prisma.moneyBlueprintSnapshot.create({
-      data: {
-        workspaceId: input.workspaceId,
-        profileId: savedProfile.id,
-        regionKey: profile.regionKey,
-        householdKind: profile.householdKind,
-        status: "generated",
-        blueprintJson: blueprint as Prisma.InputJsonValue,
-      },
-    });
+        data: {
+          workspaceId: input.workspaceId,
+          profileId: savedProfile.id,
+          regionKey: profile.regionKey,
+          householdKind: profile.householdKind,
+          status: "generated",
+          blueprintJson: blueprint as JsonInput,
+        },
+      });
 
     persistence = {
       persisted: true,
