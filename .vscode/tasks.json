@@ -1,0 +1,47 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Lint",
+			"type": "shell",
+			"command": "npm run lint",
+			"group": "test"
+		},
+		{
+			"label": "Unit tests",
+			"type": "shell",
+			"command": "npm test",
+			"group": "test"
+		},
+		{
+			"label": "E2E tests",
+			"type": "shell",
+			"command": "npm run test:e2e",
+			"group": "test"
+		},
+		{
+			"label": "Prisma generate",
+			"type": "shell",
+			"command": "npm run db:generate",
+			"group": "build"
+		},
+		{
+			"label": "Build",
+			"type": "shell",
+			"command": "npm run build",
+			"group": "build"
+		},
+		{
+			"label": "Validate (repo checks)",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"Lint",
+				"Unit tests",
+				"E2E tests",
+				"Prisma generate",
+				"Build"
+			],
+			"problemMatcher": []
+		}
+	]
+}

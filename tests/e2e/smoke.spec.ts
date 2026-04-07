@@ -9,6 +9,8 @@ test("home page renders the landing message", async ({ page }) => {
   await enterButton.click();
 
   await expect(
-    page.getByRole("heading", { name: "The storybook spectacle starts here." }),
+    page.getByRole("heading", {
+      name: "Financial control with a little theatrical menace.",
+    }),
   ).toBeVisible();
 });
