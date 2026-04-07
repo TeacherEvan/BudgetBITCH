@@ -32,6 +32,7 @@ pnpm-debug.log*
 /playwright-report
 /test-results
 /coverage
+/.worktrees
 .env*.local
 .vscode/launch.json
 .vscode/c_cpp_properties.json

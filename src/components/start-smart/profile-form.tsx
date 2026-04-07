@@ -12,12 +12,10 @@ type ProfileFormProps = {
 };
 
 const sharedFieldClassName =
-  "rounded-2xl border px-4 py-3 text-white outline-none transition placeholder:text-white/35 focus-visible:border-yellow-300 focus-visible:ring-2 focus-visible:ring-yellow-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950";
+  "bb-start-smart-field px-4 py-3 outline-none transition";
 
-function buildFieldClassName(hasError: boolean, surfaceClassName: string) {
-  return `${sharedFieldClassName} ${surfaceClassName} ${
-    hasError ? "border-rose-300/80 ring-1 ring-rose-300/40" : "border-white/10"
-  }`;
+function buildFieldClassName() {
+  return sharedFieldClassName;
 }
 
 function getDescribedByIds(field: keyof StartSmartProfileInput, hasError: boolean) {
@@ -32,20 +30,20 @@ function getDescribedByIds(field: keyof StartSmartProfileInput, hasError: boolea
 
 export function ProfileForm({ values, onChange, errors = {} }: ProfileFormProps) {
   return (
-    <section className="rounded-[28px] border border-white/10 bg-black/20 p-6 backdrop-blur">
+    <section className="bb-start-smart-form p-6">
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-sm uppercase tracking-[0.25em] text-yellow-200">Fast profile</p>
+          <p className="bb-start-smart-eyebrow">Fast profile</p>
           <h2 className="mt-2 text-2xl font-semibold text-white">Regional + household checks</h2>
         </div>
-        <p className="max-w-2xl text-sm text-emerald-50/80">
+        <p className="bb-start-smart-copy-soft max-w-2xl text-sm">
           Required fields stay starred. Use a 2-letter country code and 2- to 3-letter region code
           so the local assumptions stay useful.
         </p>
       </div>
 
       <div className="grid gap-5 md:grid-cols-2">
-        <label className="grid gap-2 text-sm text-emerald-50/85">
+        <label className="bb-start-smart-copy grid gap-2 text-sm">
           <span>
             Country <span aria-hidden="true">*</span>
           </span>
@@ -61,11 +59,11 @@ export function ProfileForm({ values, onChange, errors = {} }: ProfileFormProps)
             onChange={(event) =>
               onChange("countryCode", event.target.value.toUpperCase().slice(0, 2))
             }
-            className={buildFieldClassName(Boolean(errors.countryCode), "bg-white/5")}
+            className={buildFieldClassName()}
             placeholder="US"
             spellCheck={false}
           />
-          <span id="countryCode-hint" className="text-xs text-emerald-100/65">
+          <span id="countryCode-hint" className="bb-start-smart-copy-soft text-xs">
             Use a 2-letter country code like US.
           </span>
           {errors.countryCode ? (
@@ -75,7 +73,7 @@ export function ProfileForm({ values, onChange, errors = {} }: ProfileFormProps)
           ) : null}
         </label>
 
-        <label className="grid gap-2 text-sm text-emerald-50/85">
+        <label className="bb-start-smart-copy grid gap-2 text-sm">
           <span>
             State or region <span aria-hidden="true">*</span>
           </span>
@@ -91,11 +89,11 @@ export function ProfileForm({ values, onChange, errors = {} }: ProfileFormProps)
             onChange={(event) =>
               onChange("stateCode", event.target.value.toUpperCase().slice(0, 3))
             }
-            className={buildFieldClassName(Boolean(errors.stateCode), "bg-white/5")}
+            className={buildFieldClassName()}
             placeholder="CA"
             spellCheck={false}
           />
-          <span id="stateCode-hint" className="text-xs text-emerald-100/65">
+          <span id="stateCode-hint" className="bb-start-smart-copy-soft text-xs">
             Use a 2- or 3-letter state or region code like CA.
           </span>
           {errors.stateCode ? (
@@ -105,7 +103,7 @@ export function ProfileForm({ values, onChange, errors = {} }: ProfileFormProps)
           ) : null}
         </label>
 
-        <label className="grid gap-2 text-sm text-emerald-50/85">
+        <label className="bb-start-smart-copy grid gap-2 text-sm">
           Housing
           <select
             aria-invalid={Boolean(errors.housing)}
@@ -113,7 +111,7 @@ export function ProfileForm({ values, onChange, errors = {} }: ProfileFormProps)
             onChange={(event) =>
               onChange("housing", event.target.value as StartSmartProfileInput["housing"])
             }
-            className={buildFieldClassName(Boolean(errors.housing), "bg-slate-950")}
+            className={buildFieldClassName()}
           >
             <option value="living_with_family">Living with family</option>
             <option value="renting">Renting</option>
@@ -123,7 +121,7 @@ export function ProfileForm({ values, onChange, errors = {} }: ProfileFormProps)
           </select>
         </label>
 
-        <label className="grid gap-2 text-sm text-emerald-50/85">
+        <label className="bb-start-smart-copy grid gap-2 text-sm">
           Income pattern
           <select
             aria-invalid={Boolean(errors.incomePattern)}
@@ -134,7 +132,7 @@ export function ProfileForm({ values, onChange, errors = {} }: ProfileFormProps)
                 event.target.value as StartSmartProfileInput["incomePattern"],
               )
             }
-            className={buildFieldClassName(Boolean(errors.incomePattern), "bg-slate-950")}
+            className={buildFieldClassName()}
           >
             <option value="steady">Steady</option>
             <option value="variable">Variable</option>
@@ -143,7 +141,7 @@ export function ProfileForm({ values, onChange, errors = {} }: ProfileFormProps)
           </select>
         </label>
 
-        <label className="grid gap-2 text-sm text-emerald-50/85">
+        <label className="bb-start-smart-copy grid gap-2 text-sm">
           Dependents
           <input
             aria-invalid={Boolean(errors.dependents)}
@@ -151,11 +149,11 @@ export function ProfileForm({ values, onChange, errors = {} }: ProfileFormProps)
             min={0}
             value={values.dependents}
             onChange={(event) => onChange("dependents", Number(event.target.value))}
-            className={buildFieldClassName(Boolean(errors.dependents), "bg-white/5")}
+            className={buildFieldClassName()}
           />
         </label>
 
-        <label className="grid gap-2 text-sm text-emerald-50/85">
+        <label className="bb-start-smart-copy grid gap-2 text-sm">
           Pets
           <input
             aria-invalid={Boolean(errors.pets)}
@@ -163,7 +161,7 @@ export function ProfileForm({ values, onChange, errors = {} }: ProfileFormProps)
             min={0}
             value={values.pets}
             onChange={(event) => onChange("pets", Number(event.target.value))}
-            className={buildFieldClassName(Boolean(errors.pets), "bg-white/5")}
+            className={buildFieldClassName()}
           />
         </label>
       </div>

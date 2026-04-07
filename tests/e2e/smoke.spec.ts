@@ -10,7 +10,7 @@ test("home page renders the landing message", async ({ page }) => {
 
   await expect(
     page.getByRole("heading", {
-      name: "Financial control with a little theatrical menace.",
+      name: "Plan first. Panic less.",
     }),
   ).toBeVisible();
 });

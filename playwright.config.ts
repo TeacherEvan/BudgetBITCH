@@ -10,6 +10,13 @@ export default defineConfig({
     command: "npm run dev",
     url: "http://127.0.0.1:3000",
     reuseExistingServer: !process.env.CI,
+    env: {
+      ...process.env,
+      E2E_BYPASS_AUTH: "true",
+      E2E_TEST_CLERK_USER_ID: "clerk_e2e_user",
+      E2E_TEST_EMAIL: "start-smart-e2e@example.com",
+      E2E_TEST_NAME: "Start Smart E2E",
+    },
   },
   projects: [
     {

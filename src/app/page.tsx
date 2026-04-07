@@ -23,12 +23,14 @@ type StoryPanel = {
   title: string;
   description: string;
   icon: LucideIcon;
+  tone: "moss" | "gold" | "clay";
 };
 
 type RouteBucket = {
   title: string;
   description: string;
   icon: LucideIcon;
+  tone: "moss" | "gold" | "clay";
   links: Array<{
     href: string;
     label: string;
@@ -41,16 +43,19 @@ const storyPanels: StoryPanel[] = [
     title: "Plot the rescue",
     description: "Build a seven-day money plan before the chaos gets theatrical.",
     icon: Compass,
+    tone: "gold",
   },
   {
     title: "Practice in loops",
     description: "Learn in small bursts tied to the next decision on your board.",
     icon: BookOpen,
+    tone: "moss",
   },
   {
     title: "Open routes safely",
     description: "Jobs and integrations stay inside privacy-first guardrails.",
     icon: ShieldCheck,
+    tone: "clay",
   },
 ];
 
@@ -59,6 +64,7 @@ const routeBuckets: RouteBucket[] = [
     title: "Build lane",
     description: "Get the plan on paper, then keep the control board close.",
     icon: Sparkles,
+    tone: "gold",
     links: [
       {
         href: "/start-smart",
@@ -76,6 +82,7 @@ const routeBuckets: RouteBucket[] = [
     title: "Momentum lane",
     description: "Use lessons and job routes when the plan needs backup.",
     icon: BriefcaseBusiness,
+    tone: "moss",
     links: [
       {
         href: "/learn",
@@ -93,6 +100,7 @@ const routeBuckets: RouteBucket[] = [
     title: "Guardrail lane",
     description: "Connect outside systems only when the trust story is clear.",
     icon: LayoutDashboard,
+    tone: "clay",
     links: [
       {
         href: "/settings/integrations",
@@ -103,9 +111,9 @@ const routeBuckets: RouteBucket[] = [
   },
 ];
 
-function IconBadge({ icon: Icon }: { icon: LucideIcon }) {
+function IconBadge({ icon: Icon, tone }: { icon: LucideIcon; tone?: "moss" | "gold" | "clay" }) {
   return (
-    <span className="bb-icon-badge" aria-hidden="true">
+    <span className="bb-icon-badge" data-tone={tone} aria-hidden="true">
       <Icon className="h-5 w-5" />
     </span>
   );
@@ -168,12 +176,12 @@ export default function Home() {
             className="bb-page-shell"
           >
             <section className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(20rem,0.95fr)]">
-              <article className="bb-panel bb-panel-strong p-8 md:p-10 lg:p-11">
+              <article className="bb-app-warm-hero p-8 md:p-10 lg:p-11">
                 <p className="bb-kicker">BudgetBITCH</p>
                 <h1 className="mt-4 max-w-3xl text-5xl font-semibold md:text-6xl">
                   Plan first. Panic less.
                 </h1>
-                <p className="bb-copy mt-5 max-w-2xl text-base md:text-lg">
+                <p className="bb-copy bb-app-warm-copy-soft mt-5 max-w-2xl text-base md:text-lg">
                   Sketch the rescue route, learn the next move, and only open outside systems
                   when the guardrails feel solid.
                 </p>
@@ -194,15 +202,15 @@ export default function Home() {
                   className="mt-8 grid gap-4 md:grid-cols-3"
                   aria-label="BudgetBITCH story panels"
                 >
-                  {storyPanels.map(({ title, description, icon }) => (
-                    <article key={title} className="bb-compact-card">
+                  {storyPanels.map(({ title, description, icon, tone }) => (
+                    <article key={title} className="bb-app-warm-card bb-compact-card" data-tone={tone}>
                       <div className="flex items-start justify-between gap-3">
-                        <IconBadge icon={icon} />
+                        <IconBadge icon={icon} tone={tone} />
                         <Sparkles className="h-4 w-4 text-(--accent-strong)" aria-hidden="true" />
                       </div>
                       <div>
                         <h2 className="text-2xl font-semibold">{title}</h2>
-                        <p className="bb-mini-copy mt-2">{description}</p>
+                        <p className="bb-mini-copy bb-app-warm-copy-soft mt-2">{description}</p>
                       </div>
                     </article>
                   ))}
@@ -210,37 +218,42 @@ export default function Home() {
               </article>
 
               <aside className="grid gap-4 self-start">
-                <article className="bb-panel bb-panel-accent p-6">
+                <article className="bb-app-warm-panel p-6" data-tone="gold">
                   <p className="bb-kicker">Entry board</p>
                   <h2 className="mt-3 text-3xl font-semibold">Route lanes</h2>
-                  <p className="bb-mini-copy mt-3">
+                  <p className="bb-mini-copy bb-app-warm-copy-soft mt-3">
                     Pick a bucket, skip the sprawl: one lane for planning, one for momentum, and
                     one for guarded connections.
                   </p>
                 </article>
 
                 <div className="grid gap-3" aria-label="Main route buckets">
-                  {routeBuckets.map(({ title, description, icon, links }) => {
+                  {routeBuckets.map(({ title, description, icon, tone, links }) => {
                     const bucketId = title.toLowerCase().replace(/\s+/g, "-");
 
                     return (
-                      <section key={title} className="bb-cluster" aria-labelledby={bucketId}>
+                      <section
+                        key={title}
+                        className="bb-app-warm-card bb-cluster"
+                        data-tone={tone}
+                        aria-labelledby={bucketId}
+                      >
                         <div className="flex items-start gap-3">
-                          <IconBadge icon={icon} />
+                          <IconBadge icon={icon} tone={tone} />
                           <div>
                             <h3 id={bucketId} className="text-2xl font-semibold">
                               {title}
                             </h3>
-                            <p className="bb-mini-copy mt-1">{description}</p>
+                            <p className="bb-mini-copy bb-app-warm-copy-soft mt-1">{description}</p>
                           </div>
                         </div>
 
                         <div className="bb-stack-list">
                           {links.map(({ href, label, hint }) => (
-                            <Link key={href} href={href} className="bb-lane-link">
+                            <Link key={href} href={href} className="bb-lane-link" data-tone={tone}>
                               <div>
                                 <span className="font-semibold text-white">{label}</span>
-                                <span className="bb-mini-copy mt-1 block">{hint}</span>
+                                <span className="bb-mini-copy bb-app-warm-copy-soft mt-1 block">{hint}</span>
                               </div>
                               <ArrowRight
                                 className="h-4 w-4 shrink-0 text-(--accent-strong)"

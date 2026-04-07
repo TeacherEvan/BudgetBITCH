@@ -63,10 +63,10 @@ export function TemplatePicker({
     <section>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-sm uppercase tracking-[0.3em] text-yellow-200">Starting paths</p>
+          <p className="bb-start-smart-eyebrow">Starting paths</p>
           <h2 className="mt-2 text-2xl font-semibold text-white">Choose a life lane first</h2>
         </div>
-        <p className="max-w-2xl text-sm text-emerald-50/75">
+        <p className="bb-start-smart-copy-soft max-w-2xl text-sm">
           Pick the lane that looks most like your current pressure, then grab the closest template.
         </p>
       </div>
@@ -82,11 +82,9 @@ export function TemplatePicker({
               role="tab"
               aria-selected={isActive}
               onClick={() => setActiveLane(lane)}
-              className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                isActive
-                  ? "border-emerald-300/50 bg-emerald-400/10 text-white"
-                  : "border-white/10 bg-white/5 text-emerald-50/80 hover:bg-white/10"
-              }`}
+              className="bb-start-smart-tab rounded-full px-4 py-2 text-sm font-semibold"
+              data-active={isActive}
+              data-tone={lane}
             >
               {laneMeta[lane].label}
             </button>
@@ -94,11 +92,11 @@ export function TemplatePicker({
         })}
       </div>
 
-      <div className="mt-4 rounded-[28px] border border-white/10 bg-white/5 p-4 md:p-5">
-        <p className="text-xs uppercase tracking-[0.22em] text-yellow-200">
+      <div className="bb-start-smart-panel mt-4 p-4 md:p-5" data-tone={activeLane}>
+        <p className="bb-start-smart-eyebrow text-[0.68rem] tracking-[0.22em]">
           {formatLaneLabel(activeLane)}
         </p>
-        <p className="mt-2 text-sm text-emerald-50/75">{laneMeta[activeLane].summary}</p>
+        <p className="bb-start-smart-copy-soft mt-2 text-sm">{laneMeta[activeLane].summary}</p>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {visibleTemplates.map((template) => {
@@ -109,26 +107,24 @@ export function TemplatePicker({
                 key={template.id}
                 type="button"
                 onClick={() => onSelect(template.id)}
-                className={`rounded-[24px] border p-4 text-left transition ${
-                  isActive
-                    ? "border-emerald-300/50 bg-emerald-400/10 shadow-[0_0_0_1px_rgba(110,231,183,0.2)]"
-                    : "border-white/10 bg-black/20 hover:bg-white/10"
-                }`}
+                className="bb-start-smart-template-card rounded-[24px] p-4 text-left"
+                data-active={isActive}
+                data-tone={template.lane}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-emerald-100/65">
+                    <p className="bb-start-smart-eyebrow text-[0.66rem] tracking-[0.2em]">
                       {laneMeta[template.lane].label}
                     </p>
                     <h3 className="mt-2 text-base font-semibold text-white">{template.label}</h3>
                   </div>
                   {isActive ? (
-                    <span className="rounded-full border border-emerald-200/20 bg-emerald-300/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-100">
+                    <span className="rounded-full border border-yellow-200/20 bg-yellow-300/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-yellow-100">
                       Active
                     </span>
                   ) : null}
                 </div>
-                <p className="mt-2 text-sm text-emerald-50/80">{template.summary}</p>
+                <p className="bb-start-smart-copy-soft mt-2 text-sm">{template.summary}</p>
               </button>
             );
           })}
