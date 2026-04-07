@@ -10,6 +10,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { getCurrentWorkspaceAccess } from "@/lib/auth/workspace-access";
+import { getLatestBlueprintForWorkspace } from "@/modules/start-smart/latest-blueprint";
+
 type SignalCard = {
   title: string;
   state: string;
@@ -142,7 +145,43 @@ function buttonClassName(tone: ActionCard["tone"]) {
   return "bb-button-ghost";
 }
 
-export default function DashboardPage() {
+function formatSummaryItem(value: string) {
+  return value.replace(/_/g, " ");
+}
+
+const fallbackBlueprintSummary = {
+  notice: "No saved blueprint yet. Start Smart to build your first seven-day plan.",
+  priorityStack: ["Build your first blueprint"],
+  riskWarnings: ["No saved risk warnings yet"],
+  next7Days: ["Open Start Smart and map the next seven days"],
+  learnModuleKeys: ["Suggested lessons appear after you save a blueprint"],
+};
+
+export default async function DashboardPage() {
+  const workspaceAccess = await getCurrentWorkspaceAccess();
+  const latestBlueprint = workspaceAccess.allowed
+    ? await getLatestBlueprintForWorkspace(workspaceAccess.workspaceId)
+    : null;
+  const blueprintSummary = latestBlueprint ?? fallbackBlueprintSummary;
+  const blueprintSummarySections = [
+    {
+      title: "Priority stack",
+      items: blueprintSummary.priorityStack,
+    },
+    {
+      title: "Risk warnings",
+      items: blueprintSummary.riskWarnings,
+    },
+    {
+      title: "Next 7 days",
+      items: blueprintSummary.next7Days,
+    },
+    {
+      title: "Learn next",
+      items: blueprintSummary.learnModuleKeys,
+    },
+  ];
+
   return (
     <main className="bb-page-shell text-white">
       <section className="mx-auto grid max-w-7xl gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(19rem,0.84fr)]">
@@ -255,11 +294,28 @@ export default function DashboardPage() {
             <p className="bb-kicker">Priority build</p>
             <h2 className="mt-3 text-4xl font-semibold">Money Survival Blueprint</h2>
             <p className="bb-mini-copy bb-app-warm-copy-soft mt-3 text-(--text-2)">
-              Keep the blueprint as the control board anchor when the month starts feeling loud.
+              {latestBlueprint
+                ? "Latest saved summary from Start Smart for the active workspace."
+                : fallbackBlueprintSummary.notice}
             </p>
             <Link href="/start-smart" className="bb-button-primary mt-6">
               Start Smart
             </Link>
+
+            <div className="mt-6 grid gap-4">
+              {blueprintSummarySections.map((section) => (
+                <section key={section.title} className="bb-app-warm-card p-4" data-tone="gold">
+                  <h3 className="text-lg font-semibold">{section.title}</h3>
+                  <ul className="mt-3 grid gap-2 text-sm text-(--text-1)">
+                    {section.items.map((item) => (
+                      <li key={`${section.title}-${item}`} className="bb-mini-copy bb-app-warm-copy-soft">
+                        {formatSummaryItem(item)}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            </div>
           </article>
 
           <section className="bb-app-warm-panel p-6" data-tone="clay" aria-labelledby="dashboard-lanes-heading">

@@ -1,10 +1,11 @@
 import { JobCard } from "@/components/jobs/job-card";
 import { JobsFilterPanel } from "@/components/jobs/jobs-filter-panel";
-import { getPrismaClient } from "@/lib/prisma";
+import { getCurrentWorkspaceAccess } from "@/lib/auth/workspace-access";
 import { extractJobSignalsFromBlueprint } from "@/modules/jobs/blueprint-bridge";
 import { listJobs } from "@/modules/jobs/job-catalog";
 import { scoreJobsForBlueprint } from "@/modules/jobs/job-fit-engine";
 import type { JobSearchFilters } from "@/modules/jobs/job-schema";
+import { getLatestBlueprintSignalsForWorkspace } from "@/modules/start-smart/latest-blueprint";
 import { Clock3, Compass, Rocket, Sparkles, type LucideIcon } from "lucide-react";
 
 const defaultFilters: JobSearchFilters = {
@@ -58,25 +59,13 @@ function shouldUseSeededJobFallback(error: unknown) {
 
 async function getRecommendedJobs() {
   try {
-    const prisma = getPrismaClient();
-    const latestBlueprint = await prisma.moneyBlueprintSnapshot.findFirst({
-      where: { workspaceId: "demo_workspace" },
-      orderBy: { createdAt: "desc" },
-    });
-
-    const blueprintJson =
-      latestBlueprint &&
-      typeof latestBlueprint.blueprintJson === "object" &&
-      latestBlueprint.blueprintJson !== null
-        ? latestBlueprint.blueprintJson
-        : {};
+    const workspaceAccess = await getCurrentWorkspaceAccess();
+    const latestBlueprintSignals = workspaceAccess.allowed
+      ? await getLatestBlueprintSignalsForWorkspace(workspaceAccess.workspaceId)
+      : null;
 
     const blueprintSignals = extractJobSignalsFromBlueprint(
-      blueprintJson as {
-        priorityStack?: string[];
-        riskWarnings?: string[];
-        learnModuleKeys?: string[];
-      },
+      latestBlueprintSignals ?? {},
     );
 
     return scoreJobsForBlueprint({

@@ -135,7 +135,11 @@ function formatLaneLabel(value: string) {
   return value.replaceAll("_", " ");
 }
 
-export function StartSmartShell() {
+type StartSmartShellProps = {
+  workspaceId: string | null;
+};
+
+export function StartSmartShell({ workspaceId }: StartSmartShellProps) {
   const templates = useMemo(() => listStartSmartTemplateCards(), []);
   const [selectedTemplateId, setSelectedTemplateId] =
     useState<StartSmartTemplateId>("single_teen");
@@ -147,6 +151,7 @@ export function StartSmartShell() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<StartSmartFieldErrors>({});
+  const hasAccessibleWorkspace = workspaceId !== null;
 
   const selectedTemplate = templates.find((template) => template.id === selectedTemplateId);
   const currentStepIndex = startSmartWizardSteps.indexOf(step);
@@ -186,6 +191,11 @@ export function StartSmartShell() {
     event.preventDefault();
     setErrorMessage(null);
 
+    if (!hasAccessibleWorkspace) {
+      setErrorMessage("You need workspace access before building a blueprint.");
+      return;
+    }
+
     const validationErrors = validateProfile(values);
 
     if (Object.keys(validationErrors).length > 0) {
@@ -204,7 +214,7 @@ export function StartSmartShell() {
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          workspaceId: "demo_workspace",
+          workspaceId,
           templateId: selectedTemplateId,
           answers: values,
         }),
@@ -376,7 +386,7 @@ export function StartSmartShell() {
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !hasAccessibleWorkspace}
               className="rounded-full bg-emerald-400 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {isSubmitting ? "Building..." : "Build my survival blueprint"}

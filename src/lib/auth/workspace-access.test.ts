@@ -116,6 +116,18 @@ describe("resolveWorkspaceAccess", () => {
       status: 403,
       reason: "workspace_forbidden",
     });
+    expect(findFirstMock).toHaveBeenCalledWith({
+      where: {
+        workspaceId: "ws_forbidden",
+        user: {
+          clerkUserId: "user_live_123",
+        },
+      },
+      select: {
+        workspaceId: true,
+        userId: true,
+      },
+    });
   });
 
   it("returns the explicit workspace when membership exists", async () => {
@@ -137,6 +149,18 @@ describe("resolveWorkspaceAccess", () => {
       allowed: true,
       workspaceId: "ws_allowed",
       userProfileId: "profile_123",
+    });
+    expect(findFirstMock).toHaveBeenCalledWith({
+      where: {
+        workspaceId: "ws_allowed",
+        user: {
+          clerkUserId: "user_live_123",
+        },
+      },
+      select: {
+        workspaceId: true,
+        userId: true,
+      },
     });
   });
 });

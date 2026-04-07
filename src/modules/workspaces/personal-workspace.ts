@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
 
 type PersonalWorkspaceUser = {
   clerkUserId: string;
@@ -30,6 +30,10 @@ export async function ensurePersonalWorkspaceForUser(
       },
       select: { id: true },
     });
+
+    await tx.$executeRaw(
+      Prisma.sql`SELECT pg_advisory_xact_lock(hashtext(${`personal-workspace:${userProfile.id}`}))`,
+    );
 
     const existingMembership = await tx.workspaceMember.findFirst({
       where: {

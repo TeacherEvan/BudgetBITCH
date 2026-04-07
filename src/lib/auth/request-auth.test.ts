@@ -14,6 +14,7 @@ import { getRequestAuth } from "./request-auth";
 
 describe("getRequestAuth", () => {
   beforeEach(() => {
+    process.env.NODE_ENV = "test";
     delete process.env.E2E_BYPASS_AUTH;
     delete process.env.E2E_BYPASS_AUTH_SOURCE;
     delete process.env.E2E_TEST_CLERK_USER_ID;
@@ -25,6 +26,28 @@ describe("getRequestAuth", () => {
 
   it("ignores the bypass flag unless the explicit Playwright guard is enabled", async () => {
     process.env.E2E_BYPASS_AUTH = "true";
+    authMock.mockResolvedValue({ userId: "user_live_123" });
+    currentUserMock.mockResolvedValue({
+      id: "user_live_123",
+      fullName: "Budget Person",
+      username: "budget-person",
+      primaryEmailAddress: { emailAddress: "budget@example.com" },
+    });
+
+    await expect(getRequestAuth()).resolves.toEqual({
+      userId: "user_live_123",
+      email: "budget@example.com",
+      displayName: "Budget Person",
+    });
+  });
+
+  it("ignores the bypass flags when the test runtime guard is absent", async () => {
+    process.env.NODE_ENV = "development";
+    process.env.E2E_BYPASS_AUTH = "true";
+    process.env.E2E_BYPASS_AUTH_SOURCE = "playwright";
+    process.env.E2E_TEST_CLERK_USER_ID = "clerk_e2e_user";
+    process.env.E2E_TEST_EMAIL = "start-smart-e2e@example.com";
+    process.env.E2E_TEST_NAME = "Start Smart E2E";
     authMock.mockResolvedValue({ userId: "user_live_123" });
     currentUserMock.mockResolvedValue({
       id: "user_live_123",

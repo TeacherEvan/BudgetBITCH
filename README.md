@@ -4,8 +4,8 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 
 ## Navigation docs
 
-- `docs/DEV_TREE.md` — project tree graph and quick orientation map
-- `docs/CODEBASE_INDEX.md` — route/module/component index for future navigation
+- `.private-docs/docs/DEV_TREE.md` — project tree graph and quick orientation map
+- `.private-docs/docs/CODEBASE_INDEX.md` — route/module/component index for future navigation
 
 ## Features in Phase 1
 
@@ -42,7 +42,9 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 - `src/components/start-smart/**` contains reusable UI for the Money Survival Blueprint flow
 - `src/components/learn/**` contains reusable UI for the Learn! hub and lesson detail flow
 - `src/components/jobs/**` contains reusable UI for the Jobs hub and job detail flow
+- `src/lib/auth/**` contains request auth and workspace resolution helpers shared by protected routes
 - `src/modules/**` contains business/domain logic grouped by capability
+- `src/modules/workspaces/**` contains workspace membership and personal-workspace bootstrap logic
 - `src/components/integrations/**` contains reusable UI for the connection hub and provider wizards
 - `prisma/**` contains the schema and checked-in migration history
 - `tests/e2e/**` contains Playwright journeys for the landing flow, dashboard, Start Smart, Learn!, Jobs, and provider wizards
@@ -57,18 +59,20 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 5. If you plan to run `prisma migrate dev`, optionally set `SHADOW_DATABASE_URL` to a dedicated direct-connection shadow database.
 6. Generate the Prisma client with `npm run db:generate`.
 7. Start development with `npm run dev`.
+8. For deterministic local Playwright runs, keep the non-secret `E2E_BYPASS_AUTH*` and `E2E_TEST_*` values from `.env.example` available only in the test runtime.
 
 ## Verification
 
-The project has been verified in this workspace with:
+Useful verification commands for this workspace:
 
 - `npm run lint`
 - `npm run test`
-- `npm run test:e2e`
 - `npm run db:generate`
 - `npm run build`
 
-For deeper orientation, start with `docs/DEV_TREE.md`, then use `docs/CODEBASE_INDEX.md` to jump to the right route, module, or test.
+Playwright runs use an explicit local auth bypass configured in `playwright.config.ts`, but the full `npm run test:e2e` pass should still be treated as unresolved until the remaining verification issue on this branch is closed.
+
+For deeper orientation, start with `.private-docs/docs/DEV_TREE.md`, then use `.private-docs/docs/CODEBASE_INDEX.md` to jump to the right route, module, or test.
 
 ## Database notes
 
@@ -89,6 +93,14 @@ If you have a real PostgreSQL instance available, run:
 ## Environment variables
 
 See `.env.example` for the full list of required variables, including authentication, email, webhook signing, Sentry, and provider-secret encryption settings.
+
+The Playwright bypass variables are intentionally non-secret: `E2E_BYPASS_AUTH`, `E2E_BYPASS_AUTH_SOURCE`, `E2E_TEST_CLERK_USER_ID`, `E2E_TEST_EMAIL`, and `E2E_TEST_NAME`. They only activate the synthetic request profile when the app is running under `NODE_ENV=test` and the source guard is set to `playwright`.
+
+## Protected workspace bootstrap
+
+Protected app routes and workspace-backed API flows resolve auth through `src/lib/auth/request-auth.ts` and workspace context through `src/lib/auth/workspace-access.ts`.
+
+If a signed-in user does not already belong to a workspace, `src/modules/workspaces/personal-workspace.ts` creates a personal workspace automatically and returns that membership as the current context. Start Smart persistence and the Dashboard, Learn, and Jobs experiences all use that resolved workspace so they can share the same latest persisted Money Survival Blueprint instead of drifting onto separate demo or per-page state.
 
 ## Start Smart regional data
 

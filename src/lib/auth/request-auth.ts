@@ -6,8 +6,16 @@ export type RequestAuth = {
   displayName: string | null;
 };
 
+function isExplicitPlaywrightBypassEnabled() {
+  return (
+    process.env.NODE_ENV === "test" &&
+    process.env.E2E_BYPASS_AUTH === "true" &&
+    process.env.E2E_BYPASS_AUTH_SOURCE === "playwright"
+  );
+}
+
 export async function getRequestAuth(): Promise<RequestAuth> {
-  if (process.env.E2E_BYPASS_AUTH === "true") {
+  if (isExplicitPlaywrightBypassEnabled()) {
     return {
       userId: process.env.E2E_TEST_CLERK_USER_ID ?? "clerk_e2e_user",
       email: process.env.E2E_TEST_EMAIL ?? "start-smart-e2e@example.com",
