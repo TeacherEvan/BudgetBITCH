@@ -33,3 +33,5 @@ pnpm-debug.log*
 /test-results
 /coverage
 .env*.local
+.vscode/launch.json
+.vscode/c_cpp_properties.json
