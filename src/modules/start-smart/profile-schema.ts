@@ -17,8 +17,15 @@ const providerPreferenceSchema = z.enum([
 ]);
 
 export const startSmartProfileSchema = z.object({
-  countryCode: z.string().trim().length(2),
-  stateCode: z.string().trim().min(2).max(3),
+  countryCode: z
+    .string()
+    .trim()
+    .length(2, "Enter a valid 2-letter country code."),
+  stateCode: z
+    .string()
+    .trim()
+    .min(2, "Enter a valid 2- or 3-letter state or region code.")
+    .max(3, "Enter a valid 2- or 3-letter state or region code."),
   ageBand: z.enum(["single_teen", "young_adult", "adult", "retiree"]),
   housing: z.enum([
     "living_with_family",

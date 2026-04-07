@@ -1,4 +1,16 @@
 import { render, screen } from "@testing-library/react";
+import { vi } from "vitest";
+
+const { mockNotFound } = vi.hoisted(() => ({
+  mockNotFound: vi.fn(() => {
+    throw new Error("NEXT_NOT_FOUND");
+  }),
+}));
+
+vi.mock("next/navigation", () => ({
+  notFound: mockNotFound,
+}));
+
 import LearnLessonPage from "./page";
 
 describe("LearnLessonPage", () => {
@@ -10,7 +22,33 @@ describe("LearnLessonPage", () => {
     render(view);
 
     expect(screen.getByText("Budgeting Basics")).toBeInTheDocument();
+    expect(screen.getByText("Why it matters")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Budgeting is the base layer for essentials, optional spending, and emergency breathing room.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "A raccoon CFO keeps approving snack subscriptions because nobody made a real plan.",
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByText("Plain-English breakdown")).toBeInTheDocument();
     expect(screen.getByText("Apply this now")).toBeInTheDocument();
+    expect(screen.getByText("Takeaways")).toBeInTheDocument();
+    expect(
+      screen.getByText("A budget is a plan, not a punishment."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Essentials get funded before optional chaos."),
+    ).toBeInTheDocument();
+  });
+
+  it("delegates to notFound for an unknown lesson slug", async () => {
+    await expect(
+      LearnLessonPage({ params: Promise.resolve({ slug: "missing-lesson" }) }),
+    ).rejects.toThrow("NEXT_NOT_FOUND");
+
+    expect(mockNotFound).toHaveBeenCalled();
   });
 });

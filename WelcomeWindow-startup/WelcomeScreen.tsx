@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 
 // ─── Particle system ──────────────────────────────────────────────────────────
@@ -210,6 +210,7 @@ export interface WelcomeScreenProps {
 }
 
 export default function WelcomeScreen({ onEnter }: WelcomeScreenProps) {
+  const prefersReducedMotion = useReducedMotion();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particlesRef = useRef<Particle[]>([]);
   const rafRef = useRef<number>(0);
@@ -219,6 +220,10 @@ export default function WelcomeScreen({ onEnter }: WelcomeScreenProps) {
 
   // Canvas particle loop
   useEffect(() => {
+    if (prefersReducedMotion) {
+      return;
+    }
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -278,10 +283,19 @@ export default function WelcomeScreen({ onEnter }: WelcomeScreenProps) {
       cancelAnimationFrame(rafRef.current);
       window.removeEventListener("resize", resize);
     };
-  }, []);
+  }, [prefersReducedMotion]);
 
   // Animated loading progress (0 → 100 over ~3.4 s)
   useEffect(() => {
+    if (prefersReducedMotion) {
+      const frame = requestAnimationFrame(() => {
+        setProgress(100);
+        setReady(true);
+      });
+
+      return () => cancelAnimationFrame(frame);
+    }
+
     const start = performance.now();
     const duration = 3400;
     let frame: number;
@@ -297,7 +311,7 @@ export default function WelcomeScreen({ onEnter }: WelcomeScreenProps) {
     };
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
-  }, []);
+  }, [prefersReducedMotion]);
 
   const loadingMsg =
     progress < 30 ? "Summoning the leprechaun…" :
@@ -308,7 +322,9 @@ export default function WelcomeScreen({ onEnter }: WelcomeScreenProps) {
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Particle + rainbow canvas */}
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+      {prefersReducedMotion ? null : (
+        <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
+      )}
 
       {/* Radial vignette */}
       <div
@@ -321,9 +337,13 @@ export default function WelcomeScreen({ onEnter }: WelcomeScreenProps) {
 
       {/* Central glassmorphism card */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.8, y: 30 }}
+        initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.8, y: 30 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
+        transition={
+          prefersReducedMotion
+            ? { duration: 0 }
+            : { duration: 1, ease: [0.22, 1, 0.36, 1], delay: 0.15 }
+        }
         className="absolute inset-0 flex items-center justify-center p-4"
       >
         <div
@@ -354,9 +374,13 @@ export default function WelcomeScreen({ onEnter }: WelcomeScreenProps) {
 
           {/* Leprechaun hat bounce-in */}
           <motion.div
-            initial={{ scale: 0, rotate: -25 }}
+            initial={prefersReducedMotion ? false : { scale: 0, rotate: -25 }}
             animate={{ scale: 1, rotate: 0 }}
-            transition={{ delay: 0.55, type: "spring", stiffness: 300, damping: 20 }}
+            transition={
+              prefersReducedMotion
+                ? { duration: 0 }
+                : { delay: 0.55, type: "spring", stiffness: 300, damping: 20 }
+            }
             className="text-6xl mb-3 leading-none select-none"
           >
             🎩
@@ -364,9 +388,9 @@ export default function WelcomeScreen({ onEnter }: WelcomeScreenProps) {
 
           {/* Title block */}
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.75, duration: 0.65 }}
+            transition={prefersReducedMotion ? { duration: 0 } : { delay: 0.75, duration: 0.65 }}
           >
             <p className="text-[10px] uppercase tracking-[0.4em] text-yellow-300/70 mb-1">
               Welcome to
@@ -380,7 +404,7 @@ export default function WelcomeScreen({ onEnter }: WelcomeScreenProps) {
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
-                animation: "bbShimmer 2.8s linear infinite",
+                animation: prefersReducedMotion ? "none" : "bbShimmer 2.8s linear infinite",
               }}
             >
               BudgetBITCH
@@ -392,9 +416,9 @@ export default function WelcomeScreen({ onEnter }: WelcomeScreenProps) {
 
           {/* Gold divider */}
           <motion.div
-            initial={{ scaleX: 0 }}
+            initial={prefersReducedMotion ? false : { scaleX: 0 }}
             animate={{ scaleX: 1 }}
-            transition={{ delay: 1, duration: 0.8 }}
+            transition={prefersReducedMotion ? { duration: 0 } : { delay: 1, duration: 0.8 }}
             className="my-5 h-px origin-center"
             style={{
               background:
@@ -404,9 +428,9 @@ export default function WelcomeScreen({ onEnter }: WelcomeScreenProps) {
 
           {/* Progress bar */}
           <motion.div
-            initial={{ opacity: 0 }}
+            initial={prefersReducedMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 1.1, duration: 0.5 }}
+            transition={prefersReducedMotion ? { duration: 0 } : { delay: 1.1, duration: 0.5 }}
           >
             <div
               className="h-2 rounded-full overflow-hidden mb-2"
@@ -422,9 +446,9 @@ export default function WelcomeScreen({ onEnter }: WelcomeScreenProps) {
                   background:
                     "linear-gradient(90deg, #22c55e, #4ade80, #FFD700, #F59E0B, #ef4444, #a855f7, #22c55e)",
                   backgroundSize: "300% 100%",
-                  animation: "bbRainbow 1.8s linear infinite",
+                  animation: prefersReducedMotion ? "none" : "bbRainbow 1.8s linear infinite",
                   boxShadow: "0 0 12px rgba(255,215,0,0.55)",
-                  transition: "width 0.05s linear",
+                  transition: prefersReducedMotion ? "none" : "width 0.05s linear",
                 }}
               />
             </div>
@@ -438,16 +462,16 @@ export default function WelcomeScreen({ onEnter }: WelcomeScreenProps) {
             {ready && (
               <motion.button
                 key="enter"
-                initial={{ opacity: 0, y: 10, scale: 0.94 }}
+                initial={prefersReducedMotion ? false : { opacity: 0, y: 10, scale: 0.94 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
+                exit={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.9 }}
+                transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.4, ease: "easeOut" }}
                 onClick={onEnter}
                 className="mt-4 cursor-pointer px-8 py-3 rounded-xl font-bold text-sm tracking-wide text-black select-none"
                 style={{
                   background: "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)",
                   boxShadow: "0 4px 24px rgba(255,165,0,0.45)",
-                  animation: "bbPulse 2s ease-in-out infinite",
+                  animation: prefersReducedMotion ? "none" : "bbPulse 2s ease-in-out infinite",
                 }}
               >
                 ☘ Enter the Magic ☘

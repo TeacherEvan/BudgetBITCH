@@ -2,80 +2,92 @@ import Link from "next/link";
 
 export default function DashboardPage() {
     return (
-        <main className="min-h-screen bg-[radial-gradient(circle_at_top,#34d399_0%,#14532d_45%,#052e16_100%)] p-6 text-white">
-            <section className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-7">
-                <article className="rounded-4xl border border-emerald-200/20 bg-white/10 p-6 backdrop-blur">
-                    <h1 className="text-3xl font-bold">Treasure Map</h1>
-                    <p className="mt-2 text-sm text-emerald-50/80">
-                        Your budget journey at a glance.
-                    </p>
-                </article>
+        <main className="bb-page-shell text-white">
+            <section className="mx-auto grid max-w-7xl gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(19rem,0.8fr)]">
+                <div className="grid gap-6">
+                    <article className="bb-panel bb-panel-strong p-8 md:p-10">
+                        <p className="bb-kicker">Dashboard</p>
+                        <h1 className="mt-4 text-5xl font-semibold">Treasure Map</h1>
+                        <p className="bb-copy mt-4 max-w-3xl">
+                            Your budget journey at a glance: what needs attention first, what can wait,
+                            and where the next safe move lives.
+                        </p>
+                        <div className="mt-8 flex flex-wrap gap-3">
+                            <Link href="/start-smart" className="bb-button-primary">
+                                Start Smart
+                            </Link>
+                            <Link href="/learn" className="bb-button-secondary">
+                                Open Learn
+                            </Link>
+                        </div>
+                    </article>
 
-                <article className="rounded-4xl border border-yellow-200/20 bg-yellow-300/10 p-6 backdrop-blur">
-                    <h2 className="text-2xl font-semibold">Luck Meter</h2>
-                    <p className="mt-2 text-sm text-yellow-50/80">
-                        Visual risk signal for the current month.
-                    </p>
-                </article>
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <article className="bb-panel p-6">
+                            <p className="bb-kicker">Current signal</p>
+                            <h2 className="mt-3 text-3xl font-semibold">Luck Meter</h2>
+                            <p className="mt-3 text-sm text-(--text-muted)">
+                                Visual risk signal for the current month, tuned to your cash-flow stress.
+                            </p>
+                        </article>
 
-                <article className="rounded-4xl border border-cyan-200/20 bg-cyan-300/10 p-6 backdrop-blur">
-                    <h2 className="text-2xl font-semibold">Bills Due Soon</h2>
-                    <p className="mt-2 text-sm text-cyan-50/80">
-                        Upcoming due dates and reminder urgency.
-                    </p>
-                </article>
+                        <article className="bb-panel p-6">
+                            <p className="bb-kicker">Urgency queue</p>
+                            <h2 className="mt-3 text-3xl font-semibold">Bills Due Soon</h2>
+                            <p className="mt-3 text-sm text-(--text-muted)">
+                                Upcoming due dates, reminder urgency, and the stuff most likely to bite first.
+                            </p>
+                        </article>
+                    </div>
 
-                <article className="rounded-4xl border border-rose-200/20 bg-rose-300/10 p-6 backdrop-blur">
-                    <h2 className="text-2xl font-semibold">Money Survival Blueprint</h2>
-                    <p className="mt-2 text-sm text-rose-50/80">
-                        Build a location-aware first-strike plan for cash flow, risk, and next moves.
-                    </p>
-                    <Link
-                        href="/start-smart"
-                        className="mt-5 inline-flex rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-white"
-                    >
-                        Start Smart
-                    </Link>
-                </article>
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <article className="bb-panel bb-panel-muted p-6">
+                            <p className="bb-kicker">Skill building</p>
+                            <h2 className="mt-3 text-3xl font-semibold">Learn!</h2>
+                            <p className="mt-3 text-sm text-(--text-muted)">
+                                Absurd lessons tied to your blueprint so the next smart move actually sticks.
+                            </p>
+                            <Link href="/learn" className="bb-button-ghost mt-5">
+                                Open Learn
+                            </Link>
+                        </article>
 
-                <article className="rounded-4xl border border-violet-200/20 bg-violet-300/10 p-6 backdrop-blur">
-                    <h2 className="text-2xl font-semibold">Learn!</h2>
-                    <p className="mt-2 text-sm text-violet-50/80">
-                        Absurd lessons tied to your blueprint so the next smart move actually sticks.
-                    </p>
-                    <Link
-                        href="/learn"
-                        className="mt-5 inline-flex rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-white"
-                    >
-                        Open Learn
-                    </Link>
-                </article>
+                        <article className="bb-panel bb-panel-muted p-6">
+                            <p className="bb-kicker">Income routes</p>
+                            <h2 className="mt-3 text-3xl font-semibold">Jobs</h2>
+                            <p className="mt-3 text-sm text-(--text-muted)">
+                                Blueprint-aware job paths that help stabilize income and schedule pressure.
+                            </p>
+                            <Link href="/jobs" className="bb-button-ghost mt-5">
+                                Open Jobs
+                            </Link>
+                        </article>
+                    </div>
+                </div>
 
-                <article className="rounded-4xl border border-sky-200/20 bg-sky-300/10 p-6 backdrop-blur">
-                    <h2 className="text-2xl font-semibold">Jobs</h2>
-                    <p className="mt-2 text-sm text-sky-50/80">
-                        Blueprint-aware job paths that help stabilize income and schedule pressure.
-                    </p>
-                    <Link
-                        href="/jobs"
-                        className="mt-5 inline-flex rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-white"
-                    >
-                        Open Jobs
-                    </Link>
-                </article>
+                <aside className="grid gap-4 self-start">
+                    <article className="bb-panel bb-panel-accent p-6">
+                        <p className="bb-kicker">Priority build</p>
+                        <h2 className="mt-3 text-4xl font-semibold">Money Survival Blueprint</h2>
+                        <p className="mt-3 text-sm text-(--text-2)">
+                            Build a location-aware first-strike plan for cash flow, risk, and next moves.
+                        </p>
+                        <Link href="/start-smart" className="bb-button-primary mt-6">
+                            Start Smart
+                        </Link>
+                    </article>
 
-                <article className="rounded-4xl border border-amber-200/20 bg-amber-300/10 p-6 backdrop-blur">
-                    <h2 className="text-2xl font-semibold">Connected Finance</h2>
-                    <p className="mt-2 text-sm text-amber-50/80">
-                        Explore banking, payroll, tax, and finance-ops providers with guidance-first guardrails.
-                    </p>
-                    <Link
-                        href="/settings/integrations"
-                        className="mt-5 inline-flex rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-white"
-                    >
-                        Open Hub
-                    </Link>
-                </article>
+                    <article className="bb-panel p-6">
+                        <p className="bb-kicker">Connections</p>
+                        <h2 className="mt-3 text-3xl font-semibold">Connected Finance</h2>
+                        <p className="mt-3 text-sm text-(--text-muted)">
+                            Explore banking, payroll, tax, and finance-ops providers with guidance-first guardrails.
+                        </p>
+                        <Link href="/settings/integrations" className="bb-button-secondary mt-5">
+                            Open Hub
+                        </Link>
+                    </article>
+                </aside>
             </section>
         </main>
     );

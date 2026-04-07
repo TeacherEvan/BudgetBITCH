@@ -1,13 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import {
+  startSmartProfileSchema,
+  type StartSmartProfileInput,
+} from "@/modules/start-smart/profile-schema";
 import { getStartSmartTemplate, listStartSmartTemplateCards, type StartSmartTemplateId } from "@/modules/start-smart/template-catalog";
 import { nextWizardStep, type StartSmartWizardStep } from "@/modules/start-smart/wizard-machine";
-import type { StartSmartProfileInput } from "@/modules/start-smart/profile-schema";
-import { ConfidenceBadge } from "./confidence-badge";
+import { useMemo, useState } from "react";
 import { BlueprintPanel } from "./blueprint-panel";
+import { ConfidenceBadge } from "./confidence-badge";
 import { ProfileForm } from "./profile-form";
 import { TemplatePicker } from "./template-picker";
+
+type StartSmartFieldErrors = Partial<Record<keyof StartSmartProfileInput, string>>;
 
 type BlueprintResponse = {
   blueprint: {
@@ -49,6 +54,25 @@ function mergeTemplateIntoProfile(templateId: StartSmartTemplateId): StartSmartP
   };
 }
 
+function validateProfile(values: StartSmartProfileInput): StartSmartFieldErrors {
+  const validationResult = startSmartProfileSchema.safeParse(values);
+
+  if (validationResult.success) {
+    return {};
+  }
+
+  return Object.entries(validationResult.error.flatten().fieldErrors).reduce(
+    (errors, [field, messages]) => {
+      if (messages?.[0]) {
+        errors[field as keyof StartSmartProfileInput] = messages[0];
+      }
+
+      return errors;
+    },
+    {} as StartSmartFieldErrors,
+  );
+}
+
 export function StartSmartShell() {
   const templates = useMemo(() => listStartSmartTemplateCards(), []);
   const [selectedTemplateId, setSelectedTemplateId] =
@@ -60,11 +84,14 @@ export function StartSmartShell() {
   const [result, setResult] = useState<BlueprintResponse | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<StartSmartFieldErrors>({});
 
   function handleTemplateSelect(templateId: StartSmartTemplateId) {
     setSelectedTemplateId(templateId);
     setValues(mergeTemplateIntoProfile(templateId));
     setResult(null);
+    setFieldErrors({});
+    setErrorMessage(null);
     setStep("region");
   }
 
@@ -76,12 +103,34 @@ export function StartSmartShell() {
       ...current,
       [field]: value,
     }));
+
+    setFieldErrors((current) => {
+      if (!current[field]) {
+        return current;
+      }
+
+      const nextErrors = { ...current };
+      delete nextErrors[field];
+      return nextErrors;
+    });
+
+    setErrorMessage(null);
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setIsSubmitting(true);
     setErrorMessage(null);
+
+    const validationErrors = validateProfile(values);
+
+    if (Object.keys(validationErrors).length > 0) {
+      setFieldErrors(validationErrors);
+      setErrorMessage("Fix the highlighted fields to continue.");
+      return;
+    }
+
+    setFieldErrors({});
+    setIsSubmitting(true);
 
     try {
       const response = await fetch("/api/v1/start-smart/blueprint", {
@@ -157,28 +206,34 @@ export function StartSmartShell() {
           </div>
         </div>
 
-        <form className="mt-8 grid gap-6" onSubmit={handleSubmit}>
-          <ProfileForm values={values} onChange={handleFieldChange} />
+        <form className="mt-8 grid gap-6" noValidate onSubmit={handleSubmit}>
+          <ProfileForm
+            values={values}
+            onChange={handleFieldChange}
+            errors={fieldErrors}
+          />
 
           <div className="flex flex-wrap items-center gap-4">
             <button
               type="button"
               onClick={() => setStep(nextWizardStep(step))}
-              className="rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-emerald-50 transition hover:bg-white/10"
+              className="rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-emerald-50 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
             >
               Advance step
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="rounded-full bg-emerald-400 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-70"
+              className="rounded-full bg-emerald-400 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {isSubmitting ? "Building..." : "Build my survival blueprint"}
             </button>
           </div>
 
           {errorMessage ? (
-            <p className="text-sm text-rose-200">{errorMessage}</p>
+            <p aria-live="assertive" className="text-sm text-rose-200" role="alert">
+              {errorMessage}
+            </p>
           ) : null}
 
           {result ? (
@@ -187,11 +242,11 @@ export function StartSmartShell() {
               assumptions={
                 result.regional.housing
                   ? [
-                      {
-                        label: "Housing",
-                        confidence: result.regional.housing.confidence,
-                      },
-                    ]
+                    {
+                      label: "Housing",
+                      confidence: result.regional.housing.confidence,
+                    },
+                  ]
                   : []
               }
             />

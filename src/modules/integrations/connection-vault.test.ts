@@ -30,4 +30,21 @@ describe("connection vault", () => {
     expect(revoked.revokedAt).toBeInstanceOf(Date);
     expect(revoked.encryptedSecret).toBe("sealed-value");
   });
+
+  it("uses a random IV so the same secret encrypts differently while keeping a stable fingerprint", () => {
+    const first = createConnectionVaultEntry({
+      provider: "claude",
+      secret: "sk_test_super_secret_value",
+      encryptionKey: "budgetbitch-provider-secret-key-32",
+    });
+
+    const second = createConnectionVaultEntry({
+      provider: "claude",
+      secret: "sk_test_super_secret_value",
+      encryptionKey: "budgetbitch-provider-secret-key-32",
+    });
+
+    expect(first.encryptedSecret).not.toBe(second.encryptedSecret);
+    expect(first.secretFingerprint).toBe(second.secretFingerprint);
+  });
 });

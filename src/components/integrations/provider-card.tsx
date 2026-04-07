@@ -1,4 +1,5 @@
 import type { ProviderDefinition } from "@/modules/integrations/provider-types";
+import Link from "next/link";
 import { PrivacyBadge } from "./privacy-badge";
 
 type ProviderCardProps = {
@@ -13,7 +14,7 @@ export function ProviderCard({ provider }: ProviderCardProps) {
                     <p className="text-xs uppercase tracking-[0.25em] text-yellow-200">
                         {provider.category.replaceAll("_", " ")}
                     </p>
-                    <h2 className="mt-2 text-2xl font-semibold text-white">{provider.label}</h2>
+                    <h3 className="mt-2 text-2xl font-semibold text-white">{provider.label}</h3>
                 </div>
                 <span className="text-sm text-emerald-50/80">Risk: {provider.riskLevel}</span>
             </div>
@@ -29,12 +30,12 @@ export function ProviderCard({ provider }: ProviderCardProps) {
 
             <div className="mt-6 flex flex-wrap gap-3 text-sm">
                 {provider.setupPath ? (
-                    <a
+                    <Link
                         className="rounded-full border border-emerald-200/20 px-4 py-2 text-emerald-50 transition hover:bg-white/10"
                         href={provider.setupPath}
                     >
                         Open setup wizard
-                    </a>
+                    </Link>
                 ) : (
                     <a
                         className="rounded-full border border-emerald-200/20 px-4 py-2 text-emerald-50 transition hover:bg-white/10"

@@ -19,4 +19,10 @@ describe("providerRegistry", () => {
     expect(providerRegistry.ramp.label).toBe("Ramp");
     expect(providerRegistry.gusto.label).toBe("Gusto");
   });
+
+  it("openclaw has a dedicated setup path and quickbooks is registered under tax", () => {
+    expect(providerRegistry.openclaw.setupPath).toBe("/settings/integrations/openclaw");
+    expect(providerRegistry.quickbooks.label).toBe("QuickBooks");
+    expect(providerRegistry.quickbooks.category).toBe("tax");
+  });
 });

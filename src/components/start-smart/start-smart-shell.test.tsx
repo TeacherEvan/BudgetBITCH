@@ -44,4 +44,31 @@ describe("StartSmartShell", () => {
     expect(await screen.findByText("Build starter emergency buffer")).toBeInTheDocument();
     expect(screen.getByText("openai")).toBeInTheDocument();
   });
+
+  it("shows field-level validation and blocks submit when regional codes are invalid", () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<StartSmartShell />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /build my survival blueprint/i }),
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Fix the highlighted fields to continue.",
+    );
+    expect(
+      screen.getByText("Enter a valid 2-letter country code."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Enter a valid 2- or 3-letter state or region code."),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/country/i)).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText(/state or region/i)).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });

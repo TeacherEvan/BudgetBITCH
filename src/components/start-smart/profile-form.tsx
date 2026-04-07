@@ -1,45 +1,113 @@
 import type { StartSmartProfileInput } from "@/modules/start-smart/profile-schema";
 
+type ProfileFieldErrors = Partial<Record<keyof StartSmartProfileInput, string>>;
+
 type ProfileFormProps = {
   values: StartSmartProfileInput;
   onChange: <K extends keyof StartSmartProfileInput>(
     field: K,
     value: StartSmartProfileInput[K],
   ) => void;
+  errors?: ProfileFieldErrors;
 };
 
-export function ProfileForm({ values, onChange }: ProfileFormProps) {
+const sharedFieldClassName =
+  "rounded-2xl border px-4 py-3 text-white outline-none transition placeholder:text-white/35 focus-visible:border-yellow-300 focus-visible:ring-2 focus-visible:ring-yellow-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950";
+
+function buildFieldClassName(hasError: boolean, surfaceClassName: string) {
+  return `${sharedFieldClassName} ${surfaceClassName} ${hasError
+      ? "border-rose-300/80 ring-1 ring-rose-300/40"
+      : "border-white/10"
+    }`;
+}
+
+function getDescribedByIds(field: keyof StartSmartProfileInput, hasError: boolean) {
+  const ids = [`${field}-hint`];
+
+  if (hasError) {
+    ids.push(`${field}-error`);
+  }
+
+  return ids.join(" ");
+}
+
+export function ProfileForm({ values, onChange, errors = {} }: ProfileFormProps) {
   return (
-    <section className="rounded-[32px] border border-white/10 bg-black/20 p-6 backdrop-blur">
+    <section className="rounded-4xl border border-white/10 bg-black/20 p-6 backdrop-blur">
+      <p className="mb-5 text-sm text-emerald-50/80">
+        Fields marked <span aria-hidden="true">*</span> are required. Use your 2-letter
+        country code and 2- to 3-letter state or region code so regional assumptions stay
+        accurate.
+      </p>
+
       <div className="grid gap-5 md:grid-cols-2">
         <label className="grid gap-2 text-sm text-emerald-50/85">
-          Country
+          <span>
+            Country <span aria-hidden="true">*</span>
+          </span>
           <input
             aria-label="Country"
+            aria-describedby={getDescribedByIds("countryCode", Boolean(errors.countryCode))}
+            aria-invalid={Boolean(errors.countryCode)}
+            autoCapitalize="characters"
+            inputMode="text"
+            maxLength={2}
+            required
             value={values.countryCode}
-            onChange={(event) => onChange("countryCode", event.target.value.toUpperCase())}
-            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none ring-0 placeholder:text-white/35"
+            onChange={(event) =>
+              onChange("countryCode", event.target.value.toUpperCase().slice(0, 2))
+            }
+            className={buildFieldClassName(Boolean(errors.countryCode), "bg-white/5")}
             placeholder="US"
+            spellCheck={false}
           />
+          <span id="countryCode-hint" className="text-xs text-emerald-100/65">
+            Use a 2-letter country code like US.
+          </span>
+          {errors.countryCode ? (
+            <span id="countryCode-error" className="text-xs text-rose-200">
+              {errors.countryCode}
+            </span>
+          ) : null}
         </label>
 
         <label className="grid gap-2 text-sm text-emerald-50/85">
-          State
+          <span>
+            State or region <span aria-hidden="true">*</span>
+          </span>
           <input
-            aria-label="State"
+            aria-label="State or region"
+            aria-describedby={getDescribedByIds("stateCode", Boolean(errors.stateCode))}
+            aria-invalid={Boolean(errors.stateCode)}
+            autoCapitalize="characters"
+            inputMode="text"
+            maxLength={3}
+            required
             value={values.stateCode}
-            onChange={(event) => onChange("stateCode", event.target.value.toUpperCase())}
-            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none ring-0 placeholder:text-white/35"
+            onChange={(event) =>
+              onChange("stateCode", event.target.value.toUpperCase().slice(0, 3))
+            }
+            className={buildFieldClassName(Boolean(errors.stateCode), "bg-white/5")}
             placeholder="CA"
+            spellCheck={false}
           />
+          <span id="stateCode-hint" className="text-xs text-emerald-100/65">
+            Use a 2- or 3-letter state or region code like CA.
+          </span>
+          {errors.stateCode ? (
+            <span id="stateCode-error" className="text-xs text-rose-200">
+              {errors.stateCode}
+            </span>
+          ) : null}
         </label>
 
         <label className="grid gap-2 text-sm text-emerald-50/85">
           Housing
           <select
+            aria-invalid={Boolean(errors.housing)}
             value={values.housing}
             onChange={(event) => onChange("housing", event.target.value as StartSmartProfileInput["housing"])}
-            className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none"
+            className={buildFieldClassName(Boolean(errors.housing), "bg-slate-950")}
           >
             <option value="living_with_family">Living with family</option>
             <option value="renting">Renting</option>
@@ -52,6 +120,7 @@ export function ProfileForm({ values, onChange }: ProfileFormProps) {
         <label className="grid gap-2 text-sm text-emerald-50/85">
           Income pattern
           <select
+            aria-invalid={Boolean(errors.incomePattern)}
             value={values.incomePattern}
             onChange={(event) =>
               onChange(
@@ -59,7 +128,7 @@ export function ProfileForm({ values, onChange }: ProfileFormProps) {
                 event.target.value as StartSmartProfileInput["incomePattern"],
               )
             }
-            className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none"
+            className={buildFieldClassName(Boolean(errors.incomePattern), "bg-slate-950")}
           >
             <option value="steady">Steady</option>
             <option value="variable">Variable</option>
@@ -71,22 +140,24 @@ export function ProfileForm({ values, onChange }: ProfileFormProps) {
         <label className="grid gap-2 text-sm text-emerald-50/85">
           Dependents
           <input
+            aria-invalid={Boolean(errors.dependents)}
             type="number"
             min={0}
             value={values.dependents}
             onChange={(event) => onChange("dependents", Number(event.target.value))}
-            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none"
+            className={buildFieldClassName(Boolean(errors.dependents), "bg-white/5")}
           />
         </label>
 
         <label className="grid gap-2 text-sm text-emerald-50/85">
           Pets
           <input
+            aria-invalid={Boolean(errors.pets)}
             type="number"
             min={0}
             value={values.pets}
             onChange={(event) => onChange("pets", Number(event.target.value))}
-            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none"
+            className={buildFieldClassName(Boolean(errors.pets), "bg-white/5")}
           />
         </label>
       </div>
