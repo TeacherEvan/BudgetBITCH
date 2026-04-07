@@ -1,56 +1,93 @@
 import type { ProviderDefinition } from "@/modules/integrations/provider-types";
 import Link from "next/link";
+import { ArrowUpRight, KeyRound } from "lucide-react";
 import { PrivacyBadge } from "./privacy-badge";
 
 type ProviderCardProps = {
-    provider: ProviderDefinition;
+  provider: ProviderDefinition;
+};
+
+const categorySummary: Record<ProviderDefinition["category"], string> = {
+  ai: "Prompt-heavy tools and assistant access.",
+  banking: "Bank connections and verification rails.",
+  investing: "Portfolio, account, and brokerage access.",
+  payroll: "Income and worker operations.",
+  tax: "Tax filings, books, and accounting workflows.",
+  finance_ops: "Operational money tooling and expense controls.",
+};
+
+const riskStyles: Record<
+  ProviderDefinition["riskLevel"],
+  { label: string; className: string }
+> = {
+  low: {
+    label: "Low risk",
+    className: "border-emerald-300/30 bg-emerald-400/10 text-emerald-100",
+  },
+  medium: {
+    label: "Medium risk",
+    className: "border-yellow-300/30 bg-yellow-400/10 text-yellow-100",
+  },
+  high: {
+    label: "High risk",
+    className: "border-rose-300/30 bg-rose-400/10 text-rose-100",
+  },
 };
 
 export function ProviderCard({ provider }: ProviderCardProps) {
-    return (
-        <article className="rounded-4xl border border-white/10 bg-black/20 p-6 backdrop-blur">
-            <div className="flex items-center justify-between gap-4">
-                <div>
-                    <p className="text-xs uppercase tracking-[0.25em] text-yellow-200">
-                        {provider.category.replaceAll("_", " ")}
-                    </p>
-                    <h3 className="mt-2 text-2xl font-semibold text-white">{provider.label}</h3>
-                </div>
-                <span className="text-sm text-emerald-50/80">Risk: {provider.riskLevel}</span>
-            </div>
+  const riskStyle = riskStyles[provider.riskLevel];
 
-            <p className="mt-3 text-sm text-emerald-50/80">
-                Review the official links, privacy disclosure, and revoke controls before
-                connecting this provider.
-            </p>
+  return (
+    <article className="rounded-[24px] border border-white/10 bg-black/25 p-5 backdrop-blur">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-[0.25em] text-yellow-200">
+            {provider.category.replaceAll("_", " ")}
+          </p>
+          <h3 className="mt-2 text-xl font-semibold text-white">{provider.label}</h3>
+        </div>
+        <span
+          className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${riskStyle.className}`}
+        >
+          {riskStyle.label}
+        </span>
+      </div>
 
-            <div className="mt-4">
-                <PrivacyBadge />
-            </div>
+      <p className="mt-3 text-sm text-emerald-50/80">{categorySummary[provider.category]}</p>
 
-            <div className="mt-6 flex flex-wrap gap-3 text-sm">
-                {provider.setupPath ? (
-                    <Link
-                        className="rounded-full border border-emerald-200/20 px-4 py-2 text-emerald-50 transition hover:bg-white/10"
-                        href={provider.setupPath}
-                    >
-                        Open setup wizard
-                    </Link>
-                ) : (
-                    <a
-                        className="rounded-full border border-emerald-200/20 px-4 py-2 text-emerald-50 transition hover:bg-white/10"
-                        href={provider.officialDocsUrl}
-                    >
-                        Guidance only
-                    </a>
-                )}
-                <a
-                    className="rounded-full border border-white/10 px-4 py-2 text-white transition hover:bg-white/10"
-                    href={provider.officialLoginUrl}
-                >
-                    Official login
-                </a>
-            </div>
-        </article>
-    );
+      <div className="mt-4 flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.2em] text-emerald-100/80">
+        <PrivacyBadge />
+        <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1">
+          <KeyRound aria-hidden="true" className="h-3.5 w-3.5" />
+          {provider.setupPath ? "Setup wizard" : "Guidance only"}
+        </span>
+      </div>
+
+      <div className="mt-5 grid gap-2 text-sm sm:grid-cols-2">
+        {provider.setupPath ? (
+          <Link
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-emerald-200/20 px-4 py-2 text-emerald-50 transition hover:bg-white/10"
+            href={provider.setupPath}
+          >
+            Setup wizard
+            <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+          </Link>
+        ) : (
+          <a
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-emerald-200/20 px-4 py-2 text-emerald-50 transition hover:bg-white/10"
+            href={provider.officialDocsUrl}
+          >
+            Guidance only
+            <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+          </a>
+        )}
+        <a
+          className="inline-flex items-center justify-center rounded-full border border-white/10 px-4 py-2 text-white transition hover:bg-white/10"
+          href={provider.officialLoginUrl}
+        >
+          Official login
+        </a>
+      </div>
+    </article>
+  );
 }

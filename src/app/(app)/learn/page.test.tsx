@@ -2,42 +2,37 @@ import { render, screen } from "@testing-library/react";
 import LearnPage from "./page";
 
 describe("LearnPage", () => {
-  it("renders the Learn! hub headline and starter lesson cards", async () => {
+  it("renders the Learn! hub headline and quick story cues", async () => {
     const view = await LearnPage();
     render(view);
 
     expect(screen.getByText("Learn!")).toBeInTheDocument();
     expect(
-      screen.getByText("Absurd lessons. Real money moves."),
+      screen.getByText("Comic-strip lessons for the money move that matters next."),
     ).toBeInTheDocument();
-    expect(screen.getByText("Budgeting Basics")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Three fast scenes to anchor the idea" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText(/A raccoon CFO keeps approving snack subscriptions/i).length,
+    ).toBeGreaterThan(0);
   });
 
-  it("renders explainer copy plus primary and evergreen lesson sections", async () => {
+  it("renders compact lesson sections for blueprint picks and follow-ups", async () => {
     const view = await LearnPage();
     render(view);
 
-    expect(
-      screen.getByRole("heading", { name: "Why these lessons" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "These lessons are matched to your current blueprint priorities so the learning stays practical.",
-      ),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "Recommended for your blueprint" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "Keep learning" }),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Money Behavior")).toBeInTheDocument();
-    expect(screen.getByText("Inflation and Opportunity Cost")).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Review your essentials" }),
-    ).toHaveAttribute("href", "/learn/budgeting-basics");
-    expect(
-      screen.getByRole("link", { name: "Change one money trigger" }),
-    ).toHaveAttribute("href", "/learn/money-behavior");
+    expect(screen.getByRole("heading", { name: "Start here" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Next up" })).toBeInTheDocument();
+    expect(screen.getAllByText("Budgeting Basics").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Money Behavior").length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: /review your essentials/i })).toHaveAttribute(
+      "href",
+      "/learn/budgeting-basics",
+    );
+    expect(screen.getByRole("link", { name: /change one money trigger/i })).toHaveAttribute(
+      "href",
+      "/learn/money-behavior",
+    );
   });
 });

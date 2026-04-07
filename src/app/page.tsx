@@ -1,6 +1,16 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import type { LucideIcon } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  BriefcaseBusiness,
+  Compass,
+  LayoutDashboard,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import WelcomeScreen from "../../WelcomeWindow-startup/WelcomeScreen";
@@ -8,6 +18,98 @@ import WelcomeScreen from "../../WelcomeWindow-startup/WelcomeScreen";
 const WELCOME_DISMISSED_STORAGE_KEY = "budgetbitch:welcome-dismissed";
 
 type WelcomeDisplayState = "pending" | "show" | "hidden";
+
+type StoryPanel = {
+  title: string;
+  description: string;
+  icon: LucideIcon;
+};
+
+type RouteBucket = {
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  links: Array<{
+    href: string;
+    label: string;
+    hint: string;
+  }>;
+};
+
+const storyPanels: StoryPanel[] = [
+  {
+    title: "Plot the rescue",
+    description: "Build a seven-day money plan before the chaos gets theatrical.",
+    icon: Compass,
+  },
+  {
+    title: "Practice in loops",
+    description: "Learn in small bursts tied to the next decision on your board.",
+    icon: BookOpen,
+  },
+  {
+    title: "Open routes safely",
+    description: "Jobs and integrations stay inside privacy-first guardrails.",
+    icon: ShieldCheck,
+  },
+];
+
+const routeBuckets: RouteBucket[] = [
+  {
+    title: "Build lane",
+    description: "Get the plan on paper, then keep the control board close.",
+    icon: Sparkles,
+    links: [
+      {
+        href: "/start-smart",
+        label: "Start Smart",
+        hint: "Blueprint first",
+      },
+      {
+        href: "/dashboard",
+        label: "Open dashboard",
+        hint: "See the control board",
+      },
+    ],
+  },
+  {
+    title: "Momentum lane",
+    description: "Use lessons and job routes when the plan needs backup.",
+    icon: BriefcaseBusiness,
+    links: [
+      {
+        href: "/learn",
+        label: "Learn with context",
+        hint: "Short, timely lessons",
+      },
+      {
+        href: "/jobs",
+        label: "Explore jobs",
+        hint: "Income paths that fit the blueprint",
+      },
+    ],
+  },
+  {
+    title: "Guardrail lane",
+    description: "Connect outside systems only when the trust story is clear.",
+    icon: LayoutDashboard,
+    links: [
+      {
+        href: "/settings/integrations",
+        label: "Guard connection hub",
+        hint: "Review privacy and revoke paths",
+      },
+    ],
+  },
+];
+
+function IconBadge({ icon: Icon }: { icon: LucideIcon }) {
+  return (
+    <span className="bb-icon-badge" aria-hidden="true">
+      <Icon className="h-5 w-5" />
+    </span>
+  );
+}
 
 export default function Home() {
   const [welcomeState, setWelcomeState] = useState<WelcomeDisplayState>("pending");
@@ -65,18 +167,18 @@ export default function Home() {
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
             className="bb-page-shell"
           >
-            <section className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(19rem,0.9fr)]">
-              <article className="bb-panel bb-panel-strong p-8 md:p-10 lg:p-12">
+            <section className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(20rem,0.95fr)]">
+              <article className="bb-panel bb-panel-strong p-8 md:p-10 lg:p-11">
                 <p className="bb-kicker">BudgetBITCH</p>
-                <h1 className="mt-4 max-w-4xl text-5xl font-semibold md:text-6xl">
-                  Financial control with a little theatrical menace.
+                <h1 className="mt-4 max-w-3xl text-5xl font-semibold md:text-6xl">
+                  Plan first. Panic less.
                 </h1>
-                <p className="bb-copy mt-6 max-w-2xl text-lg">
-                  Build a cash-flow survival plan first, then branch into lessons, jobs,
-                  and guarded integrations without losing the thread of what matters now.
+                <p className="bb-copy mt-5 max-w-2xl text-base md:text-lg">
+                  Sketch the rescue route, learn the next move, and only open outside systems
+                  when the guardrails feel solid.
                 </p>
 
-                <div className="mt-8 flex flex-wrap gap-3">
+                <div className="mt-7 flex flex-wrap gap-3">
                   <Link href="/start-smart" className="bb-button-primary">
                     Build my blueprint
                   </Link>
@@ -88,58 +190,69 @@ export default function Home() {
                   </Link>
                 </div>
 
-                <div className="mt-10 grid gap-6 border-t border-white/10 pt-6 sm:grid-cols-3">
-                  <div className="bb-metric">
-                    <span className="bb-metric-value">Start Smart</span>
-                    <p className="mt-2 text-sm text-(--text-muted)">
-                      Region-aware guidance before you connect anything or chase busywork.
-                    </p>
-                  </div>
-                  <div className="bb-metric">
-                    <span className="bb-metric-value">Learn fast</span>
-                    <p className="mt-2 text-sm text-(--text-muted)">
-                      Lessons tied directly to your next move instead of generic advice soup.
-                    </p>
-                  </div>
-                  <div className="bb-metric">
-                    <span className="bb-metric-value">Guardrails</span>
-                    <p className="mt-2 text-sm text-(--text-muted)">
-                      Privacy-first connection flows and job routes that respect your reality.
-                    </p>
-                  </div>
+                <div
+                  className="mt-8 grid gap-4 md:grid-cols-3"
+                  aria-label="BudgetBITCH story panels"
+                >
+                  {storyPanels.map(({ title, description, icon }) => (
+                    <article key={title} className="bb-compact-card">
+                      <div className="flex items-start justify-between gap-3">
+                        <IconBadge icon={icon} />
+                        <Sparkles className="h-4 w-4 text-(--accent-strong)" aria-hidden="true" />
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-semibold">{title}</h2>
+                        <p className="bb-mini-copy mt-2">{description}</p>
+                      </div>
+                    </article>
+                  ))}
                 </div>
               </article>
 
-              <aside className="grid gap-4">
+              <aside className="grid gap-4 self-start">
                 <article className="bb-panel bb-panel-accent p-6">
-                  <p className="bb-kicker">Primary route</p>
-                  <h2 className="mt-3 text-3xl font-semibold">Start Smart</h2>
-                  <p className="mt-3 text-sm text-(--text-2)">
-                    Build a Money Survival Blueprint anchored in your location, risk, and
-                    the next seven days.
+                  <p className="bb-kicker">Entry board</p>
+                  <h2 className="mt-3 text-3xl font-semibold">Route lanes</h2>
+                  <p className="bb-mini-copy mt-3">
+                    Pick a bucket, skip the sprawl: one lane for planning, one for momentum, and
+                    one for guarded connections.
                   </p>
-                  <Link href="/start-smart" className="bb-button-primary mt-6">
-                    Start Smart
-                  </Link>
                 </article>
 
-                <article className="bb-panel bb-panel-muted p-6">
-                  <p className="bb-kicker">Then branch out</p>
-                  <div className="mt-4 grid gap-2">
-                    <Link href="/jobs" className="bb-link-card">
-                      <span className="font-semibold text-white">Jobs that fit the plan</span>
-                      <span className="text-sm text-(--text-muted)">
-                        Explore work paths designed to stabilize income and schedule pressure.
-                      </span>
-                    </Link>
-                    <Link href="/settings/integrations" className="bb-link-card">
-                      <span className="font-semibold text-white">Trusted connection hub</span>
-                      <span className="text-sm text-(--text-muted)">
-                        Review official links, revoke paths, and privacy notes before connecting.
-                      </span>
-                    </Link>
-                  </div>
-                </article>
+                <div className="grid gap-3" aria-label="Main route buckets">
+                  {routeBuckets.map(({ title, description, icon, links }) => {
+                    const bucketId = title.toLowerCase().replace(/\s+/g, "-");
+
+                    return (
+                      <section key={title} className="bb-cluster" aria-labelledby={bucketId}>
+                        <div className="flex items-start gap-3">
+                          <IconBadge icon={icon} />
+                          <div>
+                            <h3 id={bucketId} className="text-2xl font-semibold">
+                              {title}
+                            </h3>
+                            <p className="bb-mini-copy mt-1">{description}</p>
+                          </div>
+                        </div>
+
+                        <div className="bb-stack-list">
+                          {links.map(({ href, label, hint }) => (
+                            <Link key={href} href={href} className="bb-lane-link">
+                              <div>
+                                <span className="font-semibold text-white">{label}</span>
+                                <span className="bb-mini-copy mt-1 block">{hint}</span>
+                              </div>
+                              <ArrowRight
+                                className="h-4 w-4 shrink-0 text-(--accent-strong)"
+                                aria-hidden="true"
+                              />
+                            </Link>
+                          ))}
+                        </div>
+                      </section>
+                    );
+                  })}
+                </div>
               </aside>
             </section>
           </motion.main>

@@ -15,10 +15,9 @@ const sharedFieldClassName =
   "rounded-2xl border px-4 py-3 text-white outline-none transition placeholder:text-white/35 focus-visible:border-yellow-300 focus-visible:ring-2 focus-visible:ring-yellow-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950";
 
 function buildFieldClassName(hasError: boolean, surfaceClassName: string) {
-  return `${sharedFieldClassName} ${surfaceClassName} ${hasError
-      ? "border-rose-300/80 ring-1 ring-rose-300/40"
-      : "border-white/10"
-    }`;
+  return `${sharedFieldClassName} ${surfaceClassName} ${
+    hasError ? "border-rose-300/80 ring-1 ring-rose-300/40" : "border-white/10"
+  }`;
 }
 
 function getDescribedByIds(field: keyof StartSmartProfileInput, hasError: boolean) {
@@ -33,12 +32,17 @@ function getDescribedByIds(field: keyof StartSmartProfileInput, hasError: boolea
 
 export function ProfileForm({ values, onChange, errors = {} }: ProfileFormProps) {
   return (
-    <section className="rounded-4xl border border-white/10 bg-black/20 p-6 backdrop-blur">
-      <p className="mb-5 text-sm text-emerald-50/80">
-        Fields marked <span aria-hidden="true">*</span> are required. Use your 2-letter
-        country code and 2- to 3-letter state or region code so regional assumptions stay
-        accurate.
-      </p>
+    <section className="rounded-[28px] border border-white/10 bg-black/20 p-6 backdrop-blur">
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-sm uppercase tracking-[0.25em] text-yellow-200">Fast profile</p>
+          <h2 className="mt-2 text-2xl font-semibold text-white">Regional + household checks</h2>
+        </div>
+        <p className="max-w-2xl text-sm text-emerald-50/80">
+          Required fields stay starred. Use a 2-letter country code and 2- to 3-letter region code
+          so the local assumptions stay useful.
+        </p>
+      </div>
 
       <div className="grid gap-5 md:grid-cols-2">
         <label className="grid gap-2 text-sm text-emerald-50/85">
@@ -106,7 +110,9 @@ export function ProfileForm({ values, onChange, errors = {} }: ProfileFormProps)
           <select
             aria-invalid={Boolean(errors.housing)}
             value={values.housing}
-            onChange={(event) => onChange("housing", event.target.value as StartSmartProfileInput["housing"])}
+            onChange={(event) =>
+              onChange("housing", event.target.value as StartSmartProfileInput["housing"])
+            }
             className={buildFieldClassName(Boolean(errors.housing), "bg-slate-950")}
           >
             <option value="living_with_family">Living with family</option>

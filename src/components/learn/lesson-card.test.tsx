@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { LessonCard } from "./lesson-card";
 
 describe("LessonCard", () => {
-  it("renders summary and a launch link", () => {
+  it("renders compact scene cues, takeaways, and a launch link", () => {
     render(
       <LessonCard
         lesson={{
@@ -22,13 +22,15 @@ describe("LessonCard", () => {
               applyNow: "Fund essentials first.",
             },
           ],
-          takeaways: ["Give each dollar a job."],
+          takeaways: ["Give each dollar a job.", "Fund essentials first."],
           nextActionLabel: "Open lesson",
         }}
       />,
     );
 
     expect(screen.getByText("Budgeting Basics")).toBeInTheDocument();
+    expect(screen.getByText("A raccoon tries to expense a trampoline.")).toBeInTheDocument();
+    expect(screen.getByText("Give each dollar a job.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /open lesson/i })).toBeInTheDocument();
   });
 });

@@ -37,14 +37,14 @@ describe("Home", () => {
 
     expect(
       screen.queryByRole("heading", {
-        name: /financial control with a little theatrical menace/i,
+        name: /plan first\. panic less\./i,
       }),
     ).not.toBeInTheDocument();
 
     expect(await screen.findByRole("button", { name: /mock welcome gate/i })).toBeInTheDocument();
   });
 
-  it("shows the normalized landing shell for returning visitors", async () => {
+  it("shows compact route buckets for returning visitors", async () => {
     window.localStorage.setItem("budgetbitch:welcome-dismissed", "true");
 
     render(<Home />);
@@ -52,7 +52,7 @@ describe("Home", () => {
     await waitFor(() => {
       expect(
         screen.getByRole("heading", {
-          name: /financial control with a little theatrical menace/i,
+          name: /plan first\. panic less\./i,
         }),
       ).toBeInTheDocument();
     });
@@ -61,10 +61,21 @@ describe("Home", () => {
       "href",
       "/start-smart",
     );
-    expect(screen.getByRole("link", { name: /open dashboard/i })).toHaveAttribute(
+    expect(screen.getByRole("heading", { name: /route lanes/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /build lane/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /momentum lane/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /guardrail lane/i })).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: /open dashboard/i })).toHaveLength(2);
+    screen.getAllByRole("link", { name: /open dashboard/i }).forEach((link) => {
+      expect(link).toHaveAttribute("href", "/dashboard");
+    });
+    expect(screen.getByRole("link", { name: /explore jobs/i })).toHaveAttribute(
       "href",
-      "/dashboard",
+      "/jobs",
     );
-    expect(screen.getByText(/trusted connection hub/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /guard connection hub/i })).toHaveAttribute(
+      "href",
+      "/settings/integrations",
+    );
   });
 });
