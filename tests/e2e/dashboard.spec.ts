@@ -4,6 +4,6 @@ test("dashboard visual slice renders", async ({ page }) => {
   await page.goto("/dashboard");
 
   await expect(page.getByText("Treasure Map")).toBeVisible();
-  await expect(page.getByText("Luck Meter")).toBeVisible();
-  await expect(page.getByText("Bills Due Soon")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Luck Meter" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Bills Due Soon" })).toBeVisible();
 });
