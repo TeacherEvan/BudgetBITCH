@@ -4,30 +4,33 @@ import { describe, expect, it } from "vitest";
 import { ProviderCard } from "./provider-card";
 
 describe("ProviderCard", () => {
-  it("renders setup wizard entry points for providers with an internal flow", () => {
+  it("renders explicit setup and official action labels for internal flows", () => {
     render(<ProviderCard provider={providerRegistry.openai} />);
 
-    expect(screen.getByRole("heading", { level: 3, name: "OpenAI" })).toBeInTheDocument();
-    expect(screen.getByText("Prompt-heavy tools and assistant access.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /setup wizard/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Open setup wizard" })).toHaveAttribute(
       "href",
       "/settings/integrations/openai",
     );
-    expect(screen.getByRole("link", { name: "Official login" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Open official login" })).toHaveAttribute(
       "href",
       providerRegistry.openai.officialLoginUrl,
     );
+    expect(screen.getByRole("link", { name: "Open official docs" })).toHaveAttribute(
+      "href",
+      providerRegistry.openai.officialDocsUrl,
+    );
   });
 
-  it("renders guidance-only links for providers without an internal setup flow", () => {
+  it("renders explicit docs and login labels for guidance-only providers", () => {
     render(<ProviderCard provider={providerRegistry.plaid} />);
 
-    expect(screen.getByRole("heading", { level: 3, name: "Plaid" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /^setup wizard$/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /guidance only/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Open official docs" })).toHaveAttribute(
       "href",
       providerRegistry.plaid.officialDocsUrl,
     );
-    expect(screen.getByText("Medium risk")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open official login" })).toHaveAttribute(
+      "href",
+      providerRegistry.plaid.officialLoginUrl,
+    );
   });
 });

@@ -1,6 +1,14 @@
 import { ProviderCard } from "@/components/integrations/provider-card";
+import { buildProviderActionList } from "@/modules/integrations/integration-actions";
 import { providerRegistry } from "@/modules/integrations/provider-registry";
-import { Briefcase, Landmark, Receipt, Sparkles, Wallet, type LucideIcon } from "lucide-react";
+import {
+  Briefcase,
+  Landmark,
+  Receipt,
+  Sparkles,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
 
 type ProviderCategory = "ai" | "banking" | "investing" | "payroll" | "tax" | "finance_ops";
 
@@ -120,7 +128,11 @@ export default function IntegrationsPage() {
 
                 <div className="mt-5 grid gap-4 xl:grid-cols-3">
                   {providers.map((provider) => (
-                    <ProviderCard key={provider.id} provider={provider} />
+                    <ProviderCard
+                      key={provider.id}
+                      provider={provider}
+                      actions={buildProviderActionList(provider)}
+                    />
                   ))}
                 </div>
               </section>

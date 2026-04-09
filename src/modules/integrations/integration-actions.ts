@@ -48,3 +48,13 @@ export function buildProviderActionDeck(
     },
   };
 }
+
+export function buildProviderActionList(
+  provider: ProviderDefinition,
+): ProviderAction[] {
+  const deck = buildProviderActionDeck(provider);
+
+  return [deck.primary, deck.secondary, deck.tertiary].filter(
+    (action): action is ProviderAction => Boolean(action),
+  );
+}
