@@ -250,6 +250,8 @@ export default async function JobsPage() {
                           summary: job.summary,
                           workplace: job.workplace,
                           schedule: job.schedule,
+                          jobType: job.jobType,
+                          postingAgeDays: job.postingAgeDays,
                           fitSignals: job.fitSignals,
                         }}
                       />

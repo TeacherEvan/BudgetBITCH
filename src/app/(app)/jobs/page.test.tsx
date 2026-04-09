@@ -15,7 +15,7 @@ describe("JobsPage", () => {
     expect(screen.getByText("Remote Customer Support Specialist")).toBeInTheDocument();
   });
 
-  it("renders the compact filter summary and denser job details", async () => {
+  it("renders the compact filter summary and explicit job-card cues", async () => {
     const view = await JobsPage();
     render(view);
 
@@ -37,9 +37,14 @@ describe("JobsPage", () => {
 
     expect(remoteSupportCard).not.toBeNull();
     expect(within(remoteSupportCard as HTMLElement).getByText("daytime")).toBeInTheDocument();
+    expect(within(remoteSupportCard as HTMLElement).getByText("full time")).toBeInTheDocument();
+    expect(
+      within(remoteSupportCard as HTMLElement).getByText("Posted 4 days ago"),
+    ).toBeInTheDocument();
+    expect(within(remoteSupportCard as HTMLElement).getByText("Best for")).toBeInTheDocument();
     expect(
       within(remoteSupportCard as HTMLElement).getByRole("link", {
-        name: /open job/i,
+        name: /open job details/i,
       }),
     ).toHaveAttribute("href", "/jobs/remote-customer-support-specialist");
   });

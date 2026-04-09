@@ -11,10 +11,9 @@ test("user can open Jobs and review a blueprint-aware listing", async ({ page })
       name: "Quick job routes for real-life pressure.",
     }),
   ).toBeVisible();
-  await expect(
-    page.getByText("Remote Customer Support Specialist"),
-  ).toBeVisible();
-  await page.getByRole("link", { name: /open job/i }).first().click();
+  await expect(page.getByText("Remote Customer Support Specialist")).toBeVisible();
+  await expect(page.getByText("Posted 4 days ago")).toBeVisible();
+  await page.getByRole("link", { name: /open job details/i }).first().click();
 
   await expect(
     page.getByRole("heading", { name: "Remote Customer Support Specialist" }),
