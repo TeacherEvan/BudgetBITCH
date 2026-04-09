@@ -1,10 +1,13 @@
+import type { ProviderAction } from "@/modules/integrations/integration-actions";
+import { buildProviderActionList } from "@/modules/integrations/integration-actions";
 import type { ProviderDefinition } from "@/modules/integrations/provider-types";
-import Link from "next/link";
-import { ArrowUpRight, KeyRound } from "lucide-react";
+import { KeyRound } from "lucide-react";
 import { PrivacyBadge } from "./privacy-badge";
+import { ToolRail } from "./tool-rail";
 
 type ProviderCardProps = {
   provider: ProviderDefinition;
+  actions?: ProviderAction[];
 };
 
 const categorySummary: Record<ProviderDefinition["category"], string> = {
@@ -34,8 +37,9 @@ const riskStyles: Record<
   },
 };
 
-export function ProviderCard({ provider }: ProviderCardProps) {
+export function ProviderCard({ provider, actions }: ProviderCardProps) {
   const riskStyle = riskStyles[provider.riskLevel];
+  const actionList = actions ?? buildProviderActionList(provider);
 
   return (
     <article className="rounded-[24px] border border-white/10 bg-black/25 p-5 backdrop-blur">
@@ -63,30 +67,8 @@ export function ProviderCard({ provider }: ProviderCardProps) {
         </span>
       </div>
 
-      <div className="mt-5 grid gap-2 text-sm sm:grid-cols-2">
-        {provider.setupPath ? (
-          <Link
-            className="inline-flex items-center justify-center gap-2 rounded-full border border-emerald-200/20 px-4 py-2 text-emerald-50 transition hover:bg-white/10"
-            href={provider.setupPath}
-          >
-            Setup wizard
-            <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
-          </Link>
-        ) : (
-          <a
-            className="inline-flex items-center justify-center gap-2 rounded-full border border-emerald-200/20 px-4 py-2 text-emerald-50 transition hover:bg-white/10"
-            href={provider.officialDocsUrl}
-          >
-            Guidance only
-            <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
-          </a>
-        )}
-        <a
-          className="inline-flex items-center justify-center rounded-full border border-white/10 px-4 py-2 text-white transition hover:bg-white/10"
-          href={provider.officialLoginUrl}
-        >
-          Official login
-        </a>
+      <div className="mt-5">
+        <ToolRail title="Quick actions" titleAs="p" actions={actionList} />
       </div>
     </article>
   );

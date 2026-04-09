@@ -1,121 +1,101 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { auditEventCreate, integrationConnectionUpsert } = vi.hoisted(() => ({
-  integrationConnectionUpsert: vi.fn(),
-  auditEventCreate: vi.fn(),
+const authorizeIntegrationMutation = vi.hoisted(() => vi.fn());
+const revokeIntegration = vi.hoisted(() => vi.fn());
+const errorClasses = vi.hoisted(() => ({
+  IntegrationRouteGuardError: class IntegrationRouteGuardError extends Error {
+    constructor(
+      message: string,
+      public readonly status: number,
+    ) {
+      super(message);
+    }
+  },
+  IntegrationGatewayError: class IntegrationGatewayError extends Error {
+    constructor(
+      message: string,
+      public readonly status: number,
+    ) {
+      super(message);
+    }
+  },
 }));
 
-vi.mock("@/lib/prisma", () => ({
-  getPrismaClient: () => ({
-    integrationConnection: {
-      upsert: integrationConnectionUpsert,
-    },
-    auditEvent: {
-      create: auditEventCreate,
-    },
-  }),
+vi.mock("@/lib/auth/integration-route-guard", () => ({
+  authorizeIntegrationMutation,
+  IntegrationRouteGuardError: errorClasses.IntegrationRouteGuardError,
 }));
 
-import { POST } from "./route";
+vi.mock("@/modules/integrations/integration-gateway", () => ({
+  revokeIntegration,
+  IntegrationGatewayError: errorClasses.IntegrationGatewayError,
+}));
 
-describe("POST /api/v1/integrations/revoke", () => {
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
+import { POST as revokePOST } from "./route";
 
-  it("returns a revoked integration response with audit metadata", async () => {
-    integrationConnectionUpsert.mockResolvedValue(undefined);
-    auditEventCreate.mockResolvedValue(undefined);
+afterEach(() => {
+  vi.clearAllMocks();
+});
 
-    const request = new Request("http://localhost/api/v1/integrations/revoke", {
-      method: "POST",
-      body: JSON.stringify({
-        workspaceId: "ws_123",
-        actorUserId: "user_123",
-        connectionId: "conn_123",
-        provider: "copilot",
-        encryptedSecret: "sealed-value",
-        secretFingerprint: "abc123def456",
-      }),
-      headers: { "content-type": "application/json" },
+describe("revoke integration route", () => {
+  it("authorizes the workspace and revokes the stored provider connection", async () => {
+    authorizeIntegrationMutation.mockResolvedValue({
+      workspaceId: "workspace-1",
+      actorUserId: "profile-1",
     });
-
-    const response = await POST(request);
-    const json = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(json).toMatchObject({
-      connectionId: "conn_123",
-      provider: "copilot",
+    revokeIntegration.mockResolvedValue({
+      connectionId: "conn-db-1",
+      provider: "openai",
       secretFingerprint: "abc123def456",
       status: "revoked",
-      auditEvent: {
-        workspaceId: "ws_123",
-        actorUserId: "user_123",
-        action: "integration_revoked",
-        targetType: "integration_connection",
-        targetId: "conn_123",
-        metadataJson: {
-          provider: "copilot",
-          status: "revoked",
-        },
-      },
+      revokedAt: "2026-04-09T00:00:00.000Z",
+      auditEvent: { action: "integration_revoked" },
     });
-    expect(Date.parse(json.revokedAt)).not.toBeNaN();
-    expect(integrationConnectionUpsert).toHaveBeenCalledWith({
-      where: { id: "conn_123" },
-      update: {
-        workspaceId: "ws_123",
-        provider: "copilot",
-        displayName: "GitHub Copilot",
-        authType: "api_key",
-        encryptedSecret: "sealed-value",
-        secretFingerprint: "abc123def456",
-        status: "revoked",
-        revokedAt: expect.any(Date),
-      },
-      create: {
-        id: "conn_123",
-        workspaceId: "ws_123",
-        provider: "copilot",
-        displayName: "GitHub Copilot",
-        authType: "api_key",
-        encryptedSecret: "sealed-value",
-        secretFingerprint: "abc123def456",
-        status: "revoked",
-        revokedAt: expect.any(Date),
-      },
-    });
-    expect(auditEventCreate).toHaveBeenCalledWith({
-      data: {
-        workspaceId: "ws_123",
-        actorUserId: "user_123",
-        action: "integration_revoked",
-        targetType: "integration_connection",
-        targetId: "conn_123",
-        metadataJson: {
-          provider: "copilot",
-          status: "revoked",
-        },
-      },
+
+    const response = await revokePOST(
+      new Request("http://localhost/api/v1/integrations/revoke", {
+        method: "POST",
+        body: JSON.stringify({
+          workspaceId: "workspace-1",
+          provider: "openai",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(authorizeIntegrationMutation).toHaveBeenCalledWith("workspace-1");
+    expect(revokeIntegration).toHaveBeenCalledWith({
+      workspaceId: "workspace-1",
+      actorUserId: "profile-1",
+      provider: "openai",
     });
   });
 
-  it("rejects malformed revoke payloads", async () => {
-    const request = new Request("http://localhost/api/v1/integrations/revoke", {
-      method: "POST",
-      body: JSON.stringify({
-        workspaceId: "ws_123",
-        actorUserId: "user_123",
-        connectionId: "conn_123",
-        provider: "openai",
-        encryptedSecret: "sealed-value",
-      }),
-      headers: { "content-type": "application/json" },
+  it("returns gateway errors without leaking internal state", async () => {
+    authorizeIntegrationMutation.mockResolvedValue({
+      workspaceId: "workspace-1",
+      actorUserId: "profile-1",
     });
+    revokeIntegration.mockRejectedValue(
+      new errorClasses.IntegrationGatewayError(
+        "No integration connection exists for this workspace and provider.",
+        404,
+      ),
+    );
 
-    await expect(POST(request)).rejects.toThrow();
-    expect(integrationConnectionUpsert).not.toHaveBeenCalled();
-    expect(auditEventCreate).not.toHaveBeenCalled();
+    const response = await revokePOST(
+      new Request("http://localhost/api/v1/integrations/revoke", {
+        method: "POST",
+        body: JSON.stringify({
+          workspaceId: "workspace-1",
+          provider: "openai",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toEqual({
+      error: "No integration connection exists for this workspace and provider.",
+    });
   });
 });

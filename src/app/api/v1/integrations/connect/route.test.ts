@@ -1,187 +1,102 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { auditEventCreate, integrationConnectionUpsert } = vi.hoisted(() => ({
-  integrationConnectionUpsert: vi.fn(),
-  auditEventCreate: vi.fn(),
+const authorizeIntegrationMutation = vi.hoisted(() => vi.fn());
+const connectIntegration = vi.hoisted(() => vi.fn());
+const errorClasses = vi.hoisted(() => ({
+  IntegrationRouteGuardError: class IntegrationRouteGuardError extends Error {
+    constructor(
+      message: string,
+      public readonly status: number,
+    ) {
+      super(message);
+    }
+  },
+  IntegrationGatewayError: class IntegrationGatewayError extends Error {
+    constructor(
+      message: string,
+      public readonly status: number,
+    ) {
+      super(message);
+    }
+  },
 }));
 
-vi.mock("@/lib/prisma", () => ({
-  getPrismaClient: () => ({
-    integrationConnection: {
-      upsert: integrationConnectionUpsert,
-    },
-    auditEvent: {
-      create: auditEventCreate,
-    },
-  }),
+vi.mock("@/lib/auth/integration-route-guard", () => ({
+  authorizeIntegrationMutation,
+  IntegrationRouteGuardError: errorClasses.IntegrationRouteGuardError,
 }));
 
-import { POST } from "./route";
+vi.mock("@/modules/integrations/integration-gateway", () => ({
+  connectIntegration,
+  IntegrationGatewayError: errorClasses.IntegrationGatewayError,
+}));
 
-describe("POST /api/v1/integrations/connect", () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-    vi.clearAllMocks();
-  });
+import { POST as connectPOST } from "./route";
 
-  it("creates a connected integration response with a fingerprint and audit event", async () => {
-    vi.stubEnv(
-      "PROVIDER_SECRET_ENCRYPTION_KEY",
-      "budgetbitch-provider-secret-key-32",
-    );
-    integrationConnectionUpsert.mockResolvedValue(undefined);
-    auditEventCreate.mockResolvedValue(undefined);
+afterEach(() => {
+  delete process.env.PROVIDER_SECRET_ENCRYPTION_KEY;
+  vi.clearAllMocks();
+});
 
-    const request = new Request(
-      "http://localhost/api/v1/integrations/connect",
-      {
+describe("connect integration route", () => {
+  it("authorizes the workspace and delegates only trusted fields to the gateway", async () => {
+    process.env.PROVIDER_SECRET_ENCRYPTION_KEY = "budgetbitch-provider-secret-key-32";
+    authorizeIntegrationMutation.mockResolvedValue({
+      workspaceId: "workspace-1",
+      actorUserId: "profile-1",
+    });
+    connectIntegration.mockResolvedValue({
+      connectionId: "conn-db-1",
+      provider: "openai",
+      secretFingerprint: "abc123def456",
+      status: "connected",
+      auditEvent: { action: "integration_connected" },
+    });
+
+    const response = await connectPOST(
+      new Request("http://localhost/api/v1/integrations/connect", {
         method: "POST",
         body: JSON.stringify({
-          workspaceId: "ws_123",
-          actorUserId: "user_123",
-          connectionId: "conn_123",
+          workspaceId: "workspace-1",
           provider: "openai",
-          secret: "sk_live_super_secret_value",
+          secret: "sk_test_secret_value",
         }),
-        headers: { "content-type": "application/json" },
-      },
+      }),
     );
-
-    const response = await POST(request);
-    const json = await response.json();
 
     expect(response.status).toBe(200);
-    expect(json).toMatchObject({
-      connectionId: "conn_123",
-      provider: "openai",
-      status: "connected",
-      auditEvent: {
-        workspaceId: "ws_123",
-        actorUserId: "user_123",
-        action: "integration_connected",
-        targetType: "integration_connection",
-        targetId: "conn_123",
-        metadataJson: {
-          provider: "openai",
-          status: "connected",
-        },
-      },
-    });
-    expect(json.secretFingerprint).toMatch(/^[a-f0-9]{12}$/);
-    expect(integrationConnectionUpsert).toHaveBeenCalledWith({
-      where: { id: "conn_123" },
-      update: {
-        workspaceId: "ws_123",
+    expect(authorizeIntegrationMutation).toHaveBeenCalledWith("workspace-1");
+    expect(connectIntegration).toHaveBeenCalledWith(
+      {
+        workspaceId: "workspace-1",
+        actorUserId: "profile-1",
         provider: "openai",
-        displayName: "OpenAI",
-        authType: "api_key",
-        encryptedSecret: expect.any(String),
-        secretFingerprint: json.secretFingerprint,
-        status: "connected",
-        revokedAt: null,
+        secret: "sk_test_secret_value",
       },
-      create: {
-        id: "conn_123",
-        workspaceId: "ws_123",
-        provider: "openai",
-        displayName: "OpenAI",
-        authType: "api_key",
-        encryptedSecret: expect.any(String),
-        secretFingerprint: json.secretFingerprint,
-        status: "connected",
-      },
-    });
-    expect(auditEventCreate).toHaveBeenCalledWith({
-      data: {
-        workspaceId: "ws_123",
-        actorUserId: "user_123",
-        action: "integration_connected",
-        targetType: "integration_connection",
-        targetId: "conn_123",
-        metadataJson: {
+      { encryptionKey: "budgetbitch-provider-secret-key-32" },
+    );
+  });
+
+  it("returns the route-guard status for unauthenticated callers", async () => {
+    process.env.PROVIDER_SECRET_ENCRYPTION_KEY = "budgetbitch-provider-secret-key-32";
+    authorizeIntegrationMutation.mockRejectedValue(
+      new errorClasses.IntegrationRouteGuardError("Authentication is required.", 401),
+    );
+
+    const response = await connectPOST(
+      new Request("http://localhost/api/v1/integrations/connect", {
+        method: "POST",
+        body: JSON.stringify({
+          workspaceId: "workspace-1",
           provider: "openai",
-          status: "connected",
-        },
-      },
+          secret: "sk_test_secret_value",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({
+      error: "Authentication is required.",
     });
-  });
-
-  it("returns a server error when the encryption key is missing", async () => {
-    vi.stubEnv("PROVIDER_SECRET_ENCRYPTION_KEY", "");
-
-    const request = new Request(
-      "http://localhost/api/v1/integrations/connect",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          workspaceId: "ws_123",
-          actorUserId: "user_123",
-          connectionId: "conn_123",
-          provider: "claude",
-          secret: "sk_test_secret",
-        }),
-        headers: { "content-type": "application/json" },
-      },
-    );
-
-    const response = await POST(request);
-    const json = await response.json();
-
-    expect(response.status).toBe(500);
-    expect(json.error).toContain("PROVIDER_SECRET_ENCRYPTION_KEY");
-    expect(integrationConnectionUpsert).not.toHaveBeenCalled();
-    expect(auditEventCreate).not.toHaveBeenCalled();
-  });
-
-  it("rejects invalid providers at the schema boundary", async () => {
-    vi.stubEnv(
-      "PROVIDER_SECRET_ENCRYPTION_KEY",
-      "budgetbitch-provider-secret-key-32",
-    );
-
-    const request = new Request(
-      "http://localhost/api/v1/integrations/connect",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          workspaceId: "ws_123",
-          actorUserId: "user_123",
-          connectionId: "conn_123",
-          provider: "plaid",
-          secret: "sk_test_secret",
-        }),
-        headers: { "content-type": "application/json" },
-      },
-    );
-
-    await expect(POST(request)).rejects.toThrow();
-    expect(integrationConnectionUpsert).not.toHaveBeenCalled();
-    expect(auditEventCreate).not.toHaveBeenCalled();
-  });
-
-  it("rejects empty secrets at the schema boundary", async () => {
-    vi.stubEnv(
-      "PROVIDER_SECRET_ENCRYPTION_KEY",
-      "budgetbitch-provider-secret-key-32",
-    );
-
-    const request = new Request(
-      "http://localhost/api/v1/integrations/connect",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          workspaceId: "ws_123",
-          actorUserId: "user_123",
-          connectionId: "conn_123",
-          provider: "openai",
-          secret: "",
-        }),
-        headers: { "content-type": "application/json" },
-      },
-    );
-
-    await expect(POST(request)).rejects.toThrow();
-    expect(integrationConnectionUpsert).not.toHaveBeenCalled();
-    expect(auditEventCreate).not.toHaveBeenCalled();
   });
 });

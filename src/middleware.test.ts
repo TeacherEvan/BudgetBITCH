@@ -1,15 +1,18 @@
-import { NextResponse } from "next/server";
 import { describe, expect, it, vi } from "vitest";
+
+const middlewareHandler = vi.hoisted(() => vi.fn());
+const clerkMiddlewareMock = vi.hoisted(() => vi.fn(() => middlewareHandler));
+
+vi.mock("@clerk/nextjs/server", () => ({
+  clerkMiddleware: clerkMiddlewareMock,
+}));
+
 import middleware, { config } from "../middleware";
 
 describe("middleware", () => {
-  it("passes application requests through with NextResponse.next", () => {
-    const nextSpy = vi.spyOn(NextResponse, "next");
-
-    const response = middleware({} as never);
-
-    expect(nextSpy).toHaveBeenCalledTimes(1);
-    expect(response).toBe(nextSpy.mock.results[0]?.value);
+  it("wraps the app in Clerk middleware", () => {
+    expect(clerkMiddlewareMock).toHaveBeenCalledTimes(1);
+    expect(middleware).toBe(middlewareHandler);
   });
 
   it("keeps the matcher focused on app routes instead of static assets", () => {

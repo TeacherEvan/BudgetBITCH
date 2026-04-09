@@ -69,6 +69,7 @@ This index is a future-navigation cheat sheet for the active root application.
 | File                                                       | Purpose                           |
 | ---------------------------------------------------------- | --------------------------------- |
 | `src/components/integrations/provider-card.tsx`            | Hub card per provider             |
+| `src/components/integrations/tool-rail.tsx`                | Shared explicit action rail       |
 | `src/components/integrations/privacy-badge.tsx`            | Small privacy promise badge       |
 | `src/components/integrations/provider-wizard-shell.tsx`    | Shared wizard frame and back-link |
 | `src/components/integrations/official-link-list.tsx`       | Official login/docs links         |
@@ -80,6 +81,8 @@ This index is a future-navigation cheat sheet for the active root application.
 
 - `src/modules/integrations/provider-types.ts` — Shared provider type definitions + categories
 - `src/modules/integrations/provider-registry.ts` — Canonical provider metadata across AI and finance guidance providers
+- `src/modules/integrations/integration-actions.ts` — Shared explicit CTA deck builder for hub and wizard screens
+- `src/modules/integrations/integration-gateway.ts` — Thin server-side connect/revoke orchestration wrapper
 - `src/modules/integrations/wizard-machine.ts` — Simple wizard step state transitions
 - `src/modules/integrations/sign-webhook.ts` — HMAC-SHA256 signing helper
 - `src/modules/integrations/connection-vault.ts` — Secret sealing + revoke metadata helpers
@@ -112,6 +115,7 @@ Useful anchors:
 | `tests/e2e/integrations-openai.spec.ts`   | OpenAI wizard navigation               |
 | `tests/e2e/integrations-copilot.spec.ts`  | Copilot wizard navigation              |
 | `tests/e2e/integrations-openclaw.spec.ts` | OpenClaw wizard navigation             |
+| `tests/e2e/integrations-tool-rail.spec.ts` | Explicit tool rail labels on setup page|
 
 ## 6. Data + infrastructure files
 
