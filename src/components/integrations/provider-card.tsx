@@ -1,7 +1,5 @@
 import type { ProviderAction } from "@/modules/integrations/integration-actions";
-import {
-  buildProviderActionList,
-} from "@/modules/integrations/integration-actions";
+import { buildProviderActionList } from "@/modules/integrations/integration-actions";
 import type { ProviderDefinition } from "@/modules/integrations/provider-types";
 import { KeyRound } from "lucide-react";
 import { PrivacyBadge } from "./privacy-badge";
@@ -70,7 +68,7 @@ export function ProviderCard({ provider, actions }: ProviderCardProps) {
       </div>
 
       <div className="mt-5">
-        <ToolRail title="Quick actions" actions={actionList} />
+        <ToolRail title="Quick actions" titleAs="p" actions={actionList} />
       </div>
     </article>
   );

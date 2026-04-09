@@ -4,6 +4,7 @@ import type { ProviderAction } from "@/modules/integrations/integration-actions"
 type ToolRailProps = {
   title: string;
   actions: ProviderAction[];
+  titleAs?: "h2" | "h3" | "p";
 };
 
 const actionStyles: Record<ProviderAction["kind"], string> = {
@@ -33,10 +34,10 @@ function ActionLink({ action }: { action: ProviderAction }) {
   );
 }
 
-export function ToolRail({ title, actions }: ToolRailProps) {
+export function ToolRail({ title, actions, titleAs: Title = "h2" }: ToolRailProps) {
   return (
     <section className="rounded-[24px] border border-white/10 bg-white/5 p-5">
-      <h2 className="text-lg font-semibold text-white">{title}</h2>
+      <Title className="text-lg font-semibold text-white">{title}</Title>
       <div className="mt-4 flex flex-wrap gap-3">
         {actions.map((action) => (
           <ActionLink key={`${action.kind}-${action.label}-${action.href}`} action={action} />

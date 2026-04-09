@@ -1,5 +1,5 @@
 import { providerRegistry } from "@/modules/integrations/provider-registry";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ProviderCard } from "./provider-card";
 
@@ -32,5 +32,17 @@ describe("ProviderCard", () => {
       "href",
       providerRegistry.plaid.officialLoginUrl,
     );
+  });
+
+  it("keeps quick actions out of the card heading outline", () => {
+    render(<ProviderCard provider={providerRegistry.openai} />);
+
+    const card = screen.getByRole("heading", { level: 3, name: "OpenAI" }).closest("article");
+
+    expect(card).not.toBeNull();
+    expect(within(card as HTMLElement).getByText("Quick actions")).toBeInTheDocument();
+    expect(
+      within(card as HTMLElement).queryByRole("heading", { name: "Quick actions" }),
+    ).not.toBeInTheDocument();
   });
 });

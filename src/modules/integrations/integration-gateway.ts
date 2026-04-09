@@ -17,7 +17,6 @@ export type IntegrationGatewayEnv = {
 export type ConnectIntegrationInput = {
   workspaceId: string;
   actorUserId: string;
-  connectionId: string;
   provider: keyof typeof providerRegistry;
   secret: string;
 };
@@ -25,11 +24,44 @@ export type ConnectIntegrationInput = {
 export type RevokeIntegrationInput = {
   workspaceId: string;
   actorUserId: string;
-  connectionId: string;
   provider: keyof typeof providerRegistry;
-  encryptedSecret: string;
-  secretFingerprint: string;
 };
+
+export class IntegrationGatewayError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = "IntegrationGatewayError";
+  }
+}
+
+type IntegrationConnectionLookupClient = Pick<
+  ReturnType<typeof getPrismaClient>,
+  "integrationConnection"
+>;
+
+async function loadWorkspaceProviderConnection(
+  client: IntegrationConnectionLookupClient,
+  workspaceId: string,
+  provider: keyof typeof providerRegistry,
+) {
+  const connections = await client.integrationConnection.findMany({
+    where: { workspaceId, provider },
+    orderBy: { updatedAt: "desc" },
+    take: 2,
+  });
+
+  if (connections.length > 1) {
+    throw new IntegrationGatewayError(
+      "Multiple integration records exist for this workspace and provider.",
+      409,
+    );
+  }
+
+  return connections[0] ?? null;
+}
 
 export async function connectIntegration(
   input: ConnectIntegrationInput,
@@ -44,109 +76,132 @@ export async function connectIntegration(
     secret: input.secret,
     encryptionKey: env.encryptionKey,
   });
-  const auditEvent = buildIntegrationConnectedAuditEvent({
-    workspaceId: input.workspaceId,
-    actorUserId: input.actorUserId,
-    provider: input.provider,
-    targetId: input.connectionId,
-  });
   const prisma = getPrismaClient();
   const providerDefinition = providerRegistry[input.provider];
 
-  await prisma.integrationConnection.upsert({
-    where: { id: input.connectionId },
-    update: {
+  return prisma.$transaction(async (tx) => {
+    const existingConnection = await loadWorkspaceProviderConnection(
+      tx,
+      input.workspaceId,
+      input.provider,
+    );
+    const savedConnection = existingConnection
+      ? await tx.integrationConnection.update({
+          where: { id: existingConnection.id },
+          data: {
+            workspaceId: input.workspaceId,
+            provider: input.provider,
+            displayName: providerDefinition.label,
+            authType: "api_key",
+            encryptedSecret: vaultEntry.encryptedSecret,
+            secretFingerprint: vaultEntry.secretFingerprint,
+            status: vaultEntry.status,
+            revokedAt: null,
+          },
+        })
+      : await tx.integrationConnection.create({
+          data: {
+            workspaceId: input.workspaceId,
+            provider: input.provider,
+            displayName: providerDefinition.label,
+            authType: "api_key",
+            encryptedSecret: vaultEntry.encryptedSecret,
+            secretFingerprint: vaultEntry.secretFingerprint,
+            status: vaultEntry.status,
+          },
+        });
+
+    const auditEvent = buildIntegrationConnectedAuditEvent({
       workspaceId: input.workspaceId,
+      actorUserId: input.actorUserId,
       provider: input.provider,
-      displayName: providerDefinition.label,
-      authType: "api_key",
-      encryptedSecret: vaultEntry.encryptedSecret,
+      targetId: savedConnection.id,
+    });
+
+    await tx.auditEvent.create({
+      data: {
+        ...auditEvent,
+        metadataJson: auditEvent.metadataJson as Prisma.InputJsonValue,
+      },
+    });
+
+    return {
+      connectionId: savedConnection.id,
+      provider: input.provider,
       secretFingerprint: vaultEntry.secretFingerprint,
       status: vaultEntry.status,
-      revokedAt: null,
-    },
-    create: {
-      id: input.connectionId,
-      workspaceId: input.workspaceId,
-      provider: input.provider,
-      displayName: providerDefinition.label,
-      authType: "api_key",
-      encryptedSecret: vaultEntry.encryptedSecret,
-      secretFingerprint: vaultEntry.secretFingerprint,
-      status: vaultEntry.status,
-    },
+      auditEvent,
+    };
   });
-
-  await prisma.auditEvent.create({
-    data: {
-      ...auditEvent,
-      metadataJson: auditEvent.metadataJson as Prisma.InputJsonValue,
-    },
-  });
-
-  return {
-    connectionId: input.connectionId,
-    provider: input.provider,
-    secretFingerprint: vaultEntry.secretFingerprint,
-    status: vaultEntry.status,
-    auditEvent,
-  };
 }
 
 export async function revokeIntegration(input: RevokeIntegrationInput) {
-  const vaultEntry = revokeConnectionVaultEntry({
-    provider: input.provider,
-    encryptedSecret: input.encryptedSecret,
-    secretFingerprint: input.secretFingerprint,
-    status: "connected",
-  });
-  const auditEvent = buildIntegrationRevokedAuditEvent({
-    workspaceId: input.workspaceId,
-    actorUserId: input.actorUserId,
-    provider: input.provider,
-    targetId: input.connectionId,
-  });
   const prisma = getPrismaClient();
   const providerDefinition = providerRegistry[input.provider];
 
-  await prisma.integrationConnection.upsert({
-    where: { id: input.connectionId },
-    update: {
-      workspaceId: input.workspaceId,
+  return prisma.$transaction(async (tx) => {
+    const existingConnection = await loadWorkspaceProviderConnection(
+      tx,
+      input.workspaceId,
+      input.provider,
+    );
+
+    if (!existingConnection) {
+      throw new IntegrationGatewayError(
+        "No integration connection exists for this workspace and provider.",
+        404,
+      );
+    }
+
+    if (!existingConnection.encryptedSecret || !existingConnection.secretFingerprint) {
+      throw new IntegrationGatewayError(
+        "The stored integration secret is incomplete and cannot be revoked.",
+        409,
+      );
+    }
+
+    const vaultEntry = revokeConnectionVaultEntry({
       provider: input.provider,
-      displayName: providerDefinition.label,
-      authType: "api_key",
-      encryptedSecret: input.encryptedSecret,
+      encryptedSecret: existingConnection.encryptedSecret,
+      secretFingerprint: existingConnection.secretFingerprint,
+      status: existingConnection.status === "revoked" ? "revoked" : "connected",
+    });
+
+    const savedConnection = await tx.integrationConnection.update({
+      where: { id: existingConnection.id },
+      data: {
+        workspaceId: input.workspaceId,
+        provider: input.provider,
+        displayName: providerDefinition.label,
+        authType: "api_key",
+        encryptedSecret: existingConnection.encryptedSecret,
+        secretFingerprint: vaultEntry.secretFingerprint,
+        status: vaultEntry.status,
+        revokedAt: vaultEntry.revokedAt,
+      },
+    });
+
+    const auditEvent = buildIntegrationRevokedAuditEvent({
+      workspaceId: input.workspaceId,
+      actorUserId: input.actorUserId,
+      provider: input.provider,
+      targetId: savedConnection.id,
+    });
+
+    await tx.auditEvent.create({
+      data: {
+        ...auditEvent,
+        metadataJson: auditEvent.metadataJson as Prisma.InputJsonValue,
+      },
+    });
+
+    return {
+      connectionId: savedConnection.id,
+      provider: input.provider,
       secretFingerprint: vaultEntry.secretFingerprint,
       status: vaultEntry.status,
       revokedAt: vaultEntry.revokedAt,
-    },
-    create: {
-      id: input.connectionId,
-      workspaceId: input.workspaceId,
-      provider: input.provider,
-      displayName: providerDefinition.label,
-      authType: "api_key",
-      encryptedSecret: input.encryptedSecret,
-      secretFingerprint: vaultEntry.secretFingerprint,
-      status: vaultEntry.status,
-      revokedAt: vaultEntry.revokedAt,
-    },
+      auditEvent,
+    };
   });
-
-  await prisma.auditEvent.create({
-    data: {
-      ...auditEvent,
-      metadataJson: auditEvent.metadataJson as Prisma.InputJsonValue,
-    },
-  });
-
-  return {
-    connectionId: input.connectionId,
-    provider: input.provider,
-    secretFingerprint: vaultEntry.secretFingerprint,
-    status: vaultEntry.status,
-    revokedAt: vaultEntry.revokedAt,
-    auditEvent,
-  };
 }

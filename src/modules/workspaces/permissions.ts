@@ -4,6 +4,10 @@ export function canManageWorkspaceMembers(role: WorkspaceRole) {
   return role === "owner";
 }
 
+export function canManageIntegrations(role: WorkspaceRole) {
+  return role === "owner";
+}
+
 export function canViewAuditLog(role: WorkspaceRole) {
   return role === "owner" || role === "read_only";
 }
