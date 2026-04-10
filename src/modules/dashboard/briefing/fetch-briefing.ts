@@ -182,3 +182,24 @@ export async function loadDashboardBriefing(
 
   return snapshot;
 }
+
+export function createSeededDashboardBriefing(
+  now: Date = new Date(),
+): DashboardBriefingSnapshot {
+  return {
+    generatedAt: now.toISOString(),
+    sourceStatus: "fallback",
+    topics: dashboardBriefingSourceRegistry.map((topic) => ({
+      key: topic.key,
+      label: topic.label,
+      fields: topic.fields.map((field) => ({
+        id: field.id,
+        label: field.label,
+        summary: field.fallbackSummary,
+        sourceName: field.sourceName,
+        sourceUrl: field.sourceUrl,
+        isFallback: true,
+      })),
+    })),
+  };
+}
