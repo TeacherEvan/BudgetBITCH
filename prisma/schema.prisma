@@ -45,36 +45,150 @@ enum ConfidenceLabel {
   user_entered
 }
 
+enum DailyCheckInStatus {
+  completed
+  skipped
+}
+
+enum DailyCheckInAlertStatus {
+  open
+  resolved
+  dismissed
+}
+
+enum DailyCheckInAlertSeverity {
+  info
+  warning
+  critical
+}
+
+enum ProjectionTopic {
+  daily_check_in
+  daily_check_in_alert
+}
+
+enum ProjectionOutboxStatus {
+  pending
+  processing
+  failed
+  succeeded
+}
+
 model UserProfile {
-  id          String            @id @default(cuid())
-  clerkUserId String            @unique
-  email       String            @unique
-  displayName String?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  memberships WorkspaceMember[]
-  auditEvents AuditEvent[]
+  id                   String                    @id @default(cuid())
+  clerkUserId          String                    @unique
+  email                String                    @unique
+  displayName          String?
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+  memberships          WorkspaceMember[]
+  auditEvents          AuditEvent[]
+  dailyCheckIns        DailyCheckIn[]
+  workspacePreferences WorkspaceUserPreference[]
 }
 
 model Workspace {
-  id            String                   @id @default(cuid())
-  name          String
-  type          WorkspaceType
-  createdAt     DateTime                 @default(now())
-  updatedAt     DateTime                 @updatedAt
-  members       WorkspaceMember[]
-  accounts      Account[]
-  categories    BudgetCategory[]
-  bills         Bill[]
-  reminderRules ReminderRule[]
-  notifications NotificationPreference[]
-  auditEvents   AuditEvent[]
-  apiTokens     ApiToken[]
-  integrations  IntegrationConnection[]
-  consents      ConsentReceipt[]
-  startSmartProfiles   StartSmartProfile[]
-  regionalSnapshots    RegionalSnapshot[]
-  moneyBlueprints      MoneyBlueprintSnapshot[]
+  id                 String                    @id @default(cuid())
+  name               String
+  type               WorkspaceType
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+  members            WorkspaceMember[]
+  accounts           Account[]
+  categories         BudgetCategory[]
+  bills              Bill[]
+  reminderRules      ReminderRule[]
+  notifications      NotificationPreference[]
+  auditEvents        AuditEvent[]
+  apiTokens          ApiToken[]
+  integrations       IntegrationConnection[]
+  consents           ConsentReceipt[]
+  checkIns           DailyCheckIn[]
+  checkInAlerts      DailyCheckInAlert[]
+  projectionOutbox   ProjectionOutbox[]
+  userPreferences    WorkspaceUserPreference[]
+  startSmartProfiles StartSmartProfile[]
+  regionalSnapshots  RegionalSnapshot[]
+  moneyBlueprints    MoneyBlueprintSnapshot[]
+}
+
+model DailyCheckIn {
+  id          String             @id @default(cuid())
+  workspaceId String
+  actorUserId String?
+  checkInDate DateTime           @db.Date
+  status      DailyCheckInStatus @default(completed)
+  checkInJson Json
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  workspace Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  actor     UserProfile?        @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  alerts    DailyCheckInAlert[]
+
+  @@unique([workspaceId, checkInDate])
+  @@index([actorUserId, checkInDate])
+}
+
+model DailyCheckInAlert {
+  id           String                    @id @default(cuid())
+  workspaceId  String
+  checkInId    String
+  status       DailyCheckInAlertStatus   @default(open)
+  severity     DailyCheckInAlertSeverity @default(info)
+  code         String
+  title        String
+  message      String
+  metadataJson Json?
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+  resolvedAt   DateTime?
+
+  workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  checkIn   DailyCheckIn @relation(fields: [checkInId], references: [id], onDelete: Cascade)
+
+  @@unique([checkInId, code])
+  @@index([checkInId, status])
+  @@index([workspaceId, status, severity])
+}
+
+model ProjectionOutbox {
+  id            String                 @id @default(cuid())
+  workspaceId   String
+  topic         ProjectionTopic
+  sourceId      String
+  dedupeKey     String                 @unique
+  payloadJson   Json
+  status        ProjectionOutboxStatus @default(pending)
+  attemptCount  Int                    @default(0)
+  availableAt   DateTime               @default(now())
+  lastAttemptAt DateTime?
+  processedAt   DateTime?
+  lastError     String?
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([status, availableAt])
+  @@index([workspaceId, status, availableAt])
+  @@index([topic, sourceId])
+}
+
+model WorkspaceUserPreference {
+  id           String    @id @default(cuid())
+  workspaceId  String
+  userId       String
+  isDefault    Boolean   @default(false)
+  lastOpenedAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId, isDefault, lastOpenedAt])
 }
 
 model StartSmartProfile {

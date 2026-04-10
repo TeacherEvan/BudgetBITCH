@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Fraunces, Inter } from "next/font/google";
+import { AppProviders } from "@/components/providers/app-providers";
 import "./globals.css";
 
 const bodyFont = Inter({
@@ -25,8 +26,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${bodyFont.variable} ${displayFont.variable}`}>
-      <body className="antialiased">{children}</body>
+    <html
+      lang="en"
+      className={`${bodyFont.variable} ${displayFont.variable}`}
+      suppressHydrationWarning
+    >
+      <body className="antialiased">
+        <AppProviders>{children}</AppProviders>
+      </body>
     </html>
   );
 }

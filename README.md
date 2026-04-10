@@ -1,6 +1,6 @@
 # BudgetBITCH
 
-BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.js App Router, Prisma, Clerk, Inngest, Resend, and Playwright.
+BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.js App Router, Prisma, Neon, Convex, Clerk, Inngest, Resend, Vercel, and Playwright.
 
 ## Navigation docs
 
@@ -28,11 +28,13 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 - React 19
 - TypeScript
 - Prisma 7
-- PostgreSQL
+- Neon Postgres
+- Convex
 - Clerk
 - Inngest
 - Resend
 - Sentry
+- Vercel
 - Vitest
 - Playwright
 
@@ -55,8 +57,11 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 3. Set `PROVIDER_SECRET_ENCRYPTION_KEY` to a long random server-side secret before using integration connect/revoke routes.
 4. When using Neon, set `DATABASE_URL` to the pooled connection string from the Neon **Connect** dialog and `DIRECT_URL` to the direct connection string.
 5. If you plan to run `prisma migrate dev`, optionally set `SHADOW_DATABASE_URL` to a dedicated direct-connection shadow database.
-6. Generate the Prisma client with `npm run db:generate`.
-7. Start development with `npm run dev`.
+6. Create or link a Convex deployment, then set `CONVEX_DEPLOYMENT`, `NEXT_PUBLIC_CONVEX_URL`, `CLERK_JWT_ISSUER_DOMAIN`, and `CONVEX_SYNC_SECRET`.
+7. Set `CRON_SECRET` in Vercel so the scheduled replay route can authenticate Vercel Cron requests.
+8. Mirror the same Neon, Clerk, and Convex environment variables in Vercel before shipping preview or production deployments.
+9. Generate the Prisma client with `npm run db:generate`.
+10. Start development with `npm run dev`.
 
 ## Verification
 
@@ -85,6 +90,16 @@ For Neon + Prisma 7 in this repo:
 If you have a real PostgreSQL instance available, run:
 
 - `npm run db:migrate -- --name init_core_schema`
+
+## Neon + Convex runtime split
+
+- Neon is the canonical store for durable financial and workspace records.
+- Convex holds derived live state for daily check-ins, alert inbox rows, and workspace activity.
+- `POST /api/v1/check-ins` writes the durable check-in first, then queues a `ProjectionOutbox` job.
+- `/api/internal/projections/check-ins/replay` replays queued jobs into Convex using `CONVEX_SYNC_SECRET`.
+- Vercel Cron calls `/api/cron/projections/check-ins/replay` once per day by default using `CRON_SECRET`, which keeps the default `vercel.json` compatible with the lowest-cost Hobby plan.
+- If you need faster live projection on Vercel, raise the cron frequency on a Pro plan or point an external scheduler at the same route.
+- Replace any placeholder `CLERK_JWT_ISSUER_DOMAIN` value with your real Clerk issuer before relying on Convex auth in local or Vercel environments.
 
 ## Environment variables
 

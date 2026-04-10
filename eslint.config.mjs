@@ -15,6 +15,7 @@ const eslintConfig = [
       "test-results/**",
       "next-env.d.ts",
       "budgetbitch/convex/_generated/**",
+      "convex/_generated/**",
       "node_modules/**",
     ],
   },

@@ -1,6 +1,10 @@
 import { auth } from "@clerk/nextjs/server";
 import { getPrismaClient } from "@/lib/prisma";
 import { canManageIntegrations } from "@/modules/workspaces/permissions";
+import {
+  clerkConfigurationErrorMessage,
+  isClerkConfigured,
+} from "./clerk-config";
 
 export class IntegrationRouteGuardError extends Error {
   constructor(
@@ -20,6 +24,10 @@ export type AuthorizedIntegrationActor = {
 export async function authorizeIntegrationMutation(
   workspaceId: string,
 ): Promise<AuthorizedIntegrationActor> {
+  if (!isClerkConfigured()) {
+    throw new IntegrationRouteGuardError(clerkConfigurationErrorMessage, 503);
+  }
+
   const { userId } = await auth();
 
   if (!userId) {
