@@ -1,17 +1,15 @@
 import { expect, test } from "@playwright/test";
 
-test("dashboard visual slice renders", async ({ page }) => {
-  await page.goto("/dashboard");
+test("dashboard billboard fits in one window and shows the live surfaces", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 980 });
+  await page.goto("/dashboard?workspaceId=workspace-2");
 
-  await expect(
-    page.getByRole("heading", { name: "Workspace dashboard for Household budget" }),
-  ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Submit today's check-in" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Switch workspace" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Watch the pressure points" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Open the next route with context" })).toBeVisible();
-  await expect(
-    page.getByText("Showing sample workspace context until live memberships are available."),
-  ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Submit today's check-in" })).toBeDisabled();
+  await expect(page.getByRole("heading", { name: /interactive billboard/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /local area/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /popular budgeting tools/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /live briefing/i })).toBeVisible();
+  await expect(page.getByRole("link", { name: /open setup wizard/i })).toBeVisible();
+
+  const bodyOverflows = await page.evaluate(() => document.body.scrollHeight > window.innerHeight);
+  expect(bodyOverflows).toBe(false);
 });

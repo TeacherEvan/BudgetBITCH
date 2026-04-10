@@ -13,11 +13,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import WelcomeScreen from "../../WelcomeWindow-startup/WelcomeScreen";
+import LaunchWizard, { LAUNCH_PROFILE_STORAGE_KEY, type LaunchWizardProfile } from "@/components/launch/launch-wizard";
 
-const WELCOME_DISMISSED_STORAGE_KEY = "budgetbitch:welcome-dismissed";
-
-type WelcomeDisplayState = "pending" | "show" | "hidden";
+type HomeDisplayState = "loading" | "wizard" | "landing";
 
 type StoryPanel = {
   title: string;
@@ -111,55 +109,51 @@ function IconBadge({ icon: Icon }: { icon: LucideIcon }) {
   );
 }
 
+function hasCompletedLaunchProfile(value: string | null) {
+  if (!value) {
+    return false;
+  }
+
+  try {
+    const parsed = JSON.parse(value) as Partial<LaunchWizardProfile>;
+    return parsed.completed === true;
+  } catch {
+    return false;
+  }
+}
+
 export default function Home() {
-  const [welcomeState, setWelcomeState] = useState<WelcomeDisplayState>("pending");
+  const [homeState, setHomeState] = useState<HomeDisplayState>("loading");
 
   useEffect(() => {
-    const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
-    let nextWelcomeState: WelcomeDisplayState;
-
-    try {
-      const dismissedWelcome =
-        window.localStorage.getItem(WELCOME_DISMISSED_STORAGE_KEY) === "true";
-
-      nextWelcomeState = motionPreference.matches || dismissedWelcome ? "hidden" : "show";
-    } catch {
-      nextWelcomeState = motionPreference.matches ? "hidden" : "show";
-    }
-
     const frame = window.requestAnimationFrame(() => {
-      setWelcomeState(nextWelcomeState);
+      const savedProfile = window.localStorage.getItem(LAUNCH_PROFILE_STORAGE_KEY);
+      setHomeState(hasCompletedLaunchProfile(savedProfile) ? "landing" : "wizard");
     });
 
     return () => window.cancelAnimationFrame(frame);
   }, []);
 
-  function handleEnterWelcome() {
-    try {
-      window.localStorage.setItem(WELCOME_DISMISSED_STORAGE_KEY, "true");
-    } catch {
-      // Ignore storage access failures and continue into the app.
-    }
-
-    setWelcomeState("hidden");
+  function handleLaunchComplete() {
+    setHomeState("landing");
   }
 
   return (
     <>
       <AnimatePresence>
-        {welcomeState === "show" && (
+        {homeState === "wizard" && (
           <motion.div
-            key="welcome"
+            key="wizard"
             exit={{ opacity: 0, scale: 1.06 }}
             transition={{ duration: 0.65, ease: [0.4, 0, 0.2, 1] }}
           >
-            <WelcomeScreen onEnter={handleEnterWelcome} />
+            <LaunchWizard onComplete={handleLaunchComplete} />
           </motion.div>
         )}
       </AnimatePresence>
 
       <AnimatePresence>
-        {welcomeState === "hidden" && (
+        {homeState === "landing" && (
           <motion.main
             key="main"
             initial={{ opacity: 0, y: 20 }}

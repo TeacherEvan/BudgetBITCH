@@ -3,6 +3,11 @@ import type { Prisma } from "@prisma/client";
 import { isClerkConfigured } from "@/lib/auth/clerk-config";
 import { getPrismaClient } from "@/lib/prisma";
 import {
+  createSeededDashboardBriefing,
+  loadDashboardBriefing,
+} from "@/modules/dashboard/briefing/fetch-briefing";
+import type { DashboardBriefingSnapshot } from "@/modules/dashboard/briefing/types";
+import {
   resolveActiveWorkspace,
   type ActiveWorkspaceResolutionSource,
 } from "@/modules/workspaces/active-workspace";
@@ -22,6 +27,20 @@ export type DashboardCheckInAlert = {
   severity: "warning" | "critical";
 };
 
+export type DashboardLaunchProfile = {
+  city: string;
+  layoutPreset: string;
+  motionPreset: string;
+  themePreset: string;
+};
+
+export type DashboardLauncherTool = {
+  title: string;
+  href: string;
+  detail: string;
+  label: string;
+};
+
 export type DashboardDailyCheckInState = {
   status: "not_started" | "submitted";
   checkInDate: string;
@@ -36,8 +55,12 @@ export type DashboardDailyCheckInState = {
 
 export type DashboardPageData = {
   activeWorkspace: DashboardWorkspaceOption | null;
+  briefing: DashboardBriefingSnapshot;
   dailyCheckIn: DashboardDailyCheckInState;
   isDemo: boolean;
+  launcherTools: DashboardLauncherTool[];
+  launchProfile: DashboardLaunchProfile | null;
+  localAreaLabel: string;
   matchedRequestedWorkspace: boolean;
   requestedWorkspaceId: string | null;
   resolutionSource: ActiveWorkspaceResolutionSource;
@@ -141,6 +164,47 @@ function buildEmptyCheckIn(checkInDate: string): DashboardDailyCheckInState {
   };
 }
 
+
+function buildLauncherTools(): DashboardLauncherTool[] {
+  return [
+    {
+      title: "Open setup wizard",
+      href: "/start-smart",
+      detail: "Tune the window before anything else.",
+      label: "Wizard",
+    },
+    {
+      title: "Open Learn",
+      href: "/learn",
+      detail: "Short lessons when the board needs backup.",
+      label: "Learn",
+    },
+    {
+      title: "Open Jobs",
+      href: "/jobs",
+      detail: "Income options for the current lane.",
+      label: "Jobs",
+    },
+    {
+      title: "Open bills",
+      href: "/bills",
+      detail: "Track due dates and pressure points.",
+      label: "Bills",
+    },
+    {
+      title: "Open savings",
+      href: "/savings",
+      detail: "Grow buffers without adding clutter.",
+      label: "Savings",
+    },
+    {
+      title: "Open cashflow",
+      href: "/cashflow",
+      detail: "See the burn before it gets noisy.",
+      label: "Cashflow",
+    },
+  ];
+}
 function buildDemoData(requestedWorkspaceId?: string | null): DashboardPageData {
   const workspaces: DashboardWorkspaceOption[] = [
     {
@@ -165,11 +229,13 @@ function buildDemoData(requestedWorkspaceId?: string | null): DashboardPageData 
   ];
   const resolution = resolveActiveWorkspace(workspaces, requestedWorkspaceId);
   const today = getTodayIsoDate();
+  const briefing = createSeededDashboardBriefing(new Date(today + "T12:00:00.000Z"));
 
   return {
     activeWorkspace: resolution.activeWorkspace,
-      dailyCheckIn:
-        resolution.activeWorkspace?.workspaceId === "workspace-side-hustle"
+    briefing,
+    dailyCheckIn:
+      resolution.activeWorkspace?.workspaceId === "workspace-side-hustle"
         ? buildEmptyCheckIn(today)
         : {
             status: "submitted",
@@ -180,9 +246,17 @@ function buildDemoData(requestedWorkspaceId?: string | null): DashboardPageData 
             alerts: [],
             cashStatus: "positive",
             netCashflow: 312,
-            lastSubmittedAt: new Date(`${today}T09:00:00.000Z`).toISOString(),
+            lastSubmittedAt: new Date(today + "T09:00:00.000Z").toISOString(),
           },
     isDemo: true,
+    launcherTools: buildLauncherTools(),
+    launchProfile: {
+      city: "Dublin",
+      layoutPreset: "launcher_grid",
+      motionPreset: "cinematic",
+      themePreset: "midnight",
+    },
+    localAreaLabel: "Dublin",
     matchedRequestedWorkspace: resolution.matchedRequestedWorkspace,
     requestedWorkspaceId: resolution.requestedWorkspaceId,
     resolutionSource: resolution.resolutionSource,
@@ -190,6 +264,7 @@ function buildDemoData(requestedWorkspaceId?: string | null): DashboardPageData 
     workspaces,
   };
 }
+
 
 function buildLiveWorkspaceOptions(profile: {
   memberships: Array<{
@@ -276,12 +351,17 @@ export async function getDashboardPageData(
     const workspaces = buildLiveWorkspaceOptions(profile);
     const resolution = resolveActiveWorkspace(workspaces, requestedWorkspaceId);
     const today = getTodayIsoDate();
+    const briefing = await loadDashboardBriefing();
 
     if (!resolution.activeWorkspace) {
       return {
         activeWorkspace: null,
+        briefing,
         dailyCheckIn: buildEmptyCheckIn(today),
         isDemo: false,
+        launcherTools: buildLauncherTools(),
+        launchProfile: null,
+        localAreaLabel: "Local area",
         matchedRequestedWorkspace: resolution.matchedRequestedWorkspace,
         requestedWorkspaceId: resolution.requestedWorkspaceId,
         resolutionSource: resolution.resolutionSource,
@@ -305,10 +385,14 @@ export async function getDashboardPageData(
 
     return {
       activeWorkspace: resolution.activeWorkspace,
+      briefing,
       dailyCheckIn: todayCheckIn
         ? parseCheckInJson(todayCheckIn.checkInJson, todayCheckIn.updatedAt, today)
         : buildEmptyCheckIn(today),
       isDemo: false,
+      launcherTools: buildLauncherTools(),
+      launchProfile: null,
+      localAreaLabel: resolution.activeWorkspace.name,
       matchedRequestedWorkspace: resolution.matchedRequestedWorkspace,
       requestedWorkspaceId: resolution.requestedWorkspaceId,
       resolutionSource: resolution.resolutionSource,

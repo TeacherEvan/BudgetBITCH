@@ -14,7 +14,7 @@ describe("DashboardPage", () => {
     vi.clearAllMocks();
   });
 
-  it("renders the workspace-first dashboard layout with daily check-in and switcher cards", async () => {
+  it("renders the billboard shell with the broadcast bar, launcher grid, and live briefing rail", async () => {
     getDashboardPageData.mockResolvedValue({
       activeWorkspace: {
         id: "workspace-2",
@@ -50,6 +50,56 @@ describe("DashboardPage", () => {
           role: "owner",
         },
       ],
+      launchProfile: {
+        city: "Dublin",
+        layoutPreset: "launcher_grid",
+        motionPreset: "cinematic",
+        themePreset: "midnight",
+      },
+      localAreaLabel: "Dublin",
+      launcherTools: [
+        {
+          title: "Open setup wizard",
+          href: "/start-smart",
+          detail: "Tune the board before anything else.",
+          label: "Wizard",
+        },
+        {
+          title: "Open Learn",
+          href: "/learn",
+          detail: "Short lessons when the board needs backup.",
+          label: "Learn",
+        },
+        {
+          title: "Open Jobs",
+          href: "/jobs",
+          detail: "Income options for the current lane.",
+          label: "Jobs",
+        },
+        {
+          title: "Open bills",
+          href: "/bills",
+          detail: "Track due dates and pressure points.",
+          label: "Bills",
+        },
+        {
+          title: "Open savings",
+          href: "/savings",
+          detail: "Grow buffers without adding clutter.",
+          label: "Savings",
+        },
+        {
+          title: "Open cashflow",
+          href: "/cashflow",
+          detail: "See the burn before it gets noisy.",
+          label: "Cashflow",
+        },
+      ],
+      briefing: {
+        generatedAt: "2026-04-10T12:00:00.000Z",
+        sourceStatus: "live",
+        topics: [],
+      },
     });
 
     const view = await DashboardPage({
@@ -58,18 +108,18 @@ describe("DashboardPage", () => {
     render(view);
 
     expect(getDashboardPageData).toHaveBeenCalledWith("workspace-2");
-    expect(
-      screen.getByRole("heading", { name: /workspace dashboard for side hustle/i }),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/multi-workspace view is on\./i)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /submit today's check-in/i })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /switch workspace/i })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /watch the pressure points/i })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /open the next route with context/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /interactive billboard/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /local area/i })).toBeInTheDocument();
+    expect(screen.getByText(/dublin/i, { selector: "p.bb-mini-copy" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /popular budgeting tools/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /live briefing/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /open setup wizard/i })).toHaveAttribute(
       "href",
       "/start-smart",
     );
-    expect(screen.getByRole("link", { name: /open jobs/i })).toHaveAttribute("href", "/jobs");
+    expect(screen.getByRole("link", { name: /open cashflow/i })).toHaveAttribute(
+      "href",
+      "/cashflow",
+    );
   });
 });
