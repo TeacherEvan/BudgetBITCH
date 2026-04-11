@@ -7,7 +7,9 @@ import {
 } from "@/lib/auth/clerk-config";
 
 export default function middleware(request: NextRequest, event: NextFetchEvent) {
-  if (!isClerkConfigured()) {
+  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim();
+
+  if (!isClerkConfigured() || !publishableKey) {
     if (
       process.env.NEXT_PUBLIC_CLERK_IS_SATELLITE?.trim() === "true" &&
       !isClerkSatelliteConfigured()
@@ -20,7 +22,7 @@ export default function middleware(request: NextRequest, event: NextFetchEvent) 
     return NextResponse.next();
   }
 
-  return clerkMiddleware()(request, event);
+  return clerkMiddleware({ publishableKey })(request, event);
 }
 
 export const config = {

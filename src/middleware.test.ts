@@ -48,7 +48,9 @@ describe("middleware", () => {
     const event = { waitUntil: vi.fn() } as Parameters<typeof middleware>[1];
     const response = middleware(request as never, event);
 
-    expect(clerkMiddlewareMock).toHaveBeenCalledTimes(1);
+    expect(clerkMiddlewareMock).toHaveBeenCalledWith({
+      publishableKey: "pk_test_budgetbitch",
+    });
     expect(middlewareHandler).toHaveBeenCalledWith(request, event);
     expect(nextResponseNextMock).not.toHaveBeenCalled();
     expect(response).toBe("clerk-response");
