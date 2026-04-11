@@ -65,11 +65,12 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 4. When using Neon, set `DATABASE_URL` to the pooled connection string from the Neon **Connect** dialog and `DIRECT_URL` to the direct connection string.
 5. If you plan to run `prisma migrate dev`, optionally set `SHADOW_DATABASE_URL` to a dedicated direct-connection shadow database.
 6. Create or link a Convex deployment, then set `CONVEX_DEPLOYMENT`, `NEXT_PUBLIC_CONVEX_URL`, `CLERK_JWT_ISSUER_DOMAIN`, and `CONVEX_SYNC_SECRET`.
-7. Set `CRON_SECRET` in Vercel so the scheduled replay route can authenticate Vercel Cron requests.
-8. Mirror the same Neon, Clerk, and Convex environment variables in Vercel before shipping preview or production deployments.
-9. Generate the Prisma client with `npm run db:generate`.
-10. Before a real deploy, apply checked-in Prisma migrations with `npm run db:migrate:deploy`.
-11. Start development with `npm run dev`.
+7. If Clerk satellite mode is enabled, also set `NEXT_PUBLIC_CLERK_IS_SATELLITE` plus the matching `NEXT_PUBLIC_CLERK_DOMAIN` or `NEXT_PUBLIC_CLERK_PROXY_URL`, and the primary `NEXT_PUBLIC_CLERK_SIGN_IN_URL` / `NEXT_PUBLIC_CLERK_SIGN_UP_URL`.
+8. Set `CRON_SECRET` in Vercel so the scheduled replay route can authenticate Vercel Cron requests.
+9. Mirror the same Neon, Clerk, and Convex environment variables in Vercel before shipping preview or production deployments.
+10. Generate the Prisma client with `npm run db:generate`.
+11. Before a real deploy, apply checked-in Prisma migrations with `npm run db:migrate:deploy`.
+12. Start development with `npm run dev`.
 
 ## Verification
 

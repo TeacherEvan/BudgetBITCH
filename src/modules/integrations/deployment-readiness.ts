@@ -1,3 +1,8 @@
+import {
+  isClerkPublishableKeyConfigured,
+  isClerkSecretKeyConfigured,
+} from "@/lib/auth/clerk-config";
+
 export type DeploymentCapabilityStatus = "ready" | "needs_setup";
 
 export type DeploymentCapability = {
@@ -70,8 +75,20 @@ function hasTrimmedEnvValue(envName: string) {
   return Boolean(process.env[envName]?.trim());
 }
 
+function hasConfiguredEnvValue(envName: string) {
+  if (envName === "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY") {
+    return isClerkPublishableKeyConfigured();
+  }
+
+  if (envName === "CLERK_SECRET_KEY") {
+    return isClerkSecretKeyConfigured();
+  }
+
+  return hasTrimmedEnvValue(envName);
+}
+
 function buildCapability(definition: DeploymentCapabilityDefinition): DeploymentCapability {
-  const configuredEnvVars = definition.envVars.filter(hasTrimmedEnvValue);
+  const configuredEnvVars = definition.envVars.filter(hasConfiguredEnvValue);
   const missingEnvVars = definition.envVars.filter((envName) => !configuredEnvVars.includes(envName));
   const readyCount = configuredEnvVars.length;
 

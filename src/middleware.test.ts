@@ -40,9 +40,34 @@ describe("middleware", () => {
     expect(response).toBe("next-response");
   });
 
-  it("wraps requests in Clerk middleware when Clerk keys are configured", () => {
+  it("skips Clerk middleware when Clerk keys are malformed", () => {
     vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_budgetbitch");
     vi.stubEnv("CLERK_SECRET_KEY", "sk_test_budgetbitch");
+
+    const event = { waitUntil: vi.fn() } as Parameters<typeof middleware>[1];
+    const response = middleware(new Request("http://localhost/") as never, event);
+
+    expect(clerkMiddlewareMock).not.toHaveBeenCalled();
+    expect(nextResponseNextMock).toHaveBeenCalledTimes(1);
+    expect(response).toBe("next-response");
+  });
+
+  it("skips Clerk middleware when satellite mode is missing its domain or proxy", () => {
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_abcdefghijklmnopqrstuvwxyz012345");
+    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_abcdefghijklmnopqrstuvwxyz012345");
+    vi.stubEnv("NEXT_PUBLIC_CLERK_IS_SATELLITE", "true");
+
+    const event = { waitUntil: vi.fn() } as Parameters<typeof middleware>[1];
+    const response = middleware(new Request("http://localhost/") as never, event);
+
+    expect(clerkMiddlewareMock).not.toHaveBeenCalled();
+    expect(nextResponseNextMock).toHaveBeenCalledTimes(1);
+    expect(response).toBe("next-response");
+  });
+
+  it("wraps requests in Clerk middleware when Clerk keys are configured", () => {
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_abcdefghijklmnopqrstuvwxyz012345");
+    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_abcdefghijklmnopqrstuvwxyz012345");
 
     const request = new Request("http://localhost/");
     const event = { waitUntil: vi.fn() } as Parameters<typeof middleware>[1];

@@ -78,8 +78,8 @@ describe("IntegrationsPage", () => {
   });
 
   it("shows which capability rails are already configured for this deployment", () => {
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_budgetbitch");
-    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_budgetbitch");
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_abcdefghijklmnopqrstuvwxyz012345");
+    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_abcdefghijklmnopqrstuvwxyz012345");
     vi.stubEnv("DATABASE_URL", "postgresql://budgetbitch");
     vi.stubEnv("PROVIDER_SECRET_ENCRYPTION_KEY", "budgetbitch-provider-secret-key-32");
     vi.stubEnv("SENTRY_DSN", "https://budgetbitch@example.ingest.sentry.io/project");

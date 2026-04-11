@@ -38,8 +38,8 @@ describe("authorizeIntegrationMutation", () => {
   });
 
   it("rejects anonymous requests", async () => {
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_budgetbitch");
-    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_budgetbitch");
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_abcdefghijklmnopqrstuvwxyz012345");
+    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_abcdefghijklmnopqrstuvwxyz012345");
     authMock.mockResolvedValue({ userId: null });
 
     await expect(authorizeIntegrationMutation("workspace-1")).rejects.toMatchObject({
@@ -49,8 +49,8 @@ describe("authorizeIntegrationMutation", () => {
   });
 
   it("rejects users without a local profile", async () => {
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_budgetbitch");
-    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_budgetbitch");
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_abcdefghijklmnopqrstuvwxyz012345");
+    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_abcdefghijklmnopqrstuvwxyz012345");
     authMock.mockResolvedValue({ userId: "user_clerk_1" });
     prismaMock.userProfile.findUnique.mockResolvedValue(null);
 
@@ -61,8 +61,8 @@ describe("authorizeIntegrationMutation", () => {
   });
 
   it("rejects members who cannot manage integrations", async () => {
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_budgetbitch");
-    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_budgetbitch");
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_abcdefghijklmnopqrstuvwxyz012345");
+    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_abcdefghijklmnopqrstuvwxyz012345");
     authMock.mockResolvedValue({ userId: "user_clerk_1" });
     prismaMock.userProfile.findUnique.mockResolvedValue({ id: "profile-1" });
     prismaMock.workspaceMember.findUnique.mockResolvedValue({ role: "editor" });
@@ -74,8 +74,8 @@ describe("authorizeIntegrationMutation", () => {
   });
 
   it("returns the workspace actor for an owner", async () => {
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_budgetbitch");
-    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_budgetbitch");
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_abcdefghijklmnopqrstuvwxyz012345");
+    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_abcdefghijklmnopqrstuvwxyz012345");
     authMock.mockResolvedValue({ userId: "user_clerk_1" });
     prismaMock.userProfile.findUnique.mockResolvedValue({ id: "profile-1" });
     prismaMock.workspaceMember.findUnique.mockResolvedValue({ role: "owner" });

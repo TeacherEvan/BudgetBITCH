@@ -45,7 +45,7 @@ describe("LiveAlertFeed", () => {
 
   it("shows a projection-sync message when the viewer record is not ready", () => {
     vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "https://budgetbitch.convex.cloud");
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_budgetbitch");
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_abcdefghijklmnopqrstuvwxyz012345");
 
     useQueryMock.mockImplementation((query) => {
       if (query === viewerCurrentQuery) {
@@ -71,7 +71,7 @@ describe("LiveAlertFeed", () => {
 
   it("renders live alert rows when Convex returns data", () => {
     vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "https://budgetbitch.convex.cloud");
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_budgetbitch");
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_abcdefghijklmnopqrstuvwxyz012345");
 
     useQueryMock.mockImplementation((query) => {
       if (query === viewerCurrentQuery) {

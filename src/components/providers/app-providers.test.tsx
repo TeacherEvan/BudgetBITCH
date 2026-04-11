@@ -48,8 +48,37 @@ describe("AppProviders", () => {
     expect(screen.queryByTestId("convex-provider")).not.toBeInTheDocument();
   });
 
-  it("wraps children in Clerk only when Convex is not configured", () => {
+  it("renders children without providers when Clerk keys are malformed", () => {
     vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_budgetbitch");
+
+    render(
+      <AppProviders>
+        <main>BudgetBITCH</main>
+      </AppProviders>,
+    );
+
+    expect(screen.getByText("BudgetBITCH")).toBeInTheDocument();
+    expect(screen.queryByTestId("clerk-provider")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("convex-provider")).not.toBeInTheDocument();
+  });
+
+  it("renders children without providers when satellite mode is incomplete", () => {
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_abcdefghijklmnopqrstuvwxyz012345");
+    vi.stubEnv("NEXT_PUBLIC_CLERK_IS_SATELLITE", "true");
+
+    render(
+      <AppProviders>
+        <main>BudgetBITCH</main>
+      </AppProviders>,
+    );
+
+    expect(screen.getByText("BudgetBITCH")).toBeInTheDocument();
+    expect(screen.queryByTestId("clerk-provider")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("convex-provider")).not.toBeInTheDocument();
+  });
+
+  it("wraps children in Clerk only when Convex is not configured", () => {
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_abcdefghijklmnopqrstuvwxyz012345");
 
     render(
       <AppProviders>
@@ -61,12 +90,12 @@ describe("AppProviders", () => {
     expect(screen.queryByTestId("convex-provider")).not.toBeInTheDocument();
     expect(convexClientMock).not.toHaveBeenCalled();
     expect(clerkProviderMock.mock.calls[0]?.[0].publishableKey).toBe(
-      "pk_test_budgetbitch",
+      "pk_test_abcdefghijklmnopqrstuvwxyz012345",
     );
   });
 
   it("wraps children in Clerk and Convex when both are configured", () => {
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_budgetbitch");
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_abcdefghijklmnopqrstuvwxyz012345");
     vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "https://happy-animal-123.convex.cloud");
 
     render(
