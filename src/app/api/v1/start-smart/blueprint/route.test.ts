@@ -42,6 +42,7 @@ describe("POST /api/v1/start-smart/blueprint", () => {
           answers: {
             countryCode: "US",
             stateCode: "CA",
+            cityCode: "los-angeles",
             ageBand: "young_adult",
             housing: "renting",
             dependents: 0,
@@ -61,6 +62,9 @@ describe("POST /api/v1/start-smart/blueprint", () => {
     const json = await response.json();
 
     expect(response.status).toBe(200);
+    expect(json.profile.locationKey).toBe("us-ca-los-angeles");
+    expect(json.regional.locationKey).toBe("us-ca-los-angeles");
+    expect(json.regional.housing.monthly).toBe(2550);
     expect(json.blueprint.priorityStack.length).toBeGreaterThan(0);
     expect(json.persistence).toEqual({
       persisted: true,
@@ -83,6 +87,7 @@ describe("POST /api/v1/start-smart/blueprint", () => {
           answers: {
             countryCode: "US",
             stateCode: "CA",
+            cityCode: "los-angeles",
             ageBand: "young_adult",
             housing: "renting",
             dependents: 0,

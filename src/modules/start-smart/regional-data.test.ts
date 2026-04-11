@@ -1,14 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { buildRegionalSnapshot } from "./regional-data";
+import { getRegionalSeed } from "./regional-seed";
 
 describe("buildRegionalSnapshot", () => {
   it("prefers verified official data over estimated fallback values", () => {
     const result = buildRegionalSnapshot({
       regionKey: "us-ca",
-      seed: {
-        housing: { monthly: 2100, confidence: "estimated" },
-        transport: { monthly: 250, confidence: "estimated" },
-      },
+      locationKey: "us-ca-los-angeles",
+      seed: getRegionalSeed("us-ca-los-angeles"),
       fetched: [
         {
           sourceLabel: "California housing board",
@@ -22,6 +21,7 @@ describe("buildRegionalSnapshot", () => {
     });
 
     expect(result.regionKey).toBe("us-ca");
+    expect(result.locationKey).toBe("us-ca-los-angeles");
     expect(result.housing.monthly).toBe(2400);
     expect(result.housing.confidence).toBe("verified");
     expect(result.transport.confidence).toBe("estimated");

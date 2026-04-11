@@ -28,10 +28,11 @@ export async function POST(request: Request) {
   const body = await request.json();
   const input = blueprintRequestSchema.parse(body);
   const profile = normalizeStartSmartProfile(input.answers);
-  const fetched = await fetchRegionalData(profile.regionKey);
+  const fetched = await fetchRegionalData(profile.locationKey);
   const regional = buildRegionalSnapshot({
     regionKey: profile.regionKey,
-    seed: getRegionalSeed(profile.regionKey),
+    locationKey: profile.locationKey,
+    seed: getRegionalSeed(profile.locationKey),
     fetched,
   });
   const blueprint = generateMoneySurvivalBlueprint({ profile, regional });
@@ -43,42 +44,41 @@ export async function POST(request: Request) {
     profile,
   });
 
-  let persistence: { persisted: boolean; profileId?: string; reason?: string } =
-    {
-      persisted: false,
-      reason: "not_attempted",
-    };
+  let persistence: { persisted: boolean; profileId?: string; reason?: string } = {
+    persisted: false,
+    reason: "not_attempted",
+  };
 
   try {
     const prisma = getPrismaClient();
 
     const savedProfile = await prisma.startSmartProfile.create({
-        data: {
-          ...profileRecord,
-          profileJson: profileRecord.profileJson as JsonInput,
-        },
-      });
+      data: {
+        ...profileRecord,
+        profileJson: profileRecord.profileJson as JsonInput,
+      },
+    });
 
     await prisma.regionalSnapshot.create({
-        data: {
-          workspaceId: input.workspaceId,
-          profileId: savedProfile.id,
-          regionKey: regional.regionKey,
-          confidence: "verified",
-          assumptionsJson: regional as JsonInput,
-        },
-      });
+      data: {
+        workspaceId: input.workspaceId,
+        profileId: savedProfile.id,
+        regionKey: regional.regionKey,
+        confidence: "verified",
+        assumptionsJson: regional as JsonInput,
+      },
+    });
 
     await prisma.moneyBlueprintSnapshot.create({
-        data: {
-          workspaceId: input.workspaceId,
-          profileId: savedProfile.id,
-          regionKey: profile.regionKey,
-          householdKind: profile.householdKind,
-          status: "generated",
-          blueprintJson: blueprint as JsonInput,
-        },
-      });
+      data: {
+        workspaceId: input.workspaceId,
+        profileId: savedProfile.id,
+        regionKey: profile.regionKey,
+        householdKind: profile.householdKind,
+        status: "generated",
+        blueprintJson: blueprint as JsonInput,
+      },
+    });
 
     persistence = {
       persisted: true,
@@ -87,8 +87,7 @@ export async function POST(request: Request) {
   } catch (error) {
     persistence = {
       persisted: false,
-      reason:
-        error instanceof Error ? error.message : "unknown_persistence_error",
+      reason: error instanceof Error ? error.message : "unknown_persistence_error",
     };
   }
 

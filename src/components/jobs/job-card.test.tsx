@@ -31,7 +31,7 @@ describe("JobCard", () => {
     expect(screen.getByText("daytime")).toBeInTheDocument();
     expect(screen.getByText("full time")).toBeInTheDocument();
     expect(screen.getByText("Posted 4 days ago")).toBeInTheDocument();
-    expect(screen.getByText("Best for")).toBeInTheDocument();
+    expect(screen.getByText("Why this fits")).toBeInTheDocument();
     expect(within(card as HTMLElement).getByText("no degree pathway")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /open job details/i })).toHaveAttribute(
       "href",

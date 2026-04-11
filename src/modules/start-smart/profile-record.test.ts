@@ -11,6 +11,8 @@ describe("buildProfileRecord", () => {
       profile: {
         countryCode: "US",
         stateCode: "CA",
+        cityCode: "los-angeles",
+        locationKey: "us-ca-los-angeles",
         ageBand: "young_adult",
         housing: "renting",
         dependents: 0,
@@ -27,6 +29,10 @@ describe("buildProfileRecord", () => {
       regionKey: "us-ca",
       householdKind: "solo",
       status: "draft",
+    });
+    expect(result.profileJson).toMatchObject({
+      cityCode: "los-angeles",
+      locationKey: "us-ca-los-angeles",
     });
   });
 });

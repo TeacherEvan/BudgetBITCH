@@ -49,6 +49,7 @@ type BlueprintResponse = {
 const fallbackProfile: StartSmartProfileInput = {
   countryCode: "",
   stateCode: "",
+  cityCode: "",
   ageBand: "adult",
   housing: "renting",
   adults: 1,
@@ -105,6 +106,7 @@ function mergeTemplateIntoProfile(templateId: StartSmartTemplateId): StartSmartP
     ...defaults,
     countryCode: "",
     stateCode: "",
+    cityCode: "",
   };
 }
 
@@ -164,18 +166,39 @@ export function StartSmartShell() {
     field: K,
     value: StartSmartProfileInput[K],
   ) {
-    setValues((current) => ({
-      ...current,
-      [field]: value,
-    }));
+    setValues((current) => {
+      const nextValues = {
+        ...current,
+        [field]: value,
+      };
+
+      if (field === "countryCode") {
+        nextValues.stateCode = "";
+        nextValues.cityCode = "";
+      } else if (field === "stateCode") {
+        nextValues.cityCode = "";
+      }
+
+      return nextValues;
+    });
 
     setFieldErrors((current) => {
-      if (!current[field]) {
+      if (!current[field] && field !== "countryCode" && field !== "stateCode") {
         return current;
       }
 
       const nextErrors = { ...current };
       delete nextErrors[field];
+
+      if (field === "countryCode") {
+        delete nextErrors.stateCode;
+        delete nextErrors.cityCode;
+      }
+
+      if (field === "stateCode") {
+        delete nextErrors.cityCode;
+      }
+
       return nextErrors;
     });
 

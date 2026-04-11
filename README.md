@@ -7,6 +7,13 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 - `docs/DEV_TREE.md` — project tree graph and quick orientation map
 - `docs/CODEBASE_INDEX.md` — route/module/component index for future navigation
 
+## Documentation boundaries
+
+- `README.md`, `docs/DEV_TREE.md`, and `docs/CODEBASE_INDEX.md` are the canonical root-app orientation docs.
+- `.github/copilot-instructions.md` is the root Copilot guidance file.
+- `AGENTS.md` and `CLAUDE.md` are Convex-specific guidance notes; they can be merged with each other if the repo ever wants a single Convex instruction file.
+- `docs/frontend-audit-2026-04-07.md`, `.github/superpower/**`, `budgetbitch/**`, `.agents/**`, `.github/.agents/**`, and generated Convex/skill markdown are reference or tooling artifacts, not primary root-app docs.
+
 ## Features in Phase 1
 
 - Start Smart onboarding that generates a Money Survival Blueprint
@@ -61,7 +68,8 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 7. Set `CRON_SECRET` in Vercel so the scheduled replay route can authenticate Vercel Cron requests.
 8. Mirror the same Neon, Clerk, and Convex environment variables in Vercel before shipping preview or production deployments.
 9. Generate the Prisma client with `npm run db:generate`.
-10. Start development with `npm run dev`.
+10. Before a real deploy, apply checked-in Prisma migrations with `npm run db:migrate:deploy`.
+11. Start development with `npm run dev`.
 
 ## Verification
 

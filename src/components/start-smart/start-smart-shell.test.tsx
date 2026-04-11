@@ -22,6 +22,7 @@ describe("StartSmartShell", () => {
             recommendedIntegrations: ["openai"],
           },
           regional: {
+            locationKey: "us-ca-los-angeles",
             housing: { confidence: "verified" },
           },
         }),
@@ -31,11 +32,14 @@ describe("StartSmartShell", () => {
     render(<StartSmartShell />);
 
     fireEvent.click(screen.getByRole("button", { name: /young adult/i }));
-    fireEvent.change(screen.getByLabelText(/country/i), {
+    fireEvent.change(screen.getByLabelText(/^Country$/i), {
       target: { value: "US" },
     });
-    fireEvent.change(screen.getByLabelText(/state/i), {
+    fireEvent.change(screen.getByLabelText(/^Province or state$/i), {
       target: { value: "CA" },
+    });
+    fireEvent.change(screen.getByLabelText(/^City$/i), {
+      target: { value: "los-angeles" },
     });
     fireEvent.click(screen.getByRole("button", { name: /build my survival blueprint/i }));
 
@@ -44,7 +48,7 @@ describe("StartSmartShell", () => {
     expect(screen.getAllByText("Blueprint").length).toBeGreaterThan(0);
   });
 
-  it("shows field-level validation and blocks submit when regional codes are invalid", () => {
+  it("shows field-level validation and blocks submit when location selects are empty", () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
@@ -55,12 +59,10 @@ describe("StartSmartShell", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(
       "Fix the highlighted fields to continue.",
     );
-    expect(screen.getByText("Enter a valid 2-letter country code.")).toBeInTheDocument();
-    expect(
-      screen.getByText("Enter a valid 2- or 3-letter state or region code."),
-    ).toBeInTheDocument();
-    expect(screen.getByLabelText(/country/i)).toHaveAttribute("aria-invalid", "true");
-    expect(screen.getByLabelText(/state or region/i)).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByText("Select a country.")).toBeInTheDocument();
+    expect(screen.getByText("Select a province or state.")).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Country$/i)).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText(/^Province or state$/i)).toHaveAttribute("aria-invalid", "true");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

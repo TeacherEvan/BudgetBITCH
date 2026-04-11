@@ -1,4 +1,11 @@
 import { z } from "zod";
+import {
+  buildLocationKey,
+  buildRegionKey,
+  isSupportedCityCode,
+  isSupportedCountryCode,
+  isSupportedProvinceCode,
+} from "./location-catalog";
 
 const goalSchema = z.enum([
   "emergency_fund",
@@ -16,33 +23,59 @@ const providerPreferenceSchema = z.enum([
   "openclaw",
 ]);
 
-export const startSmartProfileSchema = z.object({
-  countryCode: z
-    .string()
-    .trim()
-    .length(2, "Enter a valid 2-letter country code."),
-  stateCode: z
-    .string()
-    .trim()
-    .min(2, "Enter a valid 2- or 3-letter state or region code.")
-    .max(3, "Enter a valid 2- or 3-letter state or region code."),
-  ageBand: z.enum(["single_teen", "young_adult", "adult", "retiree"]),
-  housing: z.enum([
-    "living_with_family",
-    "renting",
-    "owning",
-    "temporary",
-    "housing_insecure",
-  ]),
-  adults: z.number().int().min(1).default(1),
-  dependents: z.number().int().min(0),
-  pets: z.number().int().min(0),
-  incomePattern: z.enum(["steady", "variable", "seasonal", "none"]),
-  debtLoad: z.enum(["none", "low", "moderate", "high"]),
-  goals: z.array(goalSchema).min(1),
-  benefitsSupport: z.array(z.string()).default([]),
-  preferredIntegrations: z.array(providerPreferenceSchema).default([]),
-});
+export const startSmartProfileSchema = z
+  .object({
+    countryCode: z.string().trim().length(2, "Select a country."),
+    stateCode: z.string().trim().min(2, "Select a province or state.").max(64, "Select a province or state."),
+    cityCode: z.string().trim().max(64).optional(),
+    ageBand: z.enum(["single_teen", "young_adult", "adult", "retiree"]),
+    housing: z.enum([
+      "living_with_family",
+      "renting",
+      "owning",
+      "temporary",
+      "housing_insecure",
+    ]),
+    adults: z.number().int().min(1).default(1),
+    dependents: z.number().int().min(0),
+    pets: z.number().int().min(0),
+    incomePattern: z.enum(["steady", "variable", "seasonal", "none"]),
+    debtLoad: z.enum(["none", "low", "moderate", "high"]),
+    goals: z.array(goalSchema).min(1),
+    benefitsSupport: z.array(z.string()).default([]),
+    preferredIntegrations: z.array(providerPreferenceSchema).default([]),
+  })
+  .superRefine((profile, ctx) => {
+    const countryCode = profile.countryCode.trim().toUpperCase();
+    const stateCode = profile.stateCode.trim().toUpperCase();
+    const cityCode = profile.cityCode?.trim();
+
+    if (!isSupportedCountryCode(countryCode)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["countryCode"],
+        message: "Select a supported country.",
+      });
+      return;
+    }
+
+    if (!isSupportedProvinceCode(countryCode, stateCode)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["stateCode"],
+        message: "Select a province or state for the selected country.",
+      });
+      return;
+    }
+
+    if (cityCode && !isSupportedCityCode(countryCode, stateCode, cityCode)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["cityCode"],
+        message: "Select a supported city for the selected province.",
+      });
+    }
+  });
 
 export type StartSmartProfileInput = z.input<typeof startSmartProfileSchema>;
 export type StartSmartProfile = z.infer<typeof startSmartProfileSchema>;
@@ -63,13 +96,14 @@ export type StartSmartPriorityBias =
 
 export function normalizeStartSmartProfile(input: StartSmartProfileInput) {
   const profile = startSmartProfileSchema.parse(input);
-  const regionKey = `${profile.countryCode.toLowerCase()}-${profile.stateCode.toLowerCase()}`;
+  const countryCode = profile.countryCode.trim().toUpperCase();
+  const stateCode = profile.stateCode.trim().toUpperCase();
+  const cityCode = profile.cityCode?.trim().toLowerCase() || "";
+  const regionKey = buildRegionKey(countryCode, stateCode);
+  const locationKey = buildLocationKey(countryCode, stateCode, cityCode);
   const riskSignals: StartSmartRiskSignal[] = [];
 
-  if (
-    profile.incomePattern === "variable" ||
-    profile.incomePattern === "seasonal"
-  ) {
+  if (profile.incomePattern === "variable" || profile.incomePattern === "seasonal") {
     riskSignals.push("income_volatility");
   }
 
@@ -85,10 +119,7 @@ export function normalizeStartSmartProfile(input: StartSmartProfileInput) {
     riskSignals.push("pet_costs");
   }
 
-  if (
-    profile.housing === "temporary" ||
-    profile.housing === "housing_insecure"
-  ) {
+  if (profile.housing === "temporary" || profile.housing === "housing_insecure") {
     riskSignals.push("housing_instability");
   }
 
@@ -97,25 +128,15 @@ export function normalizeStartSmartProfile(input: StartSmartProfileInput) {
   }
 
   const householdKind =
-    profile.adults > 1
-      ? profile.dependents > 0
-        ? "family"
-        : "couple"
-      : "solo";
+    profile.adults > 1 ? (profile.dependents > 0 ? "family" : "couple") : "solo";
 
   const priorityBias: StartSmartPriorityBias[] = [];
 
-  if (
-    riskSignals.includes("income_volatility") ||
-    riskSignals.includes("housing_instability")
-  ) {
+  if (riskSignals.includes("income_volatility") || riskSignals.includes("housing_instability")) {
     priorityBias.push("stability");
   }
 
-  if (
-    profile.goals.includes("debt_relief") ||
-    riskSignals.includes("debt_pressure")
-  ) {
+  if (profile.goals.includes("debt_relief") || riskSignals.includes("debt_pressure")) {
     priorityBias.push("debt_relief");
   }
 
@@ -129,9 +150,11 @@ export function normalizeStartSmartProfile(input: StartSmartProfileInput) {
 
   return {
     ...profile,
-    countryCode: profile.countryCode.toUpperCase(),
-    stateCode: profile.stateCode.toUpperCase(),
+    countryCode,
+    stateCode,
+    cityCode,
     regionKey,
+    locationKey,
     householdKind,
     riskSignals,
     priorityBias,

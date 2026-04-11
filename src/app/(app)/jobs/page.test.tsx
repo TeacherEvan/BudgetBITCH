@@ -41,7 +41,9 @@ describe("JobsPage", () => {
     expect(
       within(remoteSupportCard as HTMLElement).getByText("Posted 4 days ago"),
     ).toBeInTheDocument();
-    expect(within(remoteSupportCard as HTMLElement).getByText("Best for")).toBeInTheDocument();
+    expect(
+      within(remoteSupportCard as HTMLElement).getByText("Why this fits"),
+    ).toBeInTheDocument();
     expect(
       within(remoteSupportCard as HTMLElement).getByRole("link", {
         name: /open job details/i,

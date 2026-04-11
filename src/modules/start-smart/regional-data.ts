@@ -9,6 +9,7 @@ import {
 
 export type RegionalSnapshot = {
   regionKey: string;
+  locationKey: string;
   sources: Array<{
     sourceLabel: string;
     sourceUrl: string;
@@ -18,6 +19,7 @@ export type RegionalSnapshot = {
 
 type BuildRegionalSnapshotInput = {
   regionKey: string;
+  locationKey?: string;
   seed?: RegionalSeedSnapshot;
   fetched?: RegionalSourceRecord[];
 };
@@ -33,9 +35,7 @@ export function rankTrustTier(trustTier: RegionalTrustTier) {
 }
 
 function toConfidenceLabel(trustTier: RegionalTrustTier): ConfidenceLabel {
-  return trustTier === "official" || trustTier === "regulated"
-    ? "verified"
-    : "estimated";
+  return trustTier === "official" || trustTier === "regulated" ? "verified" : "estimated";
 }
 
 export function mergeRegionalValues(
@@ -66,18 +66,20 @@ export function mergeRegionalValues(
     confidence: toConfidenceLabel(source.trustTier),
     sourceUrl: source.sourceUrl,
     fetchedAt: new Date().toISOString(),
-    explanation: `${source.sourceLabel} provided the most trusted value for this category.`,
+    explanation: source.sourceLabel + " provided the most trusted value for this category.",
   } satisfies RegionalValue;
 }
 
 export function buildRegionalSnapshot(
   input: BuildRegionalSnapshotInput,
 ): RegionalSnapshot {
-  const seed = input.seed ?? getRegionalSeed(input.regionKey);
+  const locationKey = (input.locationKey ?? input.regionKey).trim().toLowerCase();
+  const seed = input.seed ?? getRegionalSeed(locationKey);
   const fetched = input.fetched ?? [];
 
   const snapshot: RegionalSnapshot = {
     regionKey: input.regionKey,
+    locationKey,
     sources: fetched.map((source) => ({
       sourceLabel: source.sourceLabel,
       sourceUrl: source.sourceUrl,
@@ -90,11 +92,7 @@ export function buildRegionalSnapshot(
     for (const [category, value] of Object.entries(source.values) as Array<
       [RegionalBudgetCategory, { monthly: number }]
     >) {
-      snapshot[category] = mergeRegionalValues(
-        snapshot[category],
-        value,
-        source,
-      );
+      snapshot[category] = mergeRegionalValues(snapshot[category], value, source);
     }
   }
 

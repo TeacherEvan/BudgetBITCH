@@ -1,14 +1,19 @@
 import { ProviderCard } from "@/components/integrations/provider-card";
+import { getDeploymentReadiness } from "@/modules/integrations/deployment-readiness";
 import { buildProviderActionList } from "@/modules/integrations/integration-actions";
 import { providerRegistry } from "@/modules/integrations/provider-registry";
 import {
+  Activity,
   Briefcase,
   Landmark,
+  PlugZap,
   Receipt,
   Sparkles,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
+
+export const dynamic = "force-dynamic";
 
 type ProviderCategory = "ai" | "banking" | "investing" | "payroll" | "tax" | "finance_ops";
 
@@ -49,6 +54,7 @@ const categoryMeta: Record<
 };
 
 export default function IntegrationsPage() {
+  const readiness = getDeploymentReadiness();
   const providersByCategory = Object.values(providerRegistry).reduce(
     (groups, provider) => {
       groups[provider.category].push(provider);
@@ -93,6 +99,63 @@ export default function IntegrationsPage() {
           ))}
         </div>
 
+        <section className="mt-8 rounded-[30px] border border-white/10 bg-emerald-950/30 p-5 md:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <span className="rounded-2xl border border-emerald-200/20 bg-emerald-300/10 p-3 text-emerald-100">
+                <PlugZap aria-hidden="true" className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-sm uppercase tracking-[0.22em] text-yellow-200">Deployment readiness</p>
+                <h2 className="mt-2 text-2xl font-semibold text-white">
+                  Turn the env file into real capability
+                </h2>
+                <p className="mt-2 max-w-3xl text-sm text-emerald-50/80">
+                  The stack already has room for live alerts, encrypted provider secrets, scheduled
+                  replays, webhook intake, outbound email, and production monitoring. This board
+                  shows which rails are actually unlocked in the current deployment.
+                </p>
+              </div>
+            </div>
+            <span className="rounded-full border border-emerald-200/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-100">
+              {readiness.readyCount} of {readiness.totalCount} rails ready
+            </span>
+          </div>
+
+          <div className="mt-5 grid gap-4 xl:grid-cols-3">
+            {readiness.capabilities.map((capability) => (
+              <article key={capability.id} className="rounded-[24px] border border-white/10 bg-black/20 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.18em] text-yellow-100/80">
+                      {capability.status === "ready" ? "Ready now" : "Needs setup"}
+                    </p>
+                    <h3 className="mt-2 text-lg font-semibold text-white">{capability.title}</h3>
+                  </div>
+                  <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/8 px-2.5 py-1 text-xs font-semibold text-emerald-50/85">
+                    <Activity aria-hidden="true" className="h-3.5 w-3.5" />
+                    {capability.readyCount}/{capability.totalCount}
+                  </span>
+                </div>
+
+                <p className="mt-3 text-sm text-emerald-50/75">{capability.summary}</p>
+
+                <div className="mt-4 rounded-2xl border border-white/10 bg-white/6 px-3 py-3">
+                  <p className="text-xs uppercase tracking-[0.18em] text-emerald-100/75">
+                    {capability.status === "ready" ? "Configured env" : "Missing env"}
+                  </p>
+                  <p className="mt-2 text-sm text-emerald-50/90">
+                    {(capability.status === "ready"
+                      ? capability.configuredEnvVars
+                      : capability.missingEnvVars
+                    ).join(", ")}
+                  </p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
         <div className="mt-8 grid gap-6">
           {Object.entries(providersByCategory).map(([category, providers]) => {
             if (providers.length === 0) {
@@ -101,11 +164,12 @@ export default function IntegrationsPage() {
 
             const meta = categoryMeta[category as ProviderCategory];
             const Icon = meta.icon;
+            const headingId = category + "-heading";
 
             return (
               <section
                 key={category}
-                aria-labelledby={`${category}-heading`}
+                aria-labelledby={headingId}
                 className="rounded-[30px] border border-white/10 bg-white/5 p-5 md:p-6"
               >
                 <div className="flex flex-wrap items-start justify-between gap-4">
@@ -115,7 +179,7 @@ export default function IntegrationsPage() {
                     </span>
                     <div>
                       <p className="text-sm uppercase tracking-[0.22em] text-yellow-200">Grouped scan</p>
-                      <h2 id={`${category}-heading`} className="mt-2 text-2xl font-semibold text-white">
+                      <h2 id={headingId} className="mt-2 text-2xl font-semibold text-white">
                         {meta.label}
                       </h2>
                       <p className="mt-2 max-w-3xl text-sm text-emerald-50/75">{meta.summary}</p>

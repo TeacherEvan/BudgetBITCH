@@ -74,7 +74,7 @@ export function JobCard({ job }: JobCardProps) {
       <p className="mt-4 text-sm text-emerald-50/85">{job.summary}</p>
 
       <div className="mt-4 rounded-[20px] border border-emerald-200/20 bg-emerald-300/10 p-3">
-        <p className="text-xs uppercase tracking-[0.25em] text-yellow-200">Best for</p>
+        <p className="text-xs uppercase tracking-[0.25em] text-yellow-200">Why this fits</p>
         <p className="mt-2 text-sm text-emerald-50">{job.fitSummary}</p>
       </div>
 

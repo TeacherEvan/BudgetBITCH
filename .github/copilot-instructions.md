@@ -4,6 +4,11 @@
 - Work from the repository root app unless a task explicitly targets the nested `budgetbitch/` prototype subtree.
 - Prefer surgical edits that keep the current Next.js App Router, Prisma, and Clerk wiring intact.
 
+## Documentation boundaries
+- Treat `README.md`, `docs/DEV_TREE.md`, and `docs/CODEBASE_INDEX.md` as the canonical root-app orientation docs.
+- Treat `AGENTS.md` and `CLAUDE.md` as Convex-specific guidance notes; they can be merged with each other if the repo ever wants one Convex instruction file.
+- Treat `docs/frontend-audit-2026-04-07.md`, `.github/superpower/**`, `budgetbitch/**`, `.agents/**`, `.github/.agents/**`, and generated Convex/skill markdown as reference or tooling artifacts unless a task explicitly targets them.
+
 ## Validation
 - Run `npm run lint`, `npm test`, and `npm run build` after code changes.
 - Run targeted Playwright coverage for UI copy or navigation changes, especially under `tests/e2e/jobs.spec.ts` and `tests/e2e/integrations-*.spec.ts`.
