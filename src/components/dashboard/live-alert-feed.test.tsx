@@ -43,6 +43,18 @@ describe("LiveAlertFeed", () => {
     expect(useQueryMock).not.toHaveBeenCalled();
   });
 
+  it("shows a graceful fallback when the Convex URL is not absolute", () => {
+    vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "steady-ox-280.convex.cloud");
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_budgetbitch");
+
+    render(<LiveAlertFeed workspaceId="workspace-1" />);
+
+    expect(
+      screen.getByText(/live alerts stay on standby until convex auth is configured/i),
+    ).toBeInTheDocument();
+    expect(useQueryMock).not.toHaveBeenCalled();
+  });
+
   it("shows a projection-sync message when the viewer record is not ready", () => {
     vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "https://budgetbitch.convex.cloud");
     vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_budgetbitch");

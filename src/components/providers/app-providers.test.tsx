@@ -65,6 +65,21 @@ describe("AppProviders", () => {
     );
   });
 
+  it("skips Convex when the URL is not absolute", () => {
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_budgetbitch");
+    vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "steady-ox-280.convex.cloud");
+
+    render(
+      <AppProviders>
+        <main>BudgetBITCH</main>
+      </AppProviders>,
+    );
+
+    expect(screen.getByTestId("clerk-provider")).toBeInTheDocument();
+    expect(screen.queryByTestId("convex-provider")).not.toBeInTheDocument();
+    expect(convexClientMock).not.toHaveBeenCalled();
+  });
+
   it("wraps children in Clerk and Convex when both are configured", () => {
     vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_budgetbitch");
     vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "https://happy-animal-123.convex.cloud");
