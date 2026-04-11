@@ -2,6 +2,7 @@
 
 import { useQuery } from "convex/react";
 import { ShieldCheck, Siren, TriangleAlert } from "lucide-react";
+import { isClerkClientConfigured } from "@/lib/auth/clerk-config";
 import { api } from "../../../convex/_generated/api";
 
 type LiveAlertFeedProps = {
@@ -95,7 +96,7 @@ function LiveAlertFeedBody({ workspaceId }: LiveAlertFeedProps) {
 
 export function LiveAlertFeed({ workspaceId }: LiveAlertFeedProps) {
   const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL?.trim();
-  const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim();
+  const clerkAuthConfigured = isClerkClientConfigured();
 
   return (
     <section className="bb-panel bb-panel-muted p-6" aria-labelledby="live-alerts-heading">
@@ -114,7 +115,7 @@ export function LiveAlertFeed({ workspaceId }: LiveAlertFeedProps) {
 
       {!workspaceId ? (
         <p className="bb-mini-copy mt-4">Select a workspace to view live alerts.</p>
-      ) : !convexUrl || !clerkPublishableKey ? (
+      ) : !convexUrl || !clerkAuthConfigured ? (
         <p className="bb-mini-copy mt-4">
           Live alerts stay on standby until Convex auth is configured for this dashboard.
         </p>
