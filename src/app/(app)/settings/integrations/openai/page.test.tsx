@@ -2,22 +2,18 @@ import { render, screen } from "@testing-library/react";
 import OpenAiIntegrationPage from "./page";
 
 describe("OpenAiIntegrationPage", () => {
-  it("renders the OpenAI setup wizard with privacy disclosures and the shared tool rail", () => {
+  it("renders the OpenAI setup wizard with privacy disclosures and official links", () => {
     render(<OpenAiIntegrationPage />);
 
     expect(screen.getByRole("heading", { name: "Connect OpenAI" })).toBeInTheDocument();
     expect(
       screen.getByText("Only explicitly connected providers receive the minimum required data."),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open setup wizard" })).toHaveAttribute(
-      "href",
-      "/settings/integrations/openai",
-    );
-    expect(screen.getByRole("link", { name: "Open official login" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Official login" })).toHaveAttribute(
       "href",
       expect.stringContaining("platform.openai.com"),
     );
-    expect(screen.getByRole("link", { name: "Open official docs" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Official docs" })).toHaveAttribute(
       "href",
       expect.stringContaining("platform.openai.com"),
     );

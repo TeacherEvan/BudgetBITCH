@@ -3,7 +3,6 @@ import { PrivacyDisclosurePanel } from "@/components/integrations/privacy-disclo
 import { ProviderWizardShell } from "@/components/integrations/provider-wizard-shell";
 import { RiskChecklist } from "@/components/integrations/risk-checklist";
 import { SystemAccessWarning } from "@/components/integrations/system-access-warning";
-import { buildProviderActionList } from "@/modules/integrations/integration-actions";
 import { providerRegistry } from "@/modules/integrations/provider-registry";
 
 export default function OpenClawIntegrationPage() {
@@ -14,7 +13,6 @@ export default function OpenClawIntegrationPage() {
             eyebrow="OpenClaw Setup"
             title="Connect OpenClaw"
             description="OpenClaw can introduce higher trust and system-scope concerns, so review every warning before you enable it."
-            actions={buildProviderActionList(provider)}
         >
             <div className="space-y-6">
                 <RiskChecklist
