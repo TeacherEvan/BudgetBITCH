@@ -1,8 +1,11 @@
 import { ProviderCard } from "@/components/integrations/provider-card";
+import { IntegrationCategoryNav } from "@/components/integrations/integration-category-nav";
 import { providerRegistry } from "@/modules/integrations/provider-registry";
 import { Briefcase, Landmark, Receipt, Sparkles, Wallet, type LucideIcon } from "lucide-react";
 
 type ProviderCategory = "ai" | "banking" | "investing" | "payroll" | "tax" | "finance_ops";
+
+const categoryOrder: ProviderCategory[] = ["ai", "banking", "investing", "payroll", "tax", "finance_ops"];
 
 const categoryMeta: Record<
   ProviderCategory,
@@ -56,49 +59,100 @@ export default function IntegrationsPage() {
     } as Record<ProviderCategory, Array<(typeof providerRegistry)[keyof typeof providerRegistry]>>,
   );
 
-  return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#34d399_0%,#14532d_45%,#052e16_100%)] px-6 py-10 text-white">
-      <section className="mx-auto max-w-7xl rounded-[36px] border border-white/10 bg-black/20 p-6 backdrop-blur md:p-8">
-        <header className="max-w-4xl">
-          <p className="text-sm uppercase tracking-[0.3em] text-yellow-200">Connection Hub</p>
-          <h1 className="mt-3 text-3xl font-bold sm:text-4xl">
-            Connect only the providers you can scan and trust fast.
-          </h1>
-          <p className="mt-3 text-sm text-emerald-50/85 sm:text-base">
-            Every group below leads with the official route, the risk level, and the easiest next
-            action so you can move without reading a giant safety essay first.
-          </p>
-        </header>
+  const categories = categoryOrder
+    .map((category) => {
+      const providers = providersByCategory[category];
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
-          {[
-            "Official routes first",
-            "No silent sharing",
-            "Revoke path stays obvious",
-          ].map((item) => (
-            <div
-              key={item}
-              className="rounded-[24px] border border-white/10 bg-white/6 px-4 py-3 text-sm text-emerald-50/80"
-            >
-              {item}
+      return {
+        category,
+        id: `category-${category}`,
+        label: categoryMeta[category].label,
+        summary: categoryMeta[category].summary,
+        count: providers.length,
+        providers,
+      };
+    })
+    .filter((category) => category.count > 0);
+
+  const totalProviders = categories.reduce((sum, category) => sum + category.count, 0);
+  const setupWizardCount = Object.values(providerRegistry).filter((provider) => provider.setupPath)
+    .length;
+
+  return (
+    <main className="min-w-0 min-h-screen bg-[radial-gradient(circle_at_top,#34d399_0%,#14532d_45%,#052e16_100%)] px-4 py-6 text-white sm:px-6 sm:py-10">
+      <section className="mx-auto min-w-0 max-w-7xl rounded-[36px] border border-white/10 bg-black/20 p-5 backdrop-blur sm:p-6 md:p-8">
+        <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
+          <header className="max-w-4xl">
+            <p className="text-sm uppercase tracking-[0.3em] text-yellow-200">Settings hub</p>
+            <h1 className="mt-3 text-3xl font-bold sm:text-4xl">Integrations</h1>
+            <p className="mt-3 text-sm text-emerald-50/85 sm:text-base">
+              Pick a category, jump to the provider group, and keep every setup path close to the
+              official login or documentation route.
+            </p>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              {[
+                "Official routes first",
+                "No silent sharing",
+                "Revoke path stays obvious",
+              ].map((item) => (
+                <div
+                  key={item}
+                  className="rounded-[24px] border border-white/10 bg-white/6 px-4 py-3 text-sm text-emerald-50/80"
+                >
+                  {item}
+                </div>
+              ))}
             </div>
-          ))}
+          </header>
+
+          <aside className="rounded-[30px] border border-white/10 bg-white/5 p-5 md:p-6">
+            <p className="text-sm uppercase tracking-[0.22em] text-yellow-200">At a glance</p>
+            <p className="mt-3 max-w-md text-sm text-emerald-50/75">
+              This page is a quick settings surface for the integrations you actually use. Start
+              with the category map, then open the provider group you need.
+            </p>
+
+            <dl className="mt-5 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+              {[
+                { label: "Providers", value: totalProviders.toString() },
+                { label: "Categories", value: categories.length.toString() },
+                { label: "Setup wizards", value: setupWizardCount.toString() },
+              ].map((item) => (
+                <div key={item.label} className="rounded-[22px] border border-white/10 bg-black/20 px-4 py-3">
+                  <dt className="text-xs uppercase tracking-[0.22em] text-yellow-200/80">{item.label}</dt>
+                  <dd className="mt-2 text-2xl font-semibold text-white">{item.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </aside>
+        </div>
+
+        <div className="mt-8 rounded-[30px] border border-white/10 bg-white/5 p-5 md:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-sm uppercase tracking-[0.22em] text-yellow-200">Category navigator</p>
+              <h2 className="mt-2 text-2xl font-semibold text-white">Jump straight to the group you need</h2>
+              <p className="mt-2 max-w-3xl text-sm text-emerald-50/75">
+                The links below keep the page readable on smaller screens while making every
+                provider category one tap away.
+              </p>
+            </div>
+          </div>
+
+          <IntegrationCategoryNav categories={categories} />
         </div>
 
         <div className="mt-8 grid gap-6">
-          {Object.entries(providersByCategory).map(([category, providers]) => {
-            if (providers.length === 0) {
-              return null;
-            }
-
-            const meta = categoryMeta[category as ProviderCategory];
-            const Icon = meta.icon;
+          {categories.map((category) => {
+            const Icon = categoryMeta[category.category].icon;
 
             return (
               <section
-                key={category}
-                aria-labelledby={`${category}-heading`}
-                className="rounded-[30px] border border-white/10 bg-white/5 p-5 md:p-6"
+                key={category.id}
+                id={category.id}
+                aria-labelledby={`${category.id}-heading`}
+                className="scroll-mt-24 rounded-[30px] border border-white/10 bg-white/5 p-5 md:p-6"
               >
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="flex items-start gap-3">
@@ -107,19 +161,19 @@ export default function IntegrationsPage() {
                     </span>
                     <div>
                       <p className="text-sm uppercase tracking-[0.22em] text-yellow-200">Grouped scan</p>
-                      <h2 id={`${category}-heading`} className="mt-2 text-2xl font-semibold text-white">
-                        {meta.label}
+                      <h2 id={`${category.id}-heading`} className="mt-2 text-2xl font-semibold text-white">
+                        {category.label}
                       </h2>
-                      <p className="mt-2 max-w-3xl text-sm text-emerald-50/75">{meta.summary}</p>
+                      <p className="mt-2 max-w-3xl text-sm text-emerald-50/75">{category.summary}</p>
                     </div>
                   </div>
                   <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-100">
-                    {providers.length} providers
+                    {category.count} providers
                   </span>
                 </div>
 
                 <div className="mt-5 grid gap-4 xl:grid-cols-3">
-                  {providers.map((provider) => (
+                  {category.providers.map((provider) => (
                     <ProviderCard key={provider.id} provider={provider} />
                   ))}
                 </div>

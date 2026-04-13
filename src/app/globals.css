@@ -102,6 +102,116 @@ body {
     padding: clamp(1.5rem, 3vw, 2.5rem);
   }
 
+  .bb-app-shell {
+    min-height: 100vh;
+    padding: clamp(1rem, 2.5vw, 2rem);
+  }
+
+  .bb-app-shell-frame {
+    display: grid;
+    gap: 1rem;
+    margin: 0 auto;
+    max-width: 92rem;
+    border: 1px solid var(--border-soft);
+    border-radius: 2rem;
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in srgb, var(--accent-strong) 12%, transparent 88%),
+        transparent 32%
+      ),
+      linear-gradient(180deg, rgba(9, 19, 15, 0.82), rgba(7, 14, 11, 0.92));
+    box-shadow: var(--shadow-soft);
+    backdrop-filter: blur(18px);
+  }
+
+  .bb-app-skip-link {
+    position: absolute;
+    left: 1rem;
+    top: 0.75rem;
+    transform: translateY(-220%);
+    z-index: 30;
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-pill);
+    background: var(--surface-2);
+    color: var(--text-1);
+    padding: 0.7rem 1rem;
+    transition: transform 150ms ease;
+  }
+
+  .bb-app-skip-link:focus-visible {
+    transform: translateY(0);
+    outline: none;
+  }
+
+  .bb-app-shell-header {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1rem 0;
+  }
+
+  .bb-app-shell-brand {
+    color: var(--text-1);
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+  }
+
+  .bb-app-menu-button {
+    flex-shrink: 0;
+  }
+
+  .bb-app-shell-nav {
+    display: none;
+    gap: 0.5rem;
+    padding: 0 1rem;
+  }
+
+  .bb-app-shell-nav-open {
+    display: grid;
+  }
+
+  .bb-app-shell-nav-link {
+    border: 1px solid var(--border-soft);
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-1);
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1;
+    padding: 0.95rem 1rem;
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      transform 150ms ease;
+  }
+
+  .bb-app-shell-nav-link:hover {
+    background: rgba(255, 255, 255, 0.09);
+    border-color: color-mix(in srgb, var(--accent-strong) 35%, transparent 65%);
+    transform: translateY(-1px);
+  }
+
+  .bb-app-shell-nav-link[aria-current="page"] {
+    background: color-mix(in srgb, var(--accent-strong) 18%, transparent 82%);
+    border-color: color-mix(in srgb, var(--accent-strong) 40%, transparent 60%);
+    color: var(--text-1);
+  }
+
+  .bb-app-shell-content {
+    display: grid;
+    gap: 1rem;
+    padding: 0 1rem 1rem;
+  }
+
+  .bb-app-shell-content:focus {
+    outline: 2px solid color-mix(in srgb, var(--accent-strong) 72%, white 28%);
+    outline-offset: 4px;
+  }
+
   .bb-panel {
     border: 1px solid var(--border-soft);
     border-radius: var(--radius-panel);
@@ -518,6 +628,30 @@ body {
 
   .bb-start-smart-copy {
     color: var(--start-smart-copy);
+  }
+
+  @media (min-width: 48rem) {
+    .bb-app-shell-frame {
+      gap: 1.25rem;
+    }
+
+    .bb-app-shell-header {
+      padding: 1.25rem 1.25rem 0;
+    }
+
+    .bb-app-shell-nav {
+      display: flex;
+      flex-wrap: wrap;
+      padding: 0 1.25rem;
+    }
+
+    .bb-app-menu-button {
+      display: none;
+    }
+
+    .bb-app-shell-content {
+      padding: 0 1.25rem 1.25rem;
+    }
   }
 
   .bb-start-smart-copy-soft {

@@ -2,8 +2,20 @@ import { render, screen, within } from "@testing-library/react";
 import IntegrationsPage from "./page";
 
 describe("IntegrationsPage", () => {
-  it("renders provider cards for the supported integrations", () => {
+  it("renders the settings hub summary, category navigation, and provider cards", () => {
     render(<IntegrationsPage />);
+
+    expect(screen.getByRole("heading", { level: 1, name: "Integrations" })).toBeInTheDocument();
+    expect(screen.getByText("Settings hub")).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Integration categories" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Jump to AI copilots" })).toHaveAttribute(
+      "href",
+      "#category-ai",
+    );
+    expect(screen.getByRole("link", { name: "Jump to Finance operations" })).toHaveAttribute(
+      "href",
+      "#category-finance_ops",
+    );
 
     expect(screen.getByText("Claude")).toBeInTheDocument();
     expect(screen.getByText("OpenAI")).toBeInTheDocument();
@@ -14,19 +26,23 @@ describe("IntegrationsPage", () => {
     expect(screen.getByText("Stripe")).toBeInTheDocument();
     expect(screen.getByText("Ramp")).toBeInTheDocument();
     expect(screen.getByText("Gusto")).toBeInTheDocument();
-    expect(screen.getAllByText("No silent sharing").length).toBeGreaterThanOrEqual(10);
   });
 
-  it("uses grouped category summaries and client-side links for internal setup routes", () => {
+  it("links the category navigator to the matching sections", () => {
     render(<IntegrationsPage />);
 
-    expect(screen.getByRole("heading", { level: 2, name: "AI copilots" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Jump to Tax and accounting" })).toHaveAttribute(
+      "href",
+      "#category-tax",
+    );
+    expect(screen.getByRole("region", { name: "Tax and accounting" })).toHaveAttribute(
+      "id",
+      "category-tax",
+    );
     expect(
-      screen.getByText(
-        "Model-powered helpers, planning copilots, and prompt-heavy workflow tools.",
-      ),
+      screen.getByText("Documents, filings, and ledger access where trust cues must be obvious."),
     ).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 3, name: "Claude" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "AI copilots" })).toBeInTheDocument();
 
     const claudeCard = screen.getByRole("heading", { level: 3, name: "Claude" }).closest("article");
 
