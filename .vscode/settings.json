@@ -3,6 +3,10 @@
   "svelte.enable-ts-plugin": false,
   "typescript.tsdk": "node_modules/typescript/lib",
   "typescript.tsserver.maxTsServerMemory": 4096,
+  "cSpell.words": [
+    "BudgetBITCH",
+    "budgetbitch"
+  ],
   "files.watcherExclude": {
     "**/budgetbitch/**": true,
     "**/WelcomeWindow-startup/**": true

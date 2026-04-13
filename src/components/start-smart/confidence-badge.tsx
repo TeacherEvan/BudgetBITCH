@@ -16,7 +16,7 @@ const confidenceStyles: Record<
   },
   user_entered: {
     label: "User entered",
-    className: "border-cyan-300/30 bg-cyan-400/10 text-cyan-100",
+    className: "border-orange-300/30 bg-orange-400/10 text-orange-100",
   },
 };
 

@@ -1,8 +1,15 @@
 import { RecommendedLessons } from "@/components/learn/recommended-lessons";
-import { getPrismaClient } from "@/lib/prisma";
+import { getCurrentWorkspaceAccess } from "@/lib/auth/workspace-access";
 import { extractLearnSignalsFromBlueprint } from "@/modules/learn/blueprint-bridge";
 import { resolveLearnRecommendations } from "@/modules/learn/recommendation-engine";
+import { getLatestBlueprintSignalsForWorkspace } from "@/modules/start-smart/latest-blueprint";
 import { ArrowRight, Lightbulb, Sparkles } from "lucide-react";
+
+const seededLearnFallbackSignals = {
+  learnModuleKeys: [],
+  priorityStack: ["cover_essentials"],
+  riskWarnings: [],
+};
 
 function shouldUseSeededLearnFallback(error: unknown) {
   return (
@@ -14,42 +21,17 @@ function shouldUseSeededLearnFallback(error: unknown) {
 
 async function getLearnRecommendations() {
   try {
-    const prisma = getPrismaClient();
-    const latestBlueprint = await prisma.moneyBlueprintSnapshot.findFirst({
-      where: { workspaceId: "demo_workspace" },
-      orderBy: { createdAt: "desc" },
-    });
-
-    if (!latestBlueprint) {
-      return resolveLearnRecommendations({
-        learnModuleKeys: [],
-        priorityStack: ["cover_essentials"],
-        riskWarnings: [],
-      });
-    }
-
-    const blueprintJson =
-      typeof latestBlueprint.blueprintJson === "object" &&
-      latestBlueprint.blueprintJson !== null
-        ? latestBlueprint.blueprintJson
-        : {};
+    const workspaceAccess = await getCurrentWorkspaceAccess();
+    const latestBlueprintSignals = workspaceAccess.allowed
+      ? await getLatestBlueprintSignalsForWorkspace(workspaceAccess.workspaceId)
+      : null;
 
     return resolveLearnRecommendations(
-      extractLearnSignalsFromBlueprint(
-        blueprintJson as {
-          priorityStack?: string[];
-          riskWarnings?: string[];
-          learnModuleKeys?: string[];
-        },
-      ),
+      extractLearnSignalsFromBlueprint(latestBlueprintSignals ?? {}),
     );
   } catch (error) {
     if (shouldUseSeededLearnFallback(error)) {
-      return resolveLearnRecommendations({
-        learnModuleKeys: [],
-        priorityStack: ["cover_essentials"],
-        riskWarnings: [],
-      });
+      return resolveLearnRecommendations(seededLearnFallbackSignals);
     }
 
     throw error;

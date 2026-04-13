@@ -2,13 +2,47 @@ import { render, screen, within } from "@testing-library/react";
 import IntegrationsPage from "./page";
 
 describe("IntegrationsPage", () => {
-  it("renders provider cards with explicit action labels for setup flows", () => {
+  it("renders the settings hub summary, category navigation, and provider cards", () => {
     render(<IntegrationsPage />);
+
+    expect(screen.getByRole("heading", { level: 1, name: "Integrations" })).toBeInTheDocument();
+    expect(screen.getByText("Settings hub")).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Integration categories" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Jump to AI copilots" })).toHaveAttribute(
+      "href",
+      "#category-ai",
+    );
+    expect(screen.getByRole("link", { name: "Jump to Finance operations" })).toHaveAttribute(
+      "href",
+      "#category-finance_ops",
+    );
 
     expect(screen.getByText("Claude")).toBeInTheDocument();
     expect(screen.getByText("OpenAI")).toBeInTheDocument();
     expect(screen.getByText("GitHub Copilot")).toBeInTheDocument();
     expect(screen.getByText("OpenClaw")).toBeInTheDocument();
+    expect(screen.getByText("Plaid")).toBeInTheDocument();
+    expect(screen.getByText("Vanguard")).toBeInTheDocument();
+    expect(screen.getByText("Stripe")).toBeInTheDocument();
+    expect(screen.getByText("Ramp")).toBeInTheDocument();
+    expect(screen.getByText("Gusto")).toBeInTheDocument();
+  });
+
+  it("links the category navigator to the matching sections", () => {
+    render(<IntegrationsPage />);
+
+    expect(screen.getByRole("link", { name: "Jump to Tax and accounting" })).toHaveAttribute(
+      "href",
+      "#category-tax",
+    );
+    expect(screen.getByRole("region", { name: "Tax and accounting" })).toHaveAttribute(
+      "id",
+      "category-tax",
+    );
+    expect(
+      screen.getByText("Documents, filings, and ledger access where trust cues must be obvious."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "AI copilots" })).toBeInTheDocument();
 
     const claudeCard = screen.getByRole("heading", { level: 3, name: "Claude" }).closest("article");
     const openclawCard = screen

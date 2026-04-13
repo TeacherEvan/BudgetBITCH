@@ -1,29 +1,37 @@
-import { clerkMiddleware } from "@clerk/nextjs/server";
-import type { NextFetchEvent, NextRequest } from "next/server";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import {
-  isClerkConfigured,
-  isClerkSatelliteConfigured,
-} from "@/lib/auth/clerk-config";
 
-export default function middleware(request: NextRequest, event: NextFetchEvent) {
-  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim();
+const isProtectedRoute = createRouteMatcher([
+  "/dashboard(.*)",
+  "/jobs(.*)",
+  "/learn(.*)",
+  "/settings(.*)",
+  "/start-smart(.*)",
+  "/api/v1/integrations(.*)",
+  "/api/v1/jobs(.*)",
+  "/api/v1/learn(.*)",
+  "/api/v1/start-smart(.*)",
+]);
 
-  if (!isClerkConfigured() || !publishableKey) {
-    if (
-      process.env.NEXT_PUBLIC_CLERK_IS_SATELLITE?.trim() === "true" &&
-      !isClerkSatelliteConfigured()
-    ) {
-      console.warn(
-        "Clerk satellite mode is enabled without NEXT_PUBLIC_CLERK_DOMAIN or NEXT_PUBLIC_CLERK_PROXY_URL; skipping Clerk middleware.",
-      );
-    }
+function isExplicitPlaywrightBypassEnabled() {
+  return (
+    process.env.NODE_ENV === "test" &&
+    process.env.E2E_BYPASS_AUTH === "true" &&
+    process.env.E2E_BYPASS_AUTH_SOURCE === "playwright"
+  );
+}
 
+export default clerkMiddleware(async (auth, request) => {
+  if (isExplicitPlaywrightBypassEnabled()) {
     return NextResponse.next();
   }
 
-  return clerkMiddleware({ publishableKey })(request, event);
-}
+  if (isProtectedRoute(request)) {
+    await auth.protect();
+  }
+
+  return NextResponse.next();
+});
 
 export const config = {
   matcher: ["/((?!_next|.*\\..*).*)", "/"],
