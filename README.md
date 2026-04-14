@@ -21,6 +21,7 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 - privacy shield disclosures and consent receipt helpers
 - encrypted provider-secret vault primitives and revoke flow
 - API endpoints for budget health, Start Smart blueprint generation, Learn recommendations/module detail, Jobs search/recommendations, and integration connect/revoke
+- compact launch wizard preferences with searchable city selection and threshold-based loading feedback
 
 ## Tech stack
 
@@ -74,6 +75,12 @@ The project has been verified in this workspace with:
 - `npm run build`
 
 For deeper orientation, start with `docs/DEV_TREE.md`, then use `docs/CODEBASE_INDEX.md` to jump to the right route, module, or test.
+
+## Launch wizard notes
+
+- Launch preferences remain local-only in `localStorage` under `budgetbitch:launch-profile`.
+- Searchable city suggestions are loaded on demand from a small curated catalog instead of shipping every option up front.
+- The launch loading window appears only when deferred transition work runs long enough to cross the threshold, and the money-themed art is prepared only when that loading state is needed.
 
 ## Database notes
 

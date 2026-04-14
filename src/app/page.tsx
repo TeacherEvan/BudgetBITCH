@@ -13,7 +13,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { MoneyLoadingWindow } from "@/components/launch/money-loading-window";
 import LaunchWizard, { LAUNCH_PROFILE_STORAGE_KEY, type LaunchWizardProfile } from "@/components/launch/launch-wizard";
+import { useLaunchTransition } from "@/components/launch/use-launch-transition";
 
 type HomeDisplayState = "loading" | "wizard" | "landing";
 
@@ -124,6 +126,9 @@ function hasCompletedLaunchProfile(value: string | null) {
 
 export default function Home() {
   const [homeState, setHomeState] = useState<HomeDisplayState>("loading");
+  const { beginTransition, loadingWindow } = useLaunchTransition({
+    onReady: () => setHomeState("landing"),
+  });
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -135,11 +140,18 @@ export default function Home() {
   }, []);
 
   function handleLaunchComplete() {
-    setHomeState("landing");
+    void beginTransition();
   }
 
   return (
     <>
+      <MoneyLoadingWindow
+        visible={loadingWindow.visible}
+        reasons={loadingWindow.reasons}
+        reducedMotion={loadingWindow.reducedMotion}
+        showArt={loadingWindow.showArt}
+      />
+
       <AnimatePresence>
         {homeState === "wizard" && (
           <motion.div

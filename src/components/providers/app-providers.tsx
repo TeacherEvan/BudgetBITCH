@@ -3,15 +3,13 @@
 import { ClerkProvider, useAuth } from "@clerk/nextjs";
 import { ConvexReactClient } from "convex/react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { isClerkClientConfigured } from "@/lib/auth/clerk-config";
 import { isAbsoluteHttpUrl } from "@/lib/url";
 
 type AppProvidersProps = {
   children: ReactNode;
 };
-
-let hasWarnedAboutConvexUrl = false;
 
 function ConvexClerkProviders({
   children,
@@ -33,18 +31,21 @@ export function AppProviders({ children }: AppProvidersProps) {
   const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL?.trim();
   const convexUrlValue = convexUrl ?? "";
   const convexUrlConfigured = isAbsoluteHttpUrl(convexUrl);
+  const hasWarnedAboutConvexUrl = useRef(false);
+
+  useEffect(() => {
+    if (!convexUrl || convexUrlConfigured || hasWarnedAboutConvexUrl.current) {
+      return;
+    }
+
+    hasWarnedAboutConvexUrl.current = true;
+    console.warn(
+      "NEXT_PUBLIC_CONVEX_URL must be an absolute http(s) URL; skipping Convex provider.",
+    );
+  }, [convexUrl, convexUrlConfigured]);
 
   if (!publishableKey || !isClerkClientConfigured()) {
     return <>{children}</>;
-  }
-
-  if (convexUrl && !convexUrlConfigured) {
-    if (!hasWarnedAboutConvexUrl) {
-      hasWarnedAboutConvexUrl = true;
-      console.warn(
-        "NEXT_PUBLIC_CONVEX_URL must be an absolute http(s) URL; skipping Convex provider.",
-      );
-    }
   }
 
   return (

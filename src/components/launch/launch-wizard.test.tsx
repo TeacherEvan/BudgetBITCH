@@ -7,7 +7,7 @@ describe("LaunchWizard", () => {
     window.localStorage.clear();
   });
 
-  it("captures the window choices and stores a completed launch profile", () => {
+  it("captures the window choices and stores a completed launch profile", async () => {
     const onComplete = vi.fn();
 
     render(<LaunchWizard onComplete={onComplete} />);
@@ -15,7 +15,8 @@ describe("LaunchWizard", () => {
     expect(screen.getByText(/no precise location data is collected/i)).toBeInTheDocument();
     expect(screen.getByText(/crypto platform choice is a placeholder for later/i)).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText(/city/i), { target: { value: "Dublin" } });
+    fireEvent.focus(screen.getByRole("combobox", { name: /city/i }));
+    fireEvent.click(await screen.findByRole("option", { name: /dublin/i }));
     fireEvent.change(screen.getByLabelText(/visual style/i), { target: { value: "billboard" } });
     fireEvent.change(screen.getByLabelText(/motion level/i), { target: { value: "cinematic" } });
     fireEvent.change(screen.getByLabelText(/theme/i), { target: { value: "midnight" } });
@@ -36,6 +37,11 @@ describe("LaunchWizard", () => {
         cryptoPlatform: "kraken",
       }),
     );
+
+    expect(screen.getByText(/^Dublin$/i, { selector: "p" })).toBeInTheDocument();
+    expect(screen.getByText(/^billboard$/i, { selector: "p" })).toBeInTheDocument();
+    expect(screen.getByText(/^cinematic$/i, { selector: "p" })).toBeInTheDocument();
+    expect(screen.getByText(/^midnight$/i, { selector: "p" })).toBeInTheDocument();
 
     expect(JSON.parse(window.localStorage.getItem(LAUNCH_PROFILE_STORAGE_KEY) ?? "null")).toMatchObject(
       {

@@ -1,12 +1,36 @@
 import { expect, test } from "@playwright/test";
 
 test("home page shows the launch wizard before the landing board", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1100 });
   await page.goto("/");
 
   await expect(page.getByRole("heading", { name: /launch your dashboard window/i })).toBeVisible();
   await expect(page.getByText(/no precise location data is collected/i)).toBeVisible();
 
-  await page.getByLabel("City").fill("Dublin");
+  await expect.poll(
+    () =>
+      page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight),
+    { timeout: 2_000 },
+  ).toBeLessThanOrEqual(16);
+
+  await expect.poll(
+    () =>
+      page.evaluate(() => document.body.scrollHeight - window.innerHeight),
+    { timeout: 2_000 },
+  ).toBeLessThanOrEqual(16);
+
+  await expect.poll(
+    () =>
+      page.evaluate(() => {
+        const pageShell = document.querySelector(".bb-page-shell");
+        return pageShell ? pageShell.getBoundingClientRect().bottom - window.innerHeight : 0;
+      }),
+    { timeout: 2_000 },
+  ).toBeLessThanOrEqual(16);
+
+  await page.getByRole("combobox", { name: "City" }).click();
+  await page.getByRole("combobox", { name: "City" }).fill("Dub");
+  await page.getByRole("option", { name: /dublin/i }).click();
   await page.getByLabel("Visual style").selectOption("billboard");
   await page.getByLabel("Motion level").selectOption("cinematic");
   await page.getByLabel("Theme").selectOption("midnight");

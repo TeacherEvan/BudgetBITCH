@@ -2,18 +2,36 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Home from "./page";
 
+const prepareLaunchTransitionResources = vi.hoisted(() => vi.fn(() => Promise.resolve()));
+
+const launchProfile = {
+  completed: true as const,
+  completedAt: "2026-04-10T12:00:00.000Z",
+  city: "Dublin",
+  layoutPreset: "launcher_grid" as const,
+  motionPreset: "cinematic" as const,
+  themePreset: "midnight" as const,
+  cryptoPlatform: "later" as const,
+};
+
 vi.mock("@/components/launch/launch-wizard", () => ({
   LAUNCH_PROFILE_STORAGE_KEY: "budgetbitch:launch-profile",
-  default: ({ onComplete }: { onComplete: () => void }) => (
-    <button onClick={onComplete} type="button">
+  default: ({ onComplete }: { onComplete: (profile: typeof launchProfile) => void }) => (
+    <button onClick={() => onComplete(launchProfile)} type="button">
       Mock launch wizard
     </button>
   ),
 }));
 
+vi.mock("@/components/launch/load-money-loading-art", () => ({
+  prepareLaunchTransitionResources,
+}));
+
 describe("Home", () => {
   beforeEach(() => {
     window.localStorage.clear();
+    prepareLaunchTransitionResources.mockReset();
+    prepareLaunchTransitionResources.mockImplementation(() => Promise.resolve());
     Object.defineProperty(window, "matchMedia", {
       writable: true,
       value: vi.fn().mockImplementation((query: string) => ({
@@ -56,20 +74,25 @@ describe("Home", () => {
       "href",
       "/start-smart",
     );
+    expect(screen.queryByText(/preparing your money board/i)).not.toBeInTheDocument();
+  });
+
+  it("shows the loading window while launch transition work is pending", async () => {
+    prepareLaunchTransitionResources.mockImplementation(
+      () => new Promise((resolve) => window.setTimeout(resolve, 400)),
+    );
+
+    render(<Home />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /mock launch wizard/i }));
+
+    expect(await screen.findByText(/preparing your money board/i)).toBeInTheDocument();
   });
 
   it("skips the launch wizard when a completed profile is already saved", async () => {
     window.localStorage.setItem(
       "budgetbitch:launch-profile",
-      JSON.stringify({
-        completed: true,
-        completedAt: "2026-04-10T12:00:00.000Z",
-        city: "Dublin",
-        layoutPreset: "launcher_grid",
-        motionPreset: "cinematic",
-        themePreset: "midnight",
-        cryptoPlatform: "later",
-      }),
+      JSON.stringify(launchProfile),
     );
 
     render(<Home />);

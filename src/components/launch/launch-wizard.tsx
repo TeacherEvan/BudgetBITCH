@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { SearchableCombobox, type SearchableComboboxOption } from "@/components/launch/searchable-combobox";
+import { loadLaunchCityOptions } from "@/modules/launch/option-catalog";
 
 export const LAUNCH_PROFILE_STORAGE_KEY = "budgetbitch:launch-profile";
 
@@ -76,17 +78,29 @@ export function isLaunchWizardProfile(value: unknown): value is LaunchWizardProf
 }
 
 export default function LaunchWizard({ onComplete }: LaunchWizardProps) {
-  const [city, setCity] = useState("");
+  const [cityValue, setCityValue] = useState("");
+  const [cityLabel, setCityLabel] = useState("");
   const [layoutPreset, setLayoutPreset] = useState<LaunchWizardLayoutPreset>("launcher_grid");
   const [motionPreset, setMotionPreset] = useState<LaunchWizardMotionPreset>("cinematic");
   const [themePreset, setThemePreset] = useState<LaunchWizardThemePreset>("midnight");
   const [cryptoPlatform, setCryptoPlatform] = useState<LaunchWizardCryptoPlatform>("later");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  async function loadCityComboboxOptions(): Promise<SearchableComboboxOption[]> {
+    const options = await loadLaunchCityOptions();
+
+    return options.map((option) => ({
+      value: option.value,
+      label: option.label,
+      description: option.regionLabel,
+      keywords: option.keywords,
+    }));
+  }
+
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const trimmedCity = city.trim();
+    const trimmedCity = cityLabel.trim();
 
     if (!trimmedCity) {
       setErrorMessage("Enter a city to continue.");
@@ -116,31 +130,29 @@ export default function LaunchWizard({ onComplete }: LaunchWizardProps) {
 
   return (
     <main className="bb-page-shell">
-      <section className="mx-auto grid min-h-[calc(100vh-2rem)] max-w-7xl gap-6 overflow-hidden lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
-        <article className="bb-panel bb-panel-strong flex flex-col gap-6 p-8 md:p-10">
+      <section className="bb-launch-shell mx-auto max-w-7xl overflow-hidden">
+        <article className="bb-panel bb-panel-strong bb-launch-main p-6 md:p-8">
           <header className="space-y-4">
             <p className="bb-kicker">Launch wizard</p>
             <h1 className="max-w-2xl text-4xl font-semibold md:text-5xl">
               Launch your dashboard window.
             </h1>
             <p className="bb-copy max-w-2xl text-base md:text-lg">
-              Choose the city label, window style, motion, and placeholder crypto lane before the
-              rest of the app opens.
+              Set the launch look, pick the city label from a searchable list, and keep the first
+              screen tight enough to stay in view.
             </p>
           </header>
 
-          <form className="grid gap-5" onSubmit={handleSubmit} noValidate>
-            <div className="grid gap-4 md:grid-cols-2">
-              <label className="grid gap-2">
-                <span className="text-sm font-semibold text-white">City</span>
-                <input
-                  aria-label="City"
-                  className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none transition placeholder:text-white/35 focus:border-emerald-300/60 focus:ring-2 focus:ring-emerald-300/20"
-                  placeholder="City label only"
-                  value={city}
-                  onChange={(event) => setCity(event.target.value)}
-                />
-              </label>
+          <form className="bb-launch-form" onSubmit={handleSubmit} noValidate>
+            <div className="bb-launch-field-grid">
+              <SearchableCombobox
+                label="City"
+                value={cityValue}
+                onChange={setCityValue}
+                onOptionSelect={(option) => setCityLabel(option.label)}
+                loadOptions={loadCityComboboxOptions}
+                placeholder="Search a city label"
+              />
 
               <label className="grid gap-2">
                 <span className="text-sm font-semibold text-white">Visual style</span>
@@ -159,7 +171,7 @@ export default function LaunchWizard({ onComplete }: LaunchWizardProps) {
               </label>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="bb-launch-field-grid">
               <label className="grid gap-2">
                 <span className="text-sm font-semibold text-white">Motion level</span>
                 <select
@@ -238,7 +250,7 @@ export default function LaunchWizard({ onComplete }: LaunchWizardProps) {
           </form>
         </article>
 
-        <aside className="grid gap-4 self-start">
+        <aside className="bb-launch-sidebar grid gap-4 self-start">
           <article className="bb-panel bb-panel-accent p-6">
             <p className="bb-kicker">Permission copy</p>
             <h2 className="mt-3 text-3xl font-semibold">City only</h2>
@@ -252,7 +264,9 @@ export default function LaunchWizard({ onComplete }: LaunchWizardProps) {
             <div className="mt-4 grid gap-3">
               <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
                 <p className="text-xs uppercase tracking-[0.2em] text-emerald-100/65">City</p>
-                <p className="mt-1 text-lg font-semibold text-white">{city.trim() || "Not set"}</p>
+                <p className="mt-1 text-lg font-semibold text-white">
+                  {cityLabel.trim() || "Not set"}
+                </p>
               </div>
               <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
                 <p className="text-xs uppercase tracking-[0.2em] text-emerald-100/65">Layout</p>
