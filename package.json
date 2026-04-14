@@ -6,9 +6,9 @@
     "node": "22.x"
   },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "node ./scripts/run-with-sanitized-env.mjs next dev",
+    "build": "node ./scripts/run-with-sanitized-env.mjs next build",
+    "start": "node ./scripts/run-with-sanitized-env.mjs next start",
     "postinstall": "prisma generate",
     "lint": "eslint .",
     "test": "vitest run",

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Home from "./page";
 
@@ -84,9 +84,20 @@ describe("Home", () => {
 
     render(<Home />);
 
-    fireEvent.click(await screen.findByRole("button", { name: /mock launch wizard/i }));
+    const wizardButton = await screen.findByRole("button", { name: /mock launch wizard/i });
 
-    expect(await screen.findByText(/preparing your money board/i)).toBeInTheDocument();
+    vi.useFakeTimers();
+
+    try {
+      await act(async () => {
+        fireEvent.click(wizardButton);
+        await vi.advanceTimersByTimeAsync(275);
+      });
+
+      expect(screen.getByText(/preparing your money board/i)).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("skips the launch wizard when a completed profile is already saved", async () => {

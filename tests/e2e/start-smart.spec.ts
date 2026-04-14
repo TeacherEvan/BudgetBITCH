@@ -1,11 +1,12 @@
 import { expect, test } from "@playwright/test";
+import { seedCompletedLaunchProfile } from "./launch-profile";
 
 test("user can open Start Smart and generate a survival blueprint", async ({
   page,
 }) => {
+  await seedCompletedLaunchProfile(page);
   await page.goto("/");
 
-  await page.getByRole("button", { name: /enter the magic/i }).click();
   await page.getByRole("link", { name: /start smart/i }).click();
 
   await page.getByText("Young adult").click();

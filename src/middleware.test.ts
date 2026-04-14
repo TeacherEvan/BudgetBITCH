@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+function createPublishableKey(host: string) {
+  return `pk_test_${Buffer.from(`${host}$`, "utf8").toString("base64url")}`;
+}
+
 const middlewareHandler = vi.hoisted(() => vi.fn(() => "clerk-response"));
 const clerkMiddlewareMock = vi.hoisted(() => vi.fn(() => middlewareHandler));
 const nextResponseNextMock = vi.hoisted(() => vi.fn(() => "next-response"));
@@ -41,7 +45,9 @@ describe("middleware", () => {
   });
 
   it("wraps requests in Clerk middleware when Clerk keys are configured", () => {
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_budgetbitch");
+    const publishableKey = createPublishableKey("clerk.budgetbitch.test");
+
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", publishableKey);
     vi.stubEnv("CLERK_SECRET_KEY", "sk_test_budgetbitch");
 
     const request = new Request("http://localhost/");
@@ -49,7 +55,7 @@ describe("middleware", () => {
     const response = middleware(request as never, event);
 
     expect(clerkMiddlewareMock).toHaveBeenCalledWith({
-      publishableKey: "pk_test_budgetbitch",
+      publishableKey,
     });
     expect(middlewareHandler).toHaveBeenCalledWith(request, event);
     expect(nextResponseNextMock).not.toHaveBeenCalled();

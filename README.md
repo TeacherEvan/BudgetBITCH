@@ -93,6 +93,8 @@ For Neon + Prisma 7 in this repo:
 - use `DATABASE_URL` for your pooled application/runtime connection
 - use `DIRECT_URL` for Prisma CLI operations
 - use `SHADOW_DATABASE_URL` only if you want a dedicated shadow database for `prisma migrate dev`
+- `prisma.config.ts` now requires `DIRECT_URL` for non-generate Prisma CLI work when `DATABASE_URL` points at a pooled Neon host, which avoids PgBouncer transaction-mode issues during schema operations
+- the runtime Prisma client warns if `DATABASE_URL` points at a direct Neon host so you can move request traffic onto the pooled Neon endpoint before you hit connection-pressure issues
 
 If you have a real PostgreSQL instance available, run:
 

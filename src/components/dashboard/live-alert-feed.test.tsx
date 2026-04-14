@@ -1,6 +1,10 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+function createPublishableKey(host: string) {
+  return `pk_test_${Buffer.from(`${host}$`, "utf8").toString("base64url")}`;
+}
+
 const useQueryMock = vi.hoisted(() => vi.fn());
 const viewerCurrentQuery = vi.hoisted(() => Symbol("viewer.current"));
 const listAlertInboxRowsQuery = vi.hoisted(() => Symbol("live.listAlertInboxRows"));
@@ -45,7 +49,7 @@ describe("LiveAlertFeed", () => {
 
   it("shows a graceful fallback when the Convex URL is not absolute", () => {
     vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "steady-ox-280.convex.cloud");
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_budgetbitch");
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", createPublishableKey("clerk.budgetbitch.test"));
 
     render(<LiveAlertFeed workspaceId="workspace-1" />);
 
@@ -57,7 +61,7 @@ describe("LiveAlertFeed", () => {
 
   it("shows a projection-sync message when the viewer record is not ready", () => {
     vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "https://budgetbitch.convex.cloud");
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_budgetbitch");
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", createPublishableKey("clerk.budgetbitch.test"));
 
     useQueryMock.mockImplementation((query) => {
       if (query === viewerCurrentQuery) {
@@ -83,7 +87,7 @@ describe("LiveAlertFeed", () => {
 
   it("renders live alert rows when Convex returns data", () => {
     vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "https://budgetbitch.convex.cloud");
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_budgetbitch");
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", createPublishableKey("clerk.budgetbitch.test"));
 
     useQueryMock.mockImplementation((query) => {
       if (query === viewerCurrentQuery) {

@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+function createPublishableKey(host: string) {
+  return `pk_test_${Buffer.from(`${host}$`, "utf8").toString("base64url")}`;
+}
+
 const authMock = vi.hoisted(() => vi.fn());
 const prismaMock = vi.hoisted(() => ({
   userProfile: {
@@ -40,7 +44,7 @@ describe("authorizeWorkspaceMutation", () => {
   });
 
   it("rejects anonymous requests", async () => {
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_budgetbitch");
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", createPublishableKey("clerk.budgetbitch.test"));
     vi.stubEnv("CLERK_SECRET_KEY", "sk_test_budgetbitch");
     authMock.mockResolvedValue({ userId: null });
 
@@ -51,7 +55,7 @@ describe("authorizeWorkspaceMutation", () => {
   });
 
   it("rejects users without a local profile", async () => {
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_budgetbitch");
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", createPublishableKey("clerk.budgetbitch.test"));
     vi.stubEnv("CLERK_SECRET_KEY", "sk_test_budgetbitch");
     authMock.mockResolvedValue({ userId: "user_clerk_1" });
     prismaMock.userProfile.findUnique.mockResolvedValue(null);
@@ -63,7 +67,7 @@ describe("authorizeWorkspaceMutation", () => {
   });
 
   it("rejects users without workspace membership", async () => {
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_budgetbitch");
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", createPublishableKey("clerk.budgetbitch.test"));
     vi.stubEnv("CLERK_SECRET_KEY", "sk_test_budgetbitch");
     authMock.mockResolvedValue({ userId: "user_clerk_1" });
     prismaMock.userProfile.findUnique.mockResolvedValue({ id: "profile-1" });
@@ -76,7 +80,7 @@ describe("authorizeWorkspaceMutation", () => {
   });
 
   it("returns the workspace actor for any valid workspace member", async () => {
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_budgetbitch");
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", createPublishableKey("clerk.budgetbitch.test"));
     vi.stubEnv("CLERK_SECRET_KEY", "sk_test_budgetbitch");
     authMock.mockResolvedValue({ userId: "user_clerk_1" });
     prismaMock.userProfile.findUnique.mockResolvedValue({ id: "profile-1" });

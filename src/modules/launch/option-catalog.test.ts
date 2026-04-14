@@ -10,7 +10,10 @@ describe("launch option catalog", () => {
       value: expect.any(String),
       keywords: expect.any(Array),
     });
+    expect(options.length).toBeGreaterThanOrEqual(24);
     expect(options.some((option) => option.value === "dublin_ie")).toBe(true);
+    expect(options.some((option) => option.value === "singapore_sg")).toBe(true);
+    expect(options.some((option) => option.value === "mexico_city_mx")).toBe(true);
   });
 
   it("loads deferred city options", async () => {
