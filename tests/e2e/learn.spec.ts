@@ -1,11 +1,12 @@
 import { expect, test } from "@playwright/test";
+import { seedCompletedLaunchProfile } from "./launch-profile";
 
 test("user can open Learn! from Start Smart results and view a lesson", async ({
   page,
 }) => {
+  await seedCompletedLaunchProfile(page);
   await page.goto("/");
 
-  await page.getByRole("button", { name: /enter the magic/i }).click();
   await page.getByRole("link", { name: /start smart/i }).click();
 
   await page.getByText("Young adult").click();
@@ -18,7 +19,8 @@ test("user can open Learn! from Start Smart results and view a lesson", async ({
   ).toBeVisible();
   await page.getByRole("link", { name: /budgeting basics/i }).click();
 
-  await expect(page.getByText("Learn!")).toBeVisible();
+  await page.waitForURL(/\/learn\//);
+
   await expect(
     page.getByRole("heading", { name: "Budgeting Basics" }),
   ).toBeVisible();

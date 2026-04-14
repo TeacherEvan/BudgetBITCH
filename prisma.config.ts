@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import process from "node:process";
 import { defineConfig, env } from "prisma/config";
+import { resolvePrismaCliDatabaseUrl } from "./src/lib/prisma-connection";
 
 const loadEnvFileIfPresent = (path: string) => {
   if (existsSync(path)) {
@@ -24,12 +25,12 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url:
-      directUrl ??
-      databaseUrl ??
-      (isGenerateCommand
-        ? installTimeFallbackDatabaseUrl
-        : env("DATABASE_URL")),
+    url: resolvePrismaCliDatabaseUrl({
+      databaseUrl: databaseUrl ?? env("DATABASE_URL"),
+      directUrl,
+      isGenerateCommand,
+      installTimeFallbackDatabaseUrl,
+    }),
     shadowDatabaseUrl: process.env.SHADOW_DATABASE_URL,
   },
 });

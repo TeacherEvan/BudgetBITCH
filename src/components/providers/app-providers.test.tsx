@@ -30,6 +30,10 @@ vi.mock("convex/react-clerk", () => ({
 
 import { AppProviders } from "./app-providers";
 
+function createPublishableKey(host: string) {
+  return `pk_test_${Buffer.from(`${host}$`, "utf8").toString("base64url")}`;
+}
+
 describe("AppProviders", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -49,7 +53,7 @@ describe("AppProviders", () => {
   });
 
   it("wraps children in Clerk only when Convex is not configured", () => {
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_budgetbitch");
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", createPublishableKey("clerk.budgetbitch.test"));
 
     render(
       <AppProviders>
@@ -60,13 +64,11 @@ describe("AppProviders", () => {
     expect(screen.getByTestId("clerk-provider")).toBeInTheDocument();
     expect(screen.queryByTestId("convex-provider")).not.toBeInTheDocument();
     expect(convexClientMock).not.toHaveBeenCalled();
-    expect(clerkProviderMock.mock.calls[0]?.[0].publishableKey).toBe(
-      "pk_test_budgetbitch",
-    );
+    expect(clerkProviderMock.mock.calls[0]?.[0].publishableKey).toBe(createPublishableKey("clerk.budgetbitch.test"));
   });
 
   it("skips Convex when the URL is not absolute", () => {
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_budgetbitch");
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", createPublishableKey("clerk.budgetbitch.test"));
     vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "steady-ox-280.convex.cloud");
 
     render(
@@ -81,7 +83,7 @@ describe("AppProviders", () => {
   });
 
   it("wraps children in Clerk and Convex when both are configured", () => {
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_budgetbitch");
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", createPublishableKey("clerk.budgetbitch.test"));
     vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "https://happy-animal-123.convex.cloud");
 
     render(
@@ -96,5 +98,18 @@ describe("AppProviders", () => {
       "https://happy-animal-123.convex.cloud",
     );
     expect(convexProviderMock.mock.calls[0]?.[0].useAuth).toBe(clerkUseAuthMock);
+  });
+
+  it("skips Clerk when the publishable key is placeholder-like", () => {
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_replace_me");
+
+    render(
+      <AppProviders>
+        <main>BudgetBITCH</main>
+      </AppProviders>,
+    );
+
+    expect(screen.queryByTestId("clerk-provider")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("convex-provider")).not.toBeInTheDocument();
   });
 });
