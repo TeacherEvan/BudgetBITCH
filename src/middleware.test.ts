@@ -1,15 +1,21 @@
+import { NextRequest, NextResponse } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-function createPublishableKey(host: string) {
-  return `pk_test_${Buffer.from(`${host}$`, "utf8").toString("base64url")}`;
-}
-
-const middlewareHandler = vi.hoisted(() => vi.fn(() => "clerk-response"));
-const clerkMiddlewareMock = vi.hoisted(() => vi.fn(() => middlewareHandler));
-const nextResponseNextMock = vi.hoisted(() => vi.fn(() => "next-response"));
+const { protectMock, clerkMiddlewareMock } = vi.hoisted(() => ({
+  protectMock: vi.fn(),
+  clerkMiddlewareMock: vi.fn((handler: unknown) => handler),
+}));
 
 vi.mock("@clerk/nextjs/server", () => ({
   clerkMiddleware: clerkMiddlewareMock,
+  createRouteMatcher: (patterns: string[]) => (request: NextRequest) => {
+    const pathname = request.nextUrl.pathname;
+
+    return patterns.some((pattern) => {
+      const basePath = pattern.replace("(.*)", "");
+      return pathname === basePath || pathname.startsWith(basePath + "/");
+    });
+  },
 }));
 
 vi.mock("next/server", async () => {
@@ -19,7 +25,7 @@ vi.mock("next/server", async () => {
     ...actual,
     NextResponse: {
       ...actual.NextResponse,
-      next: nextResponseNextMock,
+      next: vi.fn(() => "next-response"),
     },
   };
 });
@@ -28,38 +34,58 @@ import middleware, { config } from "../middleware";
 
 describe("middleware", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+    delete process.env.E2E_BYPASS_AUTH;
+    delete process.env.E2E_BYPASS_AUTH_SOURCE;
+    protectMock.mockReset();
   });
 
-  it("skips Clerk middleware when Clerk keys are missing", () => {
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "");
-    vi.stubEnv("CLERK_SECRET_KEY", "");
+  it("protects matched app routes when auth bypass is disabled", async () => {
+    const nextSpy = vi.spyOn(NextResponse, "next");
 
-    const event = { waitUntil: vi.fn() } as Parameters<typeof middleware>[1];
-    const response = middleware(new Request("http://localhost/") as never, event);
+    const response = await middleware(
+      { protect: protectMock } as never,
+      new NextRequest("http://localhost/start-smart"),
+    );
 
-    expect(clerkMiddlewareMock).not.toHaveBeenCalled();
-    expect(nextResponseNextMock).toHaveBeenCalledTimes(1);
+    expect(protectMock).toHaveBeenCalledTimes(1);
+    expect(nextSpy).toHaveBeenCalledTimes(1);
+    expect(response).toBe(nextSpy.mock.results[0]?.value);
+  });
+
+  it("protects workspace-backed api routes when auth bypass is disabled", async () => {
+    await middleware(
+      { protect: protectMock } as never,
+      new NextRequest("http://localhost/api/v1/start-smart/blueprint"),
+    );
+
+    expect(protectMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps protection enabled when the bypass source guard is missing", async () => {
+    process.env.E2E_BYPASS_AUTH = "true";
+
+    await middleware(
+      { protect: protectMock } as never,
+      new NextRequest("http://localhost/start-smart"),
+    );
+
+    expect(protectMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("skips Clerk protection when explicit E2E auth bypass is enabled", async () => {
+    process.env.E2E_BYPASS_AUTH = "true";
+    process.env.E2E_BYPASS_AUTH_SOURCE = "playwright";
+    const nextSpy = vi.spyOn(NextResponse, "next");
+
+    const response = await middleware(
+      { protect: protectMock } as never,
+      new NextRequest("http://localhost/start-smart"),
+    );
+
+    expect(nextSpy).toHaveBeenCalled();
+    expect(protectMock).not.toHaveBeenCalled();
     expect(response).toBe("next-response");
-  });
-
-  it("wraps requests in Clerk middleware when Clerk keys are configured", () => {
-    const publishableKey = createPublishableKey("clerk.budgetbitch.test");
-
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", publishableKey);
-    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_budgetbitch");
-
-    const request = new Request("http://localhost/");
-    const event = { waitUntil: vi.fn() } as Parameters<typeof middleware>[1];
-    const response = middleware(request as never, event);
-
-    expect(clerkMiddlewareMock).toHaveBeenCalledWith({
-      publishableKey,
-    });
-    expect(middlewareHandler).toHaveBeenCalledWith(request, event);
-    expect(nextResponseNextMock).not.toHaveBeenCalled();
-    expect(response).toBe("clerk-response");
   });
 
   it("keeps the matcher focused on app routes instead of static assets", () => {
