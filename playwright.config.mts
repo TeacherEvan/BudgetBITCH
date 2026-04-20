@@ -15,17 +15,21 @@ const playwrightAuthEnv = {
 export default defineConfig({
   testDir: "./tests/e2e",
   use: {
-    baseURL: "http://127.0.0.1:3000",
+    baseURL: "http://127.0.0.1:3001",
     trace: "on-first-retry",
   },
   webServer: {
     cwd: appRoot,
-    command: "npm run dev:frontend",
-    url: "http://127.0.0.1:3000",
+    command: "npm run dev:frontend -- . --port 3001",
+    url: "http://127.0.0.1:3001",
     reuseExistingServer: false,
     env: {
       CONVEX_AGENT_MODE: "anonymous",
+      NEXT_PUBLIC_CONVEX_URL: "http://127.0.0.1:3210",
+      NEXT_PUBLIC_CONVEX_SITE_URL: "http://127.0.0.1:3211",
       WORKOS_CLIENT_ID: "client_e2e",
+      NEXT_PUBLIC_WORKOS_REDIRECT_URI: "http://127.0.0.1:3001/callback",
+      WORKOS_COOKIE_PASSWORD: "e2e-auth-cookie-password-32-chars!!",
       NODE_ENV: "test",
       ...playwrightAuthEnv,
     },

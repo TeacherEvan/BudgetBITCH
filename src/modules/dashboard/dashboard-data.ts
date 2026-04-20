@@ -399,7 +399,12 @@ export async function getDashboardPageData(
       userDisplayName: profile.displayName,
       workspaces,
     };
-  } catch {
+  } catch (error) {
+    console.error("[getDashboardPageData] Unexpected error", {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
     return buildDemoData(requestedWorkspaceId);
   }
 }

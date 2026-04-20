@@ -1,16 +1,13 @@
 import { expect, test } from "@playwright/test";
 
-test("home page renders the landing message", async ({ page }) => {
+test("home page renders the AuthKit landing page", async ({ page }) => {
   await page.goto("/");
-
-  const enterButton = page.getByRole("button", { name: /enter the magic/i });
-
-  await expect(enterButton).toBeVisible({ timeout: 10000 });
-  await enterButton.click();
 
   await expect(
     page.getByRole("heading", {
-      name: "Plan first. Panic less.",
+      name: /convex \+ next\.js \+ workos/i,
     }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 10000 });
+
+  await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
 });

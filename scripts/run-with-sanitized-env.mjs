@@ -7,6 +7,8 @@ const variablesToSanitize = [
   "CLERK_JWT_ISSUER_DOMAIN",
   "NEXT_PUBLIC_CLERK_DOMAIN",
   "NEXT_PUBLIC_CLERK_PROXY_URL",
+  "SENTRY_DSN",
+  "NEXT_PUBLIC_SENTRY_DSN",
 ];
 
 const [command, ...args] = process.argv.slice(2);
