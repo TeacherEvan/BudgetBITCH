@@ -10,5 +10,7 @@
   "search.exclude": {
     "**/budgetbitch/**": true,
     "**/WelcomeWindow-startup/**": true
-  }
+  },
+  "todo-tree.tree.showBadges": false,
+  "todo-tree.tree.showCountsInTree": true
 }

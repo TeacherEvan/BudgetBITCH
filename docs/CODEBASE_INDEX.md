@@ -188,12 +188,3 @@ Useful anchors:
 4. `src/modules/integrations/connection-vault.ts`
 5. `src/modules/audit/integration-audit.ts`
 
-## 9. Verification commands
-
-```text
-npm run lint
-npm run test
-npm run test:e2e
-npm run db:generate
-npm run build
-```

@@ -203,6 +203,18 @@ function buildLauncherTools(): DashboardLauncherTool[] {
       detail: "See the burn before it gets noisy.",
       label: "Cashflow",
     },
+    {
+      title: "Open calculator",
+      href: "/calculator",
+      detail: "Quick arithmetic without leaving the board.",
+      label: "Calculator",
+    },
+    {
+      title: "Open notes",
+      href: "/notes",
+      detail: "Scratchpad for budget thoughts and reminders.",
+      label: "Notes",
+    },
   ];
 }
 function buildDemoData(requestedWorkspaceId?: string | null): DashboardPageData {

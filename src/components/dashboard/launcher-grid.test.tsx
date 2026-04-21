@@ -43,6 +43,18 @@ describe("LauncherGrid", () => {
             detail: "See the burn before it gets noisy.",
             label: "Cashflow",
           },
+          {
+            title: "Open calculator",
+            href: "/calculator",
+            detail: "Quick arithmetic without leaving the board.",
+            label: "Calculator",
+          },
+          {
+            title: "Open notes",
+            href: "/notes",
+            detail: "Scratchpad for budget thoughts and reminders.",
+            label: "Notes",
+          },
         ]}
       />,
     );
@@ -56,6 +68,6 @@ describe("LauncherGrid", () => {
       "href",
       "/cashflow",
     );
-    expect(screen.getAllByRole("link")).toHaveLength(6);
+    expect(screen.getAllByRole("link")).toHaveLength(8);
   });
 });

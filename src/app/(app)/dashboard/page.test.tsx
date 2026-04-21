@@ -94,6 +94,18 @@ describe("DashboardPage", () => {
           detail: "See the burn before it gets noisy.",
           label: "Cashflow",
         },
+        {
+          title: "Open calculator",
+          href: "/calculator",
+          detail: "Quick arithmetic without leaving the board.",
+          label: "Calculator",
+        },
+        {
+          title: "Open notes",
+          href: "/notes",
+          detail: "Scratchpad for budget thoughts and reminders.",
+          label: "Notes",
+        },
       ],
       briefing: {
         generatedAt: "2026-04-10T12:00:00.000Z",
