@@ -40,7 +40,7 @@
 - Create: `src/components/dashboard/app-nav.tsx`
 - Create: `src/components/dashboard/app-nav.test.tsx`
 
-- [ ] **Step 1.1: Write the failing test**
+- [x] **Step 1.1: Write the failing test**
 
 ```tsx
 // src/components/dashboard/app-nav.test.tsx
@@ -62,14 +62,14 @@ describe("AppNav", () => {
 });
 ```
 
-- [ ] **Step 1.2: Run test to verify it fails**
+- [x] **Step 1.2: Run test to verify it fails**
 
 ```bash
 npx vitest run src/components/dashboard/app-nav.test.tsx
 ```
 Expected: FAIL – `Cannot find module './app-nav'`
 
-- [ ] **Step 1.3: Implement AppNav**
+- [x] **Step 1.3: Implement AppNav**
 
 ```tsx
 // src/components/dashboard/app-nav.tsx
@@ -95,14 +95,14 @@ export function AppNav() {
 }
 ```
 
-- [ ] **Step 1.4: Run test to verify it passes**
+- [x] **Step 1.4: Run test to verify it passes**
 
 ```bash
 npx vitest run src/components/dashboard/app-nav.test.tsx
 ```
 Expected: PASS (2 tests)
 
-- [ ] **Step 1.5: Commit**
+- [x] **Step 1.5: Commit**
 
 ```bash
 git add src/components/dashboard/app-nav.tsx src/components/dashboard/app-nav.test.tsx
@@ -117,7 +117,7 @@ git commit -m "feat: add AppNav component with dashboard home link"
 - Create: `src/app/(app)/layout.tsx`
 - Create: `src/app/(app)/layout.test.tsx`
 
-- [ ] **Step 2.1: Write the failing test**
+- [x] **Step 2.1: Write the failing test**
 
 ```tsx
 // src/app/(app)/layout.test.tsx
@@ -142,14 +142,14 @@ describe("AppLayout", () => {
 });
 ```
 
-- [ ] **Step 2.2: Run test to verify it fails**
+- [x] **Step 2.2: Run test to verify it fails**
 
 ```bash
 npx vitest run "src/app/\(app\)/layout.test.tsx"
 ```
 Expected: FAIL – file not found or missing export
 
-- [ ] **Step 2.3: Implement the layout**
+- [x] **Step 2.3: Implement the layout**
 
 ```tsx
 // src/app/(app)/layout.tsx
@@ -165,14 +165,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 }
 ```
 
-- [ ] **Step 2.4: Run test to verify it passes**
+- [x] **Step 2.4: Run test to verify it passes**
 
 ```bash
 npx vitest run "src/app/\(app\)/layout.test.tsx"
 ```
 Expected: PASS (2 tests)
 
-- [ ] **Step 2.5: Commit**
+- [x] **Step 2.5: Commit**
 
 ```bash
 git add "src/app/(app)/layout.tsx" "src/app/(app)/layout.test.tsx"
@@ -187,7 +187,7 @@ git commit -m "feat: add shared (app) layout with AppNav"
 - Create: `src/components/calculator/calculator.tsx`
 - Create: `src/components/calculator/calculator.test.tsx`
 
-- [ ] **Step 3.1: Write the failing tests**
+- [x] **Step 3.1: Write the failing tests**
 
 ```tsx
 // src/components/calculator/calculator.test.tsx
@@ -243,14 +243,14 @@ describe("Calculator", () => {
 });
 ```
 
-- [ ] **Step 3.2: Run to verify they fail**
+- [x] **Step 3.2: Run to verify they fail**
 
 ```bash
 npx vitest run src/components/calculator/calculator.test.tsx
 ```
 Expected: FAIL – module not found
 
-- [ ] **Step 3.3: Implement the Calculator component**
+- [x] **Step 3.3: Implement the Calculator component**
 
 ```tsx
 // src/components/calculator/calculator.tsx
@@ -384,14 +384,14 @@ export function Calculator() {
 }
 ```
 
-- [ ] **Step 3.4: Run tests to verify they pass**
+- [x] **Step 3.4: Run tests to verify they pass**
 
 ```bash
 npx vitest run src/components/calculator/calculator.test.tsx
 ```
 Expected: PASS (6 tests)
 
-- [ ] **Step 3.5: Commit**
+- [x] **Step 3.5: Commit**
 
 ```bash
 git add src/components/calculator/calculator.tsx src/components/calculator/calculator.test.tsx
@@ -406,7 +406,7 @@ git commit -m "feat: add Calculator component with arithmetic operations"
 - Create: `src/app/(app)/calculator/page.tsx`
 - Create: `src/app/(app)/calculator/page.test.tsx`
 
-- [ ] **Step 4.1: Write the failing test**
+- [x] **Step 4.1: Write the failing test**
 
 ```tsx
 // src/app/(app)/calculator/page.test.tsx
@@ -427,14 +427,14 @@ describe("CalculatorPage", () => {
 });
 ```
 
-- [ ] **Step 4.2: Run to verify it fails**
+- [x] **Step 4.2: Run to verify it fails**
 
 ```bash
 npx vitest run "src/app/\(app\)/calculator/page.test.tsx"
 ```
 Expected: FAIL – module not found
 
-- [ ] **Step 4.3: Implement the page**
+- [x] **Step 4.3: Implement the page**
 
 ```tsx
 // src/app/(app)/calculator/page.tsx
@@ -460,14 +460,14 @@ export default function CalculatorPage() {
 
 > Note: The `<Calculator />` renders a `<section aria-label="Calculator">` which satisfies `getByRole("region", { name: /calculator/i })` since section with an accessible name is mapped to the `region` role.
 
-- [ ] **Step 4.4: Run tests to verify they pass**
+- [x] **Step 4.4: Run tests to verify they pass**
 
 ```bash
 npx vitest run "src/app/\(app\)/calculator/page.test.tsx"
 ```
 Expected: PASS (2 tests)
 
-- [ ] **Step 4.5: Commit**
+- [x] **Step 4.5: Commit**
 
 ```bash
 git add "src/app/(app)/calculator/page.tsx" "src/app/(app)/calculator/page.test.tsx"
@@ -482,7 +482,7 @@ git commit -m "feat: add /calculator page"
 - Create: `src/components/notes/notes-board.tsx`
 - Create: `src/components/notes/notes-board.test.tsx`
 
-- [ ] **Step 5.1: Write the failing tests**
+- [x] **Step 5.1: Write the failing tests**
 
 ```tsx
 // src/components/notes/notes-board.test.tsx
@@ -548,14 +548,14 @@ describe("NotesBoard", () => {
 });
 ```
 
-- [ ] **Step 5.2: Run to verify they fail**
+- [x] **Step 5.2: Run to verify they fail**
 
 ```bash
 npx vitest run src/components/notes/notes-board.test.tsx
 ```
 Expected: FAIL – module not found
 
-- [ ] **Step 5.3: Implement NotesBoard**
+- [x] **Step 5.3: Implement NotesBoard**
 
 ```tsx
 // src/components/notes/notes-board.tsx
@@ -662,14 +662,14 @@ export function NotesBoard() {
 }
 ```
 
-- [ ] **Step 5.4: Run tests to verify they pass**
+- [x] **Step 5.4: Run tests to verify they pass**
 
 ```bash
 npx vitest run src/components/notes/notes-board.test.tsx
 ```
 Expected: PASS (5 tests)
 
-- [ ] **Step 5.5: Commit**
+- [x] **Step 5.5: Commit**
 
 ```bash
 git add src/components/notes/notes-board.tsx src/components/notes/notes-board.test.tsx
@@ -684,7 +684,7 @@ git commit -m "feat: add NotesBoard component with localStorage persistence"
 - Create: `src/app/(app)/notes/page.tsx`
 - Create: `src/app/(app)/notes/page.test.tsx`
 
-- [ ] **Step 6.1: Write the failing test**
+- [x] **Step 6.1: Write the failing test**
 
 ```tsx
 // src/app/(app)/notes/page.test.tsx
@@ -705,14 +705,14 @@ describe("NotesPage", () => {
 });
 ```
 
-- [ ] **Step 6.2: Run to verify it fails**
+- [x] **Step 6.2: Run to verify it fails**
 
 ```bash
 npx vitest run "src/app/\(app\)/notes/page.test.tsx"
 ```
 Expected: FAIL – module not found
 
-- [ ] **Step 6.3: Implement the page**
+- [x] **Step 6.3: Implement the page**
 
 ```tsx
 // src/app/(app)/notes/page.tsx
@@ -736,14 +736,14 @@ export default function NotesPage() {
 }
 ```
 
-- [ ] **Step 6.4: Run tests to verify they pass**
+- [x] **Step 6.4: Run tests to verify they pass**
 
 ```bash
 npx vitest run "src/app/\(app\)/notes/page.test.tsx"
 ```
 Expected: PASS (2 tests)
 
-- [ ] **Step 6.5: Commit**
+- [x] **Step 6.5: Commit**
 
 ```bash
 git add "src/app/(app)/notes/page.tsx" "src/app/(app)/notes/page.test.tsx"
@@ -759,7 +759,7 @@ git commit -m "feat: add /notes page"
 - Modify: `src/components/dashboard/launcher-grid.test.tsx`
 - Modify: `src/app/(app)/dashboard/page.test.tsx`
 
-- [ ] **Step 7.1: Update `buildLauncherTools()` in dashboard-data.ts**
+- [x] **Step 7.1: Update `buildLauncherTools()` in dashboard-data.ts**
 
 Open `src/modules/dashboard/dashboard-data.ts` and find the `buildLauncherTools` function (line ~168). Add two entries at the end of the array, before the closing `]`:
 
@@ -781,7 +781,7 @@ Open `src/modules/dashboard/dashboard-data.ts` and find the `buildLauncherTools`
 
 The updated `buildLauncherTools()` should return 8 tools total.
 
-- [ ] **Step 7.2: Update launcher-grid.test.tsx — fix link count**
+- [x] **Step 7.2: Update launcher-grid.test.tsx — fix link count**
 
 In `src/components/dashboard/launcher-grid.test.tsx`, find the `toHaveLength(6)` assertion and change it to `toHaveLength(8)`. Also add the two new tools to the `tools` prop passed to `<LauncherGrid>`:
 
@@ -810,7 +810,7 @@ to:
     expect(screen.getAllByRole("link")).toHaveLength(8);
 ```
 
-- [ ] **Step 7.3: Update dashboard/page.test.tsx — add new tools to mock**
+- [x] **Step 7.3: Update dashboard/page.test.tsx — add new tools to mock**
 
 In `src/app/(app)/dashboard/page.test.tsx`, find the `launcherTools` array in the mock (currently 6 entries) and add the same two new entries after the "Open cashflow" entry:
 
@@ -830,14 +830,14 @@ In `src/app/(app)/dashboard/page.test.tsx`, find the `launcherTools` array in th
         },
 ```
 
-- [ ] **Step 7.4: Run affected tests to verify they pass**
+- [x] **Step 7.4: Run affected tests to verify they pass**
 
 ```bash
 npx vitest run src/modules/dashboard src/components/dashboard/launcher-grid.test.tsx "src/app/\(app\)/dashboard/page.test.tsx"
 ```
 Expected: all PASS
 
-- [ ] **Step 7.5: Commit**
+- [x] **Step 7.5: Commit**
 
 ```bash
 git add src/modules/dashboard/dashboard-data.ts \
@@ -853,7 +853,7 @@ git commit -m "feat: register calculator and notes in LauncherGrid"
 **Files:**
 - Create: `tests/e2e/calculator.spec.ts`
 
-- [ ] **Step 8.1: Write the spec**
+- [x] **Step 8.1: Write the spec**
 
 ```ts
 // tests/e2e/calculator.spec.ts
@@ -905,7 +905,7 @@ git commit -m "test(e2e): add calculator Playwright spec"
 **Files:**
 - Create: `tests/e2e/notes.spec.ts`
 
-- [ ] **Step 9.1: Write the spec**
+- [x] **Step 9.1: Write the spec**
 
 ```ts
 // tests/e2e/notes.spec.ts
@@ -958,21 +958,21 @@ git commit -m "test(e2e): add notes Playwright spec"
 
 ## Task 10: Full validation pass
 
-- [ ] **Step 10.1: Run all unit tests**
+- [x] **Step 10.1: Run all unit tests**
 
 ```bash
 npm test
 ```
 Expected: all pass, no regressions
 
-- [ ] **Step 10.2: Run lint**
+- [x] **Step 10.2: Run lint**
 
 ```bash
 npm run lint
 ```
 Expected: no errors
 
-- [ ] **Step 10.3: Run build**
+- [x] **Step 10.3: Run build**
 
 ```bash
 npm run build

@@ -12,5 +12,6 @@
     "**/WelcomeWindow-startup/**": true
   },
   "todo-tree.tree.showBadges": false,
-  "todo-tree.tree.showCountsInTree": true
+  "todo-tree.tree.showCountsInTree": true,
+  "todo-tree.tree.scanMode": "open files"
 }
