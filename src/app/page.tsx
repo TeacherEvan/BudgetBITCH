@@ -16,6 +16,7 @@ import { useEffect, useState } from "react";
 import { MoneyLoadingWindow } from "@/components/launch/money-loading-window";
 import LaunchWizard, { LAUNCH_PROFILE_STORAGE_KEY, type LaunchWizardProfile } from "@/components/launch/launch-wizard";
 import { useLaunchTransition } from "@/components/launch/use-launch-transition";
+import { MobilePanelFrame } from "@/components/mobile/mobile-panel-frame";
 
 type HomeDisplayState = "loading" | "wizard" | "landing";
 
@@ -173,6 +174,7 @@ export default function Home() {
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
             className="bb-page-shell"
           >
+            <MobilePanelFrame>
             <section className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(20rem,0.95fr)]">
               <article className="bb-panel bb-panel-strong p-8 md:p-10 lg:p-11">
                 <p className="bb-kicker">BudgetBITCH</p>
@@ -261,6 +263,7 @@ export default function Home() {
                 </div>
               </aside>
             </section>
+            </MobilePanelFrame>
           </motion.main>
         )}
       </AnimatePresence>

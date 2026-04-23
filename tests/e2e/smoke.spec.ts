@@ -5,6 +5,12 @@ test("home page shows the launch wizard before the landing board", async ({ page
   await page.goto("/");
 
   await expect(page.getByRole("heading", { name: /launch your dashboard window/i })).toBeVisible();
+  await expect(
+    page.getByText(/notes, calculator, and launch settings stay available on this device/i),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/dashboard, jobs, integrations, and other sync-required routes still need a live connection/i),
+  ).toBeVisible();
   await expect(page.getByText(/no precise location data is collected/i)).toBeVisible();
 
   await expect.poll(

@@ -2,6 +2,13 @@ import { render, screen, within } from "@testing-library/react";
 import JobsPage from "./page";
 
 describe("JobsPage", () => {
+  it("wraps the jobs hub in the reusable mobile panel frame", async () => {
+    const view = await JobsPage();
+    render(view);
+
+    expect(screen.getByTestId("mobile-panel-frame")).toBeInTheDocument();
+  });
+
   it("renders the jobs hub with route-board lanes and recommended listings", async () => {
     const view = await JobsPage();
     render(view);

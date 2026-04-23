@@ -1,3 +1,4 @@
+import { countryOptions } from "@/modules/start-smart/country-options";
 import type { StartSmartProfileInput } from "@/modules/start-smart/profile-schema";
 
 type ProfileFieldErrors = Partial<Record<keyof StartSmartProfileInput, string>>;
@@ -31,6 +32,8 @@ function getDescribedByIds(field: keyof StartSmartProfileInput, hasError: boolea
 }
 
 export function ProfileForm({ values, onChange, errors = {} }: ProfileFormProps) {
+  const selectedCountry = countryOptions.find((option) => option.code === values.countryCode) ?? null;
+
   return (
     <section className="rounded-[28px] border border-white/10 bg-black/20 p-6 backdrop-blur">
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
@@ -39,8 +42,8 @@ export function ProfileForm({ values, onChange, errors = {} }: ProfileFormProps)
           <h2 className="mt-2 text-2xl font-semibold text-white">Regional + household checks</h2>
         </div>
         <p className="max-w-2xl text-sm text-emerald-50/80">
-          Required fields stay starred. Use a 2-letter country code and 2- to 3-letter region code
-          so the local assumptions stay useful.
+          Required fields stay starred. Choose a supported country and use a 2- to 3-character
+          region code so the local assumptions stay useful.
         </p>
       </div>
 
@@ -49,24 +52,30 @@ export function ProfileForm({ values, onChange, errors = {} }: ProfileFormProps)
           <span>
             Country <span aria-hidden="true">*</span>
           </span>
-          <input
+          <select
             aria-label="Country"
             aria-describedby={getDescribedByIds("countryCode", Boolean(errors.countryCode))}
             aria-invalid={Boolean(errors.countryCode)}
-            autoCapitalize="characters"
-            inputMode="text"
-            maxLength={2}
             required
             value={values.countryCode}
-            onChange={(event) =>
-              onChange("countryCode", event.target.value.toUpperCase().slice(0, 2))
-            }
-            className={buildFieldClassName(Boolean(errors.countryCode), "bg-white/5")}
-            placeholder="US"
-            spellCheck={false}
-          />
+            onChange={(event) => {
+              const nextCountryCode = event.target.value;
+              const nextCountry = countryOptions.find((option) => option.code === nextCountryCode) ?? null;
+
+              onChange("countryCode", nextCountryCode);
+              onChange("stateCode", nextCountry?.regionExample ?? "");
+            }}
+            className={buildFieldClassName(Boolean(errors.countryCode), "bg-slate-950")}
+          >
+            <option value="">Select a country</option>
+            {countryOptions.map((option) => (
+              <option key={option.code} value={option.code}>
+                {option.label}
+              </option>
+            ))}
+          </select>
           <span id="countryCode-hint" className="text-xs text-emerald-100/65">
-            Use a 2-letter country code like US.
+            Choose one of the supported countries for regional seeding.
           </span>
           {errors.countryCode ? (
             <span id="countryCode-error" className="text-xs text-rose-200">
@@ -96,7 +105,9 @@ export function ProfileForm({ values, onChange, errors = {} }: ProfileFormProps)
             spellCheck={false}
           />
           <span id="stateCode-hint" className="text-xs text-emerald-100/65">
-            Use a 2- or 3-letter state or region code like CA.
+            {selectedCountry
+              ? `Use the supported code for ${selectedCountry.label}, like ${selectedCountry.regionExample}.`
+              : "Select a country first, then enter its supported 2- or 3-character region code."}
           </span>
           {errors.stateCode ? (
             <span id="stateCode-error" className="text-xs text-rose-200">

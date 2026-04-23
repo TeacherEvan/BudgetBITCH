@@ -69,6 +69,7 @@ describe("Home", () => {
       ).toBeInTheDocument();
     });
 
+    expect(screen.getByTestId("mobile-panel-frame")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /route lanes/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /build my blueprint/i })).toHaveAttribute(
       "href",
@@ -114,6 +115,7 @@ describe("Home", () => {
       ).toBeInTheDocument();
     });
 
+    expect(screen.getByTestId("mobile-panel-frame")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /mock launch wizard/i })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /route lanes/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /build lane/i })).toBeInTheDocument();

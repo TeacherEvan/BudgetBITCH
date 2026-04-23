@@ -1,3 +1,4 @@
+import { MobilePanelFrame } from "@/components/mobile/mobile-panel-frame";
 import { ProviderCard } from "@/components/integrations/provider-card";
 import { buildProviderActionList } from "@/modules/integrations/integration-actions";
 import { providerRegistry } from "@/modules/integrations/provider-registry";
@@ -66,6 +67,7 @@ export default function IntegrationsPage() {
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#34d399_0%,#14532d_45%,#052e16_100%)] px-6 py-10 text-white">
+      <MobilePanelFrame>
       <section className="mx-auto max-w-7xl rounded-[36px] border border-white/10 bg-black/20 p-6 backdrop-blur md:p-8">
         <header className="max-w-4xl">
           <p className="text-sm uppercase tracking-[0.3em] text-yellow-200">Connection Hub</p>
@@ -140,6 +142,7 @@ export default function IntegrationsPage() {
           })}
         </div>
       </section>
+      </MobilePanelFrame>
     </main>
   );
 }

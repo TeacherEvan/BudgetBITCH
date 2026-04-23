@@ -120,6 +120,7 @@ describe("DashboardPage", () => {
     render(view);
 
     expect(getDashboardPageData).toHaveBeenCalledWith("workspace-2");
+    expect(screen.getByTestId("mobile-panel-frame")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /interactive billboard/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /local area/i })).toBeInTheDocument();
     expect(screen.getByText(/dublin/i, { selector: "p.bb-mini-copy" })).toBeInTheDocument();

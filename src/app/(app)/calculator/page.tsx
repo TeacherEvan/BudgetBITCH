@@ -1,8 +1,10 @@
 import { Calculator } from "@/components/calculator/calculator";
+import { MobilePanelFrame } from "@/components/mobile/mobile-panel-frame";
 
 export default function CalculatorPage() {
   return (
     <main className="bb-page-shell text-white">
+      <MobilePanelFrame>
       <section className="mx-auto max-w-7xl">
         <p className="bb-kicker">Tools</p>
         <h1 className="mt-3 text-4xl font-semibold">Calculator</h1>
@@ -13,6 +15,7 @@ export default function CalculatorPage() {
           <Calculator />
         </div>
       </section>
+      </MobilePanelFrame>
     </main>
   );
 }

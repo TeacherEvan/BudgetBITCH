@@ -6,6 +6,7 @@ describe("LearnPage", () => {
     const view = await LearnPage();
     render(view);
 
+    expect(screen.getByTestId("mobile-panel-frame")).toBeInTheDocument();
     expect(screen.getByText("Learn!")).toBeInTheDocument();
     expect(
       screen.getByText("Comic-strip lessons for the money move that matters next."),

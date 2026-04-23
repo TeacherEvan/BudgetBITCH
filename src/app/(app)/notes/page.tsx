@@ -1,8 +1,10 @@
+import { MobilePanelFrame } from "@/components/mobile/mobile-panel-frame";
 import { NotesBoard } from "@/components/notes/notes-board";
 
 export default function NotesPage() {
   return (
     <main className="bb-page-shell text-white">
+      <MobilePanelFrame>
       <section className="mx-auto max-w-7xl">
         <p className="bb-kicker">Tools</p>
         <h1 className="mt-3 text-4xl font-semibold">Notes</h1>
@@ -13,6 +15,7 @@ export default function NotesPage() {
           <NotesBoard />
         </div>
       </section>
+      </MobilePanelFrame>
     </main>
   );
 }

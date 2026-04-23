@@ -31,6 +31,14 @@ This index is a future-navigation cheat sheet for the active root application.
 | `/settings/integrations/openai`   | `src/app/(app)/settings/integrations/openai/page.tsx`   | OpenAI setup wizard                |
 | `/settings/integrations/copilot`  | `src/app/(app)/settings/integrations/copilot/page.tsx`  | GitHub Copilot setup wizard        |
 | `/settings/integrations/openclaw` | `src/app/(app)/settings/integrations/openclaw/page.tsx` | OpenClaw setup wizard              |
+| `/settings/integrations/gemini`   | `src/app/(app)/settings/integrations/gemini/page.tsx`   | Gemini setup wizard                |
+| `/settings/integrations/perplexity` | `src/app/(app)/settings/integrations/perplexity/page.tsx` | Perplexity setup wizard         |
+| `/settings/integrations/mistral`  | `src/app/(app)/settings/integrations/mistral/page.tsx`  | Mistral setup wizard               |
+| `/settings/integrations/wise`     | `src/app/(app)/settings/integrations/wise/page.tsx`     | Wise setup wizard                  |
+| `/settings/integrations/revolut`  | `src/app/(app)/settings/integrations/revolut/page.tsx`  | Revolut setup wizard               |
+| `/settings/integrations/paypal`   | `src/app/(app)/settings/integrations/paypal/page.tsx`   | PayPal setup wizard                |
+| `/settings/integrations/xero`     | `src/app/(app)/settings/integrations/xero/page.tsx`     | Xero setup wizard                  |
+| `/settings/integrations/deel`     | `src/app/(app)/settings/integrations/deel/page.tsx`     | Deel setup wizard                  |
 
 ### API routes
 
@@ -80,12 +88,14 @@ This index is a future-navigation cheat sheet for the active root application.
 ### Integration logic
 
 - `src/modules/integrations/provider-types.ts` — Shared provider type definitions + categories
-- `src/modules/integrations/provider-registry.ts` — Canonical provider metadata across AI and finance guidance providers
+- `src/modules/integrations/provider-registry.ts` — Canonical provider metadata across AI, banking, finance ops, tax, and payroll providers
 - `src/modules/integrations/integration-actions.ts` — Shared explicit CTA deck builder for hub and wizard screens
 - `src/modules/integrations/integration-gateway.ts` — Thin server-side connect/revoke orchestration wrapper
 - `src/modules/integrations/wizard-machine.ts` — Simple wizard step state transitions
 - `src/modules/integrations/sign-webhook.ts` — HMAC-SHA256 signing helper
 - `src/modules/integrations/connection-vault.ts` — Secret sealing + revoke metadata helpers
+
+Wizard routes currently cover Claude, OpenAI, GitHub Copilot, OpenClaw, Gemini, Perplexity, Mistral, Wise, Revolut, PayPal, Xero, and Deel.
 
 ## 5. Testing map
 
@@ -112,6 +122,7 @@ Useful anchors:
 | `tests/e2e/learn.spec.ts`                 | Start Smart to Learn lesson journey    |
 | `tests/e2e/jobs.spec.ts`                  | Landing to Jobs detail journey         |
 | `tests/e2e/integrations-claude.spec.ts`   | Claude wizard navigation               |
+| `tests/e2e/integrations-gemini.spec.ts`   | Gemini wizard navigation               |
 | `tests/e2e/integrations-openai.spec.ts`   | OpenAI wizard navigation               |
 | `tests/e2e/integrations-copilot.spec.ts`  | Copilot wizard navigation              |
 | `tests/e2e/integrations-openclaw.spec.ts` | OpenClaw wizard navigation             |

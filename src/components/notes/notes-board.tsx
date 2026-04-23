@@ -2,6 +2,7 @@
 
 import { Trash2 } from "lucide-react";
 import { useState } from "react";
+import { OfflineBanner } from "@/components/pwa/offline-banner";
 
 type Note = {
   id: string;
@@ -11,17 +12,46 @@ type Note = {
 
 const STORAGE_KEY = "bb-notes";
 
+function isNote(value: unknown): value is Note {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  const note = value as Partial<Note>;
+
+  return (
+    typeof note.id === "string" &&
+    typeof note.text === "string" &&
+    typeof note.createdAt === "string"
+  );
+}
+
 function loadNotes(): Note[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Note[]) : [];
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+
+    if (!raw) {
+      return [];
+    }
+
+    const parsed = JSON.parse(raw);
+
+    return Array.isArray(parsed) && parsed.every(isNote) ? parsed : [];
   } catch {
     return [];
   }
 }
 
 function saveNotes(notes: Note[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+  } catch {
+    // Keep notes usable even if this browser blocks local persistence.
+  }
 }
 
 function buildId() {
@@ -58,6 +88,7 @@ export function NotesBoard() {
 
   return (
     <section className="bb-panel bb-panel-strong mx-auto max-w-2xl p-5" aria-label="Notes board">
+      <OfflineBanner className="mb-4" />
       <div className="flex gap-2">
         <label htmlFor="new-note-input" className="sr-only">
           New note

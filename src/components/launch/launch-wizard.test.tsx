@@ -12,6 +12,9 @@ describe("LaunchWizard", () => {
 
     render(<LaunchWizard onComplete={onComplete} />);
 
+    expect(
+      screen.getByText(/notes, calculator, and launch settings stay available on this device/i),
+    ).toBeInTheDocument();
     expect(screen.getByText(/no precise location data is collected/i)).toBeInTheDocument();
     expect(screen.getByText(/crypto platform choice is a placeholder for later/i)).toBeInTheDocument();
 
