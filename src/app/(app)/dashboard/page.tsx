@@ -1,6 +1,7 @@
 import { BroadcastBar } from "@/components/dashboard/broadcast-bar";
 import { LauncherGrid } from "@/components/dashboard/launcher-grid";
 import { LiveBriefingRail } from "@/components/dashboard/live-briefing-rail";
+import { MobilePanelFrame } from "@/components/mobile/mobile-panel-frame";
 import { getDashboardPageData } from "@/modules/dashboard/dashboard-data";
 
 type DashboardPageProps = {
@@ -36,6 +37,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   return (
     <main className="bb-page-shell overflow-hidden px-4 py-0 text-white md:px-5 md:py-0">
+      <MobilePanelFrame>
       <section className="mx-auto grid max-w-7xl gap-0">
         <BroadcastBar cityLabel={cityLabel} tickerItems={tickerItems} />
 
@@ -94,6 +96,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           <LiveBriefingRail briefing={dashboardData.briefing} />
         </section>
       </section>
+      </MobilePanelFrame>
     </main>
   );
 }

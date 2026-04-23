@@ -5,6 +5,7 @@ describe("StartSmartPage", () => {
   it("renders the compact onboarding headline and first-step controls", () => {
     render(<StartSmartPage />);
 
+    expect(screen.getByTestId("mobile-panel-frame")).toBeInTheDocument();
     expect(screen.getByText("Build your survival blueprint in one quick pass.")).toBeInTheDocument();
     expect(screen.getAllByText("Single teen").length).toBeGreaterThan(0);
     expect(screen.getByText("Step map")).toBeInTheDocument();

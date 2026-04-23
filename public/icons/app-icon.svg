@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">BudgetBITCH app icon</title>
+  <desc id="desc">A rounded green and gold monogram icon for BudgetBITCH.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#122820" />
+      <stop offset="100%" stop-color="#081512" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#8ee29f" />
+      <stop offset="100%" stop-color="#d8b85a" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="120" fill="url(#bg)" />
+  <path
+    fill="url(#accent)"
+    d="M146 128h122c76 0 128 45 128 113 0 52-31 91-78 106l74 115H311l-63-101h-29v101h-73V128Zm73 172h41c40 0 62-18 62-49 0-31-22-49-62-49h-41v98Z"
+  />
+</svg>

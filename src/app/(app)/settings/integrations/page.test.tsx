@@ -5,6 +5,7 @@ describe("IntegrationsPage", () => {
   it("renders provider cards with explicit action labels for setup flows", () => {
     render(<IntegrationsPage />);
 
+    expect(screen.getByTestId("mobile-panel-frame")).toBeInTheDocument();
     expect(screen.getByText("Claude")).toBeInTheDocument();
     expect(screen.getByText("OpenAI")).toBeInTheDocument();
     expect(screen.getByText("GitHub Copilot")).toBeInTheDocument();

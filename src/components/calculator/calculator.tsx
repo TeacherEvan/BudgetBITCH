@@ -1,38 +1,118 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { OfflineBanner } from "@/components/pwa/offline-banner";
 
 type CalcOp = "+" | "−" | "×" | "÷" | null;
+
+type CalculatorDraft = {
+  display: string;
+  stored: number | null;
+  op: CalcOp;
+  waitingForOperand: boolean;
+};
 
 type ButtonConfig = {
   label: string;
   action: () => void;
 };
 
+const CALCULATOR_STORAGE_KEY = "bb-calculator-draft";
+
+function getDefaultDraft(): CalculatorDraft {
+  return {
+    display: "0",
+    stored: null,
+    op: null,
+    waitingForOperand: false,
+  };
+}
+
+function isCalculatorDraft(value: unknown): value is CalculatorDraft {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  const draft = value as Partial<CalculatorDraft>;
+
+  return (
+    typeof draft.display === "string" &&
+    (typeof draft.stored === "number" || draft.stored === null) &&
+    (draft.op === "+" || draft.op === "−" || draft.op === "×" || draft.op === "÷" || draft.op === null) &&
+    typeof draft.waitingForOperand === "boolean"
+  );
+}
+
+function loadDraft(): CalculatorDraft {
+  if (typeof window === "undefined") {
+    return getDefaultDraft();
+  }
+
+  try {
+    const raw = window.localStorage.getItem(CALCULATOR_STORAGE_KEY);
+
+    if (!raw) {
+      return getDefaultDraft();
+    }
+
+    const parsed = JSON.parse(raw);
+
+    return isCalculatorDraft(parsed) ? parsed : getDefaultDraft();
+  } catch {
+    return getDefaultDraft();
+  }
+}
+
+function saveDraft(draft: CalculatorDraft) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(CALCULATOR_STORAGE_KEY, JSON.stringify(draft));
+  } catch {
+    // Keep the calculator usable even if local persistence is unavailable.
+  }
+}
+
 export function Calculator() {
-  const [display, setDisplay] = useState("0");
-  const [stored, setStored] = useState<number | null>(null);
-  const [op, setOp] = useState<CalcOp>(null);
-  const [waitingForOperand, setWaitingForOperand] = useState(false);
+  const [draft, setDraft] = useState<CalculatorDraft>(() => loadDraft());
+  const { display, stored, op, waitingForOperand } = draft;
+
+  useEffect(() => {
+    saveDraft(draft);
+  }, [draft]);
 
   function handleDigit(digit: string) {
     if (waitingForOperand) {
-      setDisplay(digit);
-      setWaitingForOperand(false);
+      setDraft((current) => ({
+        ...current,
+        display: digit,
+        waitingForOperand: false,
+      }));
       return;
     }
 
-    setDisplay((current) => (current === "0" ? digit : current + digit));
+    setDraft((current) => ({
+      ...current,
+      display: current.display === "0" ? digit : current.display + digit,
+    }));
   }
 
   function handleDecimal() {
     if (waitingForOperand) {
-      setDisplay("0.");
-      setWaitingForOperand(false);
+      setDraft((current) => ({
+        ...current,
+        display: "0.",
+        waitingForOperand: false,
+      }));
       return;
     }
 
-    setDisplay((current) => (current.includes(".") ? current : current + "."));
+    setDraft((current) => ({
+      ...current,
+      display: current.display.includes(".") ? current.display : current.display + ".",
+    }));
   }
 
   function compute(a: number, b: number, operator: CalcOp): number {
@@ -55,32 +135,39 @@ export function Calculator() {
 
     if (stored !== null && op && !waitingForOperand) {
       const result = compute(stored, current, op);
-      setDisplay(String(result));
-      setStored(result);
+      setDraft((currentDraft) => ({
+        ...currentDraft,
+        display: String(result),
+        stored: result,
+        op: nextOp,
+        waitingForOperand: true,
+      }));
     } else {
-      setStored(current);
+      setDraft((currentDraft) => ({
+        ...currentDraft,
+        stored: current,
+        op: nextOp,
+        waitingForOperand: true,
+      }));
+      return;
     }
-
-    setOp(nextOp);
-    setWaitingForOperand(true);
   }
 
   function handleEquals() {
     const current = parseFloat(display);
     if (stored !== null && op) {
       const result = compute(stored, current, op);
-      setDisplay(String(result));
-      setStored(null);
-      setOp(null);
-      setWaitingForOperand(true);
+      setDraft({
+        display: String(result),
+        stored: null,
+        op: null,
+        waitingForOperand: true,
+      });
     }
   }
 
   function handleClear() {
-    setDisplay("0");
-    setStored(null);
-    setOp(null);
-    setWaitingForOperand(false);
+    setDraft(getDefaultDraft());
   }
 
   const buttons: ButtonConfig[] = [
@@ -106,6 +193,7 @@ export function Calculator() {
       className="bb-panel bb-panel-strong mx-auto max-w-xs p-5"
       aria-label="Calculator"
     >
+      <OfflineBanner className="mb-4" />
       <p
         role="status"
         className="mb-4 rounded bg-black/40 px-4 py-3 text-right font-mono text-3xl text-white"

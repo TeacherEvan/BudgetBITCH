@@ -82,11 +82,35 @@ body {
   margin: 0;
 }
 
+@media (max-width: 767px) {
+  .bb-mobile-shell {
+    inset: 0;
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+  }
+
+  .bb-mobile-content {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
 @layer components {
   .bb-page-shell {
     --page-shell-padding: clamp(1.5rem, 3vw, 2.5rem);
     min-height: 100vh;
     padding: var(--page-shell-padding);
+  }
+
+  @media (max-width: 767px) {
+    .bb-mobile-content .bb-page-shell,
+    .bb-mobile-content .min-h-screen {
+      min-height: 100%;
+    }
   }
 
   .bb-panel {

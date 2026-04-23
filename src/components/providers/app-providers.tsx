@@ -4,6 +4,7 @@ import { ClerkProvider, useAuth } from "@clerk/nextjs";
 import { ConvexReactClient } from "convex/react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { useEffect, useMemo, useRef, type ComponentProps, type ReactNode } from "react";
+import { PwaProvider } from "@/components/providers/pwa-provider";
 import { getClerkFrontendHost, isClerkClientConfigured } from "@/lib/auth/clerk-config";
 import { isAbsoluteHttpUrl } from "@/lib/url";
 
@@ -58,8 +59,10 @@ export function AppProviders({ children }: AppProvidersProps) {
     );
   }, [convexUrl, convexUrlConfigured]);
 
+  const pwaChildren = <PwaProvider>{children}</PwaProvider>;
+
   if (!publishableKey || !clerkConfigured) {
-    return <>{children}</>;
+    return pwaChildren;
   }
 
   const clerkProviderProps = {
@@ -72,12 +75,14 @@ export function AppProviders({ children }: AppProvidersProps) {
   } as unknown as ComponentProps<typeof ClerkProvider>;
 
   return (
-    <ClerkProvider {...clerkProviderProps}>
-      {convexUrlConfigured ? (
-        <ConvexClerkProviders convexUrl={convexUrlValue}>{children}</ConvexClerkProviders>
-      ) : (
-        children
-      )}
-    </ClerkProvider>
+    <PwaProvider>
+      <ClerkProvider {...clerkProviderProps}>
+        {convexUrlConfigured ? (
+          <ConvexClerkProviders convexUrl={convexUrlValue}>{children}</ConvexClerkProviders>
+        ) : (
+          children
+        )}
+      </ClerkProvider>
+    </PwaProvider>
   );
 }

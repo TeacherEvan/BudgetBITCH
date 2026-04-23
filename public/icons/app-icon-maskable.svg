@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">BudgetBITCH maskable app icon</title>
+  <desc id="desc">A mask-safe version of the BudgetBITCH app icon.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#17342a" />
+      <stop offset="100%" stop-color="#081512" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#d8b85a" />
+      <stop offset="100%" stop-color="#8ee29f" />
+    </linearGradient>
+  </defs>
+  <rect x="52" y="52" width="408" height="408" rx="112" fill="url(#bg)" />
+  <path
+    fill="url(#accent)"
+    d="M178 160h108c66 0 114 39 114 99 0 46-27 81-68 94l66 99h-80l-57-88h-19v88h-64V160Zm64 147h34c35 0 54-16 54-43s-19-43-54-43h-34v86Z"
+  />
+</svg>

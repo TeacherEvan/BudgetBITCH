@@ -1,10 +1,5 @@
-import { AppNav } from "@/components/dashboard/app-nav";
+import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <>
-      <AppNav />
-      {children}
-    </>
-  );
+  return <MobileAppShell>{children}</MobileAppShell>;
 }

@@ -1,4 +1,5 @@
 import { RecommendedLessons } from "@/components/learn/recommended-lessons";
+import { MobilePanelFrame } from "@/components/mobile/mobile-panel-frame";
 import { getPrismaClient } from "@/lib/prisma";
 import { extractLearnSignalsFromBlueprint } from "@/modules/learn/blueprint-bridge";
 import { resolveLearnRecommendations } from "@/modules/learn/recommendation-engine";
@@ -69,6 +70,7 @@ export default async function LearnPage() {
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#34d399_0%,#14532d_45%,#052e16_100%)] px-6 py-10 text-white">
+      <MobilePanelFrame>
       <section className="mx-auto max-w-7xl rounded-[36px] border border-white/10 bg-black/20 p-6 backdrop-blur md:p-8">
         <header className="flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -152,6 +154,7 @@ export default async function LearnPage() {
           />
         </div>
       </section>
+      </MobilePanelFrame>
     </main>
   );
 }

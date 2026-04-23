@@ -33,6 +33,10 @@ afterEach(() => {
 describe("NotesBoard", () => {
   it("shows an empty state message when no notes exist", () => {
     render(<NotesBoard />);
+
+    expect(
+      screen.getByText(/notes, calculator, and launch settings stay available on this device/i),
+    ).toBeInTheDocument();
     expect(screen.getByText(/no notes yet/i)).toBeInTheDocument();
   });
 
@@ -64,6 +68,14 @@ describe("NotesBoard", () => {
   it("does not add an empty note", () => {
     render(<NotesBoard />);
     fireEvent.click(screen.getByRole("button", { name: /add note/i }));
+    expect(screen.getByText(/no notes yet/i)).toBeInTheDocument();
+  });
+
+  it("falls back to the empty state when stored notes are not a valid note array", () => {
+    window.localStorage.setItem("bb-notes", JSON.stringify({ nope: true }));
+
+    render(<NotesBoard />);
+
     expect(screen.getByText(/no notes yet/i)).toBeInTheDocument();
   });
 });

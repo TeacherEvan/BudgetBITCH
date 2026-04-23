@@ -5,6 +5,7 @@ import CalculatorPage from "./page";
 describe("CalculatorPage", () => {
   it("renders the page heading", () => {
     render(<CalculatorPage />);
+    expect(screen.getByTestId("mobile-panel-frame")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /calculator/i })).toBeInTheDocument();
   });
 

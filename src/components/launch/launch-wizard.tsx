@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { SearchableCombobox, type SearchableComboboxOption } from "@/components/launch/searchable-combobox";
+import { OfflineBanner } from "@/components/pwa/offline-banner";
 import { loadLaunchCityOptions } from "@/modules/launch/option-catalog";
 
 export const LAUNCH_PROFILE_STORAGE_KEY = "budgetbitch:launch-profile";
@@ -142,6 +143,8 @@ export default function LaunchWizard({ onComplete }: LaunchWizardProps) {
               screen tight enough to stay in view.
             </p>
           </header>
+
+          <OfflineBanner className="mt-6" />
 
           <form className="bb-launch-form" onSubmit={handleSubmit} noValidate>
             <div className="bb-launch-field-grid">
