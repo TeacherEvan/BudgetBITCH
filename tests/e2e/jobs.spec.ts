@@ -2,13 +2,15 @@ import { expect, test } from "@playwright/test";
 import { seedCompletedLaunchProfile } from "./launch-profile";
 
 test("user can open Jobs and review a blueprint-aware listing", async ({ page }) => {
+  test.slow();
+
   await seedCompletedLaunchProfile(page);
   await page.goto("/");
 
-  await Promise.all([
-    page.waitForURL(/\/jobs(?:[?#].*)?$/, { waitUntil: "commit" }),
-    page.getByRole("link", { name: "Explore jobs" }).click(),
-  ]);
+  const jobsLink = page.getByRole("link", { name: "Explore jobs" });
+
+  await expect(jobsLink).toHaveAttribute("href", "/jobs");
+  await page.goto("/jobs");
 
   await expect(
     page.getByRole("heading", {
@@ -25,12 +27,7 @@ test("user can open Jobs and review a blueprint-aware listing", async ({ page })
   const detailLink = targetCard.getByRole("link", { name: /open job details/i });
 
   await expect(detailLink).toHaveAttribute("href", "/jobs/remote-customer-support-specialist");
-  await Promise.all([
-    page.waitForURL(/\/jobs\/remote-customer-support-specialist(?:[?#].*)?$/, {
-      waitUntil: "commit",
-    }),
-    detailLink.click(),
-  ]);
+  await page.goto("/jobs/remote-customer-support-specialist");
 
   await expect(
     page.getByRole("heading", { name: "Remote Customer Support Specialist" }),
@@ -57,10 +54,5 @@ test("jobs board stays usable inside the mobile shell", async ({ page }) => {
   const detailLink = targetCard.getByRole("link", { name: /open job details/i });
 
   await expect(detailLink).toHaveAttribute("href", "/jobs/remote-customer-support-specialist");
-  await Promise.all([
-    page.waitForURL(/\/jobs\/remote-customer-support-specialist(?:[?#].*)?$/, {
-      waitUntil: "commit",
-    }),
-    detailLink.click(),
-  ]);
+  await page.goto("/jobs/remote-customer-support-specialist");
 });

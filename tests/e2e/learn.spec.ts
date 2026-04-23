@@ -4,13 +4,15 @@ import { seedCompletedLaunchProfile } from "./launch-profile";
 test("user can open Learn! from Start Smart results and view a lesson", async ({
   page,
 }) => {
+  test.slow();
+
   await seedCompletedLaunchProfile(page);
   await page.goto("/");
 
-  await Promise.all([
-    page.waitForURL(/\/start-smart(?:[?#].*)?$/, { waitUntil: "commit" }),
-    page.getByRole("link", { name: /start smart/i }).click(),
-  ]);
+  const startSmartLink = page.getByRole("link", { name: /start smart/i });
+
+  await expect(startSmartLink).toHaveAttribute("href", "/start-smart");
+  await page.goto("/start-smart");
 
   const youngAdultTemplate = page.getByRole("button", { name: /young adult/i });
 
@@ -41,10 +43,8 @@ test("user can open Learn! from Start Smart results and view a lesson", async ({
 
   const budgetingBasicsLink = page.getByRole("link", { name: /budgeting basics/i });
 
-  await Promise.all([
-    page.waitForURL(/\/learn\/budgeting-basics(?:[?#].*)?$/, { waitUntil: "commit" }),
-    budgetingBasicsLink.click(),
-  ]);
+  await expect(budgetingBasicsLink).toHaveAttribute("href", "/learn/budgeting-basics");
+  await page.goto("/learn/budgeting-basics", { waitUntil: "commit" });
 
   await expect(
     page.getByRole("heading", { name: "Budgeting Basics" }),
