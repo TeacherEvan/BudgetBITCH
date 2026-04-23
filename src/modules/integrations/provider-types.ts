@@ -3,12 +3,20 @@ export type ProviderId =
   | "openai"
   | "copilot"
   | "openclaw"
+  | "gemini"
+  | "perplexity"
+  | "mistral"
   | "plaid"
+  | "wise"
+  | "revolut"
   | "vanguard"
   | "stripe"
   | "ramp"
+  | "paypal"
   | "gusto"
-  | "quickbooks";
+  | "quickbooks"
+  | "xero"
+  | "deel";
 
 export type ProviderRiskLevel = "low" | "medium" | "high";
 

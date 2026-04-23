@@ -10,7 +10,7 @@ test("user can open Learn! from Start Smart results and view a lesson", async ({
   await page.getByRole("link", { name: /start smart/i }).click();
 
   await page.getByText("Young adult").click();
-  await page.getByLabel(/country/i).fill("US");
+  await page.getByLabel(/country/i).selectOption("US");
   await page.getByLabel(/state/i).fill("CA");
   await page.getByRole("button", { name: /build my survival blueprint/i }).click();
 

@@ -14,7 +14,10 @@ type LauncherGridProps = {
 
 export function LauncherGrid({ tools }: LauncherGridProps) {
   return (
-    <section className="bb-panel bb-panel-strong p-5" aria-labelledby="popular-budgeting-tools-heading">
+    <section
+      className="bb-panel bb-panel-strong p-5 md:min-h-0 md:overflow-y-auto"
+      aria-labelledby="popular-budgeting-tools-heading"
+    >
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="bb-kicker">Tools</p>

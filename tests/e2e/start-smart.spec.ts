@@ -10,8 +10,8 @@ test("user can open Start Smart and generate a survival blueprint", async ({
   await page.getByRole("link", { name: /start smart/i }).click();
 
   await page.getByText("Young adult").click();
-  await page.getByLabel(/country/i).fill("US");
-  await page.getByLabel(/state/i).fill("CA");
+  await page.getByLabel(/country/i).selectOption("SG");
+  await page.getByLabel(/state/i).fill("01");
   await page
     .getByRole("button", { name: /build my survival blueprint/i })
     .click();

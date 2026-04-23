@@ -2,7 +2,11 @@ import { expect, test } from "@playwright/test";
 
 test("GitHub Copilot wizard is reachable from the hub", async ({ page }) => {
   await page.goto("/settings/integrations");
-  await page.locator('a[href="/settings/integrations/copilot"]').click();
+
+  await Promise.all([
+    page.waitForURL(/\/settings\/integrations\/copilot(?:[?#].*)?$/),
+    page.locator('a[href="/settings/integrations/copilot"]').click(),
+  ]);
 
   await expect(
     page.getByRole("heading", { name: "Connect GitHub Copilot" }),

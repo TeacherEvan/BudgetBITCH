@@ -6,7 +6,7 @@ describe("NotesPage", () => {
   it("renders the page heading", () => {
     render(<NotesPage />);
     expect(screen.getByTestId("mobile-panel-frame")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /notes/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Notes" })).toBeInTheDocument();
   });
 
   it("renders the notes board", () => {

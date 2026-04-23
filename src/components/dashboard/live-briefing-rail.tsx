@@ -6,7 +6,10 @@ type LiveBriefingRailProps = {
 
 export function LiveBriefingRail({ briefing }: LiveBriefingRailProps) {
   return (
-    <section className="bb-panel bb-panel-muted p-5" aria-labelledby="live-briefing-heading">
+    <section
+      className="bb-panel bb-panel-muted p-5 md:min-h-0 md:overflow-y-auto"
+      aria-labelledby="live-briefing-heading"
+    >
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="bb-kicker">Briefing</p>

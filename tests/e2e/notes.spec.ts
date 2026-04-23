@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("notes page renders empty state on first visit", async ({ page }) => {
   await page.goto("/notes");
-  await expect(page.getByRole("heading", { name: /notes/i })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Notes" })).toBeVisible();
   await expect(page.getByText(/no notes yet/i)).toBeVisible();
 });
 

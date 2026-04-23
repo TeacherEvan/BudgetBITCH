@@ -32,12 +32,12 @@ function SignInForm() {
   return (
     <div className="flex flex-col gap-8 w-96 mx-auto">
       <p>Log in to see the numbers</p>
-      <a href="/sign-in">
-        <button className="bg-foreground text-background px-4 py-2 rounded-md">Sign in</button>
-      </a>
-      <a href="/sign-up">
-        <button className="bg-foreground text-background px-4 py-2 rounded-md">Sign up</button>
-      </a>
+      <Link href="/sign-in" className="bg-foreground text-background px-4 py-2 rounded-md text-center">
+        Sign in
+      </Link>
+      <Link href="/sign-up" className="bg-foreground text-background px-4 py-2 rounded-md text-center">
+        Sign up
+      </Link>
     </div>
   );
 }

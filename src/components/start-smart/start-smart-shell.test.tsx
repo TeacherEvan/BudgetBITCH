@@ -31,7 +31,7 @@ describe("StartSmartShell", () => {
     render(<StartSmartShell />);
 
     fireEvent.click(screen.getByRole("button", { name: /young adult/i }));
-    fireEvent.change(screen.getByLabelText(/country/i), {
+    fireEvent.change(screen.getByRole("combobox", { name: /^country$/i }), {
       target: { value: "US" },
     });
     fireEvent.change(screen.getByLabelText(/state/i), {
@@ -57,10 +57,27 @@ describe("StartSmartShell", () => {
     );
     expect(screen.getByText("Enter a valid 2-letter country code.")).toBeInTheDocument();
     expect(
-      screen.getByText("Enter a valid 2- or 3-letter state or region code."),
+      screen.getByText("Enter a valid 2- or 3-character state or region code."),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText(/country/i)).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("combobox", { name: /^country$/i })).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByLabelText(/state or region/i)).toHaveAttribute("aria-invalid", "true");
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("resets the region code to a supported example when the country changes", () => {
+    render(<StartSmartShell />);
+
+    fireEvent.change(screen.getByLabelText(/^country$/i), {
+      target: { value: "US" },
+    });
+    fireEvent.change(screen.getByLabelText(/state or region/i), {
+      target: { value: "CA" },
+    });
+
+    fireEvent.change(screen.getByLabelText(/^country$/i), {
+      target: { value: "SG" },
+    });
+
+    expect(screen.getByLabelText(/state or region/i)).toHaveValue("01");
   });
 });

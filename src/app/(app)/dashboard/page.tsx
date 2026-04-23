@@ -36,9 +36,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       : ["Budget updates", "Launcher grid", "Live briefing"];
 
   return (
-    <main className="bb-page-shell overflow-hidden px-4 py-0 text-white md:px-5 md:py-0">
+    <main className="bb-page-shell overflow-hidden px-4 py-0 text-white md:h-full md:min-h-0 md:px-5 md:py-0">
       <MobilePanelFrame>
-      <section className="mx-auto grid max-w-7xl gap-0">
+      <section className="mx-auto grid max-w-7xl gap-0 md:h-full md:grid-rows-[auto_auto_minmax(0,1fr)]">
         <BroadcastBar cityLabel={cityLabel} tickerItems={tickerItems} />
 
         <section className="grid gap-3 xl:grid-cols-[minmax(0,1.08fr)_minmax(18rem,0.92fr)]">
@@ -91,7 +91,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           </aside>
         </section>
 
-        <section className="grid gap-3 xl:grid-cols-[minmax(0,1.05fr)_minmax(24rem,0.95fr)]">
+        <section className="grid min-h-0 gap-3 xl:grid-cols-[minmax(0,1.05fr)_minmax(24rem,0.95fr)]">
           <LauncherGrid tools={dashboardData.launcherTools} />
           <LiveBriefingRail briefing={dashboardData.briefing} />
         </section>

@@ -2,7 +2,11 @@ import { expect, test } from "@playwright/test";
 
 test("OpenClaw wizard is reachable from the hub", async ({ page }) => {
   await page.goto("/settings/integrations");
-  await page.locator('a[href="/settings/integrations/openclaw"]').click();
+
+  await Promise.all([
+    page.waitForURL(/\/settings\/integrations\/openclaw(?:[?#].*)?$/),
+    page.locator('a[href="/settings/integrations/openclaw"]').click(),
+  ]);
 
   await expect(
     page.getByRole("heading", { name: "Connect OpenClaw" }),

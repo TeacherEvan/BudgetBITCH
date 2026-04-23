@@ -5,7 +5,10 @@ test("user can open Jobs and review a blueprint-aware listing", async ({ page })
   await seedCompletedLaunchProfile(page);
   await page.goto("/");
 
-  await page.getByRole("link", { name: "Explore jobs" }).click();
+  await Promise.all([
+    page.waitForURL(/\/jobs(?:[?#].*)?$/),
+    page.getByRole("link", { name: "Explore jobs" }).click(),
+  ]);
 
   await expect(
     page.getByRole("heading", {
