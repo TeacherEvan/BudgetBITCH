@@ -6,7 +6,7 @@ test("user can open Jobs and review a blueprint-aware listing", async ({ page })
   await page.goto("/");
 
   await Promise.all([
-    page.waitForURL(/\/jobs(?:[?#].*)?$/),
+    page.waitForURL(/\/jobs(?:[?#].*)?$/, { waitUntil: "commit" }),
     page.getByRole("link", { name: "Explore jobs" }).click(),
   ]);
 
@@ -14,17 +14,23 @@ test("user can open Jobs and review a blueprint-aware listing", async ({ page })
     page.getByRole("heading", {
       name: "Quick job routes for real-life pressure.",
     }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 15000 });
+  await expect(page).toHaveURL(/\/jobs(?:[?#].*)?$/);
   await expect(page.getByText("Remote Customer Support Specialist")).toBeVisible();
   await expect(page.getByText("Posted 4 days ago")).toBeVisible();
 
   const targetCard = page.locator("article").filter({
     has: page.getByRole("heading", { name: "Remote Customer Support Specialist" }),
   });
+  const detailLink = targetCard.getByRole("link", { name: /open job details/i });
 
-  await targetCard.getByRole("link", { name: /open job details/i }).click();
-
-  await page.waitForURL(/\/jobs\//);
+  await expect(detailLink).toHaveAttribute("href", "/jobs/remote-customer-support-specialist");
+  await Promise.all([
+    page.waitForURL(/\/jobs\/remote-customer-support-specialist(?:[?#].*)?$/, {
+      waitUntil: "commit",
+    }),
+    detailLink.click(),
+  ]);
 
   await expect(
     page.getByRole("heading", { name: "Remote Customer Support Specialist" }),
@@ -48,7 +54,13 @@ test("jobs board stays usable inside the mobile shell", async ({ page }) => {
   const targetCard = page.locator("article").filter({
     has: page.getByRole("heading", { name: "Remote Customer Support Specialist" }),
   });
+  const detailLink = targetCard.getByRole("link", { name: /open job details/i });
 
-  await targetCard.getByRole("link", { name: /open job details/i }).click();
-  await page.waitForURL(/\/jobs\//);
+  await expect(detailLink).toHaveAttribute("href", "/jobs/remote-customer-support-specialist");
+  await Promise.all([
+    page.waitForURL(/\/jobs\/remote-customer-support-specialist(?:[?#].*)?$/, {
+      waitUntil: "commit",
+    }),
+    detailLink.click(),
+  ]);
 });

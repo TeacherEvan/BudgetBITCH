@@ -71,12 +71,13 @@ Current workspace verification status:
 
 - `npm run lint`
 - `npm run test`
+- `npm run test:e2e`
 - `npm run db:generate`
 - `npm run build`
 
 Current browser-test note:
 
-- `npm run test:e2e` now starts reliably with the dedicated webpack web server, but the full suite still has active failures in `tests/e2e/learn.spec.ts` and `tests/e2e/jobs.spec.ts`.
+- `npm run test:e2e` uses a dedicated webpack-backed dev server on port `3100` with server reuse disabled so the suite does not attach to a hanging Turbopack process.
 
 For deeper orientation, start with `docs/DEV_TREE.md`, then use `docs/CODEBASE_INDEX.md` to jump to the right route, module, or test.
 
