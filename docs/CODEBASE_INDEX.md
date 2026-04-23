@@ -135,7 +135,7 @@ Useful anchors:
 | `prisma/schema.prisma`                                            | Root schema                         |
 | `prisma/migrations/20260406112000_init_core_schema/migration.sql` | Initial checked-in migration        |
 | `prisma.config.ts`                                                | Prisma 7 runtime config             |
-| `playwright.config.ts`                                            | E2E runtime + local web server      |
+| `playwright.config.ts`                                            | E2E runtime + local webpack-backed web server |
 | `vitest.config.ts`                                                | Unit/component test config          |
 | `eslint.config.mjs`                                               | Root lint rules and ignore patterns |
 | `sentry.client.config.ts`                                         | Client-side Sentry bootstrap        |

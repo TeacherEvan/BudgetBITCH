@@ -63,16 +63,20 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 8. Mirror the same Neon, Clerk, and Convex environment variables in Vercel before shipping preview or production deployments.
 9. Generate the Prisma client with `npm run db:generate`.
 10. Start development with `npm run dev`.
+11. For browser tests, keep the Playwright web server on its dedicated webpack path. `playwright.config.ts` now uses `npm run dev -- --webpack --port 3100` with server reuse disabled because Turbopack can report ready in this workspace but still hang on the first `/` request.
 
 ## Verification
 
-The project has been verified in this workspace with:
+Current workspace verification status:
 
 - `npm run lint`
 - `npm run test`
-- `npm run test:e2e`
 - `npm run db:generate`
 - `npm run build`
+
+Current browser-test note:
+
+- `npm run test:e2e` now starts reliably with the dedicated webpack web server, but the full suite still has active failures in `tests/e2e/learn.spec.ts` and `tests/e2e/jobs.spec.ts`.
 
 For deeper orientation, start with `docs/DEV_TREE.md`, then use `docs/CODEBASE_INDEX.md` to jump to the right route, module, or test.
 
