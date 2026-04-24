@@ -69,7 +69,7 @@ flowchart TD
 ├── docs/
 │   ├── CODEBASE_INDEX.md
 │   └── DEV_TREE.md
-├── middleware.ts
+├── src/middleware.ts
 ├── next.config.ts
 ├── prisma/
 │   ├── schema.prisma
@@ -163,7 +163,7 @@ flowchart TD
 - **Business rule change:** start in `src/modules/**`
 - **API behavior change:** start in `src/app/api/**`, then follow calls into `src/modules/**`
 - **Schema or migration change:** start in `prisma/schema.prisma`
-- **Auth gate change:** start in `src/app/page.tsx`, `src/components/welcome/**`, `src/app/sign-in/**`, `src/app/sign-up/**`, `src/app/(app)/auth/continue/**`, then check `src/components/auth/**`, `src/modules/auth/**`, `src/lib/auth/**`, and `middleware.ts`
+- **Auth gate change:** start in `src/app/page.tsx`, `src/components/welcome/**`, `src/app/sign-in/**`, `src/app/sign-up/**`, `src/app/(app)/auth/continue/**`, then check `src/components/auth/**`, `src/modules/auth/**`, `src/lib/auth/**`, and `src/middleware.ts`
 - **Integration wizard change:** start in `src/app/(app)/settings/integrations/**` and `src/components/integrations/**`
 - **Start Smart onboarding change:** start in `src/app/(app)/start-smart/**`, then check `src/components/start-smart/**` and `src/modules/start-smart/**`
 - **Learn! lesson or recommendation change:** start in `src/app/(app)/learn/**`, then check `src/components/learn/**` and `src/modules/learn/**`

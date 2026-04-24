@@ -58,7 +58,7 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 - `/` is the auth-first gate: signed-out visitors stay on the welcome window, signed-in visitors without a completed launch profile move into the launch wizard, and signed-in visitors with a completed launch profile land on the root board.
 - `/sign-in` and `/sign-up` keep only sanitized in-app `redirectTo` targets. Safe root and dashboard targets are routed through `/auth/continue` before the final landing step.
 - `/auth/continue` is the post-Clerk bootstrap boundary. It shows the final local-setup panel, then the continue action resolves any missing local user and workspace records before redirecting to the safe post-auth destination.
-- `middleware.ts` recognizes `/auth/continue`, `/dashboard`, `/settings`, and `/api/v1` as the protected surface. When Clerk config is missing or invalid, protected browser routes redirect to `/sign-in` and protected API routes return JSON `503` errors.
+- `src/middleware.ts` recognizes `/auth/continue`, `/dashboard`, `/settings`, and `/api/v1` as the protected surface. When Clerk config is missing or invalid, protected browser routes redirect to `/sign-in` and protected API routes return JSON `503` errors.
 
 ## Local setup
 
@@ -73,7 +73,7 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 9. Mirror the same Neon, Clerk, and Convex environment variables in Vercel before shipping preview or production deployments.
 10. Generate the Prisma client with `npm run db:generate`.
 11. Start development with `npm run dev`.
-12. For browser tests, keep the Playwright web server on its dedicated webpack path. `playwright.config.ts` now uses `npm run dev -- --webpack --port 3100` with server reuse disabled because Turbopack can report ready in this workspace but still hang on the first `/` request.
+12. For browser tests, keep the Playwright web server on its dedicated webpack path. `playwright.config.ts` now starts `npm run dev -- --webpack --port 3100` through `scripts/run-with-sanitized-env.mjs`, with server reuse disabled, so local Clerk keys do not change the auth-root test behavior and Turbopack does not hang on the first `/` request.
 
 ## Verification
 
@@ -88,6 +88,7 @@ Current workspace verification status:
 Current browser-test note:
 
 - `npm run test:e2e` uses a dedicated webpack-backed dev server on port `3100` with server reuse disabled so the suite does not attach to a hanging Turbopack process.
+- The Playwright web server strips local Clerk auth env on purpose so signed-out welcome coverage and the non-production signed-in fallback stay deterministic even when `.env.local` contains real dev keys.
 - Playwright root coverage is split between `tests/e2e/welcome-auth.spec.ts` for signed-out entry behavior and `tests/e2e/smoke.spec.ts` for the signed-in root gate path.
 
 For deeper orientation, start with `docs/DEV_TREE.md`, then use `docs/CODEBASE_INDEX.md` to jump to the right route, module, or test.

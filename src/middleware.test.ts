@@ -26,7 +26,7 @@ vi.mock("next/server", async () => {
   };
 });
 
-import middleware, { config } from "../middleware";
+import middleware, { config } from "./middleware";
 
 describe("middleware", () => {
   beforeEach(() => {

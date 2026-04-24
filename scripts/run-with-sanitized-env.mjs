@@ -1,10 +1,12 @@
 import { spawn } from "node:child_process";
 
 const placeholderPattern = /replace_me|your-app/i;
+const forceStripClerkEnv = process.env.BUDGETBITCH_STRIP_CLERK_ENV === "true";
 const variablesToSanitize = [
   "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
   "CLERK_SECRET_KEY",
   "CLERK_JWT_ISSUER_DOMAIN",
+  "NEXT_PUBLIC_CLERK_IS_SATELLITE",
   "NEXT_PUBLIC_CLERK_DOMAIN",
   "NEXT_PUBLIC_CLERK_PROXY_URL",
 ];
@@ -20,6 +22,11 @@ const env = { ...process.env };
 
 for (const name of variablesToSanitize) {
   const value = env[name]?.trim();
+
+  if (forceStripClerkEnv) {
+    env[name] = "";
+    continue;
+  }
 
   if (value && placeholderPattern.test(value)) {
     delete env[name];
