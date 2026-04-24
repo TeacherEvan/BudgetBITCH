@@ -1,5 +1,8 @@
 type ClerkEmailAddress = {
   emailAddress?: string | null;
+  verification?: {
+    status?: string | null;
+  } | null;
 };
 
 type ClerkUserLike = {
@@ -11,7 +14,7 @@ type ClerkUserLike = {
 } | null | undefined;
 
 export const missingClerkUserEmailErrorMessage =
-  "BudgetBITCH requires an email-backed Clerk account before local setup can finish.";
+  "BudgetBITCH requires a verified email-backed Clerk account before local setup can finish.";
 
 export function getClerkUserDisplayName(user: ClerkUserLike) {
   const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim();
@@ -20,7 +23,19 @@ export function getClerkUserDisplayName(user: ClerkUserLike) {
 }
 
 export function getClerkUserEmail(user: ClerkUserLike) {
-  return user?.primaryEmailAddress?.emailAddress?.trim() ??
-    user?.emailAddresses?.[0]?.emailAddress?.trim() ??
-    "";
+  const candidates = [user?.primaryEmailAddress, ...(user?.emailAddresses ?? [])];
+
+  for (const candidate of candidates) {
+    if (candidate?.verification?.status !== "verified") {
+      continue;
+    }
+
+    const emailAddress = candidate.emailAddress?.trim();
+
+    if (emailAddress) {
+      return emailAddress;
+    }
+  }
+
+  return "";
 }

@@ -10,8 +10,12 @@ const redirectMock = vi.hoisted(() =>
 );
 
 vi.mock("@clerk/nextjs", () => ({
-  SignUp: ({ forceRedirectUrl }: { forceRedirectUrl: string }) => (
-    <div data-testid="clerk-sign-up" data-force-redirect-url={forceRedirectUrl} />
+  SignUp: ({ forceRedirectUrl, signInUrl }: { forceRedirectUrl: string; signInUrl: string }) => (
+    <div
+      data-testid="clerk-sign-up"
+      data-force-redirect-url={forceRedirectUrl}
+      data-sign-in-url={signInUrl}
+    />
   ),
 }));
 
@@ -35,12 +39,18 @@ describe("SignUpPage", () => {
     vi.clearAllMocks();
   });
 
-  it("redirects authenticated users to the continue step", async () => {
+  it("redirects authenticated users to the sanitized target", async () => {
     clerkConfiguredMock.mockReturnValue(true);
     authMock.mockResolvedValue({ userId: "clerk_user_1" });
 
-    await expect(SignUpPage()).rejects.toThrow("REDIRECT:/auth/continue");
-    expect(redirectMock).toHaveBeenCalledWith("/auth/continue");
+    await expect(
+      SignUpPage({
+        searchParams: Promise.resolve({ redirectTo: "/dashboard?from=welcome" }),
+      }),
+    ).rejects.toThrow("REDIRECT:/auth/continue?redirectTo=%2Fdashboard%3Ffrom%3Dwelcome");
+    expect(redirectMock).toHaveBeenCalledWith(
+      "/auth/continue?redirectTo=%2Fdashboard%3Ffrom%3Dwelcome",
+    );
   });
 
   it("renders the Clerk sign-up entry and the email-backed guidance", async () => {
@@ -61,6 +71,63 @@ describe("SignUpPage", () => {
     expect(screen.getByTestId("clerk-sign-up")).toHaveAttribute(
       "data-force-redirect-url",
       "/auth/continue",
+    );
+    expect(screen.getByTestId("clerk-sign-up")).toHaveAttribute(
+      "data-sign-in-url",
+      "/sign-in",
+    );
+  });
+
+  it("passes only a safe redirect target to Clerk", async () => {
+    clerkConfiguredMock.mockReturnValue(true);
+    authMock.mockResolvedValue({ userId: null });
+
+    const view = await SignUpPage({
+      searchParams: Promise.resolve({ redirectTo: "https://evil.example/steal" }),
+    });
+    render(view);
+
+    expect(screen.getByTestId("clerk-sign-up")).toHaveAttribute(
+      "data-force-redirect-url",
+      "/auth/continue",
+    );
+  });
+
+  it("routes safe dashboard targets through auth continue before Clerk completes", async () => {
+    clerkConfiguredMock.mockReturnValue(true);
+    authMock.mockResolvedValue({ userId: null });
+
+    const view = await SignUpPage({
+      searchParams: Promise.resolve({ redirectTo: "/dashboard?from=welcome" }),
+    });
+    render(view);
+
+    expect(screen.getByTestId("clerk-sign-up")).toHaveAttribute(
+      "data-force-redirect-url",
+      "/auth/continue?redirectTo=%2Fdashboard%3Ffrom%3Dwelcome",
+    );
+  });
+
+  it("routes a safe root target through auth continue before Clerk completes", async () => {
+    clerkConfiguredMock.mockReturnValue(true);
+    authMock.mockResolvedValue({ userId: null });
+
+    const view = await SignUpPage({
+      searchParams: Promise.resolve({ redirectTo: "/" }),
+    });
+    render(view);
+
+    expect(screen.getByTestId("clerk-sign-up")).toHaveAttribute(
+      "data-force-redirect-url",
+      "/auth/continue?redirectTo=%2F",
+    );
+    expect(screen.getByRole("link", { name: /open sign-in/i })).toHaveAttribute(
+      "href",
+      "/sign-in?redirectTo=%2F",
+    );
+    expect(screen.getByTestId("clerk-sign-up")).toHaveAttribute(
+      "data-sign-in-url",
+      "/sign-in?redirectTo=%2F",
     );
   });
 });

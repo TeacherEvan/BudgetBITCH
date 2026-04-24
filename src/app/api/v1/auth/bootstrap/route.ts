@@ -4,7 +4,10 @@ import {
   clerkConfigurationErrorMessage,
   isClerkConfigured,
 } from "@/lib/auth/clerk-config";
-import { bootstrapUser } from "@/modules/auth/bootstrap-user";
+import {
+  bootstrapUser,
+  bootstrapUserLinkConflictErrorMessage,
+} from "@/modules/auth/bootstrap-user";
 import {
   getClerkUserDisplayName,
   getClerkUserEmail,
@@ -35,11 +38,25 @@ export async function POST() {
     );
   }
 
-  const result = await bootstrapUser({
-    clerkUserId: userId,
-    email,
-    displayName: getClerkUserDisplayName(user),
-  });
+  try {
+    const result = await bootstrapUser({
+      clerkUserId: userId,
+      email,
+      displayName: getClerkUserDisplayName(user),
+    });
 
-  return NextResponse.json(result);
+    return NextResponse.json(result);
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === bootstrapUserLinkConflictErrorMessage
+    ) {
+      return NextResponse.json(
+        { error: bootstrapUserLinkConflictErrorMessage },
+        { status: 409 },
+      );
+    }
+
+    throw error;
+  }
 }

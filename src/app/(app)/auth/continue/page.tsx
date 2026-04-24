@@ -1,47 +1,59 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { AuthAccountRecoveryButton } from "@/components/auth/auth-account-recovery-button";
 import { AuthEntryPanel } from "@/components/auth/auth-entry-panel";
 import {
   clerkConfigurationErrorMessage,
   isClerkConfigured,
 } from "@/lib/auth/clerk-config";
-import { bootstrapUser } from "@/modules/auth/bootstrap-user";
+import {
+  bootstrapUser,
+  bootstrapUserLinkConflictErrorMessage,
+} from "@/modules/auth/bootstrap-user";
 import {
   getClerkUserDisplayName,
   getClerkUserEmail,
   missingClerkUserEmailErrorMessage,
 } from "@/modules/auth/clerk-user";
+import { getSafePostAuthRedirect } from "@/modules/auth/post-auth-redirect";
 
-async function completeBootstrapAction() {
-  "use server";
+type AuthContinuePageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
 
-  if (!isClerkConfigured()) {
-    throw new Error(clerkConfigurationErrorMessage);
+function getSearchParam(
+  searchParams: Record<string, string | string[] | undefined> | undefined,
+  key: string,
+) {
+  const value = searchParams?.[key];
+
+  if (Array.isArray(value)) {
+    return value[0];
   }
 
-  const { userId } = await auth();
-
-  if (!userId) {
-    redirect("/sign-in");
-  }
-
-  const user = await currentUser();
-  const email = getClerkUserEmail(user);
-
-  if (!email) {
-    redirect("/auth/continue");
-  }
-
-  const result = await bootstrapUser({
-    clerkUserId: userId,
-    email,
-    displayName: getClerkUserDisplayName(user),
-  });
-
-  redirect(`/dashboard?workspaceId=${encodeURIComponent(result.workspaceId)}`);
+  return value;
 }
 
-export default async function AuthContinuePage() {
+function getPostBootstrapRedirect(redirectTarget: string, workspaceId: string) {
+  if (redirectTarget === "/") {
+    return "/";
+  }
+
+  if (!redirectTarget.startsWith("/dashboard")) {
+    return `/dashboard?workspaceId=${encodeURIComponent(workspaceId)}`;
+  }
+
+  const dashboardUrl = new URL(redirectTarget, "https://budgetbitch.local");
+  dashboardUrl.searchParams.set("workspaceId", workspaceId);
+
+  return `${dashboardUrl.pathname}?${dashboardUrl.searchParams.toString()}`;
+}
+
+export default async function AuthContinuePage({ searchParams }: AuthContinuePageProps = {}) {
+  const resolvedSearchParams = (await searchParams) ?? undefined;
+  const redirectTarget = getSafePostAuthRedirect(getSearchParam(resolvedSearchParams, "redirectTo"));
+  const errorCode = getSearchParam(resolvedSearchParams, "error");
+
   if (!isClerkConfigured()) {
     return (
       <AuthEntryPanel
@@ -57,8 +69,10 @@ export default async function AuthContinuePage() {
   const { userId } = await auth();
 
   if (!userId) {
-    redirect("/sign-in");
+    redirect(`/sign-in?redirectTo=${encodeURIComponent(redirectTarget)}`);
   }
+
+  const authenticatedUserId = userId;
 
   const user = await currentUser();
   const email = getClerkUserEmail(user);
@@ -77,6 +91,38 @@ export default async function AuthContinuePage() {
     );
   }
 
+  async function completeBootstrapAction() {
+    "use server";
+
+    try {
+      const result = await bootstrapUser({
+        clerkUserId: authenticatedUserId,
+        email,
+        displayName: getClerkUserDisplayName(user),
+      });
+
+      redirect(getPostBootstrapRedirect(redirectTarget, result.workspaceId));
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message === bootstrapUserLinkConflictErrorMessage
+      ) {
+        const relinkConflictUrl = new URL("/auth/continue", "https://budgetbitch.local");
+        relinkConflictUrl.searchParams.set("error", "relink-conflict");
+
+        if (redirectTarget !== "/auth/continue") {
+          relinkConflictUrl.searchParams.set("redirectTo", redirectTarget);
+        }
+
+        redirect(
+          `${relinkConflictUrl.pathname}?${relinkConflictUrl.searchParams.toString()}`,
+        );
+      }
+
+      throw error;
+    }
+  }
+
   return (
     <AuthEntryPanel
       eyebrow="Continue"
@@ -93,6 +139,14 @@ export default async function AuthContinuePage() {
         </article>
       }
     >
+      {errorCode === "relink-conflict" ? (
+        <div className="mb-4 flex flex-col gap-3">
+          <p className="text-sm text-rose-200" role="alert">
+            This email is already linked to a different Clerk account. Sign out here, switch to the original sign-in method, or contact support before continuing.
+          </p>
+          <AuthAccountRecoveryButton redirectTo={redirectTarget} />
+        </div>
+      ) : null}
       <form action={completeBootstrapAction} className="flex flex-col gap-3">
         <button type="submit" className="bb-button-primary w-full justify-center md:w-auto">
           Continue to dashboard

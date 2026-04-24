@@ -1,10 +1,15 @@
 import { expect, test } from "@playwright/test";
+import { seedSignedInAuthOverride } from "./auth-state";
+import { seedCompletedLaunchProfile } from "./launch-profile";
 
-test("home page shows the launch wizard before the landing board", async ({ page }) => {
+test("home page shows the launch wizard before the landing board for the signed-in root flow", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1100 });
+  await seedSignedInAuthOverride(page);
   await page.goto("/");
 
-  await expect(page.getByRole("heading", { name: /launch your dashboard window/i })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /launch your dashboard window/i }),
+  ).toBeVisible({ timeout: 15000 });
   await expect(
     page.getByText(/notes, calculator, and launch settings stay available on this device/i),
   ).toBeVisible();
@@ -48,24 +53,14 @@ test("home page shows the launch wizard before the landing board", async ({ page
   await expect(page.getByRole("link", { name: "Open dashboard", exact: true })).toBeVisible();
 });
 
-test("home page skips the launch wizard when a saved profile exists", async ({ page }) => {
-  await page.addInitScript(() => {
-    localStorage.setItem(
-      "budgetbitch:launch-profile",
-      JSON.stringify({
-        completed: true,
-        completedAt: "2026-04-10T12:00:00.000Z",
-        city: "Dublin",
-        layoutPreset: "launcher_grid",
-        motionPreset: "cinematic",
-        themePreset: "midnight",
-        cryptoPlatform: "later",
-      }),
-    );
-  });
-
+test("home page skips the launch wizard when a signed-in root flow already has a saved profile", async ({ page }) => {
+  await seedSignedInAuthOverride(page);
+  await seedCompletedLaunchProfile(page);
   await page.goto("/");
 
-  await expect(page.getByRole("heading", { name: "Plan first. Panic less." })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Plan first. Panic less." }),
+  ).toBeVisible({ timeout: 15000 });
   await expect(page.getByRole("heading", { name: /launch your dashboard window/i })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: /route lanes/i })).toBeVisible();
 });

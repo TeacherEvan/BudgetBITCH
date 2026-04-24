@@ -7,6 +7,7 @@ function createPublishableKey(host: string) {
 const middlewareHandler = vi.hoisted(() => vi.fn(() => "clerk-response"));
 const clerkMiddlewareMock = vi.hoisted(() => vi.fn(() => middlewareHandler));
 const nextResponseNextMock = vi.hoisted(() => vi.fn(() => "next-response"));
+const nextResponseRedirectMock = vi.hoisted(() => vi.fn(() => "redirect-response"));
 
 vi.mock("@clerk/nextjs/server", () => ({
   clerkMiddleware: clerkMiddlewareMock,
@@ -20,6 +21,7 @@ vi.mock("next/server", async () => {
     NextResponse: {
       ...actual.NextResponse,
       next: nextResponseNextMock,
+      redirect: nextResponseRedirectMock,
     },
   };
 });
@@ -42,6 +44,35 @@ describe("middleware", () => {
     expect(clerkMiddlewareMock).not.toHaveBeenCalled();
     expect(nextResponseNextMock).toHaveBeenCalledTimes(1);
     expect(response).toBe("next-response");
+  });
+
+  it("redirects protected routes to sign-in when Clerk is unavailable", () => {
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "");
+    vi.stubEnv("CLERK_SECRET_KEY", "");
+
+    const request = new Request("http://localhost/dashboard");
+    const event = { waitUntil: vi.fn() } as Parameters<typeof middleware>[1];
+    const response = middleware(request as never, event);
+
+    expect(clerkMiddlewareMock).not.toHaveBeenCalled();
+    expect(nextResponseRedirectMock).toHaveBeenCalledWith(new URL("/sign-in", request.url));
+    expect(response).toBe("redirect-response");
+  });
+
+  it("returns a JSON 503 for protected API routes when Clerk is unavailable", async () => {
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "");
+    vi.stubEnv("CLERK_SECRET_KEY", "");
+
+    const request = new Request("http://localhost/api/v1/auth/bootstrap");
+    const event = { waitUntil: vi.fn() } as Parameters<typeof middleware>[1];
+    const response = middleware(request as never, event);
+
+    expect(clerkMiddlewareMock).not.toHaveBeenCalled();
+    expect(nextResponseRedirectMock).not.toHaveBeenCalled();
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({
+      error: "Clerk authentication is not configured on the server.",
+    });
   });
 
   it("wraps requests in Clerk middleware when Clerk keys are configured", () => {

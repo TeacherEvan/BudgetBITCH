@@ -5,6 +5,9 @@ const authMock = vi.hoisted(() => vi.fn());
 const currentUserMock = vi.hoisted(() => vi.fn());
 const bootstrapUserMock = vi.hoisted(() => vi.fn());
 const clerkConfiguredMock = vi.hoisted(() => vi.fn());
+const bootstrapUserLinkConflictErrorMessage = vi.hoisted(
+  () => "A different Clerk account is already linked to this local profile.",
+);
 
 vi.mock("@clerk/nextjs/server", () => ({
   auth: authMock,
@@ -17,6 +20,7 @@ vi.mock("@/lib/auth/clerk-config", () => ({
 }));
 
 vi.mock("@/modules/auth/bootstrap-user", () => ({
+  bootstrapUserLinkConflictErrorMessage,
   bootstrapUser: bootstrapUserMock,
 }));
 
@@ -40,15 +44,18 @@ describe("POST /api/v1/auth/bootstrap", () => {
     expect(bootstrapUserMock).not.toHaveBeenCalled();
   });
 
-  it("returns a guided error when the Clerk account has no email", async () => {
+  it("returns a guided error when the Clerk account has no verified email", async () => {
     clerkConfiguredMock.mockReturnValue(true);
     authMock.mockResolvedValue({ userId: "clerk_user_1" });
     currentUserMock.mockResolvedValue({
       firstName: "Alex",
       lastName: "Example",
       username: null,
-      primaryEmailAddress: null,
-      emailAddresses: [],
+      primaryEmailAddress: {
+        emailAddress: "alex@example.com",
+        verification: { status: "unverified" },
+      },
+      emailAddresses: [{ emailAddress: "alex@example.com", verification: { status: "unverified" } }],
     });
 
     const response = await POST();
@@ -67,8 +74,13 @@ describe("POST /api/v1/auth/bootstrap", () => {
       firstName: "Alex",
       lastName: "Example",
       username: "alex",
-      primaryEmailAddress: { emailAddress: "alex@example.com" },
-      emailAddresses: [{ emailAddress: "alex@example.com" }],
+      primaryEmailAddress: {
+        emailAddress: "alex@example.com",
+        verification: { status: "verified" },
+      },
+      emailAddresses: [
+        { emailAddress: "alex@example.com", verification: { status: "verified" } },
+      ],
     });
     bootstrapUserMock.mockResolvedValue({
       userId: "profile-1",
@@ -86,6 +98,54 @@ describe("POST /api/v1/auth/bootstrap", () => {
     await expect(response.json()).resolves.toEqual({
       userId: "profile-1",
       workspaceId: "workspace-1",
+    });
+  });
+
+  it("does not bootstrap when only an unverified primary email exists", async () => {
+    clerkConfiguredMock.mockReturnValue(true);
+    authMock.mockResolvedValue({ userId: "clerk_user_1" });
+    currentUserMock.mockResolvedValue({
+      firstName: "Alex",
+      lastName: "Example",
+      username: "alex",
+      primaryEmailAddress: {
+        emailAddress: "alex@example.com",
+        verification: { status: "unverified" },
+      },
+      emailAddresses: [],
+    });
+
+    const response = await POST();
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: missingClerkUserEmailErrorMessage,
+    });
+    expect(bootstrapUserMock).not.toHaveBeenCalled();
+  });
+
+  it("returns a conflict error when bootstrap finds a Clerk link mismatch", async () => {
+    clerkConfiguredMock.mockReturnValue(true);
+    authMock.mockResolvedValue({ userId: "clerk_user_1" });
+    currentUserMock.mockResolvedValue({
+      firstName: "Alex",
+      lastName: "Example",
+      username: "alex",
+      primaryEmailAddress: {
+        emailAddress: "alex@example.com",
+        verification: { status: "verified" },
+      },
+      emailAddresses: [
+        { emailAddress: "alex@example.com", verification: { status: "verified" } },
+      ],
+    });
+    bootstrapUserMock.mockRejectedValue(new Error(bootstrapUserLinkConflictErrorMessage));
+
+    const response = await POST();
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      error: bootstrapUserLinkConflictErrorMessage,
     });
   });
 });

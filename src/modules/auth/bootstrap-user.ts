@@ -11,6 +11,9 @@ export type BootstrapUserResult = {
   workspaceId: string;
 };
 
+export const bootstrapUserLinkConflictErrorMessage =
+  "A different Clerk account is already linked to this local profile.";
+
 function getPersonalWorkspaceName(displayName: string | null | undefined, email: string) {
   const trimmedDisplayName = displayName?.trim();
 
@@ -47,6 +50,7 @@ export async function bootstrapUser({
   const prisma = getPrismaClient();
 
   return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${normalizedEmail}), 0)`;
     await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${normalizedClerkUserId}), 0)`;
 
     let profile = await tx.userProfile.findUnique({
@@ -80,6 +84,10 @@ export async function bootstrapUser({
       });
 
       if (existingProfileByEmail) {
+        if (existingProfileByEmail.clerkUserId !== normalizedClerkUserId) {
+          throw new Error(bootstrapUserLinkConflictErrorMessage);
+        }
+
         const updatedProfile = await tx.userProfile.update({
           where: { id: existingProfileByEmail.id },
           data: {

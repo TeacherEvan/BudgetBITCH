@@ -327,6 +327,9 @@ describe("bootstrapUser", () => {
         lastOpenedAt: null,
       },
     ]);
+    expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(2);
+    expect(prismaMock.$queryRaw.mock.calls[0]?.[1]).toBe("alex@example.com");
+    expect(prismaMock.$queryRaw.mock.calls[1]?.[1]).toBe("user_clerk_123");
   });
 
   it("reuses the same local profile and workspace when bootstrap runs again", async () => {
@@ -472,7 +475,7 @@ describe("bootstrapUser", () => {
     ).toBe(false);
   });
 
-  it("links an existing local profile by email before creating a duplicate", async () => {
+  it("rejects claiming a local profile already linked to another Clerk account", async () => {
     prismaMock.__state.userProfiles.push({
       id: "profile-existing",
       clerkUserId: "legacy_clerk_user",
@@ -480,19 +483,24 @@ describe("bootstrapUser", () => {
       displayName: null,
     });
 
-    const result = await bootstrapUser({
-      clerkUserId: "user_clerk_123",
-      email: "alex@example.com",
-      displayName: "Alex Example",
-    });
+    await expect(
+      bootstrapUser({
+        clerkUserId: "user_clerk_123",
+        email: "alex@example.com",
+        displayName: "Alex Example",
+      }),
+    ).rejects.toThrow("A different Clerk account is already linked to this local profile.");
 
-    expect(result.userId).toBe("profile-existing");
-    expect(prismaMock.__state.userProfiles).toHaveLength(1);
-    expect(prismaMock.__state.userProfiles[0]).toMatchObject({
-      id: "profile-existing",
-      clerkUserId: "user_clerk_123",
-      email: "Alex@Example.com",
-      displayName: "Alex Example",
-    });
+    expect(prismaMock.__state.userProfiles).toEqual([
+      {
+        id: "profile-existing",
+        clerkUserId: "legacy_clerk_user",
+        email: "Alex@Example.com",
+        displayName: null,
+      },
+    ]);
+    expect(prismaMock.__state.workspaces).toEqual([]);
+    expect(prismaMock.__state.workspaceMembers).toEqual([]);
+    expect(prismaMock.__state.workspaceUserPreferences).toEqual([]);
   });
 });
