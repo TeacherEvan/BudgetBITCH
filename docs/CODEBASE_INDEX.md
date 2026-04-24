@@ -7,8 +7,9 @@ This index is a future-navigation cheat sheet for the active root application.
 | Area             | File / Folder          | Why it matters                                                           |
 | ---------------- | ---------------------- | ------------------------------------------------------------------------ |
 | App shell        | `src/app/layout.tsx`   | Global layout and top-level app wrapper                                  |
-| Landing flow     | `src/app/page.tsx`     | Welcome-screen gate and landing state transition                         |
-| Route protection | `middleware.ts`        | Clerk middleware protecting app and API routes                           |
+| Root auth gate   | `src/app/page.tsx`     | Auth-first root gate for welcome, launch wizard, or landing board        |
+| Auth bootstrap   | `src/app/(app)/auth/continue/page.tsx` | Post-Clerk local bootstrap and safe redirect boundary     |
+| Route protection | `middleware.ts`        | Protected-surface fallback handling for auth continue, dashboard, settings, and `/api/v1` |
 | Root config      | `next.config.ts`       | Next.js runtime config, including dev origin allowance                   |
 | Prisma config    | `prisma.config.ts`     | Prisma 7 config and env loading                                          |
 | Data model       | `prisma/schema.prisma` | Canonical schema for workspaces, budgets, reminders, audit, integrations |
@@ -19,13 +20,16 @@ This index is a future-navigation cheat sheet for the active root application.
 
 | Route                             | File                                                    | Purpose                            |
 | --------------------------------- | ------------------------------------------------------- | ---------------------------------- |
-| `/`                               | `src/app/page.tsx`                                      | Welcome sequence and landing page  |
+| `/`                               | `src/app/page.tsx`                                      | Auth-first gate for welcome, wizard, or landing board |
+| `/sign-in`                        | `src/app/sign-in/[[...sign-in]]/page.tsx`               | Clerk sign-in entry with sanitized `redirectTo` handling |
+| `/sign-up`                        | `src/app/sign-up/[[...sign-up]]/page.tsx`               | Clerk sign-up entry with sanitized `redirectTo` handling |
+| `/auth/continue`                  | `src/app/(app)/auth/continue/page.tsx`                  | Post-Clerk bootstrap and safe post-auth redirect |
 | `/start-smart`                    | `src/app/(app)/start-smart/page.tsx`                    | Money Survival Blueprint wizard    |
 | `/learn`                          | `src/app/(app)/learn/page.tsx`                          | Learn! recommendation hub          |
 | `/learn/[slug]`                   | `src/app/(app)/learn/[slug]/page.tsx`                   | Learn! lesson detail               |
 | `/jobs`                           | `src/app/(app)/jobs/page.tsx`                           | Jobs hub with recommended listings |
 | `/jobs/[slug]`                    | `src/app/(app)/jobs/[slug]/page.tsx`                    | Job detail + fit impact summary    |
-| `/dashboard`                      | `src/app/(app)/dashboard/page.tsx`                      | Cinematic dashboard shell          |
+| `/dashboard`                      | `src/app/(app)/dashboard/page.tsx`                      | Protected dashboard shell          |
 | `/settings/integrations`          | `src/app/(app)/settings/integrations/page.tsx`          | Provider connection hub            |
 | `/settings/integrations/claude`   | `src/app/(app)/settings/integrations/claude/page.tsx`   | Claude setup wizard                |
 | `/settings/integrations/openai`   | `src/app/(app)/settings/integrations/openai/page.tsx`   | OpenAI setup wizard                |
@@ -43,6 +47,7 @@ This index is a future-navigation cheat sheet for the active root application.
 ### API routes
 
 - `POST /api/v1/budgets/health` → `src/app/api/v1/budgets/health/route.ts` — validates budget payloads and returns health scoring
+- `POST /api/v1/auth/bootstrap` → `src/app/api/v1/auth/bootstrap/route.ts` — boots or reuses the local user/workspace records for an authenticated Clerk session
 - `POST /api/v1/start-smart/regional-data` → `src/app/api/v1/start-smart/regional-data/route.ts` — returns a normalized region snapshot with trust metadata
 - `POST /api/v1/start-smart/blueprint` → `src/app/api/v1/start-smart/blueprint/route.ts` — builds a Money Survival Blueprint and attempts persistence
 - `POST /api/v1/learn/recommendations` → `src/app/api/v1/learn/recommendations/route.ts` — resolves lesson recommendations from the latest stored blueprint
@@ -54,7 +59,7 @@ This index is a future-navigation cheat sheet for the active root application.
 
 ## 3. Domain module index
 
-- **Auth** — `src/lib/auth/route-guard.ts` — tiny access gate for protected app access
+- **Auth** — `src/modules/auth/*.ts`, `src/lib/auth/*.ts` — redirect sanitizing, Clerk config checks, Clerk-user helpers, and local bootstrap wiring
 - **Start Smart** — `src/modules/start-smart/*.ts` — profile normalization, regional data, blueprint generation, and wizard state
 - **Learn!** — `src/modules/learn/*.ts` — lesson schema, module catalog, blueprint signal extraction, and recommendation resolution
 - **Jobs** — `src/modules/jobs/*.ts` — seeded jobs catalog, filter schema, blueprint signal extraction, and fit scoring
@@ -116,7 +121,8 @@ Useful anchors:
 
 | File                                      | Coverage                               |
 | ----------------------------------------- | -------------------------------------- |
-| `tests/e2e/smoke.spec.ts`                 | Landing flow through welcome gate      |
+| `tests/e2e/welcome-auth.spec.ts`          | Signed-out root entry, welcome auth links, and preserved `redirectTo` |
+| `tests/e2e/smoke.spec.ts`                 | Signed-in root gate smoke for wizard-first and landing-first paths |
 | `tests/e2e/dashboard.spec.ts`             | Dashboard visual slice                 |
 | `tests/e2e/start-smart.spec.ts`           | Start Smart wizard to blueprint result |
 | `tests/e2e/learn.spec.ts`                 | Start Smart to Learn lesson journey    |
@@ -146,7 +152,7 @@ Useful anchors:
 | Path                     | Status                                                                                |
 | ------------------------ | ------------------------------------------------------------------------------------- |
 | `budgetbitch/`           | Separate nested Convex prototype/reference app; excluded from root TypeScript project |
-| `WelcomeWindow-startup/` | Visual welcome screen dependency used by the root landing page                        |
+| `WelcomeWindow-startup/` | Legacy visual reference folder; not part of the active root auth-first flow          |
 
 ## 8. Suggested navigation recipes
 
@@ -156,6 +162,13 @@ Useful anchors:
 2. Check shared UI in `src/components/integrations/**`
 3. Check provider metadata in `src/modules/integrations/provider-registry.ts`
 4. Re-run the provider page test + matching e2e spec
+
+### I want to change auth entry or the root gate
+
+1. Start at `src/app/page.tsx`
+2. Check `src/components/welcome/**`, `src/app/sign-in/**`, `src/app/sign-up/**`, and `src/app/(app)/auth/continue/**`
+3. Check `src/modules/auth/post-auth-redirect.ts` and related auth helpers
+4. Re-run the related route tests plus `tests/e2e/welcome-auth.spec.ts` and `tests/e2e/smoke.spec.ts`
 
 ### I want to change business logic
 

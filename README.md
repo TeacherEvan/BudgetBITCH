@@ -18,9 +18,10 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 - budget health scoring and due-soon automation
 - notification fanout and email template scaffolding
 - provider connection hub for Claude, OpenAI, GitHub Copilot, and OpenClaw
+- auth-first root entry that sends signed-out visitors to the welcome window, signed-in users without a saved launch profile to the launch wizard, and signed-in users with a saved launch profile to the landing board
 - privacy shield disclosures and consent receipt helpers
 - encrypted provider-secret vault primitives and revoke flow
-- API endpoints for budget health, Start Smart blueprint generation, Learn recommendations/module detail, Jobs search/recommendations, and integration connect/revoke
+- API endpoints for auth bootstrap, budget health, Start Smart blueprint generation, Learn recommendations/module detail, Jobs search/recommendations, and integration connect/revoke
 - compact launch wizard preferences with searchable city selection and threshold-based loading feedback
 
 ## Tech stack
@@ -42,28 +43,37 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 ## Codebase shape
 
 - `src/app/**` contains routes, route groups, layouts, and API handlers
+- `src/app/page.tsx`, `src/app/sign-in/**`, `src/app/sign-up/**`, and `src/app/(app)/auth/continue/**` define the auth-first root entry and post-Clerk bootstrap path
 - `src/components/start-smart/**` contains reusable UI for the Money Survival Blueprint flow
 - `src/components/learn/**` contains reusable UI for the Learn! hub and lesson detail flow
 - `src/components/jobs/**` contains reusable UI for the Jobs hub and job detail flow
 - `src/modules/**` contains business/domain logic grouped by capability
 - `src/components/integrations/**` contains reusable UI for the connection hub and provider wizards
 - `prisma/**` contains the schema and checked-in migration history
-- `tests/e2e/**` contains Playwright journeys for the landing flow, dashboard, Start Smart, Learn!, Jobs, and provider wizards
+- `tests/e2e/**` contains Playwright journeys for the auth-first root flow, dashboard, Start Smart, Learn!, Jobs, and provider wizards
 - `budgetbitch/` is a separate nested Convex prototype/reference subtree and is **not** the primary app being built from the repo root
+
+## Auth-first root flow
+
+- `/` is the auth-first gate: signed-out visitors stay on the welcome window, signed-in visitors without a completed launch profile move into the launch wizard, and signed-in visitors with a completed launch profile land on the root board.
+- `/sign-in` and `/sign-up` keep only sanitized in-app `redirectTo` targets. Safe root and dashboard targets are routed through `/auth/continue` before the final landing step.
+- `/auth/continue` is the post-Clerk bootstrap boundary. It shows the final local-setup panel, then the continue action resolves any missing local user and workspace records before redirecting to the safe post-auth destination.
+- `middleware.ts` recognizes `/auth/continue`, `/dashboard`, `/settings`, and `/api/v1` as the protected surface. When Clerk config is missing or invalid, protected browser routes redirect to `/sign-in` and protected API routes return JSON `503` errors.
 
 ## Local setup
 
 1. Copy environment values from `.env.example` into `.env.local`.
 2. Install dependencies with `npm install`.
-3. Set `PROVIDER_SECRET_ENCRYPTION_KEY` to a long random server-side secret before using integration connect/revoke routes.
+3. Set `PROVIDER_SECRET_ENCRYPTION_KEY` to a long random server-side secret before using integration connect/revoke routes under `/settings/integrations`.
 4. When using Neon, set `DATABASE_URL` to the pooled connection string from the Neon **Connect** dialog and `DIRECT_URL` to the direct connection string.
 5. If you plan to run `prisma migrate dev`, optionally set `SHADOW_DATABASE_URL` to a dedicated direct-connection shadow database.
 6. Create or link a Convex deployment, then set `CONVEX_DEPLOYMENT`, `NEXT_PUBLIC_CONVEX_URL`, `CLERK_JWT_ISSUER_DOMAIN`, and `CONVEX_SYNC_SECRET`.
-7. Set `CRON_SECRET` in Vercel so the scheduled replay route can authenticate Vercel Cron requests.
-8. Mirror the same Neon, Clerk, and Convex environment variables in Vercel before shipping preview or production deployments.
-9. Generate the Prisma client with `npm run db:generate`.
-10. Start development with `npm run dev`.
-11. For browser tests, keep the Playwright web server on its dedicated webpack path. `playwright.config.ts` now uses `npm run dev -- --webpack --port 3100` with server reuse disabled because Turbopack can report ready in this workspace but still hang on the first `/` request.
+7. If your Clerk app uses a satellite or proxy deployment, also set `NEXT_PUBLIC_CLERK_IS_SATELLITE`, plus either `NEXT_PUBLIC_CLERK_DOMAIN` or `NEXT_PUBLIC_CLERK_PROXY_URL`.
+8. Set `CRON_SECRET` in Vercel so the scheduled replay route can authenticate Vercel Cron requests.
+9. Mirror the same Neon, Clerk, and Convex environment variables in Vercel before shipping preview or production deployments.
+10. Generate the Prisma client with `npm run db:generate`.
+11. Start development with `npm run dev`.
+12. For browser tests, keep the Playwright web server on its dedicated webpack path. `playwright.config.ts` now uses `npm run dev -- --webpack --port 3100` with server reuse disabled because Turbopack can report ready in this workspace but still hang on the first `/` request.
 
 ## Verification
 
@@ -78,12 +88,14 @@ Current workspace verification status:
 Current browser-test note:
 
 - `npm run test:e2e` uses a dedicated webpack-backed dev server on port `3100` with server reuse disabled so the suite does not attach to a hanging Turbopack process.
+- Playwright root coverage is split between `tests/e2e/welcome-auth.spec.ts` for signed-out entry behavior and `tests/e2e/smoke.spec.ts` for the signed-in root gate path.
 
 For deeper orientation, start with `docs/DEV_TREE.md`, then use `docs/CODEBASE_INDEX.md` to jump to the right route, module, or test.
 
 ## Launch wizard notes
 
 - Launch preferences remain local-only in `localStorage` under `budgetbitch:launch-profile`.
+- The signed-in root E2E override is non-production-only and uses `budgetbitch:e2e-auth-state` only to exercise the signed-in root flow when Clerk client config is missing locally.
 - Searchable city suggestions are loaded on demand from a small curated catalog instead of shipping every option up front.
 - The launch loading window appears only when deferred transition work runs long enough to cross the threshold, and the money-themed art is prepared only when that loading state is needed.
 
@@ -117,7 +129,14 @@ If you have a real PostgreSQL instance available, run:
 
 ## Environment variables
 
-See `.env.example` for the full list of required variables, including authentication, email, webhook signing, Sentry, and provider-secret encryption settings.
+See `.env.example` for the full list of required variables, including authentication, Convex projection sync, Sentry, and provider-secret encryption settings.
+
+Environment notes:
+
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, and `CLERK_JWT_ISSUER_DOMAIN` are the baseline Clerk values for local auth and Convex auth validation.
+- `NEXT_PUBLIC_CLERK_IS_SATELLITE`, `NEXT_PUBLIC_CLERK_DOMAIN`, and `NEXT_PUBLIC_CLERK_PROXY_URL` are optional and only needed for Clerk satellite or proxy deployments.
+- `PROVIDER_SECRET_ENCRYPTION_KEY` is only required when you want to exercise the encrypted integration connect/revoke routes.
+- `RESEND_API_KEY`, `INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY`, and `WEBHOOK_SIGNING_SECRET` remain scaffolded placeholders for email and webhook surfaces that are not active in the current root app slice.
 
 ## Start Smart regional data
 

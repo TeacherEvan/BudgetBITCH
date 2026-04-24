@@ -31,6 +31,13 @@ Keep the card structure in this order:
 - Surface metadata users can compare quickly before they commit to the detail page.
 - Avoid turning the card into a long narrative block.
 
+## Job Lanes
+
+- The jobs hub groups cards into three blueprint-aware lanes before any wildcard overflow: `Career pivot lane`, `Fast cash lane`, and `Steady routine lane`.
+- The card-level `Best for` summary should explain why the job belongs in its current lane, not repeat the same generic promise across every listing.
+- `fitSignals` are secondary context only. Keep them capped to the top few badges so the lane and `Best for` cue stay easy to scan.
+- Lane definitions live in `src/app/(app)/jobs/page.tsx`, while the card stays responsible for compact comparison-ready presentation.
+
 ## Testing Contract
 
 When changing the jobs card UI, update all of the following:
