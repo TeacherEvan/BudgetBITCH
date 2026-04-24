@@ -14,7 +14,10 @@ flowchart TD
   A --> G[src/lib]
   A --> H[src/inngest]
 
-  B --> B1[page.tsx\nwelcome + landing flow]
+  B --> B1[page.tsx\nauth-first root gate]
+  B --> B1d[sign-in\nClerk sign-in entry]
+  B --> B1e[sign-up\nClerk sign-up entry]
+  B --> B1f[(app)/auth/continue\npost-Clerk bootstrap boundary]
   B --> B1a[(app)/start-smart\nMoney Survival Blueprint wizard]
   B --> B1b[(app)/learn\nLearn hub + lessons]
   B --> B1c[(app)/jobs\nJobs hub + detail]
@@ -23,6 +26,7 @@ flowchart TD
   B --> B4[api/v1]
 
   B4 --> B41[budgets/health/route.ts]
+  B4 --> B40[auth/bootstrap/route.ts]
   B4 --> B46[learn/recommendations/route.ts]
   B4 --> B47[learn/modules/[slug]/route.ts]
   B4 --> B48[jobs/search/route.ts]
@@ -51,8 +55,9 @@ flowchart TD
   D --> D4[jobs UI primitives]
   E --> E1[schema.prisma]
   E --> E2[migrations]
-  F --> F1[dashboard + wizard journeys + Start Smart + Learn + Jobs]
-  G --> G1[route-guard]
+  F --> F1[welcome-auth root entry coverage]
+  F --> F2[signed-in root smoke + dashboard + wizard journeys + Start Smart + Learn + Jobs]
+  G --> G1[auth config + route guards]
   H --> H1[Inngest client]
 ```
 
@@ -77,7 +82,11 @@ flowchart TD
 │   │   ├── page.tsx
 │   │   ├── layout.tsx
 │   │   ├── globals.css
+│   │   ├── sign-in/
+│   │   ├── sign-up/
 │   │   ├── (app)/
+│   │   │   ├── auth/
+│   │   │   │   └── continue/
 │   │   │   ├── learn/
 │   │   │   ├── jobs/
 │   │   │   ├── start-smart/
@@ -94,6 +103,7 @@ flowchart TD
 │   │   │           └── openclaw/
 │   │   └── api/
 │   │       └── v1/
+│   │           ├── auth/bootstrap/route.ts
 │   │           ├── budgets/health/route.ts
 │   │           ├── jobs/
 │   │           │   ├── recommendations/route.ts
@@ -141,8 +151,10 @@ flowchart TD
 
 - `src/**` is the active application code for the root Next.js app.
 - `prisma/**` is the authoritative data model and checked-in migration history.
-- `tests/e2e/**` contains Playwright journey coverage.
-- `WelcomeWindow-startup/WelcomeScreen.tsx` is used by `src/app/page.tsx`, but the folder is excluded from root TypeScript compilation.
+- `src/components/welcome/**` holds the signed-out welcome window shown by the root auth gate.
+- `src/components/auth/**`, `src/modules/auth/**`, and `src/lib/auth/**` hold the shared auth entry UI, redirect sanitizing, Clerk checks, and local bootstrap helpers used by the root auth flow.
+- `tests/e2e/**` contains Playwright journey coverage, including a split between signed-out welcome-entry auth coverage and signed-in root smoke coverage.
+- `WelcomeWindow-startup/WelcomeScreen.tsx` is a leftover visual reference and is not part of the active root auth flow.
 - `budgetbitch/` is a separate nested prototype/reference subtree and is excluded from the root TypeScript project.
 
 ## Where to start by task
@@ -151,7 +163,7 @@ flowchart TD
 - **Business rule change:** start in `src/modules/**`
 - **API behavior change:** start in `src/app/api/**`, then follow calls into `src/modules/**`
 - **Schema or migration change:** start in `prisma/schema.prisma`
-- **Auth gate change:** start in `middleware.ts` and `src/lib/auth/route-guard.ts`
+- **Auth gate change:** start in `src/app/page.tsx`, `src/components/welcome/**`, `src/app/sign-in/**`, `src/app/sign-up/**`, `src/app/(app)/auth/continue/**`, then check `src/components/auth/**`, `src/modules/auth/**`, `src/lib/auth/**`, and `middleware.ts`
 - **Integration wizard change:** start in `src/app/(app)/settings/integrations/**` and `src/components/integrations/**`
 - **Start Smart onboarding change:** start in `src/app/(app)/start-smart/**`, then check `src/components/start-smart/**` and `src/modules/start-smart/**`
 - **Learn! lesson or recommendation change:** start in `src/app/(app)/learn/**`, then check `src/components/learn/**` and `src/modules/learn/**`
