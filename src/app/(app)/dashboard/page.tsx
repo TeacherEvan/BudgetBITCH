@@ -3,6 +3,7 @@ import { LauncherGrid } from "@/components/dashboard/launcher-grid";
 import { LiveBriefingRail } from "@/components/dashboard/live-briefing-rail";
 import { MobilePanelFrame } from "@/components/mobile/mobile-panel-frame";
 import { getDashboardPageData } from "@/modules/dashboard/dashboard-data";
+import { redirect } from "next/navigation";
 
 type DashboardPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -23,7 +24,14 @@ function getRequestedWorkspaceId(
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const resolvedSearchParams = (await searchParams) ?? undefined;
   const requestedWorkspaceId = getRequestedWorkspaceId(resolvedSearchParams);
-  const dashboardData = await getDashboardPageData(requestedWorkspaceId);
+  const result = await getDashboardPageData(requestedWorkspaceId);
+
+  if (result.kind === "auth-required" || result.kind === "setup-required") {
+    redirect(result.redirectTo);
+    return null;
+  }
+
+  const dashboardData = result.data;
   const activeWorkspaceName = dashboardData.activeWorkspace?.name ?? "No workspace selected";
   const activeWorkspaceRole = dashboardData.activeWorkspace?.role.replaceAll("_", " ") ?? "none";
   const checkInStatus =

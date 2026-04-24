@@ -27,6 +27,13 @@ function getRequestPathname(request: NextRequest) {
   return new URL(request.url).pathname;
 }
 
+function getRedirectTarget(request: NextRequest) {
+  const pathname = getRequestPathname(request);
+  const search = request.nextUrl?.search ?? new URL(request.url).search;
+
+  return `${pathname}${search}`;
+}
+
 export default function middleware(request: NextRequest, event: NextFetchEvent) {
   const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim();
 
@@ -53,7 +60,23 @@ export default function middleware(request: NextRequest, event: NextFetchEvent) 
     return NextResponse.next();
   }
 
-  return clerkMiddleware({ publishableKey })(request, event);
+  return clerkMiddleware(
+    async (auth, req) => {
+      if (isProtectedPath(getRequestPathname(req))) {
+        const redirectTarget = getRedirectTarget(req);
+        const signInUrl = new URL("/sign-in", req.url);
+
+        signInUrl.searchParams.set("redirectTo", redirectTarget);
+
+        await auth.protect({
+          unauthenticatedUrl: signInUrl.toString(),
+        });
+      }
+
+      return NextResponse.next();
+    },
+    { publishableKey },
+  )(request, event);
 }
 
 export const config = {

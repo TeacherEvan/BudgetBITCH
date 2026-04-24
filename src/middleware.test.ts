@@ -31,6 +31,14 @@ import middleware, { config } from "../middleware";
 describe("middleware", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    middlewareHandler.mockReset();
+    middlewareHandler.mockReturnValue("clerk-response");
+    clerkMiddlewareMock.mockReset();
+    clerkMiddlewareMock.mockImplementation(() => middlewareHandler);
+    nextResponseNextMock.mockReset();
+    nextResponseNextMock.mockReturnValue("next-response");
+    nextResponseRedirectMock.mockReset();
+    nextResponseRedirectMock.mockReturnValue("redirect-response");
     vi.unstubAllEnvs();
   });
 
@@ -75,6 +83,89 @@ describe("middleware", () => {
     });
   });
 
+  it("protects dashboard routes when Clerk is configured", async () => {
+    const publishableKey = createPublishableKey("clerk.budgetbitch.test");
+    const protectMock = vi.fn();
+
+    clerkMiddlewareMock.mockImplementation((handler, options) => {
+      expect(options).toEqual({ publishableKey });
+
+      return (request: Request, event: unknown) =>
+        handler(
+          {
+            protect: protectMock,
+          },
+          request,
+          event,
+        );
+    });
+
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", publishableKey);
+    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_budgetbitch");
+
+    const request = new Request("http://localhost/dashboard?workspaceId=workspace-2");
+    const event = { waitUntil: vi.fn() } as Parameters<typeof middleware>[1];
+
+    await middleware(request as never, event);
+
+    expect(protectMock).toHaveBeenCalledWith({
+      unauthenticatedUrl:
+        "http://localhost/sign-in?redirectTo=%2Fdashboard%3FworkspaceId%3Dworkspace-2",
+    });
+  });
+
+  it("keeps the root route public when Clerk is configured", async () => {
+    const publishableKey = createPublishableKey("clerk.budgetbitch.test");
+    const protectMock = vi.fn();
+
+    clerkMiddlewareMock.mockImplementation((handler) => {
+      return (request: Request, event: unknown) =>
+        handler(
+          {
+            protect: protectMock,
+          },
+          request,
+          event,
+        );
+    });
+
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", publishableKey);
+    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_budgetbitch");
+
+    const request = new Request("http://localhost/");
+    const event = { waitUntil: vi.fn() } as Parameters<typeof middleware>[1];
+
+    await middleware(request as never, event);
+
+    expect(protectMock).not.toHaveBeenCalled();
+  });
+
+  it("protects API routes when Clerk is configured", async () => {
+    const publishableKey = createPublishableKey("clerk.budgetbitch.test");
+    const protectMock = vi.fn();
+
+    clerkMiddlewareMock.mockImplementation((handler) => {
+      return (request: Request, event: unknown) =>
+        handler(
+          {
+            protect: protectMock,
+          },
+          request,
+          event,
+        );
+    });
+
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", publishableKey);
+    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_budgetbitch");
+
+    const request = new Request("http://localhost/api/v1/auth/bootstrap");
+    const event = { waitUntil: vi.fn() } as Parameters<typeof middleware>[1];
+
+    await middleware(request as never, event);
+
+    expect(protectMock).toHaveBeenCalledTimes(1);
+  });
+
   it("wraps requests in Clerk middleware when Clerk keys are configured", () => {
     const publishableKey = createPublishableKey("clerk.budgetbitch.test");
 
@@ -85,11 +176,10 @@ describe("middleware", () => {
     const event = { waitUntil: vi.fn() } as Parameters<typeof middleware>[1];
     const response = middleware(request as never, event);
 
-    expect(clerkMiddlewareMock).toHaveBeenCalledWith({
+    expect(clerkMiddlewareMock).toHaveBeenCalledWith(expect.any(Function), {
       publishableKey,
     });
     expect(middlewareHandler).toHaveBeenCalledWith(request, event);
-    expect(nextResponseNextMock).not.toHaveBeenCalled();
     expect(response).toBe("clerk-response");
   });
 

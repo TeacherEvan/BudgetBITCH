@@ -27,6 +27,16 @@ test("signed-out visitors still see welcome when a launch profile is already sav
   await expect(page.getByRole("heading", { name: /plan first\. panic less\./i })).toHaveCount(0);
 });
 
+test("dashboard stays available in demo mode when local Clerk setup is unavailable", async ({ page }) => {
+  await page.goto("/dashboard?workspaceId=workspace-2");
+
+  await expect(page).toHaveURL(/\/dashboard\?workspaceId=workspace-2$/);
+  await expect(page.getByRole("heading", { name: /interactive billboard/i })).toBeVisible({
+    timeout: 15000,
+  });
+  await expect(page.getByText(/demo workspace context is showing/i)).toBeVisible();
+});
+
 for (const authEntry of [
   {
     label: "sign in",
