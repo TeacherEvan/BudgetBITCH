@@ -9,7 +9,7 @@ This index is a future-navigation cheat sheet for the active root application.
 | App shell        | `src/app/layout.tsx`   | Global layout and top-level app wrapper                                  |
 | Root auth gate   | `src/app/page.tsx`     | Auth-first root gate for welcome, launch wizard, or landing board        |
 | Auth bootstrap   | `src/app/(app)/auth/continue/page.tsx` | Post-Clerk local bootstrap and safe redirect boundary     |
-| Route protection | `src/middleware.ts`    | Protected-surface fallback handling for auth continue, dashboard, settings, and `/api/v1` |
+| Route protection | `middleware.ts`        | Protected-surface fallback handling for auth continue, dashboard, settings, and `/api/v1` |
 | Root config      | `next.config.ts`       | Next.js runtime config, including dev origin allowance                   |
 | Prisma config    | `prisma.config.ts`     | Prisma 7 config and env loading                                          |
 | Data model       | `prisma/schema.prisma` | Canonical schema for workspaces, budgets, reminders, audit, integrations |

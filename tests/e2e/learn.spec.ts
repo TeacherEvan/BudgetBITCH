@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { seedSignedInAuthOverride } from "./auth-state";
 import { seedCompletedLaunchProfile } from "./launch-profile";
 
 test("user can open Learn! from Start Smart results and view a lesson", async ({
@@ -6,6 +7,7 @@ test("user can open Learn! from Start Smart results and view a lesson", async ({
 }) => {
   test.slow();
 
+  await seedSignedInAuthOverride(page);
   await seedCompletedLaunchProfile(page);
   await page.goto("/");
 
@@ -44,10 +46,12 @@ test("user can open Learn! from Start Smart results and view a lesson", async ({
   const budgetingBasicsLink = page.getByRole("link", { name: /budgeting basics/i });
 
   await expect(budgetingBasicsLink).toHaveAttribute("href", "/learn/budgeting-basics");
-  await page.goto("/learn/budgeting-basics", { waitUntil: "commit" });
+  const lessonPage = await page.context().newPage();
+  await lessonPage.goto("/learn/budgeting-basics");
 
   await expect(
-    page.getByRole("heading", { name: "Budgeting Basics" }),
+    lessonPage.getByRole("heading", { name: "Budgeting Basics" }),
   ).toBeVisible({ timeout: 15000 });
-  await expect(page.getByText("Plain-English breakdown")).toBeVisible();
+  await expect(lessonPage.getByText("Plain-English breakdown")).toBeVisible();
+  await lessonPage.close();
 });

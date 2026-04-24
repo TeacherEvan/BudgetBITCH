@@ -1,17 +1,8 @@
 import { expect, test } from "@playwright/test";
 
-test("OpenAI wizard is reachable from the hub", async ({ page }) => {
+test("OpenAI hub redirects to sign-in when local Clerk setup is unavailable", async ({ page }) => {
   await page.goto("/settings/integrations");
 
-  await Promise.all([
-    page.waitForURL(/\/settings\/integrations\/openai(?:[?#].*)?$/),
-    page.locator('a[href="/settings/integrations/openai"]').click(),
-  ]);
-
-  await expect(
-    page.getByRole("heading", { name: "Connect OpenAI" }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("link", { name: "Back to connection hub" }),
-  ).toBeVisible();
+  await expect(page).toHaveURL(/\/sign-in$/);
+  await expect(page.getByRole("heading", { name: /sign in is not ready yet/i })).toBeVisible();
 });

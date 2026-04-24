@@ -155,6 +155,7 @@ function HomeContent({ isLoaded, isSignedIn }: HomeAuthState) {
     onReady: () => setHomeState("landing"),
   });
   const displayState: HomeDisplayState = isLoaded ? homeState : "loading";
+  const showAuthLoadingWindow = !isLoaded;
 
   useEffect(() => {
     if (!isLoaded) {
@@ -181,10 +182,10 @@ function HomeContent({ isLoaded, isSignedIn }: HomeAuthState) {
   return (
     <>
       <MoneyLoadingWindow
-        visible={loadingWindow.visible}
-        reasons={loadingWindow.reasons}
+        visible={showAuthLoadingWindow || loadingWindow.visible}
+        reasons={showAuthLoadingWindow ? ["auth"] : loadingWindow.reasons}
         reducedMotion={loadingWindow.reducedMotion}
-        showArt={loadingWindow.showArt}
+        showArt={showAuthLoadingWindow || loadingWindow.showArt}
       />
 
       <AnimatePresence>

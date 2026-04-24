@@ -68,6 +68,11 @@ export type DashboardPageData = {
   workspaces: DashboardWorkspaceOption[];
 };
 
+export type DashboardPageDataResult =
+  | { kind: "data"; data: DashboardPageData }
+  | { kind: "auth-required"; redirectTo: string }
+  | { kind: "setup-required"; redirectTo: string };
+
 type DashboardCheckInJson = {
   headline?: unknown;
   alerts?: unknown;
@@ -162,6 +167,14 @@ function buildEmptyCheckIn(checkInDate: string): DashboardDailyCheckInState {
     netCashflow: null,
     lastSubmittedAt: null,
   };
+}
+
+function getDashboardRedirectTarget(requestedWorkspaceId?: string | null) {
+  const search = requestedWorkspaceId
+    ? `?workspaceId=${encodeURIComponent(requestedWorkspaceId)}`
+    : "";
+
+  return `/dashboard${search}`;
 }
 
 
@@ -318,55 +331,63 @@ function buildLiveWorkspaceOptions(profile: {
 
 export async function getDashboardPageData(
   requestedWorkspaceId?: string | null,
-): Promise<DashboardPageData> {
+): Promise<DashboardPageDataResult> {
   if (!process.env.DATABASE_URL?.trim() || !isClerkConfigured()) {
-    return buildDemoData(requestedWorkspaceId);
+    return { kind: "data", data: buildDemoData(requestedWorkspaceId) };
   }
 
-  try {
-    const { userId } = await auth();
+  const redirectTarget = getDashboardRedirectTarget(requestedWorkspaceId);
+  const { userId } = await auth();
 
-    if (!userId) {
-      return buildDemoData(requestedWorkspaceId);
-    }
+  if (!userId) {
+    return {
+      kind: "auth-required",
+      redirectTo: `/sign-in?redirectTo=${encodeURIComponent(redirectTarget)}`,
+    };
+  }
 
-    const prisma = getPrismaClient();
-    const profile = await prisma.userProfile.findUnique({
-      where: { clerkUserId: userId },
-      select: {
-        id: true,
-        displayName: true,
-        memberships: {
-          select: {
-            role: true,
-            workspace: {
-              select: {
-                id: true,
-                name: true,
-              },
+  const prisma = getPrismaClient();
+  const profile = await prisma.userProfile.findUnique({
+    where: { clerkUserId: userId },
+    select: {
+      id: true,
+      displayName: true,
+      memberships: {
+        select: {
+          role: true,
+          workspace: {
+            select: {
+              id: true,
+              name: true,
             },
           },
         },
-        workspacePreferences: {
-          select: {
-            workspaceId: true,
-            isDefault: true,
-          },
+      },
+      workspacePreferences: {
+        select: {
+          workspaceId: true,
+          isDefault: true,
         },
       },
-    });
+    },
+  });
 
-    if (!profile) {
-      return buildDemoData(requestedWorkspaceId);
-    }
+  if (!profile) {
+    return {
+      kind: "setup-required",
+      redirectTo: `/auth/continue?redirectTo=${encodeURIComponent(redirectTarget)}`,
+    };
+  }
 
-    const workspaces = buildLiveWorkspaceOptions(profile);
-    const resolution = resolveActiveWorkspace(workspaces, requestedWorkspaceId);
-    const today = getTodayIsoDate();
-    const briefing = await loadDashboardBriefing();
+  const workspaces = buildLiveWorkspaceOptions(profile);
+  const resolution = resolveActiveWorkspace(workspaces, requestedWorkspaceId);
+  const today = getTodayIsoDate();
+  const briefing = await loadDashboardBriefing();
 
-    if (!resolution.activeWorkspace) {
-      return {
+  if (!resolution.activeWorkspace) {
+    return {
+      kind: "data",
+      data: {
         activeWorkspace: null,
         briefing,
         dailyCheckIn: buildEmptyCheckIn(today),
@@ -379,23 +400,26 @@ export async function getDashboardPageData(
         resolutionSource: resolution.resolutionSource,
         userDisplayName: profile.displayName,
         workspaces,
-      };
-    }
-
-    const todayCheckIn = await prisma.dailyCheckIn.findUnique({
-      where: {
-        workspaceId_checkInDate: {
-          workspaceId: resolution.activeWorkspace.workspaceId,
-          checkInDate: getUtcDate(today),
-        },
       },
-      select: {
-        checkInJson: true,
-        updatedAt: true,
-      },
-    });
+    };
+  }
 
-    return {
+  const todayCheckIn = await prisma.dailyCheckIn.findUnique({
+    where: {
+      workspaceId_checkInDate: {
+        workspaceId: resolution.activeWorkspace.workspaceId,
+        checkInDate: getUtcDate(today),
+      },
+    },
+    select: {
+      checkInJson: true,
+      updatedAt: true,
+    },
+  });
+
+  return {
+    kind: "data",
+    data: {
       activeWorkspace: resolution.activeWorkspace,
       briefing,
       dailyCheckIn: todayCheckIn
@@ -410,8 +434,6 @@ export async function getDashboardPageData(
       resolutionSource: resolution.resolutionSource,
       userDisplayName: profile.displayName,
       workspaces,
-    };
-  } catch {
-    return buildDemoData(requestedWorkspaceId);
-  }
+    },
+  };
 }

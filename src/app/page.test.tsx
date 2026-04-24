@@ -93,6 +93,21 @@ describe("Home", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("shows an explicit loading window while Clerk auth is unresolved", () => {
+    clerkUseAuthMock.mockReturnValue({
+      isLoaded: false,
+      isSignedIn: false,
+    });
+
+    render(<Home />);
+
+    expect(screen.getByText(/preparing your money board/i)).toBeInTheDocument();
+    expect(screen.getByText(/active work: auth/i)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: /open your budgetbitch board/i }),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows the welcome window when Clerk client auth is not configured", async () => {
     isClerkClientConfiguredMock.mockReturnValue(false);
     clerkUseAuthMock.mockImplementation(() => {

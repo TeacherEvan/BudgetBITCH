@@ -7,10 +7,17 @@ import {
   isClerkSatelliteConfigured,
 } from "@/lib/auth/clerk-config";
 
-const protectedPathPrefixes = ["/dashboard", "/settings", "/auth/continue", "/api/v1"];
+const protectedPathPrefixes = ["/dashboard", "/settings", "/auth/continue"];
+const protectedApiPathPrefixes = [
+  "/api/v1/auth/bootstrap",
+  "/api/v1/check-ins",
+  "/api/v1/integrations",
+];
 
 function isProtectedPath(pathname: string) {
-  return protectedPathPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  return [...protectedPathPrefixes, ...protectedApiPathPrefixes].some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
 }
 
 function isApiPath(pathname: string) {
@@ -25,6 +32,13 @@ function getRequestPathname(request: NextRequest) {
   }
 
   return new URL(request.url).pathname;
+}
+
+function getRedirectTarget(request: NextRequest) {
+  const pathname = getRequestPathname(request);
+  const search = request.nextUrl?.search ?? new URL(request.url).search;
+
+  return `${pathname}${search}`;
 }
 
 export default function middleware(request: NextRequest, event: NextFetchEvent) {
@@ -53,7 +67,23 @@ export default function middleware(request: NextRequest, event: NextFetchEvent) 
     return NextResponse.next();
   }
 
-  return clerkMiddleware({ publishableKey })(request, event);
+  return clerkMiddleware(
+    async (auth, req) => {
+      if (isProtectedPath(getRequestPathname(req))) {
+        const redirectTarget = getRedirectTarget(req);
+        const signInUrl = new URL("/sign-in", req.url);
+
+        signInUrl.searchParams.set("redirectTo", redirectTarget);
+
+        await auth.protect({
+          unauthenticatedUrl: signInUrl.toString(),
+        });
+      }
+
+      return NextResponse.next();
+    },
+    { publishableKey },
+  )(request, event);
 }
 
 export const config = {

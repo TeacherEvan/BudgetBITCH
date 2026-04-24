@@ -58,7 +58,7 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 - `/` is the auth-first gate: signed-out visitors stay on the welcome window, signed-in visitors without a completed launch profile move into the launch wizard, and signed-in visitors with a completed launch profile land on the root board.
 - `/sign-in` and `/sign-up` keep only sanitized in-app `redirectTo` targets. Safe root and dashboard targets are routed through `/auth/continue` before the final landing step.
 - `/auth/continue` is the post-Clerk bootstrap boundary. It shows the final local-setup panel, then the continue action resolves any missing local user and workspace records before redirecting to the safe post-auth destination.
-- `src/middleware.ts` recognizes `/auth/continue`, `/dashboard`, `/settings`, and `/api/v1` as the protected surface. When Clerk config is missing or invalid, protected browser routes redirect to `/sign-in` and protected API routes return JSON `503` errors.
+- `middleware.ts` recognizes `/auth/continue`, `/dashboard`, `/settings`, and `/api/v1` as the protected surface. When Clerk config is missing or invalid, protected browser routes redirect to `/sign-in` and protected API routes return JSON `503` errors.
 
 ## Local setup
 

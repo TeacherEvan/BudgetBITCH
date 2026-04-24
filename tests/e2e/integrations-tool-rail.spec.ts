@@ -1,9 +1,8 @@
 import { expect, test } from "@playwright/test";
 
-test("OpenAI setup page shows explicit tool rail labels", async ({ page }) => {
+test("OpenAI setup page redirects to sign-in when local Clerk setup is unavailable", async ({ page }) => {
   await page.goto("/settings/integrations/openai");
 
-  await expect(page.getByRole("link", { name: "Open setup wizard" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Open official login" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Open official docs" })).toBeVisible();
+  await expect(page).toHaveURL(/\/sign-in$/);
+  await expect(page.getByRole("heading", { name: /sign in is not ready yet/i })).toBeVisible();
 });

@@ -1,9 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { seedSignedInAuthOverride } from "./auth-state";
 import { seedCompletedLaunchProfile } from "./launch-profile";
 
 test("user can open Start Smart and generate a survival blueprint", async ({
   page,
 }) => {
+  await seedSignedInAuthOverride(page);
   await seedCompletedLaunchProfile(page);
   await page.goto("/");
 

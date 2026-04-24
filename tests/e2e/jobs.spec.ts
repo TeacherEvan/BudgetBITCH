@@ -1,9 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { seedSignedInAuthOverride } from "./auth-state";
 import { seedCompletedLaunchProfile } from "./launch-profile";
 
 test("user can open Jobs and review a blueprint-aware listing", async ({ page }) => {
   test.slow();
 
+  await seedSignedInAuthOverride(page);
   await seedCompletedLaunchProfile(page);
   await page.goto("/");
 
@@ -37,6 +39,7 @@ test("user can open Jobs and review a blueprint-aware listing", async ({ page })
 
 test("jobs board stays usable inside the mobile shell", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
+  await seedSignedInAuthOverride(page);
   await seedCompletedLaunchProfile(page);
   await page.goto("/jobs");
 

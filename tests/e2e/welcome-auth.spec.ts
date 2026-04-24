@@ -27,6 +27,16 @@ test("signed-out visitors still see welcome when a launch profile is already sav
   await expect(page.getByRole("heading", { name: /plan first\. panic less\./i })).toHaveCount(0);
 });
 
+test("dashboard redirects to sign-in when local Clerk setup is unavailable", async ({ page }) => {
+  await page.goto("/dashboard?workspaceId=workspace-2");
+
+  await expect(page).toHaveURL(/\/sign-in$/);
+  await expect(page.getByRole("heading", { name: /sign in is not ready yet/i })).toBeVisible({
+    timeout: 15000,
+  });
+  await expect(page.getByText(/clerk authentication is not configured on the server/i)).toBeVisible();
+});
+
 for (const authEntry of [
   {
     label: "sign in",
