@@ -7,8 +7,46 @@ import {
   clerkConfigurationErrorMessage,
   isClerkConfigured,
 } from "@/lib/auth/clerk-config";
+import { getSafePostAuthRedirect } from "@/modules/auth/post-auth-redirect";
 
-export default async function SignInPage() {
+const fallbackAuthSwitchRedirect = "/auth/continue";
+
+type SignInPageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
+
+function getRedirectToCandidate(searchParams?: Record<string, string | string[] | undefined>) {
+  const redirectTo = searchParams?.redirectTo;
+
+  if (Array.isArray(redirectTo)) {
+    return redirectTo[0];
+  }
+
+  return redirectTo;
+}
+
+function getForceRedirectUrl(redirectTarget: string) {
+  if (redirectTarget === "/" || redirectTarget.startsWith("/dashboard")) {
+    return `/auth/continue?redirectTo=${encodeURIComponent(redirectTarget)}`;
+  }
+
+  return redirectTarget;
+}
+
+function getAuthSwitchUrl(pathname: string, redirectTarget: string) {
+  if (redirectTarget === fallbackAuthSwitchRedirect) {
+    return pathname;
+  }
+
+  return `${pathname}?redirectTo=${encodeURIComponent(redirectTarget)}`;
+}
+
+export default async function SignInPage({ searchParams }: SignInPageProps = {}) {
+  const resolvedSearchParams = (await searchParams) ?? undefined;
+  const redirectTarget = getSafePostAuthRedirect(getRedirectToCandidate(resolvedSearchParams));
+  const forceRedirectUrl = getForceRedirectUrl(redirectTarget);
+  const signUpUrl = getAuthSwitchUrl("/sign-up", redirectTarget);
+
   if (!isClerkConfigured()) {
     return (
       <AuthEntryPanel
@@ -24,7 +62,7 @@ export default async function SignInPage() {
   const { userId } = await auth();
 
   if (userId) {
-    redirect("/auth/continue");
+    redirect(forceRedirectUrl);
   }
 
   return (
@@ -35,15 +73,15 @@ export default async function SignInPage() {
       authMethodVariant="sign-in"
       footer={
         <span>
-          Need an account? <Link href="/sign-up">Open sign-up</Link>.
+          Need an account? <Link href={signUpUrl}>Open sign-up</Link>.
         </span>
       }
     >
       <SignIn
         routing="path"
         path="/sign-in"
-        signUpUrl="/sign-up"
-        forceRedirectUrl="/auth/continue"
+        signUpUrl={signUpUrl}
+        forceRedirectUrl={forceRedirectUrl}
       />
     </AuthEntryPanel>
   );

@@ -7,8 +7,46 @@ import {
   clerkConfigurationErrorMessage,
   isClerkConfigured,
 } from "@/lib/auth/clerk-config";
+import { getSafePostAuthRedirect } from "@/modules/auth/post-auth-redirect";
 
-export default async function SignUpPage() {
+const fallbackAuthSwitchRedirect = "/auth/continue";
+
+type SignUpPageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
+
+function getRedirectToCandidate(searchParams?: Record<string, string | string[] | undefined>) {
+  const redirectTo = searchParams?.redirectTo;
+
+  if (Array.isArray(redirectTo)) {
+    return redirectTo[0];
+  }
+
+  return redirectTo;
+}
+
+function getForceRedirectUrl(redirectTarget: string) {
+  if (redirectTarget === "/" || redirectTarget.startsWith("/dashboard")) {
+    return `/auth/continue?redirectTo=${encodeURIComponent(redirectTarget)}`;
+  }
+
+  return redirectTarget;
+}
+
+function getAuthSwitchUrl(pathname: string, redirectTarget: string) {
+  if (redirectTarget === fallbackAuthSwitchRedirect) {
+    return pathname;
+  }
+
+  return `${pathname}?redirectTo=${encodeURIComponent(redirectTarget)}`;
+}
+
+export default async function SignUpPage({ searchParams }: SignUpPageProps = {}) {
+  const resolvedSearchParams = (await searchParams) ?? undefined;
+  const redirectTarget = getSafePostAuthRedirect(getRedirectToCandidate(resolvedSearchParams));
+  const forceRedirectUrl = getForceRedirectUrl(redirectTarget);
+  const signInUrl = getAuthSwitchUrl("/sign-in", redirectTarget);
+
   if (!isClerkConfigured()) {
     return (
       <AuthEntryPanel
@@ -24,7 +62,7 @@ export default async function SignUpPage() {
   const { userId } = await auth();
 
   if (userId) {
-    redirect("/auth/continue");
+    redirect(forceRedirectUrl);
   }
 
   return (
@@ -35,7 +73,7 @@ export default async function SignUpPage() {
       authMethodVariant="sign-up"
       footer={
         <span>
-          Already have an account? <Link href="/sign-in">Open sign-in</Link>.
+          Already have an account? <Link href={signInUrl}>Open sign-in</Link>.
         </span>
       }
     >
@@ -45,8 +83,8 @@ export default async function SignUpPage() {
       <SignUp
         routing="path"
         path="/sign-up"
-        signInUrl="/sign-in"
-        forceRedirectUrl="/auth/continue"
+        signInUrl={signInUrl}
+        forceRedirectUrl={forceRedirectUrl}
       />
     </AuthEntryPanel>
   );

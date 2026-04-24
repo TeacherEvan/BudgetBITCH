@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import { useAuth } from "@clerk/nextjs";
 import type { LucideIcon } from "lucide-react";
 import {
   ArrowRight,
@@ -12,13 +13,22 @@ import {
   Sparkles,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { MoneyLoadingWindow } from "@/components/launch/money-loading-window";
 import LaunchWizard, { LAUNCH_PROFILE_STORAGE_KEY, type LaunchWizardProfile } from "@/components/launch/launch-wizard";
 import { useLaunchTransition } from "@/components/launch/use-launch-transition";
 import { MobilePanelFrame } from "@/components/mobile/mobile-panel-frame";
+import { WelcomeWindow } from "@/components/welcome/welcome-window";
+import { isClerkClientConfigured } from "@/lib/auth/clerk-config";
 
-type HomeDisplayState = "loading" | "wizard" | "landing";
+export const HOME_E2E_AUTH_OVERRIDE_STORAGE_KEY = "budgetbitch:e2e-auth-state";
+
+type HomeDisplayState = "loading" | "welcome" | "wizard" | "landing";
+
+type HomeAuthState = {
+  isLoaded: boolean;
+  isSignedIn: boolean;
+};
 
 type StoryPanel = {
   title: string;
@@ -125,20 +135,44 @@ function hasCompletedLaunchProfile(value: string | null) {
   }
 }
 
-export default function Home() {
+function getFallbackHomeAuthStateValue() {
+  if (typeof window === "undefined") {
+    return "loading" as const;
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    return "signed-out" as const;
+  }
+
+  const override = window.localStorage.getItem(HOME_E2E_AUTH_OVERRIDE_STORAGE_KEY);
+
+  return override === "signed-in" ? "signed-in" : "signed-out";
+}
+
+function HomeContent({ isLoaded, isSignedIn }: HomeAuthState) {
   const [homeState, setHomeState] = useState<HomeDisplayState>("loading");
   const { beginTransition, loadingWindow } = useLaunchTransition({
     onReady: () => setHomeState("landing"),
   });
+  const displayState: HomeDisplayState = isLoaded ? homeState : "loading";
 
   useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
+
     const frame = window.requestAnimationFrame(() => {
+      if (!isSignedIn) {
+        setHomeState("welcome");
+        return;
+      }
+
       const savedProfile = window.localStorage.getItem(LAUNCH_PROFILE_STORAGE_KEY);
       setHomeState(hasCompletedLaunchProfile(savedProfile) ? "landing" : "wizard");
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, []);
+  }, [isLoaded, isSignedIn]);
 
   function handleLaunchComplete() {
     void beginTransition();
@@ -154,7 +188,24 @@ export default function Home() {
       />
 
       <AnimatePresence>
-        {homeState === "wizard" && (
+        {displayState === "welcome" && (
+          <motion.div
+            key="welcome"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <WelcomeWindow
+              signInHref="/sign-in?redirectTo=%2F"
+              signUpHref="/sign-up?redirectTo=%2F"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {displayState === "wizard" && (
           <motion.div
             key="wizard"
             exit={{ opacity: 0, scale: 1.06 }}
@@ -166,7 +217,7 @@ export default function Home() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {homeState === "landing" && (
+        {displayState === "landing" && (
           <motion.main
             key="main"
             initial={{ opacity: 0, y: 20 }}
@@ -269,4 +320,39 @@ export default function Home() {
       </AnimatePresence>
     </>
   );
+}
+
+function HomeWithClerkAuth() {
+  const { isLoaded, isSignedIn } = useAuth();
+
+  return <HomeContent isLoaded={isLoaded} isSignedIn={Boolean(isSignedIn)} />;
+}
+
+function subscribeToFallbackHomeAuthState() {
+  return () => {};
+}
+
+function HomeWithoutClerkAuth() {
+  const fallbackAuthState = useSyncExternalStore(
+    subscribeToFallbackHomeAuthState,
+    getFallbackHomeAuthStateValue,
+    () => "loading",
+  );
+
+  const authState: HomeAuthState =
+    fallbackAuthState === "signed-in"
+      ? { isLoaded: true, isSignedIn: true }
+      : fallbackAuthState === "signed-out"
+        ? { isLoaded: true, isSignedIn: false }
+        : { isLoaded: false, isSignedIn: false };
+
+  return <HomeContent isLoaded={authState.isLoaded} isSignedIn={authState.isSignedIn} />;
+}
+
+export default function Home() {
+  if (!isClerkClientConfigured()) {
+    return <HomeWithoutClerkAuth />;
+  }
+
+  return <HomeWithClerkAuth />;
 }
