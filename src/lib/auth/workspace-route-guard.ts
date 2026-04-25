@@ -5,10 +5,17 @@ import {
   isClerkConfigured,
 } from "./clerk-config";
 
+export type WorkspaceRouteGuardErrorReason =
+  | "clerk_configuration_required"
+  | "unauthenticated"
+  | "local_profile_required"
+  | "workspace_membership_required";
+
 export class WorkspaceRouteGuardError extends Error {
   constructor(
     message: string,
     public readonly status: number,
+    public readonly reason: WorkspaceRouteGuardErrorReason,
   ) {
     super(message);
     this.name = "WorkspaceRouteGuardError";
@@ -25,13 +32,21 @@ export async function authorizeWorkspaceMutation(
   workspaceId: string,
 ): Promise<AuthorizedWorkspaceActor> {
   if (!isClerkConfigured()) {
-    throw new WorkspaceRouteGuardError(clerkConfigurationErrorMessage, 503);
+    throw new WorkspaceRouteGuardError(
+      clerkConfigurationErrorMessage,
+      503,
+      "clerk_configuration_required",
+    );
   }
 
   const { userId } = await auth();
 
   if (!userId) {
-    throw new WorkspaceRouteGuardError("Authentication is required.", 401);
+    throw new WorkspaceRouteGuardError(
+      "Authentication is required.",
+      401,
+      "unauthenticated",
+    );
   }
 
   const prisma = getPrismaClient();
@@ -44,6 +59,7 @@ export async function authorizeWorkspaceMutation(
     throw new WorkspaceRouteGuardError(
       "No local user profile exists for the authenticated Clerk user.",
       404,
+      "local_profile_required",
     );
   }
 
@@ -61,6 +77,7 @@ export async function authorizeWorkspaceMutation(
     throw new WorkspaceRouteGuardError(
       "The authenticated user is not a member of this workspace.",
       403,
+      "workspace_membership_required",
     );
   }
 

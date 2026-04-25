@@ -39,8 +39,9 @@ describe("authorizeWorkspaceMutation", () => {
 
     await expect(authorizeWorkspaceMutation("workspace-1")).rejects.toMatchObject({
       status: 503,
+      reason: "clerk_configuration_required",
       message: "Clerk authentication is not configured on the server.",
-    } satisfies Pick<WorkspaceRouteGuardError, "status" | "message">);
+    } satisfies Pick<WorkspaceRouteGuardError, "status" | "reason" | "message">);
   });
 
   it("rejects anonymous requests", async () => {
@@ -50,8 +51,9 @@ describe("authorizeWorkspaceMutation", () => {
 
     await expect(authorizeWorkspaceMutation("workspace-1")).rejects.toMatchObject({
       status: 401,
+      reason: "unauthenticated",
       message: "Authentication is required.",
-    } satisfies Pick<WorkspaceRouteGuardError, "status" | "message">);
+    } satisfies Pick<WorkspaceRouteGuardError, "status" | "reason" | "message">);
   });
 
   it("rejects users without a local profile", async () => {
@@ -62,8 +64,9 @@ describe("authorizeWorkspaceMutation", () => {
 
     await expect(authorizeWorkspaceMutation("workspace-1")).rejects.toMatchObject({
       status: 404,
+      reason: "local_profile_required",
       message: "No local user profile exists for the authenticated Clerk user.",
-    } satisfies Pick<WorkspaceRouteGuardError, "status" | "message">);
+    } satisfies Pick<WorkspaceRouteGuardError, "status" | "reason" | "message">);
   });
 
   it("rejects users without workspace membership", async () => {
@@ -75,8 +78,9 @@ describe("authorizeWorkspaceMutation", () => {
 
     await expect(authorizeWorkspaceMutation("workspace-1")).rejects.toMatchObject({
       status: 403,
+      reason: "workspace_membership_required",
       message: "The authenticated user is not a member of this workspace.",
-    } satisfies Pick<WorkspaceRouteGuardError, "status" | "message">);
+    } satisfies Pick<WorkspaceRouteGuardError, "status" | "reason" | "message">);
   });
 
   it("returns the workspace actor for any valid workspace member", async () => {

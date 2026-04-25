@@ -7,6 +7,10 @@ import { generateMoneySurvivalBlueprint } from "@/modules/start-smart/blueprint-
 import { buildRegionalSnapshot } from "@/modules/start-smart/regional-data";
 import { fetchRegionalData } from "@/modules/start-smart/regional-fetch";
 import { getRegionalSeed } from "@/modules/start-smart/regional-seed";
+import {
+  createWorkspaceApiAccessErrorResponse,
+  resolveWorkspaceApiAccess,
+} from "@/lib/auth/workspace-api-access";
 import { getPrismaClient } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -27,6 +31,21 @@ const blueprintRequestSchema = z.object({
 export async function POST(request: Request) {
   const body = await request.json();
   const input = blueprintRequestSchema.parse(body);
+  let trustedWorkspaceId: string;
+
+  try {
+    const access = await resolveWorkspaceApiAccess(input.workspaceId);
+    trustedWorkspaceId = access.workspaceId;
+  } catch (error) {
+    const authErrorResponse = createWorkspaceApiAccessErrorResponse(error);
+
+    if (authErrorResponse) {
+      return authErrorResponse;
+    }
+
+    throw error;
+  }
+
   const profile = normalizeStartSmartProfile(input.answers);
   const fetched = await fetchRegionalData(profile.regionKey);
   const regional = buildRegionalSnapshot({
@@ -36,7 +55,7 @@ export async function POST(request: Request) {
   });
   const blueprint = generateMoneySurvivalBlueprint({ profile, regional });
   const profileRecord = buildProfileRecord({
-    workspaceId: input.workspaceId,
+    workspaceId: trustedWorkspaceId,
     templateId: input.templateId,
     regionKey: profile.regionKey,
     householdKind: profile.householdKind,
@@ -53,32 +72,32 @@ export async function POST(request: Request) {
     const prisma = getPrismaClient();
 
     const savedProfile = await prisma.startSmartProfile.create({
-        data: {
-          ...profileRecord,
-          profileJson: profileRecord.profileJson as JsonInput,
-        },
-      });
+      data: {
+        ...profileRecord,
+        profileJson: profileRecord.profileJson as JsonInput,
+      },
+    });
 
     await prisma.regionalSnapshot.create({
-        data: {
-          workspaceId: input.workspaceId,
-          profileId: savedProfile.id,
-          regionKey: regional.regionKey,
-          confidence: "verified",
-          assumptionsJson: regional as JsonInput,
-        },
-      });
+      data: {
+        workspaceId: trustedWorkspaceId,
+        profileId: savedProfile.id,
+        regionKey: regional.regionKey,
+        confidence: "verified",
+        assumptionsJson: regional as JsonInput,
+      },
+    });
 
     await prisma.moneyBlueprintSnapshot.create({
-        data: {
-          workspaceId: input.workspaceId,
-          profileId: savedProfile.id,
-          regionKey: profile.regionKey,
-          householdKind: profile.householdKind,
-          status: "generated",
-          blueprintJson: blueprint as JsonInput,
-        },
-      });
+      data: {
+        workspaceId: trustedWorkspaceId,
+        profileId: savedProfile.id,
+        regionKey: profile.regionKey,
+        householdKind: profile.householdKind,
+        status: "generated",
+        blueprintJson: blueprint as JsonInput,
+      },
+    });
 
     persistence = {
       persisted: true,

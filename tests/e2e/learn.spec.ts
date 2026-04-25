@@ -43,15 +43,27 @@ test("user can open Learn! from Start Smart results and view a lesson", async ({
     page.getByText("Money Survival Blueprint", { exact: true }),
   ).toBeVisible({ timeout: 15000 });
 
-  const budgetingBasicsLink = page.getByRole("link", { name: /budgeting basics/i });
+  const blueprintResult = page.locator("section").filter({
+    has: page.getByRole("heading", { name: "What must I cover first?" }),
+  });
+  const learnNextBlock = blueprintResult.locator("article").filter({
+    has: page.getByRole("heading", { name: "Learn next" }),
+  });
+  const budgetingBasicsLink = learnNextBlock.getByRole("link", {
+    name: /budgeting basics/i,
+  });
 
   await expect(budgetingBasicsLink).toHaveAttribute("href", "/learn/budgeting-basics");
-  const lessonPage = await page.context().newPage();
-  await lessonPage.goto("/learn/budgeting-basics");
+  await expect(budgetingBasicsLink).toBeVisible();
+
+  await Promise.all([
+    page.waitForURL("**/learn/budgeting-basics", { waitUntil: "commit" }),
+    budgetingBasicsLink.click(),
+  ]);
 
   await expect(
-    lessonPage.getByRole("heading", { name: "Budgeting Basics" }),
+    page.getByRole("heading", { name: "Budgeting Basics" }),
   ).toBeVisible({ timeout: 15000 });
-  await expect(lessonPage.getByText("Plain-English breakdown")).toBeVisible();
-  await lessonPage.close();
+  await expect(page).toHaveURL(/\/learn\/budgeting-basics$/);
+  await expect(page.getByText("Plain-English breakdown")).toBeVisible();
 });
