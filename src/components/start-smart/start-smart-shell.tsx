@@ -268,8 +268,7 @@ export function StartSmartShell() {
     }
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function handleBuildBlueprint() {
     setErrorMessage(null);
 
     if (step !== "moneySnapshot") {
@@ -314,6 +313,11 @@ export function StartSmartShell() {
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void handleBuildBlueprint();
   }
 
   const currentPanelMeta = wizardStepMeta[step];
@@ -563,8 +567,8 @@ export function StartSmartShell() {
             <p className="text-sm text-emerald-50/75">{currentPanelMeta.cue}</p>
 
             <button
-              type={isSubmitStep ? "submit" : "button"}
-              onClick={isSubmitStep ? undefined : handleAdvanceStep}
+              type="button"
+              onClick={isSubmitStep ? () => void handleBuildBlueprint() : handleAdvanceStep}
               disabled={isSubmitting}
               className="inline-flex items-center gap-2 rounded-full bg-emerald-400 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-70"
             >
