@@ -2,8 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Home, { HOME_E2E_AUTH_OVERRIDE_STORAGE_KEY } from "./page";
 
-const clerkUseAuthMock = vi.hoisted(() => vi.fn());
-const isClerkClientConfiguredMock = vi.hoisted(() => vi.fn(() => true));
+const useSessionMock = vi.hoisted(() => vi.fn());
 const prepareLaunchTransitionResources = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 
 const launchProfile = {
@@ -29,23 +28,55 @@ vi.mock("@/components/launch/load-money-loading-art", () => ({
   prepareLaunchTransitionResources,
 }));
 
-vi.mock("@clerk/nextjs", () => ({
-  useAuth: clerkUseAuthMock,
+vi.mock("next-auth/react", () => ({
+  useSession: useSessionMock,
 }));
 
-vi.mock("@/lib/auth/clerk-config", () => ({
-  isClerkClientConfigured: isClerkClientConfiguredMock,
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => {
+    const translations: Record<string, string> = {
+      brand: "BudgetBITCH",
+      heading: "Open your BudgetBITCH board",
+      description:
+        "Sign in to unlock your root flow. After that, BudgetBITCH can send you into the setup wizard or straight to the landing board based on your saved launch profile.",
+      openSignIn: "Open sign in",
+      openSignUp: "Open sign-up",
+      quickReasonsAria: "Welcome quick reasons",
+      "quickReasons.signInFirst.title": "Sign in first",
+      "quickReasons.signInFirst.description": "Open your account before the app decides whether you need setup or your landing board.",
+      "quickReasons.keepItShort.title": "Keep the first step short",
+      "quickReasons.keepItShort.description": "The setup wizard only appears after sign-in and only when your launch profile is still incomplete.",
+      "quickReasons.moveWithoutSprawl.title": "Move without the sprawl",
+      "quickReasons.moveWithoutSprawl.description": "BudgetBITCH keeps the entry path dense, readable, and ready for quick scanning on smaller screens.",
+      rootFlow: "Root flow",
+      authFirstThenSetup: "Auth first, then setup",
+      rootFlowDescription:
+        "Signed-out visitors stay on this welcome window. Signed-in visitors move into the wizard only when the launch profile still needs to be completed.",
+      whatChangesNext: "What changes next",
+      "nextSteps.signIn": "Sign in when you already have an account.",
+      "nextSteps.signUp": "Sign up when you need a fresh account before setup begins.",
+      "nextSteps.finishWizard": "Finish the launch wizard once, then return to the landing board on future visits.",
+      label: "Language",
+      "options.en": "English",
+      "options.zh": "简体中文",
+      "options.th": "ไทย",
+    };
+
+    return translations[key] ?? key;
+  },
+  useLocale: () => "en",
+}));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: () => undefined }),
 }));
 
 describe("Home", () => {
   beforeEach(() => {
     window.localStorage.clear();
-    clerkUseAuthMock.mockReset();
-    isClerkClientConfiguredMock.mockReset();
-    isClerkClientConfiguredMock.mockReturnValue(true);
-    clerkUseAuthMock.mockReturnValue({
-      isLoaded: true,
-      isSignedIn: true,
+    useSessionMock.mockReset();
+    useSessionMock.mockReturnValue({
+      status: "authenticated",
     });
     prepareLaunchTransitionResources.mockReset();
     prepareLaunchTransitionResources.mockImplementation(() => Promise.resolve());
@@ -69,9 +100,8 @@ describe("Home", () => {
   });
 
   it("shows the welcome window for signed-out users", async () => {
-    clerkUseAuthMock.mockReturnValue({
-      isLoaded: true,
-      isSignedIn: false,
+    useSessionMock.mockReturnValue({
+      status: "unauthenticated",
     });
 
     render(<Home />);
@@ -93,10 +123,9 @@ describe("Home", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows an explicit loading window while Clerk auth is unresolved", () => {
-    clerkUseAuthMock.mockReturnValue({
-      isLoaded: false,
-      isSignedIn: false,
+  it("shows an explicit loading window while session auth is unresolved", () => {
+    useSessionMock.mockReturnValue({
+      status: "loading",
     });
 
     render(<Home />);
@@ -108,10 +137,9 @@ describe("Home", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows the welcome window when Clerk client auth is not configured", async () => {
-    isClerkClientConfiguredMock.mockReturnValue(false);
-    clerkUseAuthMock.mockImplementation(() => {
-      throw new Error("useAuth should not run without Clerk client config");
+  it("shows the welcome window when the session is unauthenticated", async () => {
+    useSessionMock.mockReturnValue({
+      status: "unauthenticated",
     });
 
     render(<Home />);
@@ -129,10 +157,9 @@ describe("Home", () => {
     );
   });
 
-  it("keeps the signed-in root flow available for the no-Clerk local fallback in non-production tests", async () => {
-    isClerkClientConfiguredMock.mockReturnValue(false);
-    clerkUseAuthMock.mockImplementation(() => {
-      throw new Error("useAuth should not run without Clerk client config");
+  it("keeps the signed-in root flow available for the local signed-in override in non-production tests", async () => {
+    useSessionMock.mockReturnValue({
+      status: "unauthenticated",
     });
     window.localStorage.setItem(HOME_E2E_AUTH_OVERRIDE_STORAGE_KEY, "signed-in");
 

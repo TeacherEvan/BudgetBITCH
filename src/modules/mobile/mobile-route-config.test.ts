@@ -14,8 +14,8 @@ describe("mobileRouteConfig", () => {
     ]);
   });
 
-  it("keeps unique href and label pairs for the mobile contract", () => {
+  it("keeps unique href and label key pairs for the mobile contract", () => {
     expect(new Set(mobileRouteConfig.map((route) => route.href)).size).toBe(mobileRouteConfig.length);
-    expect(new Set(mobileRouteConfig.map((route) => route.label)).size).toBe(mobileRouteConfig.length);
+    expect(new Set(mobileRouteConfig.map((route) => route.labelKey)).size).toBe(mobileRouteConfig.length);
   });
 });

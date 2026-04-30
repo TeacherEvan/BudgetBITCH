@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 test("Claude hub redirects to sign-in when local Clerk setup is unavailable", async ({ page }) => {
   await page.goto("/settings/integrations");
 
-  await expect(page).toHaveURL(/\/sign-in$/);
-  await expect(page.getByRole("heading", { name: /sign in is not ready yet/i })).toBeVisible();
+  await expect(page).toHaveURL(/\/sign-in\?redirectTo=%2Fsettings%2Fintegrations$/);
+  await expect(page.getByRole("heading", { name: /open your budget board/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /continue with google/i })).toBeVisible();
 });

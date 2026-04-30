@@ -1,6 +1,29 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import AppLayout from "./layout";
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/dashboard",
+}));
+
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => {
+    const translations: Record<string, string> = {
+      mobileNavigation: "Mobile app navigation",
+      desktopNavigation: "App navigation",
+      openDashboard: "Go to dashboard",
+      "routes.dashboard": "Dashboard",
+      "routes.startSmart": "Start Smart",
+      "routes.calculator": "Calculator",
+      "routes.notes": "Notes",
+      "routes.learn": "Learn",
+      "routes.integrations": "Integrations",
+      "routes.jobs": "Jobs",
+    };
+
+    return translations[key] ?? key;
+  },
+}));
 
 describe("AppLayout", () => {
   it("renders children inside the mobile app shell", () => {

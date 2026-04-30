@@ -1,7 +1,44 @@
 import { providerRegistry } from "@/modules/integrations/provider-registry";
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ProviderCard } from "./provider-card";
+
+vi.mock("next-intl", () => ({
+  useTranslations: (namespace: string) => (key: string) => {
+    const translations: Record<string, Record<string, string>> = {
+      integrationActions: {
+        openSetupWizard: "Open setup wizard",
+        openOfficialLogin: "Open official login",
+        openOfficialDocs: "Open official docs",
+      },
+      providerCard: {
+        "categoryLabel.ai": "AI",
+        "categoryLabel.banking": "Banking",
+        "categoryLabel.investing": "Investing",
+        "categoryLabel.payroll": "Payroll",
+        "categoryLabel.tax": "Tax",
+        "categoryLabel.finance_ops": "Finance ops",
+        "categorySummary.ai": "Prompt-heavy tools and assistant access.",
+        "categorySummary.banking": "Bank connections and verification rails.",
+        "categorySummary.investing": "Portfolio, account, and brokerage access.",
+        "categorySummary.payroll": "Income and worker operations.",
+        "categorySummary.tax": "Tax filings, books, and accounting workflows.",
+        "categorySummary.finance_ops": "Operational money tooling and expense controls.",
+        "risk.low": "Low risk",
+        "risk.medium": "Medium risk",
+        "risk.high": "High risk",
+        "setupState.setupWizard": "Setup wizard",
+        "setupState.guidanceOnly": "Guidance only",
+        quickActions: "Quick actions",
+      },
+      integrationsShared: {
+        privacyBadge: "No silent sharing",
+      },
+    };
+
+    return translations[namespace]?.[key] ?? key;
+  },
+}));
 
 describe("ProviderCard", () => {
   it("renders explicit setup and official action labels for internal flows", () => {

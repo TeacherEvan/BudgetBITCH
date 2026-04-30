@@ -1,51 +1,70 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-const clerkConfiguredMock = vi.hoisted(() => vi.fn());
-
-vi.mock("@clerk/nextjs", () => ({
-  UserProfile: ({ path, routing }: { path: string; routing: string }) => (
-    <div data-testid="clerk-user-profile" data-path={path} data-routing={routing} />
+vi.mock("@/components/auth/auth-account-recovery-button", () => ({
+  AuthAccountRecoveryButton: ({ redirectTo }: { redirectTo: string }) => (
+    <div data-testid="auth-account-recovery-button" data-redirect-to={redirectTo} />
   ),
 }));
 
-vi.mock("@/lib/auth/clerk-config", () => ({
-  clerkConfigurationErrorMessage: "Clerk auth is not configured.",
-  isClerkConfigured: clerkConfiguredMock,
+vi.mock("@/i18n/server", () => ({
+  getRequestMessages: async () => ({
+    securitySettings: {
+      eyebrow: "Security settings",
+      title: "Open your account security controls.",
+      description:
+        "BudgetBITCH uses Google for secure sign-in only. This app does not use a separate BudgetBITCH password, does not manage passkeys here, and never reads or stores Gmail inbox or message content.",
+      googleAccountEyebrow: "Google account",
+      googleAccountTitle: "Open Google account security.",
+      googleAccountDescription:
+        "Use your Google Account security page to review sign-in activity, connected sessions, recovery options, and multi-factor protections for the identity you use with this app.",
+      openGoogleSecurity: "Open Google account security",
+      openGooglePermissions: "Open Google app permissions",
+      sessionAccessEyebrow: "Session access",
+      sessionAccessTitle: "Switch accounts safely.",
+      sessionAccessDescription:
+        "Sign out here if you need to return to the Google sign-in screen and use a different account.",
+      privacyEyebrow: "Privacy",
+      privacyItems: {
+        signInOnly: "Google is used only to verify sign-in and return your account identity.",
+        minimalData:
+          "BudgetBITCH keeps only the local account, workspace, preference, and integration data it needs to run.",
+        gmailPrivacy: "Gmail inbox and message content are never read or stored by this app.",
+      },
+    },
+  }),
 }));
 
 import SecuritySettingsPage from "./page";
 
 describe("SecuritySettingsPage", () => {
-  it("renders a setup notice when Clerk is not configured", () => {
-    clerkConfiguredMock.mockReturnValue(false);
+  it("renders the product-owned Google security guidance", async () => {
 
-    render(<SecuritySettingsPage />);
-
-    expect(screen.getByRole("heading", { name: /security settings are not ready yet\./i })).toBeInTheDocument();
-    expect(screen.getByText("Clerk auth is not configured.")).toBeInTheDocument();
-    expect(screen.queryByTestId("clerk-user-profile")).not.toBeInTheDocument();
-  });
-
-  it("renders the Clerk account management profile on the security path", () => {
-    clerkConfiguredMock.mockReturnValue(true);
-
-    render(<SecuritySettingsPage />);
+    render(await SecuritySettingsPage());
 
     expect(screen.getByTestId("mobile-panel-frame")).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: /open your account security controls\./i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/device biometrics stay with your passkey provider/i),
+      screen.getByText(/does not use a separate budgetbitch password/i),
     ).toBeInTheDocument();
-    expect(screen.getByTestId("clerk-user-profile")).toHaveAttribute(
-      "data-path",
-      "/settings/security",
+    expect(
+      screen.getByRole("link", { name: /open google account security/i }),
+    ).toHaveAttribute(
+      "href",
+      "https://myaccount.google.com/security",
     );
-    expect(screen.getByTestId("clerk-user-profile")).toHaveAttribute(
-      "data-routing",
-      "path",
+    expect(
+      screen.getByRole("link", { name: /open google app permissions/i }),
+    ).toHaveAttribute(
+      "href",
+      "https://myaccount.google.com/permissions",
     );
+    expect(screen.getByTestId("auth-account-recovery-button")).toHaveAttribute(
+      "data-redirect-to",
+      "/",
+    );
+    expect(screen.getByText(/gmail inbox and message content are never read or stored/i)).toBeInTheDocument();
   });
 });

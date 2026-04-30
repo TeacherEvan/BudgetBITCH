@@ -1,4 +1,5 @@
 import { RadioTower } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 type BroadcastBarProps = {
   cityLabel: string;
@@ -6,7 +7,8 @@ type BroadcastBarProps = {
 };
 
 export function BroadcastBar({ cityLabel, tickerItems }: BroadcastBarProps) {
-  const tickerText = tickerItems.length > 0 ? tickerItems.join("  ·  ") : "Budget updates";
+  const t = useTranslations("broadcastBar");
+  const tickerText = tickerItems.length > 0 ? tickerItems.join("  ·  ") : t("fallbackTicker");
 
   return (
     <section className="bb-panel bb-panel-accent overflow-hidden p-4" aria-labelledby="local-area-heading">
@@ -16,9 +18,9 @@ export function BroadcastBar({ cityLabel, tickerItems }: BroadcastBarProps) {
             <RadioTower className="h-5 w-5" />
           </span>
           <div>
-            <p className="bb-kicker">Local area</p>
+            <p className="bb-kicker">{t("kicker")}</p>
             <h2 id="local-area-heading" className="mt-1 text-2xl font-semibold">
-              Local area
+              {t("title")}
             </h2>
             <p className="bb-mini-copy mt-1 text-sm text-white/90">{cityLabel}</p>
           </div>

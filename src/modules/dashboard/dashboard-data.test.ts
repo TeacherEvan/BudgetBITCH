@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const authMock = vi.hoisted(() => vi.fn());
-const isClerkConfiguredMock = vi.hoisted(() => vi.fn());
 
 const prismaMock = {
   userProfile: {
@@ -12,12 +11,8 @@ const prismaMock = {
   },
 };
 
-vi.mock("@clerk/nextjs/server", () => ({
+vi.mock("@/auth", () => ({
   auth: authMock,
-}));
-
-vi.mock("@/lib/auth/clerk-config", () => ({
-  isClerkConfigured: isClerkConfiguredMock,
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -31,7 +26,6 @@ describe("getDashboardPageData", () => {
 
   beforeEach(() => {
     authMock.mockReset();
-    isClerkConfiguredMock.mockReset();
     prismaMock.userProfile.findUnique.mockReset();
     prismaMock.dailyCheckIn.findUnique.mockReset();
     process.env.DATABASE_URL = "postgres://budgetbitch:test@localhost:5432/budgetbitch";
@@ -41,9 +35,8 @@ describe("getDashboardPageData", () => {
     process.env.DATABASE_URL = originalDatabaseUrl;
   });
 
-  it("returns an auth-required result instead of demo data when Clerk is configured but the visitor is anonymous", async () => {
-    isClerkConfiguredMock.mockReturnValue(true);
-    authMock.mockResolvedValue({ userId: null });
+  it("returns an auth-required result instead of demo data when the visitor is anonymous", async () => {
+    authMock.mockResolvedValue(null);
 
     await expect(getDashboardPageData("workspace-2")).resolves.toEqual({
       kind: "auth-required",
@@ -51,9 +44,8 @@ describe("getDashboardPageData", () => {
     });
   });
 
-  it("returns a setup-required result instead of demo data when the Clerk user has no local profile", async () => {
-    isClerkConfiguredMock.mockReturnValue(true);
-    authMock.mockResolvedValue({ userId: "user_123" });
+  it("returns a setup-required result instead of demo data when the account has no local profile", async () => {
+    authMock.mockResolvedValue({ user: { id: "google-sub-1" } });
     prismaMock.userProfile.findUnique.mockResolvedValue(null);
 
     await expect(getDashboardPageData("workspace-2")).resolves.toEqual({
@@ -62,8 +54,8 @@ describe("getDashboardPageData", () => {
     });
   });
 
-  it("still returns demo data when Clerk is not configured", async () => {
-    isClerkConfiguredMock.mockReturnValue(false);
+  it("still returns demo data when the database is not configured", async () => {
+    process.env.DATABASE_URL = "";
 
     const result = await getDashboardPageData(null);
 

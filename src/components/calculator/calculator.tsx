@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { OfflineBanner } from "@/components/pwa/offline-banner";
 
@@ -76,6 +77,7 @@ function saveDraft(draft: CalculatorDraft) {
 }
 
 export function Calculator() {
+  const t = useTranslations("calculator");
   const [draft, setDraft] = useState<CalculatorDraft>(() => loadDraft());
   const { display, stored, op, waitingForOperand } = draft;
 
@@ -191,7 +193,7 @@ export function Calculator() {
   return (
     <section
       className="bb-panel bb-panel-strong mx-auto max-w-xs p-5"
-      aria-label="Calculator"
+      aria-label={t("regionLabel")}
     >
       <OfflineBanner className="mb-4" />
       <p
@@ -206,7 +208,7 @@ export function Calculator() {
           type="button"
           onClick={handleClear}
           className="bb-button-secondary col-span-2 text-sm font-semibold"
-          aria-label="C"
+          aria-label={t("clearButton")}
         >
           C
         </button>

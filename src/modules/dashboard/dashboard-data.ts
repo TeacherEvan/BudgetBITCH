@@ -1,6 +1,6 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/auth";
 import type { Prisma } from "@prisma/client";
-import { isClerkConfigured } from "@/lib/auth/clerk-config";
+import { getAuthenticatedUserId } from "@/lib/auth/session";
 import { getPrismaClient } from "@/lib/prisma";
 import {
   createSeededDashboardBriefing,
@@ -332,12 +332,13 @@ function buildLiveWorkspaceOptions(profile: {
 export async function getDashboardPageData(
   requestedWorkspaceId?: string | null,
 ): Promise<DashboardPageDataResult> {
-  if (!process.env.DATABASE_URL?.trim() || !isClerkConfigured()) {
+  if (!process.env.DATABASE_URL?.trim()) {
     return { kind: "data", data: buildDemoData(requestedWorkspaceId) };
   }
 
   const redirectTarget = getDashboardRedirectTarget(requestedWorkspaceId);
-  const { userId } = await auth();
+  const session = await auth();
+  const userId = getAuthenticatedUserId(session);
 
   if (!userId) {
     return {

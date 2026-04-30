@@ -1,4 +1,28 @@
 import { render, screen } from "@testing-library/react";
+import { vi } from "vitest";
+
+vi.mock("@/i18n/server", () => ({
+  getRequestMessages: async () => ({
+    learnPage: {
+      eyebrow: "Learn!",
+      title: "Comic-strip lessons for the money move that matters next.",
+      description:
+        "Skip the explainer wall. Start with fast visual cues, then open the lesson card only when you want the deeper breakdown.",
+      storyCuesEyebrow: "Story cues",
+      storyCuesTitle: "Three fast scenes to anchor the idea",
+      storyCuesDescription: "Absurd setup, plain-English meaning, and one action cue per card.",
+      blueprintPicksEyebrow: "Blueprint picks",
+      blueprintPicksTitle: "Start here",
+      blueprintPicksDescription:
+        "Highest-signal lessons matched to your current blueprint pressure.",
+      streakEyebrow: "Keep the streak",
+      streakTitle: "Next up",
+      streakDescription:
+        "Evergreen refreshers when you want one more useful concept without a long scroll.",
+    },
+  }),
+}));
+
 import LearnPage from "./page";
 
 describe("LearnPage", () => {

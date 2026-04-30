@@ -1,6 +1,20 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { PrivacyDisclosurePanel } from "./privacy-disclosure-panel";
+
+vi.mock("next-intl", () => ({
+    useTranslations: () => (key: string, values?: Record<string, string>) => {
+        const translations: Record<string, string> = {
+            privacyShieldTitle: "Privacy Shield",
+            privacyShieldDescription: `Review how ${values?.providerLabel ?? ""} receives data before enabling any connection.`.trim(),
+            "disclosures.minimumData": "Only explicitly connected providers receive the minimum required data.",
+            "disclosures.noSilentSharing": "No silent sharing or automatic cross-provider routing.",
+            "disclosures.revokeAnyTime": "You can revoke and disconnect this provider at any time.",
+        };
+
+        return translations[key] ?? key;
+    },
+}));
 
 describe("PrivacyDisclosurePanel", () => {
     it("renders provider-specific disclosure copy and all required privacy guardrails", () => {

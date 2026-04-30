@@ -1,9 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-function createPublishableKey(host: string) {
-  return `pk_test_${Buffer.from(`${host}$`, "utf8").toString("base64url")}`;
-}
-
 const authMock = vi.hoisted(() => vi.fn());
 const prismaMock = vi.hoisted(() => ({
   userProfile: {
@@ -14,7 +10,7 @@ const prismaMock = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("@clerk/nextjs/server", () => ({
+vi.mock("@/auth", () => ({
   auth: authMock,
 }));
 
@@ -30,24 +26,10 @@ import {
 describe("authorizeWorkspaceMutation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.unstubAllEnvs();
-  });
-
-  it("rejects requests when Clerk is not configured on the server", async () => {
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "");
-    vi.stubEnv("CLERK_SECRET_KEY", "");
-
-    await expect(authorizeWorkspaceMutation("workspace-1")).rejects.toMatchObject({
-      status: 503,
-      reason: "clerk_configuration_required",
-      message: "Clerk authentication is not configured on the server.",
-    } satisfies Pick<WorkspaceRouteGuardError, "status" | "reason" | "message">);
   });
 
   it("rejects anonymous requests", async () => {
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", createPublishableKey("clerk.budgetbitch.test"));
-    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_budgetbitch");
-    authMock.mockResolvedValue({ userId: null });
+    authMock.mockResolvedValue(null);
 
     await expect(authorizeWorkspaceMutation("workspace-1")).rejects.toMatchObject({
       status: 401,
@@ -57,22 +39,18 @@ describe("authorizeWorkspaceMutation", () => {
   });
 
   it("rejects users without a local profile", async () => {
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", createPublishableKey("clerk.budgetbitch.test"));
-    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_budgetbitch");
-    authMock.mockResolvedValue({ userId: "user_clerk_1" });
+    authMock.mockResolvedValue({ user: { id: "google-sub-1" } });
     prismaMock.userProfile.findUnique.mockResolvedValue(null);
 
     await expect(authorizeWorkspaceMutation("workspace-1")).rejects.toMatchObject({
       status: 404,
       reason: "local_profile_required",
-      message: "No local user profile exists for the authenticated Clerk user.",
+      message: "No local user profile exists for the authenticated account.",
     } satisfies Pick<WorkspaceRouteGuardError, "status" | "reason" | "message">);
   });
 
   it("rejects users without workspace membership", async () => {
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", createPublishableKey("clerk.budgetbitch.test"));
-    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_budgetbitch");
-    authMock.mockResolvedValue({ userId: "user_clerk_1" });
+    authMock.mockResolvedValue({ user: { id: "google-sub-1" } });
     prismaMock.userProfile.findUnique.mockResolvedValue({ id: "profile-1" });
     prismaMock.workspaceMember.findUnique.mockResolvedValue(null);
 
@@ -84,9 +62,7 @@ describe("authorizeWorkspaceMutation", () => {
   });
 
   it("returns the workspace actor for any valid workspace member", async () => {
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", createPublishableKey("clerk.budgetbitch.test"));
-    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_budgetbitch");
-    authMock.mockResolvedValue({ userId: "user_clerk_1" });
+    authMock.mockResolvedValue({ user: { id: "google-sub-1" } });
     prismaMock.userProfile.findUnique.mockResolvedValue({ id: "profile-1" });
     prismaMock.workspaceMember.findUnique.mockResolvedValue({ role: "editor" });
 

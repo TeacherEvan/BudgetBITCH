@@ -12,6 +12,58 @@ vi.mock("next/navigation", () => ({
   redirect,
 }));
 
+vi.mock("next-intl", () => ({
+  useTranslations: (namespace: string) => (key: string, values?: Record<string, number>) => {
+    const translations: Record<string, Record<string, string>> = {
+      broadcastBar: {
+        kicker: "Local area",
+        title: "Local area",
+        fallbackTicker: "Budget updates",
+      },
+      launcherGrid: {
+        kicker: "Tools",
+        title: "Popular budgeting tools",
+        description: "Open the lanes you actually use without stacking another scrolling page.",
+      },
+      liveBriefing: {
+        kicker: "Briefing",
+        title: "Live briefing",
+        description: "Five trusted topics, three short fields each, trimmed for fast scanning.",
+        "sourceStatus.live": "Live",
+        "sourceStatus.fallback": "Fallback",
+        fieldCount: `${values?.count ?? 0} fields`,
+      },
+    };
+
+    return translations[namespace]?.[key] ?? key;
+  },
+}));
+
+vi.mock("@/i18n/server", () => ({
+  getRequestMessages: async () => ({
+    dashboardPage: {
+      eyebrow: "Dashboard",
+      title: "Interactive billboard",
+      description:
+        "Keep the city label, the tool deck, and the live briefing in one visible window.",
+      workspaceLabel: "Workspace",
+      cityLabel: "City",
+      motionLabel: "Motion",
+      currentModeEyebrow: "Current mode",
+      checkInSubmitted: "Submitted today",
+      checkInNeeded: "Needs today’s check-in",
+      demoWorkspace:
+        "Demo workspace context is showing until a live membership is available.",
+      liveMembership: "Live membership is synced.",
+      windowProfileEyebrow: "Window profile",
+      layoutLabel: "Layout",
+      motionValueLabel: "Motion",
+      noWorkspaceSelected: "No workspace selected",
+      noWorkspaceRole: "none",
+    },
+  }),
+}));
+
 import DashboardPage from "./page";
 
 describe("DashboardPage", () => {

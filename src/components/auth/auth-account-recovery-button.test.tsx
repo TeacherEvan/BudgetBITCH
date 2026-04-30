@@ -4,10 +4,8 @@ import { AuthAccountRecoveryButton } from "./auth-account-recovery-button";
 
 const signOutMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 
-vi.mock("@clerk/nextjs", () => ({
-  useClerk: () => ({
-    signOut: signOutMock,
-  }),
+vi.mock("next-auth/react", () => ({
+  signOut: signOutMock,
 }));
 
 describe("AuthAccountRecoveryButton", () => {
@@ -22,7 +20,7 @@ describe("AuthAccountRecoveryButton", () => {
 
     await waitFor(() => {
       expect(signOutMock).toHaveBeenCalledWith({
-        redirectUrl: "/sign-in?redirectTo=%2F",
+        redirectTo: "/sign-in?redirectTo=%2F",
       });
     });
   });
@@ -34,7 +32,7 @@ describe("AuthAccountRecoveryButton", () => {
 
     await waitFor(() => {
       expect(signOutMock).toHaveBeenCalledWith({
-        redirectUrl: "/sign-in?redirectTo=%2Fdashboard%3Ffrom%3Dwelcome",
+        redirectTo: "/sign-in?redirectTo=%2Fdashboard%3Ffrom%3Dwelcome",
       });
     });
   });

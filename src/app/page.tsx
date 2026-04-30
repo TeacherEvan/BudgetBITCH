@@ -1,8 +1,8 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useAuth } from "@clerk/nextjs";
 import type { LucideIcon } from "lucide-react";
+import { useSession } from "next-auth/react";
 import {
   ArrowRight,
   BookOpen,
@@ -19,7 +19,6 @@ import LaunchWizard, { LAUNCH_PROFILE_STORAGE_KEY, type LaunchWizardProfile } fr
 import { useLaunchTransition } from "@/components/launch/use-launch-transition";
 import { MobilePanelFrame } from "@/components/mobile/mobile-panel-frame";
 import { WelcomeWindow } from "@/components/welcome/welcome-window";
-import { isClerkClientConfigured } from "@/lib/auth/clerk-config";
 
 export const HOME_E2E_AUTH_OVERRIDE_STORAGE_KEY = "budgetbitch:e2e-auth-state";
 
@@ -137,16 +136,16 @@ function hasCompletedLaunchProfile(value: string | null) {
 
 function getFallbackHomeAuthStateValue() {
   if (typeof window === "undefined") {
-    return "loading" as const;
-  }
-
-  if (process.env.NODE_ENV === "production") {
-    return "signed-out" as const;
+    return "default" as const;
   }
 
   const override = window.localStorage.getItem(HOME_E2E_AUTH_OVERRIDE_STORAGE_KEY);
 
-  return override === "signed-in" ? "signed-in" : "signed-out";
+  if (override === "signed-in" || override === "signed-out") {
+    return override;
+  }
+
+  return "default";
 }
 
 function HomeContent({ isLoaded, isSignedIn }: HomeAuthState) {
@@ -323,37 +322,35 @@ function HomeContent({ isLoaded, isSignedIn }: HomeAuthState) {
   );
 }
 
-function HomeWithClerkAuth() {
-  const { isLoaded, isSignedIn } = useAuth();
-
-  return <HomeContent isLoaded={isLoaded} isSignedIn={Boolean(isSignedIn)} />;
-}
-
 function subscribeToFallbackHomeAuthState() {
   return () => {};
 }
 
-function HomeWithoutClerkAuth() {
+function HomeWithSessionAuth() {
+  const { status } = useSession();
   const fallbackAuthState = useSyncExternalStore(
     subscribeToFallbackHomeAuthState,
     getFallbackHomeAuthStateValue,
-    () => "loading",
+    () => "default",
   );
+
+  const sessionAuthState: HomeAuthState =
+    status === "authenticated"
+      ? { isLoaded: true, isSignedIn: true }
+      : status === "unauthenticated"
+        ? { isLoaded: true, isSignedIn: false }
+        : { isLoaded: false, isSignedIn: false };
 
   const authState: HomeAuthState =
     fallbackAuthState === "signed-in"
       ? { isLoaded: true, isSignedIn: true }
       : fallbackAuthState === "signed-out"
         ? { isLoaded: true, isSignedIn: false }
-        : { isLoaded: false, isSignedIn: false };
+        : sessionAuthState;
 
   return <HomeContent isLoaded={authState.isLoaded} isSignedIn={authState.isSignedIn} />;
 }
 
 export default function Home() {
-  if (!isClerkClientConfigured()) {
-    return <HomeWithoutClerkAuth />;
-  }
-
-  return <HomeWithClerkAuth />;
+  return <HomeWithSessionAuth />;
 }

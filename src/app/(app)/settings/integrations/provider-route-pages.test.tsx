@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { vi } from "vitest";
 import DeelIntegrationPage from "./deel/page";
 import GeminiIntegrationPage from "./gemini/page";
 import MistralIntegrationPage from "./mistral/page";
@@ -7,6 +8,27 @@ import PerplexityIntegrationPage from "./perplexity/page";
 import RevolutIntegrationPage from "./revolut/page";
 import WiseIntegrationPage from "./wise/page";
 import XeroIntegrationPage from "./xero/page";
+
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string, values?: Record<string, string>) => {
+    const translations: Record<string, string> = {
+      backToConnectionHub: "Back to connection hub",
+      tools: "Tools",
+      privacyShieldTitle: "Privacy Shield",
+      privacyShieldDescription: `Review how ${values?.providerLabel ?? ""} receives data before enabling any connection.`.trim(),
+      officialLinksTitle: "Official links",
+      officialLogin: "Official login",
+      officialDocs: "Official docs",
+      privacyBadge: "No silent sharing",
+      systemAccessWarning: "System access warning",
+      "disclosures.minimumData": "Only explicitly connected providers receive the minimum required data.",
+      "disclosures.noSilentSharing": "No silent sharing or automatic cross-provider routing.",
+      "disclosures.revokeAnyTime": "You can revoke and disconnect this provider at any time.",
+    };
+
+    return translations[key] ?? key;
+  },
+}));
 
 const providerCases = [
   {

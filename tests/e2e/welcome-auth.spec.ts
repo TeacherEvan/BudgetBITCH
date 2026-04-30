@@ -30,40 +30,41 @@ test("signed-out visitors still see welcome when a launch profile is already sav
 test("dashboard redirects to sign-in when local Clerk setup is unavailable", async ({ page }) => {
   await page.goto("/dashboard?workspaceId=workspace-2");
 
-  await expect(page).toHaveURL(/\/sign-in$/);
-  await expect(page.getByRole("heading", { name: /sign in is not ready yet/i })).toBeVisible({
+  await expect(page).toHaveURL(
+    /\/sign-in\?redirectTo=%2Fdashboard%3FworkspaceId%3Dworkspace-2$/,
+  );
+  await expect(page.getByRole("heading", { name: /open your budget board/i })).toBeVisible({
     timeout: 15000,
   });
-  await expect(page.getByText(/clerk authentication is not configured on the server/i)).toBeVisible();
+  await expect(page.getByRole("button", { name: /continue with google/i })).toBeVisible();
 });
 
 for (const authEntry of [
   {
     label: "sign in",
     linkName: /open sign in/i,
-    pathname: "/sign-in",
-    heading: /sign in is not ready yet/i,
+    finalUrl: /\/sign-in\?redirectTo=%2F$/,
   },
   {
     label: "sign up",
     linkName: /open sign-up/i,
-    pathname: "/sign-up",
-    heading: /sign up is not ready yet/i,
+    finalUrl: /\/sign-in\?redirectTo=%2F$/,
   },
 ] as const) {
   test(`welcome ${authEntry.label} link keeps redirectTo in the URL without local Clerk setup`, async ({ page }) => {
     await page.goto("/");
 
     await Promise.all([
-      page.waitForURL(new RegExp(`${authEntry.pathname.replace("/", "\\/")}\\?redirectTo=%2F$`), {
+      page.waitForURL(authEntry.finalUrl, {
         waitUntil: "commit",
       }),
       page.getByRole("link", { name: authEntry.linkName }).click(),
     ]);
 
-    await expect(page).toHaveURL(new RegExp(`${authEntry.pathname.replace("/", "\\/")}\\?redirectTo=%2F$`));
-    await expect(page.getByRole("heading", { name: authEntry.heading })).toBeVisible({
+    await expect(page).toHaveURL(authEntry.finalUrl);
+    await expect(page.getByRole("heading", { name: /open your budget board/i })).toBeVisible({
       timeout: 15000,
     });
+    await expect(page.getByRole("button", { name: /continue with google/i })).toBeVisible();
   });
 }

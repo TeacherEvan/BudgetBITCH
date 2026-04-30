@@ -1,6 +1,21 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { LiveBriefingRail } from "./live-briefing-rail";
+
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string, values?: Record<string, number>) => {
+    const translations: Record<string, string> = {
+      kicker: "Briefing",
+      title: "Live briefing",
+      description: "Five trusted topics, three short fields each, trimmed for fast scanning.",
+      "sourceStatus.live": "Live",
+      "sourceStatus.fallback": "Fallback",
+      fieldCount: `${values?.count ?? 0} fields`,
+    };
+
+    return translations[key] ?? key;
+  },
+}));
 
 const briefing = {
   generatedAt: "2026-04-10T12:00:00.000Z",

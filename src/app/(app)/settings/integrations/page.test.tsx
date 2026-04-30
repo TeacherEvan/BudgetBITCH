@@ -1,9 +1,92 @@
 import { render, screen, within } from "@testing-library/react";
+import { vi } from "vitest";
+
+vi.mock("next-intl", () => ({
+  useTranslations: (namespace: string) => (key: string) => {
+    const translations: Record<string, Record<string, string>> = {
+      integrationActions: {
+        openSetupWizard: "Open setup wizard",
+        openOfficialLogin: "Open official login",
+        openOfficialDocs: "Open official docs",
+      },
+      providerCard: {
+        "categoryLabel.ai": "AI",
+        "categoryLabel.banking": "Banking",
+        "categoryLabel.investing": "Investing",
+        "categoryLabel.payroll": "Payroll",
+        "categoryLabel.tax": "Tax",
+        "categoryLabel.finance_ops": "Finance ops",
+        "categorySummary.ai": "Prompt-heavy tools and assistant access.",
+        "categorySummary.banking": "Bank connections and verification rails.",
+        "categorySummary.investing": "Portfolio, account, and brokerage access.",
+        "categorySummary.payroll": "Income and worker operations.",
+        "categorySummary.tax": "Tax filings, books, and accounting workflows.",
+        "categorySummary.finance_ops": "Operational money tooling and expense controls.",
+        "risk.low": "Low risk",
+        "risk.medium": "Medium risk",
+        "risk.high": "High risk",
+        "setupState.setupWizard": "Setup wizard",
+        "setupState.guidanceOnly": "Guidance only",
+        quickActions: "Quick actions",
+      },
+      integrationsShared: {
+        privacyBadge: "No silent sharing",
+      },
+    };
+
+    return translations[namespace]?.[key] ?? key;
+  },
+}));
+
+vi.mock("@/i18n/server", () => ({
+  getRequestMessages: async () => ({
+    integrationsHub: {
+      eyebrow: "Connection Hub",
+      title: "Connect only the providers you can scan and trust fast.",
+      description:
+        "Every group below leads with the official route, the risk level, and the easiest next action so you can move without reading a giant safety essay first.",
+      guardrails: {
+        officialRoutesFirst: "Official routes first",
+        noSilentSharing: "No silent sharing",
+        revokePathStaysObvious: "Revoke path stays obvious",
+      },
+      groupedScan: "Grouped scan",
+      providerCount: "{count} providers",
+      categories: {
+        ai: {
+          label: "AI copilots",
+          summary: "Model-powered helpers, planning copilots, and prompt-heavy workflow tools.",
+        },
+        banking: {
+          label: "Banking rails",
+          summary: "Account verification and banking connections that should feel official, not sneaky.",
+        },
+        investing: {
+          label: "Investing",
+          summary: "Brokerage and portfolio tools that belong behind clear permissions and revoke paths.",
+        },
+        payroll: {
+          label: "Payroll",
+          summary: "Income, pay runs, and worker details that need low-friction but careful setup.",
+        },
+        tax: {
+          label: "Tax and accounting",
+          summary: "Documents, filings, and ledger access where trust cues must be obvious.",
+        },
+        finance_ops: {
+          label: "Finance operations",
+          summary: "Expense, card, and ops tooling for the parts of money management that stay boring on purpose.",
+        },
+      },
+    },
+  }),
+}));
+
 import IntegrationsPage from "./page";
 
 describe("IntegrationsPage", () => {
-  it("renders provider cards with explicit action labels for setup flows", () => {
-    render(<IntegrationsPage />);
+  it("renders provider cards with explicit action labels for setup flows", async () => {
+    render(await IntegrationsPage());
 
     expect(screen.getByTestId("mobile-panel-frame")).toBeInTheDocument();
 

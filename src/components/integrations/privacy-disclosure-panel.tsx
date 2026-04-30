@@ -1,19 +1,22 @@
+import { useTranslations } from "next-intl";
+
 type PrivacyDisclosurePanelProps = {
     providerLabel: string;
 };
 
-const disclosures = [
-    "Only explicitly connected providers receive the minimum required data.",
-    "No silent sharing or automatic cross-provider routing.",
-    "You can revoke and disconnect this provider at any time.",
-];
-
 export function PrivacyDisclosurePanel({ providerLabel }: PrivacyDisclosurePanelProps) {
+    const t = useTranslations("integrationsShared");
+    const disclosures = [
+        t("disclosures.minimumData"),
+        t("disclosures.noSilentSharing"),
+        t("disclosures.revokeAnyTime"),
+    ];
+
     return (
         <div className="rounded-4xl border border-emerald-200/20 bg-emerald-300/10 p-6">
-            <h2 className="text-xl font-semibold">Privacy Shield</h2>
+            <h2 className="text-xl font-semibold">{t("privacyShieldTitle")}</h2>
             <p className="mt-3 text-sm text-emerald-50/85">
-                Review how {providerLabel} receives data before enabling any connection.
+                {t("privacyShieldDescription", { providerLabel })}
             </p>
             <ul className="mt-4 space-y-3 text-sm text-white">
                 {disclosures.map((item) => (

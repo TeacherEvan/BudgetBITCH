@@ -1,7 +1,3 @@
-import {
-  clerkConfigurationErrorMessage,
-  isClerkConfigured,
-} from "./clerk-config";
 import { NextResponse } from "next/server";
 import {
   authorizeWorkspaceMutation,
@@ -79,29 +75,21 @@ export function createWorkspaceApiAccessErrorResponse(error: unknown) {
 export async function resolveWorkspaceApiAccess(
   workspaceId: string,
 ): Promise<TrustedWorkspaceApiAccess> {
-  if (!isClerkConfigured()) {
-    if (!isWorkspaceApiDemoModeEnabled()) {
-      throw new WorkspaceApiAccessError(
-        clerkConfigurationErrorMessage,
-        503,
-        "clerk_configuration_required",
-      );
-    }
-
-    if (workspaceId !== localDemoWorkspaceId) {
-      throw new WorkspaceApiAccessError(
-        "Local demo API access is limited to the demo workspace.",
-        403,
-        "demo_workspace_required",
-      );
-    }
-
+  if (isWorkspaceApiDemoModeEnabled() && workspaceId === localDemoWorkspaceId) {
     return {
       workspaceId: localDemoWorkspaceId,
       accessMode: "demo",
       actorUserId: null,
       role: null,
     };
+  }
+
+  if (isWorkspaceApiDemoModeEnabled() && workspaceId !== localDemoWorkspaceId) {
+    throw new WorkspaceApiAccessError(
+      "Local demo API access is limited to the demo workspace.",
+      403,
+      "demo_workspace_required",
+    );
   }
 
   try {

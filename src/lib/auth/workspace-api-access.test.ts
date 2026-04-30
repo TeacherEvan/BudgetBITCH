@@ -1,16 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-function createPublishableKey(host: string) {
-  return `pk_test_${Buffer.from(`${host}$`, "utf8").toString("base64url")}`;
-}
-
 const authorizeWorkspaceMutationMock = vi.hoisted(() => vi.fn());
+const WorkspaceRouteGuardErrorMock = vi.hoisted(
+  () =>
+    class WorkspaceRouteGuardError extends Error {
+      constructor(
+        message: string,
+        public readonly status: number,
+        public readonly reason:
+          | "unauthenticated"
+          | "local_profile_required"
+          | "workspace_membership_required",
+      ) {
+        super(message);
+        this.name = "WorkspaceRouteGuardError";
+      }
+    },
+);
 
-vi.mock("./workspace-route-guard", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./workspace-route-guard")>();
-
+vi.mock("./workspace-route-guard", () => {
   return {
-    ...actual,
+    WorkspaceRouteGuardError: WorkspaceRouteGuardErrorMock,
     authorizeWorkspaceMutation: authorizeWorkspaceMutationMock,
   };
 });
@@ -30,8 +40,6 @@ describe("resolveWorkspaceApiAccess", () => {
 
   it("allows the local demo workspace during local development when Clerk is not configured", async () => {
     vi.stubEnv("NODE_ENV", "development");
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "");
-    vi.stubEnv("CLERK_SECRET_KEY", "");
 
     await expect(resolveWorkspaceApiAccess(localDemoWorkspaceId)).resolves.toEqual({
       workspaceId: localDemoWorkspaceId,
@@ -44,8 +52,6 @@ describe("resolveWorkspaceApiAccess", () => {
 
   it("rejects non-demo workspaces when Clerk is not configured", async () => {
     vi.stubEnv("NODE_ENV", "test");
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "");
-    vi.stubEnv("CLERK_SECRET_KEY", "");
 
     await expect(resolveWorkspaceApiAccess("workspace-1")).rejects.toMatchObject({
       status: 403,
@@ -55,24 +61,9 @@ describe("resolveWorkspaceApiAccess", () => {
     expect(authorizeWorkspaceMutationMock).not.toHaveBeenCalled();
   });
 
-  it("rejects demo access when Clerk is missing in production", async () => {
-    vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "");
-    vi.stubEnv("CLERK_SECRET_KEY", "");
-
-    await expect(resolveWorkspaceApiAccess(localDemoWorkspaceId)).rejects.toMatchObject({
-      status: 503,
-      reason: "clerk_configuration_required",
-      message: "Clerk authentication is not configured on the server.",
-    } satisfies Pick<WorkspaceApiAccessError, "status" | "reason" | "message">);
-    expect(authorizeWorkspaceMutationMock).not.toHaveBeenCalled();
-  });
-
   it("allows the local demo workspace for the stripped Clerk test harness", async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("BUDGETBITCH_STRIP_CLERK_ENV", "true");
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "");
-    vi.stubEnv("CLERK_SECRET_KEY", "");
 
     await expect(resolveWorkspaceApiAccess(localDemoWorkspaceId)).resolves.toEqual({
       workspaceId: localDemoWorkspaceId,
@@ -83,13 +74,8 @@ describe("resolveWorkspaceApiAccess", () => {
     expect(authorizeWorkspaceMutationMock).not.toHaveBeenCalled();
   });
 
-  it("delegates to the workspace guard when Clerk is configured", async () => {
+  it("delegates to the workspace guard outside demo mode", async () => {
     vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv(
-      "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
-      createPublishableKey("clerk.budgetbitch.test"),
-    );
-    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_budgetbitch");
     authorizeWorkspaceMutationMock.mockResolvedValue({
       workspaceId: "workspace-1",
       actorUserId: "profile-1",
@@ -107,14 +93,9 @@ describe("resolveWorkspaceApiAccess", () => {
 
   it("preserves the workspace guard reason when delegation fails", async () => {
     vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv(
-      "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
-      createPublishableKey("clerk.budgetbitch.test"),
-    );
-    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_budgetbitch");
     authorizeWorkspaceMutationMock.mockRejectedValue(
       new WorkspaceRouteGuardError(
-        "No local user profile exists for the authenticated Clerk user.",
+        "No local user profile exists for the authenticated account.",
         404,
         "local_profile_required",
       ),
@@ -123,7 +104,7 @@ describe("resolveWorkspaceApiAccess", () => {
     await expect(resolveWorkspaceApiAccess("workspace-1")).rejects.toMatchObject({
       status: 404,
       reason: "local_profile_required",
-      message: "No local user profile exists for the authenticated Clerk user.",
+      message: "No local user profile exists for the authenticated account.",
     } satisfies Pick<WorkspaceApiAccessError, "status" | "reason" | "message">);
   });
 });

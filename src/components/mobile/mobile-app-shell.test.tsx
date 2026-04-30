@@ -5,8 +5,23 @@ import { MobileAppShell } from "./mobile-app-shell";
 
 let mockPathname = "/dashboard";
 
+const navTranslations: Record<string, string> = {
+  mobileNavigation: "Mobile app navigation",
+  "routes.dashboard": "Dashboard",
+  "routes.startSmart": "Start Smart",
+  "routes.calculator": "Calculator",
+  "routes.notes": "Notes",
+  "routes.learn": "Learn",
+  "routes.integrations": "Integrations",
+  "routes.jobs": "Jobs",
+};
+
 vi.mock("next/navigation", () => ({
   usePathname: () => mockPathname,
+}));
+
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => navTranslations[key] ?? key,
 }));
 
 describe("MobileAppShell", () => {
@@ -21,7 +36,9 @@ describe("MobileAppShell", () => {
     const content = container.querySelector('[data-slot="mobile-shell-content"]');
 
     for (const route of mobileRouteConfig) {
-      expect(within(navigation).getByRole("link", { name: route.label })).toHaveAttribute(
+      expect(
+        within(navigation).getByRole("link", { name: navTranslations[`routes.${route.labelKey}`] }),
+      ).toHaveAttribute(
         "href",
         route.href,
       );

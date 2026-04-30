@@ -1,10 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-function createPublishableKey(host: string) {
-  return `pk_test_${Buffer.from(`${host}$`, "utf8").toString("base64url")}`;
-}
-
 const useQueryMock = vi.hoisted(() => vi.fn());
 const viewerCurrentQuery = vi.hoisted(() => Symbol("viewer.current"));
 const listAlertInboxRowsQuery = vi.hoisted(() => Symbol("live.listAlertInboxRows"));
@@ -42,26 +38,36 @@ describe("LiveAlertFeed", () => {
     render(<LiveAlertFeed workspaceId="workspace-1" />);
 
     expect(
-      screen.getByText(/live alerts stay on standby until convex auth is configured/i),
+      screen.getByText(/live alerts stay on standby until the convex url is configured/i),
+    ).toBeInTheDocument();
+    expect(useQueryMock).not.toHaveBeenCalled();
+  });
+
+  it("shows a graceful fallback when the Convex realtime auth bridge is not ready", () => {
+    vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "https://budgetbitch.convex.cloud");
+
+    render(<LiveAlertFeed workspaceId="workspace-1" />);
+
+    expect(
+      screen.getByText(/live alerts stay on standby until the convex realtime auth bridge is ready/i),
     ).toBeInTheDocument();
     expect(useQueryMock).not.toHaveBeenCalled();
   });
 
   it("shows a graceful fallback when the Convex URL is not absolute", () => {
     vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "steady-ox-280.convex.cloud");
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", createPublishableKey("clerk.budgetbitch.test"));
 
     render(<LiveAlertFeed workspaceId="workspace-1" />);
 
     expect(
-      screen.getByText(/live alerts stay on standby until convex auth is configured/i),
+      screen.getByText(/live alerts stay on standby until the convex url is configured/i),
     ).toBeInTheDocument();
     expect(useQueryMock).not.toHaveBeenCalled();
   });
 
   it("shows a projection-sync message when the viewer record is not ready", () => {
     vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "https://budgetbitch.convex.cloud");
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", createPublishableKey("clerk.budgetbitch.test"));
+    vi.stubEnv("NEXT_PUBLIC_CONVEX_AUTH_BRIDGE_READY", "true");
 
     useQueryMock.mockImplementation((query) => {
       if (query === viewerCurrentQuery) {
@@ -87,7 +93,7 @@ describe("LiveAlertFeed", () => {
 
   it("renders live alert rows when Convex returns data", () => {
     vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "https://budgetbitch.convex.cloud");
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", createPublishableKey("clerk.budgetbitch.test"));
+    vi.stubEnv("NEXT_PUBLIC_CONVEX_AUTH_BRIDGE_READY", "true");
 
     useQueryMock.mockImplementation((query) => {
       if (query === viewerCurrentQuery) {

@@ -1,6 +1,26 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ProviderWizardShell } from "./provider-wizard-shell";
+
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => {
+    const translations: Record<string, string> = {
+      backToConnectionHub: "Back to connection hub",
+      tools: "Tools",
+      privacyShieldTitle: "Privacy Shield",
+      officialLinksTitle: "Official links",
+      officialLogin: "Official login",
+      officialDocs: "Official docs",
+      privacyBadge: "No silent sharing",
+      systemAccessWarning: "System access warning",
+      "disclosures.minimumData": "Only explicitly connected providers receive the minimum required data.",
+      "disclosures.noSilentSharing": "No silent sharing or automatic cross-provider routing.",
+      "disclosures.revokeAnyTime": "You can revoke and disconnect this provider at any time.",
+    };
+
+    return translations[key] ?? key;
+  },
+}));
 
 describe("ProviderWizardShell", () => {
   it("renders the shell copy, back link, children, and the shared tool rail", () => {

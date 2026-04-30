@@ -6,6 +6,8 @@ This note captures the current contract for the jobs card surface in the root ap
 
 `src/components/jobs/job-card.tsx` is a scan-first card for comparing practical job options quickly. It should help the user decide whether to open the full job detail route without forcing them to read dense copy first.
 
+This contract applies to the root app surface under `src/` (not the nested `budgetbitch/` prototype subtree).
+
 ## Content Order
 
 Keep the card structure in this order:
@@ -23,6 +25,21 @@ Keep the card structure in this order:
 - Keep summary copy short and practical.
 - Preserve one obvious fit cue that explains why the job belongs in the current lane.
 - Use readable labels instead of raw enum formatting where possible.
+- Keep card language practical and decision-oriented. Avoid motivational filler copy.
+
+## Localization Contract
+
+- English stays the default locale.
+- New or updated card/page copy must be wired through the shared i18n dictionary (`src/i18n/messages.ts`) using stable keys rather than hardcoded strings.
+- Chinese and Thai translations must be added in the same change for any new user-facing jobs copy.
+- Do not localize slugs, IDs, URLs, or provider names that are system identifiers.
+
+## Accessibility Contract
+
+- Preserve the current heading outline in the jobs page and card composition.
+- Keep the primary action discoverable as a link with explicit text (`Open job details`).
+- Ensure metadata labels remain screen-reader friendly and avoid icon-only meaning.
+- If changing badges/chips, keep text alternatives visible (do not encode key information by color only).
 
 ## Layout Rules
 
@@ -45,6 +62,13 @@ When changing the jobs card UI, update all of the following:
 - `src/components/jobs/job-card.test.tsx`
 - `src/app/(app)/jobs/page.test.tsx`
 - The relevant Playwright flow under `tests/e2e/jobs.spec.ts`
+
+Also ensure assertions still cover:
+
+- Card scan order (headline -> facts -> timing -> fit cue -> action).
+- Primary CTA label (`Open job details`).
+- Lane-specific fit messaging (not generic repeated summaries).
+- Any localization wiring added in the change (at minimum default English behavior).
 
 ## Related Files
 

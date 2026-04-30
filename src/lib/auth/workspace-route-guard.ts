@@ -1,12 +1,8 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/auth";
+import { getAuthenticatedUserId } from "@/lib/auth/session";
 import { getPrismaClient } from "@/lib/prisma";
-import {
-  clerkConfigurationErrorMessage,
-  isClerkConfigured,
-} from "./clerk-config";
 
 export type WorkspaceRouteGuardErrorReason =
-  | "clerk_configuration_required"
   | "unauthenticated"
   | "local_profile_required"
   | "workspace_membership_required";
@@ -31,15 +27,8 @@ export type AuthorizedWorkspaceActor = {
 export async function authorizeWorkspaceMutation(
   workspaceId: string,
 ): Promise<AuthorizedWorkspaceActor> {
-  if (!isClerkConfigured()) {
-    throw new WorkspaceRouteGuardError(
-      clerkConfigurationErrorMessage,
-      503,
-      "clerk_configuration_required",
-    );
-  }
-
-  const { userId } = await auth();
+  const session = await auth();
+  const userId = getAuthenticatedUserId(session);
 
   if (!userId) {
     throw new WorkspaceRouteGuardError(
@@ -57,7 +46,7 @@ export async function authorizeWorkspaceMutation(
 
   if (!profile) {
     throw new WorkspaceRouteGuardError(
-      "No local user profile exists for the authenticated Clerk user.",
+      "No local user profile exists for the authenticated account.",
       404,
       "local_profile_required",
     );

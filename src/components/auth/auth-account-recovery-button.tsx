@@ -1,16 +1,14 @@
 "use client";
 
-import { useClerk } from "@clerk/nextjs";
+import { signOut } from "next-auth/react";
 
 type AuthAccountRecoveryButtonProps = {
   redirectTo: string;
 };
 
 export function AuthAccountRecoveryButton({ redirectTo }: AuthAccountRecoveryButtonProps) {
-  const clerk = useClerk();
-
   async function handleClick() {
-    await clerk.signOut({ redirectUrl: `/sign-in?redirectTo=${encodeURIComponent(redirectTo)}` });
+    await signOut({ redirectTo: `/sign-in?redirectTo=${encodeURIComponent(redirectTo)}` });
   }
 
   return (

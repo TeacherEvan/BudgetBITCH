@@ -1,5 +1,6 @@
 import { RecommendedLessons } from "@/components/learn/recommended-lessons";
 import { MobilePanelFrame } from "@/components/mobile/mobile-panel-frame";
+import { getRequestMessages } from "@/i18n/server";
 import { getPrismaClient } from "@/lib/prisma";
 import { extractLearnSignalsFromBlueprint } from "@/modules/learn/blueprint-bridge";
 import { resolveLearnRecommendations } from "@/modules/learn/recommendation-engine";
@@ -58,6 +59,7 @@ async function getLearnRecommendations() {
 }
 
 export default async function LearnPage() {
+  const messages = await getRequestMessages();
   const recommendations = await getLearnRecommendations();
   const storyCues = [...recommendations.primary, ...recommendations.evergreen]
     .slice(0, 3)
@@ -74,13 +76,12 @@ export default async function LearnPage() {
       <section className="mx-auto max-w-7xl rounded-[36px] border border-white/10 bg-black/20 p-6 backdrop-blur md:p-8">
         <header className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-sm uppercase tracking-[0.3em] text-yellow-200">Learn!</p>
+            <p className="text-sm uppercase tracking-[0.3em] text-yellow-200">{messages.learnPage.eyebrow}</p>
             <h1 className="mt-3 text-3xl font-bold sm:text-4xl">
-              Comic-strip lessons for the money move that matters next.
+              {messages.learnPage.title}
             </h1>
             <p className="mt-3 max-w-3xl text-sm text-emerald-50/85 sm:text-base">
-              Skip the explainer wall. Start with fast visual cues, then open the lesson card only
-              when you want the deeper breakdown.
+              {messages.learnPage.description}
             </p>
           </div>
 
@@ -99,13 +100,13 @@ export default async function LearnPage() {
         <section aria-labelledby="story-cues-heading" className="mt-8">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <p className="text-sm uppercase tracking-[0.25em] text-yellow-200">Story cues</p>
+              <p className="text-sm uppercase tracking-[0.25em] text-yellow-200">{messages.learnPage.storyCuesEyebrow}</p>
               <h2 id="story-cues-heading" className="mt-2 text-2xl font-semibold text-white">
-                Three fast scenes to anchor the idea
+                {messages.learnPage.storyCuesTitle}
               </h2>
             </div>
             <p className="text-sm text-emerald-50/75">
-              Absurd setup, plain-English meaning, and one action cue per card.
+              {messages.learnPage.storyCuesDescription}
             </p>
           </div>
 
@@ -141,15 +142,15 @@ export default async function LearnPage() {
 
         <div className="mt-8 grid gap-6">
           <RecommendedLessons
-            eyebrow="Blueprint picks"
-            title="Start here"
-            description="Highest-signal lessons matched to your current blueprint pressure."
+            eyebrow={messages.learnPage.blueprintPicksEyebrow}
+            title={messages.learnPage.blueprintPicksTitle}
+            description={messages.learnPage.blueprintPicksDescription}
             lessons={recommendations.primary}
           />
           <RecommendedLessons
-            eyebrow="Keep the streak"
-            title="Next up"
-            description="Evergreen refreshers when you want one more useful concept without a long scroll."
+            eyebrow={messages.learnPage.streakEyebrow}
+            title={messages.learnPage.streakTitle}
+            description={messages.learnPage.streakDescription}
             lessons={recommendations.evergreen.slice(0, 4)}
           />
         </div>

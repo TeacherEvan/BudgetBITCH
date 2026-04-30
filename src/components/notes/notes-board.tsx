@@ -1,6 +1,7 @@
 "use client";
 
 import { Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { OfflineBanner } from "@/components/pwa/offline-banner";
 
@@ -63,6 +64,7 @@ function buildId() {
 }
 
 export function NotesBoard() {
+  const t = useTranslations("notesBoard");
   const [notes, setNotes] = useState<Note[]>(() => loadNotes());
   const [input, setInput] = useState("");
 
@@ -87,11 +89,11 @@ export function NotesBoard() {
   }
 
   return (
-    <section className="bb-panel bb-panel-strong mx-auto max-w-2xl p-5" aria-label="Notes board">
+    <section className="bb-panel bb-panel-strong mx-auto max-w-2xl p-5" aria-label={t("regionLabel")}>
       <OfflineBanner className="mb-4" />
       <div className="flex gap-2">
         <label htmlFor="new-note-input" className="sr-only">
-          New note
+          {t("inputLabel")}
         </label>
         <input
           id="new-note-input"
@@ -99,24 +101,24 @@ export function NotesBoard() {
           value={input}
           onChange={(event) => setInput(event.target.value)}
           onKeyDown={(event) => event.key === "Enter" && handleAdd()}
-          placeholder="Type a note and press Enter or Add note…"
+          placeholder={t("inputPlaceholder")}
           className="flex-1 rounded-lg border border-white/10 bg-black/30 px-4 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-400"
-          aria-label="New note"
+          aria-label={t("inputLabel")}
         />
         <button
           type="button"
           onClick={handleAdd}
           className="bb-button-primary px-4 py-2 text-sm"
-          aria-label="Add note"
+          aria-label={t("addNote")}
         >
-          Add note
+          {t("addNote")}
         </button>
       </div>
 
       {notes.length === 0 ? (
-        <p className="bb-mini-copy mt-6 text-center text-sm">No notes yet — add your first one above.</p>
+        <p className="bb-mini-copy mt-6 text-center text-sm">{t("emptyState")}</p>
       ) : (
-        <ul className="mt-4 grid gap-2" aria-label="Notes list">
+        <ul className="mt-4 grid gap-2" aria-label={t("regionLabel")}>
           {notes.map((note) => (
             <li key={note.id} className="bb-compact-card flex items-start justify-between gap-3 p-3">
               <span className="text-sm text-white">{note.text}</span>
@@ -124,7 +126,7 @@ export function NotesBoard() {
                 type="button"
                 onClick={() => handleDelete(note.id)}
                 className="shrink-0 rounded p-1 text-white/40 transition-colors hover:text-red-400 focus:outline-none focus:ring-2 focus:ring-red-400"
-                aria-label={`Delete ${note.text}`}
+                aria-label={t("deleteNote", { text: note.text })}
               >
                 <Trash2 className="h-4 w-4" aria-hidden="true" />
               </button>

@@ -1,6 +1,18 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { OfficialLinkList } from "./official-link-list";
+
+vi.mock("next-intl", () => ({
+    useTranslations: () => (key: string) => {
+        const translations: Record<string, string> = {
+            officialLinksTitle: "Official links",
+            officialLogin: "Official login",
+            officialDocs: "Official docs",
+        };
+
+        return translations[key] ?? key;
+    },
+}));
 
 describe("OfficialLinkList", () => {
     it("renders the official login and docs anchors using the provided URLs", () => {

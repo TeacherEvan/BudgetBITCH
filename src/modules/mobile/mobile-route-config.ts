@@ -1,14 +1,21 @@
 export type MobileRouteConfigItem = {
   readonly href: string;
-  readonly label: string;
+  readonly labelKey:
+    | "dashboard"
+    | "startSmart"
+    | "calculator"
+    | "notes"
+    | "learn"
+    | "integrations"
+    | "jobs";
 };
 
 export const mobileRouteConfig: readonly MobileRouteConfigItem[] = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/start-smart", label: "Start Smart" },
-  { href: "/calculator", label: "Calculator" },
-  { href: "/notes", label: "Notes" },
-  { href: "/learn", label: "Learn" },
-  { href: "/settings/integrations", label: "Integrations" },
-  { href: "/jobs", label: "Jobs" },
+  { href: "/dashboard", labelKey: "dashboard" },
+  { href: "/start-smart", labelKey: "startSmart" },
+  { href: "/calculator", labelKey: "calculator" },
+  { href: "/notes", labelKey: "notes" },
+  { href: "/learn", labelKey: "learn" },
+  { href: "/settings/integrations", labelKey: "integrations" },
+  { href: "/jobs", labelKey: "jobs" },
 ];

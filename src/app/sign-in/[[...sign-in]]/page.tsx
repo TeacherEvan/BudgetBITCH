@@ -1,12 +1,9 @@
-import { SignIn } from "@clerk/nextjs";
-import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { auth, signIn } from "@/auth";
 import { AuthEntryPanel } from "@/components/auth/auth-entry-panel";
-import {
-  clerkConfigurationErrorMessage,
-  isClerkConfigured,
-} from "@/lib/auth/clerk-config";
+import { getRequestMessages } from "@/i18n/server";
+import { getAuthenticatedUserId } from "@/lib/auth/session";
 import { getSafePostAuthRedirect } from "@/modules/auth/post-auth-redirect";
 
 const fallbackAuthSwitchRedirect = "/auth/continue";
@@ -43,46 +40,43 @@ function getAuthSwitchUrl(pathname: string, redirectTarget: string) {
 
 export default async function SignInPage({ searchParams }: SignInPageProps = {}) {
   const resolvedSearchParams = (await searchParams) ?? undefined;
+  const messages = await getRequestMessages();
   const redirectTarget = getSafePostAuthRedirect(getRedirectToCandidate(resolvedSearchParams));
   const forceRedirectUrl = getForceRedirectUrl(redirectTarget);
   const signUpUrl = getAuthSwitchUrl("/sign-up", redirectTarget);
 
-  if (!isClerkConfigured()) {
-    return (
-      <AuthEntryPanel
-        eyebrow="Sign in"
-        title="Sign in is not ready yet"
-        description={clerkConfigurationErrorMessage}
-      >
-        <p className="bb-mini-copy text-sm">Add valid Clerk keys to enable app sign-in.</p>
-      </AuthEntryPanel>
-    );
-  }
-
-  const { userId } = await auth();
+  const session = await auth();
+  const userId = getAuthenticatedUserId(session);
 
   if (userId) {
     redirect(forceRedirectUrl);
   }
 
+  async function startGoogleSignIn() {
+    "use server";
+
+    await signIn("google", { redirectTo: forceRedirectUrl });
+  }
+
   return (
     <AuthEntryPanel
-      eyebrow="Sign in"
-      title="Open your budget board"
-      description="Choose email and password, Google, or a supported passkey with Clerk, then finish local workspace setup before the app opens your dashboard."
+      eyebrow={messages.signIn.eyebrow}
+      title={messages.signIn.title}
+      description={messages.signIn.description}
+      copy={messages.authPanel}
       authMethodVariant="sign-in"
       footer={
         <span>
-          Need an account? <Link href={signUpUrl}>Open sign-up</Link>.
+          {messages.signIn.needAccount} <Link href={signUpUrl}>{messages.signIn.openSignUp}</Link>.
         </span>
       }
     >
-      <SignIn
-        routing="path"
-        path="/sign-in"
-        signUpUrl={signUpUrl}
-        forceRedirectUrl={forceRedirectUrl}
-      />
+      <form action={startGoogleSignIn} className="flex flex-col gap-3">
+        <button type="submit" className="bb-button-primary w-full justify-center md:w-auto">
+          {messages.signIn.continueWithGoogle}
+        </button>
+        <p className="bb-mini-copy text-sm">{messages.signIn.privacy}</p>
+      </form>
     </AuthEntryPanel>
   );
 }

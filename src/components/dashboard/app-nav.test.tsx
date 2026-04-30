@@ -5,8 +5,25 @@ import { AppNav } from "./app-nav";
 
 let mockPathname = "/dashboard";
 
+const navTranslations: Record<string, string> = {
+  mobileNavigation: "Mobile app navigation",
+  desktopNavigation: "App navigation",
+  openDashboard: "Go to dashboard",
+  "routes.dashboard": "Dashboard",
+  "routes.startSmart": "Start Smart",
+  "routes.calculator": "Calculator",
+  "routes.notes": "Notes",
+  "routes.learn": "Learn",
+  "routes.integrations": "Integrations",
+  "routes.jobs": "Jobs",
+};
+
 vi.mock("next/navigation", () => ({
   usePathname: () => mockPathname,
+}));
+
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => navTranslations[key] ?? key,
 }));
 
 describe("AppNav", () => {
@@ -20,7 +37,9 @@ describe("AppNav", () => {
     const navigation = screen.getByRole("navigation", { name: "Mobile app navigation" });
 
     for (const route of mobileRouteConfig) {
-      expect(within(navigation).getByRole("link", { name: route.label })).toHaveAttribute(
+      expect(
+        within(navigation).getByRole("link", { name: navTranslations[`routes.${route.labelKey}`] }),
+      ).toHaveAttribute(
         "href",
         route.href,
       );

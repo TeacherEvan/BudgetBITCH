@@ -1,15 +1,18 @@
 import { Calculator } from "@/components/calculator/calculator";
 import { MobilePanelFrame } from "@/components/mobile/mobile-panel-frame";
+import { getRequestMessages } from "@/i18n/server";
 
-export default function CalculatorPage() {
+export default async function CalculatorPage() {
+  const messages = await getRequestMessages();
+
   return (
     <main className="bb-page-shell text-white">
       <MobilePanelFrame>
       <section className="mx-auto max-w-7xl">
-        <p className="bb-kicker">Tools</p>
-        <h1 className="mt-3 text-4xl font-semibold">Calculator</h1>
+        <p className="bb-kicker">{messages.calculatorPage.eyebrow}</p>
+        <h1 className="mt-3 text-4xl font-semibold">{messages.calculatorPage.title}</h1>
         <p className="bb-copy mt-3 max-w-xl text-sm">
-          Quick arithmetic for budget checks — no number crunching in your head.
+          {messages.calculatorPage.description}
         </p>
         <div className="mt-8">
           <Calculator />

@@ -2,6 +2,17 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Calculator } from "./calculator";
 
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => {
+    const translations: Record<string, string> = {
+      regionLabel: "Calculator",
+      clearButton: "Clear",
+    };
+
+    return translations[key] ?? key;
+  },
+}));
+
 describe("Calculator", () => {
   beforeEach(() => {
     window.localStorage.clear();
@@ -48,7 +59,7 @@ describe("Calculator", () => {
   it("C button resets display to 0", () => {
     render(<Calculator />);
     fireEvent.click(screen.getByRole("button", { name: "7" }));
-    fireEvent.click(screen.getByRole("button", { name: "C" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
     expect(screen.getByRole("status")).toHaveTextContent("0");
   });
 

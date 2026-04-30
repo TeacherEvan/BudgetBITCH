@@ -2,7 +2,6 @@
 
 import { useQuery } from "convex/react";
 import { ShieldCheck, Siren, TriangleAlert } from "lucide-react";
-import { isClerkClientConfigured } from "@/lib/auth/clerk-config";
 import { api } from "../../../convex/_generated/api";
 import { isAbsoluteHttpUrl } from "@/lib/url";
 
@@ -11,6 +10,10 @@ type LiveAlertFeedProps = {
 };
 
 const VIEWER_WORKSPACE_LIMIT = 10;
+
+function isConvexRealtimeAuthReady() {
+  return process.env.NEXT_PUBLIC_CONVEX_AUTH_BRIDGE_READY?.trim() === "true";
+}
 
 function severityIcon(severity: "info" | "warning" | "critical") {
   if (severity === "critical") {
@@ -98,7 +101,7 @@ function LiveAlertFeedBody({ workspaceId }: LiveAlertFeedProps) {
 export function LiveAlertFeed({ workspaceId }: LiveAlertFeedProps) {
   const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL?.trim();
   const convexUrlConfigured = isAbsoluteHttpUrl(convexUrl);
-  const clerkAuthConfigured = isClerkClientConfigured();
+  const convexRealtimeAuthReady = isConvexRealtimeAuthReady();
 
   return (
     <section className="bb-panel bb-panel-muted p-6" aria-labelledby="live-alerts-heading">
@@ -117,9 +120,13 @@ export function LiveAlertFeed({ workspaceId }: LiveAlertFeedProps) {
 
       {!workspaceId ? (
         <p className="bb-mini-copy mt-4">Select a workspace to view live alerts.</p>
-      ) : !convexUrlConfigured || !clerkAuthConfigured ? (
+      ) : !convexUrlConfigured ? (
         <p className="bb-mini-copy mt-4">
-          Live alerts stay on standby until Convex auth is configured for this dashboard.
+          Live alerts stay on standby until the Convex URL is configured for this dashboard.
+        </p>
+      ) : !convexRealtimeAuthReady ? (
+        <p className="bb-mini-copy mt-4">
+          Live alerts stay on standby until the Convex realtime auth bridge is ready for this dashboard.
         </p>
       ) : (
         <LiveAlertFeedBody workspaceId={workspaceId} />

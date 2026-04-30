@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export type LauncherTool = {
   title: string;
@@ -13,6 +14,8 @@ type LauncherGridProps = {
 };
 
 export function LauncherGrid({ tools }: LauncherGridProps) {
+  const t = useTranslations("launcherGrid");
+
   return (
     <section
       className="bb-panel bb-panel-strong p-5 md:min-h-0 md:overflow-y-auto"
@@ -20,12 +23,12 @@ export function LauncherGrid({ tools }: LauncherGridProps) {
     >
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="bb-kicker">Tools</p>
+          <p className="bb-kicker">{t("kicker")}</p>
           <h2 id="popular-budgeting-tools-heading" className="mt-2 text-2xl font-semibold">
-            Popular budgeting tools
+            {t("title")}
           </h2>
           <p className="bb-mini-copy mt-2 max-w-2xl text-sm">
-            Open the lanes you actually use without stacking another scrolling page.
+            {t("description")}
           </p>
         </div>
       </div>

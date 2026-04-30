@@ -1,6 +1,18 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { LauncherGrid } from "./launcher-grid";
+
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => {
+    const translations: Record<string, string> = {
+      kicker: "Tools",
+      title: "Popular budgeting tools",
+      description: "Open the lanes you actually use without stacking another scrolling page.",
+    };
+
+    return translations[key] ?? key;
+  },
+}));
 
 describe("LauncherGrid", () => {
   it("renders popular budgeting tools as practical action cards", () => {

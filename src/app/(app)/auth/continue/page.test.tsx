@@ -3,8 +3,6 @@ import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const authMock = vi.hoisted(() => vi.fn());
-const currentUserMock = vi.hoisted(() => vi.fn());
-const clerkConfiguredMock = vi.hoisted(() => vi.fn());
 const bootstrapUserMock = vi.hoisted(() => vi.fn());
 const bootstrapUserLinkConflictErrorMessage = vi.hoisted(
   () => "A different Clerk account is already linked to this local profile.",
@@ -15,18 +13,66 @@ const redirectMock = vi.hoisted(() =>
   }),
 );
 
-vi.mock("@clerk/nextjs/server", () => ({
+vi.mock("@/auth", () => ({
   auth: authMock,
-  currentUser: currentUserMock,
 }));
 
 vi.mock("next/navigation", () => ({
   redirect: redirectMock,
+  useRouter: () => ({ refresh: () => undefined }),
 }));
 
-vi.mock("@/lib/auth/clerk-config", () => ({
-  clerkConfigurationErrorMessage: "Clerk auth is not configured.",
-  isClerkConfigured: clerkConfiguredMock,
+vi.mock("next-intl", () => ({
+  useLocale: () => "en",
+  useTranslations: () => (key: string) => {
+    const translations: Record<string, string> = {
+      label: "Language",
+      "options.en": "English",
+      "options.zh": "简体中文",
+      "options.th": "ไทย",
+    };
+
+    return translations[key] ?? key;
+  },
+}));
+
+vi.mock("@/i18n/server", () => ({
+  getRequestMessages: async () => ({
+    authPanel: {
+      secureAccess: "Secure access",
+      useGoogleToStart: "Use Google to start",
+      useGoogleToContinue: "Use Google to continue",
+      googleOnly: "Google is the only sign-in method for this app.",
+      secureSignIn: "Google is only used for secure sign-in and account verification.",
+      gmailPrivacy: "BudgetBITCH never reads or stores Gmail inbox or message content.",
+      minimalData:
+        "BudgetBITCH keeps only the minimal account, workspace, preference, and integration data it needs to run.",
+      whyThisStepExists: "Why this step exists",
+      localProfileFirst: "Local profile first",
+      localProfileDescription:
+        "BudgetBITCH uses Google to verify who you are, then creates your local profile, personal workspace, and default workspace preference once so the app can load the right data shape on the server.",
+    },
+    authContinue: {
+      eyebrow: "Continue",
+      missingEmailTitle: "Add an email to finish setup",
+      missingEmailDescription:
+        "BudgetBITCH requires a verified Google email account before local setup can finish.",
+      missingEmailHelp:
+        "Use the Google sign-in flow with a verified email account, then return here to finish setup.",
+      title: "Finish your local setup",
+      description:
+        "BudgetBITCH needs one local profile and one personal workspace before the dashboard can load server-side data for this account.",
+      whatHappensNext: "What happens next",
+      oneSafeBootstrap: "One safe bootstrap",
+      oneSafeBootstrapDescription:
+        "The continue action creates any missing records once, reuses them on later sign-ins, and then opens your dashboard with the resulting workspace selected.",
+      relinkConflict:
+        "This email is already linked to a different account. Sign out here, switch to the original sign-in method, or contact support before continuing.",
+      continueToDashboard: "Continue to dashboard",
+      rerunSafe:
+        "This is safe to run again if your session already created the local records.",
+    },
+  }),
 }));
 
 vi.mock("@/modules/auth/bootstrap-user", () => ({
@@ -58,8 +104,7 @@ describe("AuthContinuePage", () => {
   });
 
   it("redirects anonymous visitors to sign-in with an auth continue target", async () => {
-    clerkConfiguredMock.mockReturnValue(true);
-    authMock.mockResolvedValue({ userId: null });
+    authMock.mockResolvedValue(null);
 
     await expect(AuthContinuePage()).rejects.toThrow(
       "REDIRECT:/sign-in?redirectTo=%2Fauth%2Fcontinue",
@@ -68,8 +113,7 @@ describe("AuthContinuePage", () => {
   });
 
   it("preserves a safe root target when auth continue has to send users back to sign-in", async () => {
-    clerkConfiguredMock.mockReturnValue(true);
-    authMock.mockResolvedValue({ userId: null });
+    authMock.mockResolvedValue(null);
 
     await expect(
       AuthContinuePage({ searchParams: Promise.resolve({ redirectTo: "/" }) }),
@@ -77,18 +121,14 @@ describe("AuthContinuePage", () => {
     expect(redirectMock).toHaveBeenCalledWith("/sign-in?redirectTo=%2F");
   });
 
-  it("renders recovery guidance when the Clerk account has no verified email", async () => {
-    clerkConfiguredMock.mockReturnValue(true);
-    authMock.mockResolvedValue({ userId: "clerk_user_1" });
-    currentUserMock.mockResolvedValue({
-      firstName: "Alex",
-      lastName: "Example",
-      username: null,
-      primaryEmailAddress: {
-        emailAddress: "alex@example.com",
-        verification: { status: "unverified" },
+  it("renders recovery guidance when the authenticated session has no verified email", async () => {
+    authMock.mockResolvedValue({
+      user: {
+        id: "google-sub-1",
+        email: "alex@example.com",
+        name: "Alex Example",
+        emailVerified: false,
       },
-      emailAddresses: [{ emailAddress: "alex@example.com", verification: { status: "unverified" } }],
     });
 
     const view = await AuthContinuePage();
@@ -96,24 +136,18 @@ describe("AuthContinuePage", () => {
 
     expect(screen.getByRole("heading", { name: /add an email to finish setup/i })).toBeInTheDocument();
     expect(
-      screen.getByText(/use an email-based clerk sign-in method, or add an email to this account/i),
+      screen.getByText(/use the google sign-in flow with a verified email account/i),
     ).toBeInTheDocument();
   });
 
   it("renders the continue action for email-backed users", async () => {
-    clerkConfiguredMock.mockReturnValue(true);
-    authMock.mockResolvedValue({ userId: "clerk_user_1" });
-    currentUserMock.mockResolvedValue({
-      firstName: "Alex",
-      lastName: "Example",
-      username: "alex",
-      primaryEmailAddress: {
-        emailAddress: "alex@example.com",
-        verification: { status: "verified" },
+    authMock.mockResolvedValue({
+      user: {
+        id: "google-sub-1",
+        email: "alex@example.com",
+        name: "Alex Example",
+        emailVerified: true,
       },
-      emailAddresses: [
-        { emailAddress: "alex@example.com", verification: { status: "verified" } },
-      ],
     });
 
     const view = await AuthContinuePage();
@@ -123,20 +157,14 @@ describe("AuthContinuePage", () => {
     expect(screen.getByRole("button", { name: /continue to dashboard/i })).toBeInTheDocument();
   });
 
-  it("renders recovery guidance when bootstrap hits a Clerk link conflict", async () => {
-    clerkConfiguredMock.mockReturnValue(true);
-    authMock.mockResolvedValue({ userId: "clerk_user_1" });
-    currentUserMock.mockResolvedValue({
-      firstName: "Alex",
-      lastName: "Example",
-      username: "alex",
-      primaryEmailAddress: {
-        emailAddress: "alex@example.com",
-        verification: { status: "verified" },
+  it("renders recovery guidance when bootstrap hits an account link conflict", async () => {
+    authMock.mockResolvedValue({
+      user: {
+        id: "google-sub-1",
+        email: "alex@example.com",
+        name: "Alex Example",
+        emailVerified: true,
       },
-      emailAddresses: [
-        { emailAddress: "alex@example.com", verification: { status: "verified" } },
-      ],
     });
 
     const view = await AuthContinuePage({
@@ -145,7 +173,7 @@ describe("AuthContinuePage", () => {
     render(view);
 
     expect(
-      screen.getByText(/already linked to a different clerk account/i),
+      screen.getByText(/already linked to a different account/i),
     ).toBeInTheDocument();
     expect(screen.getByTestId("auth-account-recovery-button")).toHaveAttribute(
       "data-redirect-to",
@@ -154,19 +182,13 @@ describe("AuthContinuePage", () => {
   });
 
   it("boots the local workspace and redirects to the dashboard when the continue action runs", async () => {
-    clerkConfiguredMock.mockReturnValue(true);
-    authMock.mockResolvedValue({ userId: "clerk_user_1" });
-    currentUserMock.mockResolvedValue({
-      firstName: "Alex",
-      lastName: "Example",
-      username: "alex",
-      primaryEmailAddress: {
-        emailAddress: "alex@example.com",
-        verification: { status: "verified" },
+    authMock.mockResolvedValue({
+      user: {
+        id: "google-sub-1",
+        email: "alex@example.com",
+        name: "Alex Example",
+        emailVerified: true,
       },
-      emailAddresses: [
-        { emailAddress: "alex@example.com", verification: { status: "verified" } },
-      ],
     });
     bootstrapUserMock.mockResolvedValue({
       userId: "profile-1",
@@ -180,7 +202,7 @@ describe("AuthContinuePage", () => {
       "REDIRECT:/dashboard?workspaceId=workspace-1",
     );
     expect(bootstrapUserMock).toHaveBeenCalledWith({
-      clerkUserId: "clerk_user_1",
+      clerkUserId: "google-sub-1",
       email: "alex@example.com",
       displayName: "Alex Example",
     });
@@ -188,19 +210,13 @@ describe("AuthContinuePage", () => {
   });
 
   it("preserves a safe dashboard target until bootstrap finishes", async () => {
-    clerkConfiguredMock.mockReturnValue(true);
-    authMock.mockResolvedValue({ userId: "clerk_user_1" });
-    currentUserMock.mockResolvedValue({
-      firstName: "Alex",
-      lastName: "Example",
-      username: "alex",
-      primaryEmailAddress: {
-        emailAddress: "alex@example.com",
-        verification: { status: "verified" },
+    authMock.mockResolvedValue({
+      user: {
+        id: "google-sub-1",
+        email: "alex@example.com",
+        name: "Alex Example",
+        emailVerified: true,
       },
-      emailAddresses: [
-        { emailAddress: "alex@example.com", verification: { status: "verified" } },
-      ],
     });
     bootstrapUserMock.mockResolvedValue({
       userId: "profile-1",
@@ -221,19 +237,13 @@ describe("AuthContinuePage", () => {
   });
 
   it("returns to the root gate when bootstrap finishes with a safe root target", async () => {
-    clerkConfiguredMock.mockReturnValue(true);
-    authMock.mockResolvedValue({ userId: "clerk_user_1" });
-    currentUserMock.mockResolvedValue({
-      firstName: "Alex",
-      lastName: "Example",
-      username: "alex",
-      primaryEmailAddress: {
-        emailAddress: "alex@example.com",
-        verification: { status: "verified" },
+    authMock.mockResolvedValue({
+      user: {
+        id: "google-sub-1",
+        email: "alex@example.com",
+        name: "Alex Example",
+        emailVerified: true,
       },
-      emailAddresses: [
-        { emailAddress: "alex@example.com", verification: { status: "verified" } },
-      ],
     });
     bootstrapUserMock.mockResolvedValue({
       userId: "profile-1",
@@ -249,20 +259,14 @@ describe("AuthContinuePage", () => {
     expect(redirectMock).toHaveBeenCalledWith("/");
   });
 
-  it("redirects back to auth continue recovery when bootstrap finds a Clerk link conflict", async () => {
-    clerkConfiguredMock.mockReturnValue(true);
-    authMock.mockResolvedValue({ userId: "clerk_user_1" });
-    currentUserMock.mockResolvedValue({
-      firstName: "Alex",
-      lastName: "Example",
-      username: "alex",
-      primaryEmailAddress: {
-        emailAddress: "alex@example.com",
-        verification: { status: "verified" },
+  it("redirects back to auth continue recovery when bootstrap finds an account link conflict", async () => {
+    authMock.mockResolvedValue({
+      user: {
+        id: "google-sub-1",
+        email: "alex@example.com",
+        name: "Alex Example",
+        emailVerified: true,
       },
-      emailAddresses: [
-        { emailAddress: "alex@example.com", verification: { status: "verified" } },
-      ],
     });
     bootstrapUserMock.mockRejectedValue(new Error(bootstrapUserLinkConflictErrorMessage));
 
@@ -276,19 +280,13 @@ describe("AuthContinuePage", () => {
   });
 
   it("preserves a safe root target when bootstrap hits a relink conflict", async () => {
-    clerkConfiguredMock.mockReturnValue(true);
-    authMock.mockResolvedValue({ userId: "clerk_user_1" });
-    currentUserMock.mockResolvedValue({
-      firstName: "Alex",
-      lastName: "Example",
-      username: "alex",
-      primaryEmailAddress: {
-        emailAddress: "alex@example.com",
-        verification: { status: "verified" },
+    authMock.mockResolvedValue({
+      user: {
+        id: "google-sub-1",
+        email: "alex@example.com",
+        name: "Alex Example",
+        emailVerified: true,
       },
-      emailAddresses: [
-        { emailAddress: "alex@example.com", verification: { status: "verified" } },
-      ],
     });
     bootstrapUserMock.mockRejectedValue(new Error(bootstrapUserLinkConflictErrorMessage));
 
@@ -306,19 +304,13 @@ describe("AuthContinuePage", () => {
   });
 
   it("offers an account-switch recovery action that preserves a safe root target", async () => {
-    clerkConfiguredMock.mockReturnValue(true);
-    authMock.mockResolvedValue({ userId: "clerk_user_1" });
-    currentUserMock.mockResolvedValue({
-      firstName: "Alex",
-      lastName: "Example",
-      username: "alex",
-      primaryEmailAddress: {
-        emailAddress: "alex@example.com",
-        verification: { status: "verified" },
+    authMock.mockResolvedValue({
+      user: {
+        id: "google-sub-1",
+        email: "alex@example.com",
+        name: "Alex Example",
+        emailVerified: true,
       },
-      emailAddresses: [
-        { emailAddress: "alex@example.com", verification: { status: "verified" } },
-      ],
     });
 
     const view = await AuthContinuePage({

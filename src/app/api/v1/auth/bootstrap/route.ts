@@ -1,39 +1,31 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { auth } from "@/auth";
 import {
-  clerkConfigurationErrorMessage,
-  isClerkConfigured,
-} from "@/lib/auth/clerk-config";
+  getAuthenticatedUserDisplayName,
+  getAuthenticatedUserEmail,
+  getAuthenticatedUserId,
+} from "@/lib/auth/session";
 import {
   bootstrapUser,
   bootstrapUserLinkConflictErrorMessage,
 } from "@/modules/auth/bootstrap-user";
-import {
-  getClerkUserDisplayName,
-  getClerkUserEmail,
-  missingClerkUserEmailErrorMessage,
-} from "@/modules/auth/clerk-user";
+
+const missingAuthenticatedUserEmailErrorMessage =
+  "BudgetBITCH requires a verified Google email account before local setup can finish.";
 
 export async function POST() {
-  if (!isClerkConfigured()) {
-    return NextResponse.json(
-      { error: clerkConfigurationErrorMessage },
-      { status: 503 },
-    );
-  }
-
-  const { userId } = await auth();
+  const session = await auth();
+  const userId = getAuthenticatedUserId(session);
 
   if (!userId) {
     return NextResponse.json({ error: "Authentication is required." }, { status: 401 });
   }
 
-  const user = await currentUser();
-  const email = getClerkUserEmail(user);
+  const email = getAuthenticatedUserEmail(session);
 
   if (!email) {
     return NextResponse.json(
-      { error: missingClerkUserEmailErrorMessage },
+      { error: missingAuthenticatedUserEmailErrorMessage },
       { status: 400 },
     );
   }
@@ -42,7 +34,7 @@ export async function POST() {
     const result = await bootstrapUser({
       clerkUserId: userId,
       email,
-      displayName: getClerkUserDisplayName(user),
+      displayName: getAuthenticatedUserDisplayName(session),
     });
 
     return NextResponse.json(result);

@@ -1,6 +1,6 @@
 import { MobilePanelFrame } from "@/components/mobile/mobile-panel-frame";
 import { ProviderCard } from "@/components/integrations/provider-card";
-import { buildProviderActionList } from "@/modules/integrations/integration-actions";
+import { getRequestMessages } from "@/i18n/server";
 import { providerRegistry } from "@/modules/integrations/provider-registry";
 import {
   Briefcase,
@@ -13,43 +13,29 @@ import {
 
 type ProviderCategory = "ai" | "banking" | "investing" | "payroll" | "tax" | "finance_ops";
 
-const categoryMeta: Record<
-  ProviderCategory,
-  { label: string; summary: string; icon: LucideIcon }
-> = {
+const categoryMeta: Record<ProviderCategory, { icon: LucideIcon }> = {
   ai: {
-    label: "AI copilots",
-    summary: "Model-powered helpers, planning copilots, and prompt-heavy workflow tools.",
     icon: Sparkles,
   },
   banking: {
-    label: "Banking rails",
-    summary: "Account verification and banking connections that should feel official, not sneaky.",
     icon: Landmark,
   },
   investing: {
-    label: "Investing",
-    summary: "Brokerage and portfolio tools that belong behind clear permissions and revoke paths.",
     icon: Sparkles,
   },
   payroll: {
-    label: "Payroll",
-    summary: "Income, pay runs, and worker details that need low-friction but careful setup.",
     icon: Wallet,
   },
   tax: {
-    label: "Tax and accounting",
-    summary: "Documents, filings, and ledger access where trust cues must be obvious.",
     icon: Receipt,
   },
   finance_ops: {
-    label: "Finance operations",
-    summary: "Expense, card, and ops tooling for the parts of money management that stay boring on purpose.",
     icon: Briefcase,
   },
 };
 
-export default function IntegrationsPage() {
+export default async function IntegrationsPage() {
+  const messages = await getRequestMessages();
   const providersByCategory = Object.values(providerRegistry).reduce(
     (groups, provider) => {
       groups[provider.category].push(provider);
@@ -70,21 +56,20 @@ export default function IntegrationsPage() {
       <MobilePanelFrame>
       <section className="mx-auto max-w-7xl rounded-[36px] border border-white/10 bg-black/20 p-6 backdrop-blur md:p-8">
         <header className="max-w-4xl">
-          <p className="text-sm uppercase tracking-[0.3em] text-yellow-200">Connection Hub</p>
+          <p className="text-sm uppercase tracking-[0.3em] text-yellow-200">{messages.integrationsHub.eyebrow}</p>
           <h1 className="mt-3 text-3xl font-bold sm:text-4xl">
-            Connect only the providers you can scan and trust fast.
+            {messages.integrationsHub.title}
           </h1>
           <p className="mt-3 text-sm text-emerald-50/85 sm:text-base">
-            Every group below leads with the official route, the risk level, and the easiest next
-            action so you can move without reading a giant safety essay first.
+            {messages.integrationsHub.description}
           </p>
         </header>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
           {[
-            "Official routes first",
-            "No silent sharing",
-            "Revoke path stays obvious",
+            messages.integrationsHub.guardrails.officialRoutesFirst,
+            messages.integrationsHub.guardrails.noSilentSharing,
+            messages.integrationsHub.guardrails.revokePathStaysObvious,
           ].map((item) => (
             <div
               key={item}
@@ -102,6 +87,7 @@ export default function IntegrationsPage() {
             }
 
             const meta = categoryMeta[category as ProviderCategory];
+            const categoryMessages = messages.integrationsHub.categories[category as ProviderCategory];
             const Icon = meta.icon;
 
             return (
@@ -116,25 +102,21 @@ export default function IntegrationsPage() {
                       <Icon aria-hidden="true" className="h-5 w-5" />
                     </span>
                     <div>
-                      <p className="text-sm uppercase tracking-[0.22em] text-yellow-200">Grouped scan</p>
+                      <p className="text-sm uppercase tracking-[0.22em] text-yellow-200">{messages.integrationsHub.groupedScan}</p>
                       <h2 id={`${category}-heading`} className="mt-2 text-2xl font-semibold text-white">
-                        {meta.label}
+                        {categoryMessages.label}
                       </h2>
-                      <p className="mt-2 max-w-3xl text-sm text-emerald-50/75">{meta.summary}</p>
+                      <p className="mt-2 max-w-3xl text-sm text-emerald-50/75">{categoryMessages.summary}</p>
                     </div>
                   </div>
                   <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-100">
-                    {providers.length} providers
+                    {messages.integrationsHub.providerCount.replace("{count}", String(providers.length))}
                   </span>
                 </div>
 
                 <div className="mt-5 grid gap-4 xl:grid-cols-3">
                   {providers.map((provider) => (
-                    <ProviderCard
-                      key={provider.id}
-                      provider={provider}
-                      actions={buildProviderActionList(provider)}
-                    />
+                    <ProviderCard key={provider.id} provider={provider} />
                   ))}
                 </div>
               </section>

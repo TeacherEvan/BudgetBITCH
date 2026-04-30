@@ -1,18 +1,16 @@
 "use client";
 
-import { ClerkProvider, useAuth } from "@clerk/nextjs";
-import { ConvexReactClient } from "convex/react";
-import { ConvexProviderWithClerk } from "convex/react-clerk";
-import { useEffect, useMemo, useRef, type ComponentProps, type ReactNode } from "react";
+import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { SessionProvider } from "next-auth/react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { PwaProvider } from "@/components/providers/pwa-provider";
-import { getClerkFrontendHost, isClerkClientConfigured } from "@/lib/auth/clerk-config";
 import { isAbsoluteHttpUrl } from "@/lib/url";
 
 type AppProvidersProps = {
   children: ReactNode;
 };
 
-function ConvexClerkProviders({
+function ConvexAppProviders({
   children,
   convexUrl,
 }: AppProvidersProps & {
@@ -20,33 +18,14 @@ function ConvexClerkProviders({
 }) {
   const convex = useMemo(() => new ConvexReactClient(convexUrl), [convexUrl]);
 
-  return (
-    <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-      {children}
-    </ConvexProviderWithClerk>
-  );
+  return <ConvexProvider client={convex}>{children}</ConvexProvider>;
 }
 
 export function AppProviders({ children }: AppProvidersProps) {
-  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim();
   const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL?.trim();
   const convexUrlValue = convexUrl ?? "";
-  const clerkConfigured = isClerkClientConfigured();
-  const clerkFrontendHost = getClerkFrontendHost(publishableKey);
   const convexUrlConfigured = isAbsoluteHttpUrl(convexUrl);
   const hasWarnedAboutConvexUrl = useRef(false);
-  const hasWarnedAboutClerkConfig = useRef(false);
-
-  useEffect(() => {
-    if (!publishableKey || clerkConfigured || hasWarnedAboutClerkConfig.current) {
-      return;
-    }
-
-    hasWarnedAboutClerkConfig.current = true;
-    console.warn(
-      "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is missing, placeholder, or malformed; skipping Clerk provider.",
-    );
-  }, [clerkConfigured, publishableKey]);
 
   useEffect(() => {
     if (!convexUrl || convexUrlConfigured || hasWarnedAboutConvexUrl.current) {
@@ -59,30 +38,17 @@ export function AppProviders({ children }: AppProvidersProps) {
     );
   }, [convexUrl, convexUrlConfigured]);
 
-  const pwaChildren = <PwaProvider>{children}</PwaProvider>;
+  const providerChildren = <SessionProvider>{children}</SessionProvider>;
 
-  if (!publishableKey || !clerkConfigured) {
-    return pwaChildren;
+  if (!convexUrlConfigured) {
+    return <PwaProvider>{providerChildren}</PwaProvider>;
   }
-
-  const clerkProviderProps = {
-    publishableKey,
-    ...(clerkFrontendHost
-      ? {
-          __internal_clerkJSUrl: `https://${clerkFrontendHost}/npm/@clerk/clerk-js@6/dist/clerk.browser.js`,
-        }
-      : {}),
-  } as unknown as ComponentProps<typeof ClerkProvider>;
 
   return (
     <PwaProvider>
-      <ClerkProvider {...clerkProviderProps}>
-        {convexUrlConfigured ? (
-          <ConvexClerkProviders convexUrl={convexUrlValue}>{children}</ConvexClerkProviders>
-        ) : (
-          children
-        )}
-      </ClerkProvider>
+      <SessionProvider>
+        <ConvexAppProviders convexUrl={convexUrlValue}>{children}</ConvexAppProviders>
+      </SessionProvider>
     </PwaProvider>
   );
 }

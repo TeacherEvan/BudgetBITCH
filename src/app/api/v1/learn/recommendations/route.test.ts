@@ -1,13 +1,41 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const findLatestBlueprintMock = vi.fn();
+const localDemoWorkspaceId = vi.hoisted(() => "demo_workspace");
 const resolveWorkspaceApiAccessMock = vi.hoisted(() => vi.fn());
+const WorkspaceApiAccessErrorMock = vi.hoisted(
+  () =>
+    class WorkspaceApiAccessError extends Error {
+      constructor(
+        message: string,
+        public readonly status: number,
+        public readonly reason: string,
+      ) {
+        super(message);
+        this.name = "WorkspaceApiAccessError";
+      }
+    },
+);
 
-vi.mock("@/lib/auth/workspace-api-access", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/auth/workspace-api-access")>();
-
+vi.mock("@/lib/auth/workspace-api-access", () => {
   return {
-    ...actual,
+    localDemoWorkspaceId,
+    WorkspaceApiAccessError: WorkspaceApiAccessErrorMock,
+    createWorkspaceApiAccessErrorResponse: (error: unknown) => {
+      if (!(error instanceof WorkspaceApiAccessErrorMock)) {
+        return null;
+      }
+
+      return Response.json(
+        {
+          error: {
+            message: error.message,
+            reason: error.reason,
+          },
+        },
+        { status: error.status },
+      );
+    },
     resolveWorkspaceApiAccess: resolveWorkspaceApiAccessMock,
   };
 });

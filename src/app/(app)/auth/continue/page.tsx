@@ -1,20 +1,17 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { auth } from "@/auth";
 import { AuthAccountRecoveryButton } from "@/components/auth/auth-account-recovery-button";
 import { AuthEntryPanel } from "@/components/auth/auth-entry-panel";
+import { getRequestMessages } from "@/i18n/server";
 import {
-  clerkConfigurationErrorMessage,
-  isClerkConfigured,
-} from "@/lib/auth/clerk-config";
+  getAuthenticatedUserDisplayName,
+  getAuthenticatedUserEmail,
+  getAuthenticatedUserId,
+} from "@/lib/auth/session";
 import {
   bootstrapUser,
   bootstrapUserLinkConflictErrorMessage,
 } from "@/modules/auth/bootstrap-user";
-import {
-  getClerkUserDisplayName,
-  getClerkUserEmail,
-  missingClerkUserEmailErrorMessage,
-} from "@/modules/auth/clerk-user";
 import { getSafePostAuthRedirect } from "@/modules/auth/post-auth-redirect";
 
 type AuthContinuePageProps = {
@@ -51,42 +48,29 @@ function getPostBootstrapRedirect(redirectTarget: string, workspaceId: string) {
 
 export default async function AuthContinuePage({ searchParams }: AuthContinuePageProps = {}) {
   const resolvedSearchParams = (await searchParams) ?? undefined;
+  const messages = await getRequestMessages();
   const redirectTarget = getSafePostAuthRedirect(getSearchParam(resolvedSearchParams, "redirectTo"));
   const errorCode = getSearchParam(resolvedSearchParams, "error");
 
-  if (!isClerkConfigured()) {
-    return (
-      <AuthEntryPanel
-        eyebrow="Continue"
-        title="Auth continue is not ready yet"
-        description={clerkConfigurationErrorMessage}
-      >
-        <p className="bb-mini-copy text-sm">Add valid Clerk keys to finish post-auth setup.</p>
-      </AuthEntryPanel>
-    );
-  }
-
-  const { userId } = await auth();
+  const session = await auth();
+  const userId = getAuthenticatedUserId(session);
 
   if (!userId) {
     redirect(`/sign-in?redirectTo=${encodeURIComponent(redirectTarget)}`);
   }
 
   const authenticatedUserId = userId;
-
-  const user = await currentUser();
-  const email = getClerkUserEmail(user);
+  const email = getAuthenticatedUserEmail(session);
 
   if (!email) {
     return (
       <AuthEntryPanel
-        eyebrow="Continue"
-        title="Add an email to finish setup"
-        description={missingClerkUserEmailErrorMessage}
+        eyebrow={messages.authContinue.eyebrow}
+        title={messages.authContinue.missingEmailTitle}
+        description={messages.authContinue.missingEmailDescription}
+        copy={messages.authPanel}
       >
-        <p className="bb-mini-copy text-sm">
-          Use an email-based Clerk sign-in method, or add an email to this account, then return here.
-        </p>
+        <p className="bb-mini-copy text-sm">{messages.authContinue.missingEmailHelp}</p>
       </AuthEntryPanel>
     );
   }
@@ -98,7 +82,7 @@ export default async function AuthContinuePage({ searchParams }: AuthContinuePag
       const result = await bootstrapUser({
         clerkUserId: authenticatedUserId,
         email,
-        displayName: getClerkUserDisplayName(user),
+        displayName: getAuthenticatedUserDisplayName(session),
       });
 
       redirect(getPostBootstrapRedirect(redirectTarget, result.workspaceId));
@@ -125,35 +109,31 @@ export default async function AuthContinuePage({ searchParams }: AuthContinuePag
 
   return (
     <AuthEntryPanel
-      eyebrow="Continue"
-      title="Finish your local setup"
-      description="BudgetBITCH needs one local profile and one personal workspace before the dashboard can load server-side data for this account."
+      eyebrow={messages.authContinue.eyebrow}
+      title={messages.authContinue.title}
+      description={messages.authContinue.description}
+      copy={messages.authPanel}
       aside={
         <article className="bb-panel bb-panel-muted p-5">
-          <p className="bb-kicker">What happens next</p>
-          <h2 className="mt-2 text-2xl font-semibold">One safe bootstrap</h2>
-          <p className="bb-mini-copy mt-3 text-sm">
-            The continue action creates any missing records once, reuses them on later sign-ins,
-            and then opens your dashboard with the resulting workspace selected.
-          </p>
+          <p className="bb-kicker">{messages.authContinue.whatHappensNext}</p>
+          <h2 className="mt-2 text-2xl font-semibold">{messages.authContinue.oneSafeBootstrap}</h2>
+          <p className="bb-mini-copy mt-3 text-sm">{messages.authContinue.oneSafeBootstrapDescription}</p>
         </article>
       }
     >
       {errorCode === "relink-conflict" ? (
         <div className="mb-4 flex flex-col gap-3">
           <p className="text-sm text-rose-200" role="alert">
-            This email is already linked to a different Clerk account. Sign out here, switch to the original sign-in method, or contact support before continuing.
+            {messages.authContinue.relinkConflict}
           </p>
           <AuthAccountRecoveryButton redirectTo={redirectTarget} />
         </div>
       ) : null}
       <form action={completeBootstrapAction} className="flex flex-col gap-3">
         <button type="submit" className="bb-button-primary w-full justify-center md:w-auto">
-          Continue to dashboard
+          {messages.authContinue.continueToDashboard}
         </button>
-        <p className="bb-mini-copy text-sm">
-          This is safe to run again if your session already created the local records.
-        </p>
+        <p className="bb-mini-copy text-sm">{messages.authContinue.rerunSafe}</p>
       </form>
     </AuthEntryPanel>
   );

@@ -2,6 +2,21 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NotesBoard } from "./notes-board";
 
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string, values?: Record<string, string>) => {
+    const translations: Record<string, string> = {
+      regionLabel: "Notes board",
+      inputLabel: "New note",
+      inputPlaceholder: "Type a note and press Enter or Add note…",
+      addNote: "Add note",
+      emptyState: "No notes yet — add your first one above.",
+      deleteNote: `Delete ${values?.text ?? ""}`.trim(),
+    };
+
+    return translations[key] ?? key;
+  },
+}));
+
 const localStorageMock = (() => {
   let store: Record<string, string> = {};
   return {
