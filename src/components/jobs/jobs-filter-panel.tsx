@@ -1,4 +1,5 @@
 import type { JobSearchFilters } from "@/modules/jobs/job-schema";
+import { HomeLocationCard } from "@/components/home-location/home-location-card";
 import { DollarSign, Filter, MapPin, Sparkles, type LucideIcon } from "lucide-react";
 import { JobFitBadge } from "./job-fit-badge";
 
@@ -76,6 +77,16 @@ export function JobsFilterPanel({ filters, jobCount, laneCount }: JobsFilterPane
           ))}
         </div>
       </div>
+
+      <HomeLocationCard
+        kicker="Home base"
+        title="Sticky home location"
+        description="Jobs can now reuse the same saved home base that Start Smart and dashboard read."
+        emptyStateCopy="No home base saved yet. Set one in Start Smart so regional job cues have one shared anchor."
+        actionHref="/start-smart"
+        actionLabel="Open setup wizard"
+        className="mt-5 p-4"
+      />
 
       <p className="mt-5 text-sm text-emerald-50/75">
         {jobCount} seeded matches are already sorted into fast-scan recommendation lanes.

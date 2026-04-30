@@ -42,7 +42,7 @@ export const localeMessages = {
       brand: "BudgetBITCH",
       heading: "Open your BudgetBITCH board",
       description:
-        "Sign in to unlock your root flow. After that, BudgetBITCH can send you into the setup wizard or straight to the landing board based on your saved launch profile.",
+        "Sign in to unlock your root flow. After that, BudgetBITCH can send you into the one-time startup questionnaire or straight to the landing board based on your saved startup progress.",
       openSignIn: "Open sign in",
       openSignUp: "Open sign-up",
       quickReasonsAria: "Welcome quick reasons",
@@ -55,7 +55,7 @@ export const localeMessages = {
         keepItShort: {
           title: "Keep the first step short",
           description:
-            "The setup wizard only appears after sign-in and only when your launch profile is still incomplete.",
+            "The startup questionnaire only appears after sign-in and only when your first-run progress is still incomplete.",
         },
         moveWithoutSprawl: {
           title: "Move without the sprawl",
@@ -66,13 +66,51 @@ export const localeMessages = {
       rootFlow: "Root flow",
       authFirstThenSetup: "Auth first, then setup",
       rootFlowDescription:
-        "Signed-out visitors stay on this welcome window. Signed-in visitors move into the wizard only when the launch profile still needs to be completed.",
+        "Signed-out visitors stay on this welcome window. Signed-in visitors move into the startup questionnaire only when first-run setup still needs to be completed.",
       whatChangesNext: "What changes next",
       nextSteps: {
         signIn: "Sign in when you already have an account.",
         signUp: "Sign up when you need a fresh account before setup begins.",
         finishWizard:
-          "Finish the launch wizard once, then return to the landing board on future visits.",
+          "Finish the startup questionnaire once, then return to the landing board on future visits.",
+      },
+    },
+    launchWizard: {
+      kicker: "Startup questionnaire",
+      title: "Ballpark expenses",
+      description:
+        "Add rough recurring costs first so BudgetBITCH can open with a practical money baseline instead of a blank board.",
+      topCategoriesTitle: "Common expense titles",
+      entryLabel: "Expense title",
+      entryPlaceholder: "Search or select a common expense",
+      customTitleLabel: "Custom expense title",
+      customTitlePlaceholder: "Use this when the list does not fit",
+      amountLabel: "Rough monthly amount",
+      addExpense: "Add expense",
+      finish: "Finish startup",
+      summaryTitle: "Ballpark entries",
+      emptySummary: "No expenses added yet.",
+      helperTitle: "Why this comes first",
+      helperDescription:
+        "This first popup stays lightweight: rough categories, rough amounts, then the normal app flow.",
+      currentCountLabel: "Saved categories",
+      errors: {
+        titleRequired: "Choose a common expense title or enter a custom one.",
+        amountRequired: "Enter a rough monthly amount greater than zero.",
+        atLeastOne: "Add at least one ballpark expense before finishing startup.",
+        saveFailed: "Unable to save startup settings in this browser.",
+      },
+      categories: {
+        rentMortgage: "Rent or mortgage",
+        groceries: "Groceries",
+        utilities: "Utilities",
+        transportFuel: "Transport or fuel",
+        phoneInternet: "Phone or internet",
+        insurance: "Insurance",
+        debtPayments: "Debt payments",
+        healthcare: "Healthcare",
+        childcareFamilySupport: "Childcare or family support",
+        funEntertainment: "Fun or entertainment",
       },
     },
     authPanel: {
@@ -428,7 +466,7 @@ export const localeMessages = {
       brand: "BudgetBITCH",
       heading: "打开你的 BudgetBITCH 控制板",
       description:
-        "先登录，再解锁你的起始流程。之后，BudgetBITCH 会根据你保存的启动配置，把你带到设置向导或直接进入主面板。",
+        "先登录，再解锁你的起始流程。之后，BudgetBITCH 会根据你保存的启动进度，把你带到一次性的启动问卷或直接进入主面板。",
       openSignIn: "打开登录",
       openSignUp: "打开注册",
       quickReasonsAria: "欢迎页重点说明",
@@ -439,7 +477,7 @@ export const localeMessages = {
         },
         keepItShort: {
           title: "让第一步保持简短",
-          description: "只有在登录后且你的启动配置尚未完成时，设置向导才会出现。",
+          description: "只有在登录后且你的首次启动进度尚未完成时，启动问卷才会出现。",
         },
         moveWithoutSprawl: {
           title: "保持清晰，不要蔓延",
@@ -449,12 +487,48 @@ export const localeMessages = {
       rootFlow: "起始流程",
       authFirstThenSetup: "先认证，再设置",
       rootFlowDescription:
-        "未登录访客会停留在这个欢迎窗口。已登录访客只有在启动配置尚未完成时才会进入向导。",
+        "未登录访客会停留在这个欢迎窗口。已登录访客只有在首次启动尚未完成时才会进入启动问卷。",
       whatChangesNext: "接下来会发生什么",
       nextSteps: {
         signIn: "如果你已有账户，请先登录。",
         signUp: "如果你需要新账户，请先注册，然后再开始设置。",
-        finishWizard: "启动向导只需完成一次，之后再次访问会直接返回主面板。",
+        finishWizard: "启动问卷只需完成一次，之后再次访问会直接返回主面板。",
+      },
+    },
+    launchWizard: {
+      kicker: "启动问卷",
+      title: "大致开支",
+      description: "先记录粗略的常见支出，让 BudgetBITCH 打开时就有一个实用的资金基线，而不是空白面板。",
+      topCategoriesTitle: "常见支出标题",
+      entryLabel: "支出标题",
+      entryPlaceholder: "搜索或选择一个常见支出",
+      customTitleLabel: "自定义支出标题",
+      customTitlePlaceholder: "当列表不适用时请在这里输入",
+      amountLabel: "每月大致金额",
+      addExpense: "添加支出",
+      finish: "完成启动",
+      summaryTitle: "大致记录",
+      emptySummary: "还没有添加任何支出。",
+      helperTitle: "为什么先做这一步",
+      helperDescription: "这个第一步弹窗保持轻量：粗略类别、粗略金额，然后进入正常应用流程。",
+      currentCountLabel: "已保存类别",
+      errors: {
+        titleRequired: "请选择一个常见支出标题，或者输入一个自定义标题。",
+        amountRequired: "请输入一个大于零的每月大致金额。",
+        atLeastOne: "完成启动前，至少添加一项大致支出。",
+        saveFailed: "无法在这个浏览器里保存启动设置。",
+      },
+      categories: {
+        rentMortgage: "房租或房贷",
+        groceries: "杂货",
+        utilities: "水电燃气",
+        transportFuel: "交通或燃油",
+        phoneInternet: "电话或网络",
+        insurance: "保险",
+        debtPayments: "债务还款",
+        healthcare: "医疗",
+        childcareFamilySupport: "托儿或家庭支持",
+        funEntertainment: "娱乐消遣",
       },
     },
     authPanel: {
@@ -781,7 +855,7 @@ export const localeMessages = {
       brand: "BudgetBITCH",
       heading: "เปิดบอร์ด BudgetBITCH ของคุณ",
       description:
-        "ลงชื่อเข้าใช้ก่อนเพื่อปลดล็อกเส้นทางเริ่มต้นของคุณ หลังจากนั้น BudgetBITCH จะพาคุณไปยังตัวช่วยตั้งค่า หรือเข้าสู่บอร์ดหลักตามโปรไฟล์ที่คุณบันทึกไว้",
+        "ลงชื่อเข้าใช้ก่อนเพื่อปลดล็อกเส้นทางเริ่มต้นของคุณ หลังจากนั้น BudgetBITCH จะพาคุณไปยังแบบสอบถามเริ่มต้นครั้งเดียว หรือเข้าสู่บอร์ดหลักตามความคืบหน้าที่บันทึกไว้",
       openSignIn: "เปิดหน้าลงชื่อเข้าใช้",
       openSignUp: "เปิดหน้าสมัครใช้งาน",
       quickReasonsAria: "เหตุผลสำคัญบนหน้าต้อนรับ",
@@ -792,7 +866,7 @@ export const localeMessages = {
         },
         keepItShort: {
           title: "ให้ขั้นตอนแรกสั้นและชัดเจน",
-          description: "ตัวช่วยตั้งค่าจะปรากฏหลังจากลงชื่อเข้าใช้ และเฉพาะเมื่อโปรไฟล์เริ่มต้นของคุณยังไม่เสร็จสมบูรณ์",
+          description: "แบบสอบถามเริ่มต้นจะปรากฏหลังจากลงชื่อเข้าใช้ และเฉพาะเมื่อความคืบหน้าครั้งแรกของคุณยังไม่เสร็จสมบูรณ์",
         },
         moveWithoutSprawl: {
           title: "ไปต่อได้โดยไม่รก",
@@ -802,12 +876,50 @@ export const localeMessages = {
       rootFlow: "เส้นทางเริ่มต้น",
       authFirstThenSetup: "ยืนยันตัวตนก่อน แล้วค่อยตั้งค่า",
       rootFlowDescription:
-        "ผู้ใช้ที่ยังไม่ได้ลงชื่อเข้าใช้จะอยู่ที่หน้าต้อนรับนี้ ส่วนผู้ใช้ที่ลงชื่อเข้าใช้แล้วจะเข้าสู่ตัวช่วยตั้งค่าเฉพาะเมื่อโปรไฟล์เริ่มต้นยังไม่เสร็จ",
+        "ผู้ใช้ที่ยังไม่ได้ลงชื่อเข้าใช้จะอยู่ที่หน้าต้อนรับนี้ ส่วนผู้ใช้ที่ลงชื่อเข้าใช้แล้วจะเข้าสู่แบบสอบถามเริ่มต้นเฉพาะเมื่อการตั้งค่าครั้งแรกยังไม่เสร็จ",
       whatChangesNext: "ขั้นตอนถัดไป",
       nextSteps: {
         signIn: "ลงชื่อเข้าใช้หากคุณมีบัญชีอยู่แล้ว",
         signUp: "สมัครใช้งานหากคุณต้องการบัญชีใหม่ก่อนเริ่มตั้งค่า",
-        finishWizard: "ตั้งค่าผ่านตัวช่วยเพียงครั้งเดียว แล้วครั้งถัดไปจะกลับสู่บอร์ดหลักโดยอัตโนมัติ",
+        finishWizard: "ทำแบบสอบถามเริ่มต้นให้เสร็จเพียงครั้งเดียว แล้วครั้งถัดไปจะกลับสู่บอร์ดหลักโดยอัตโนมัติ",
+      },
+    },
+    launchWizard: {
+      kicker: "แบบสอบถามเริ่มต้น",
+      title: "ค่าใช้จ่ายคร่าว ๆ",
+      description:
+        "เพิ่มค่าใช้จ่ายประจำแบบคร่าว ๆ ก่อน เพื่อให้ BudgetBITCH เปิดมาพร้อมฐานเงินที่ใช้งานได้ แทนที่จะเป็นกระดานว่าง",
+      topCategoriesTitle: "หมวดค่าใช้จ่ายยอดนิยม",
+      entryLabel: "ชื่อค่าใช้จ่าย",
+      entryPlaceholder: "ค้นหาหรือเลือกค่าใช้จ่ายที่พบบ่อย",
+      customTitleLabel: "ชื่อค่าใช้จ่ายแบบกำหนดเอง",
+      customTitlePlaceholder: "ใช้ช่องนี้เมื่อรายการที่มีอยู่ไม่ตรง",
+      amountLabel: "จำนวนเงินต่อเดือนโดยประมาณ",
+      addExpense: "เพิ่มค่าใช้จ่าย",
+      finish: "เสร็จสิ้นการเริ่มต้น",
+      summaryTitle: "รายการประมาณการ",
+      emptySummary: "ยังไม่มีการเพิ่มค่าใช้จ่าย",
+      helperTitle: "เหตุผลที่เริ่มจากขั้นตอนนี้",
+      helperDescription:
+        "ป๊อปอัปแรกนี้ตั้งใจให้เบา: หมวดคร่าว ๆ จำนวนเงินคร่าว ๆ แล้วค่อยเข้าสู่การใช้งานปกติของแอป",
+      currentCountLabel: "หมวดที่บันทึกแล้ว",
+      errors: {
+        titleRequired: "เลือกชื่อค่าใช้จ่ายที่พบบ่อยหรือกรอกชื่อแบบกำหนดเอง",
+        amountRequired: "กรอกจำนวนเงินต่อเดือนโดยประมาณที่มากกว่าศูนย์",
+        atLeastOne: "เพิ่มค่าใช้จ่ายคร่าว ๆ อย่างน้อยหนึ่งรายการก่อนจบขั้นตอนเริ่มต้น",
+        saveFailed: "ไม่สามารถบันทึกการตั้งค่าเริ่มต้นในเบราว์เซอร์นี้ได้",
+      },
+      categories: {
+        rentMortgage: "ค่าเช่าหรือผ่อนบ้าน",
+        groceries: "ของชำ",
+        utilities: "ค่าสาธารณูปโภค",
+        transportFuel: "ค่าเดินทางหรือน้ำมัน",
+        phoneInternet: "ค่าโทรศัพท์หรืออินเทอร์เน็ต",
+        insurance: "ประกัน",
+        debtPayments: "ชำระหนี้",
+        healthcare: "สุขภาพ",
+        childcareFamilySupport: "ดูแลเด็กหรือช่วยเหลือครอบครัว",
+        funEntertainment: "ความสนุกหรือความบันเทิง",
       },
     },
     authPanel: {

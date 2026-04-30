@@ -6,11 +6,12 @@ describe("StartSmartPage", () => {
     render(<StartSmartPage />);
 
     expect(screen.getByTestId("mobile-panel-frame")).toBeInTheDocument();
-    expect(screen.getByText("Build your survival blueprint in one quick pass.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Build a fixed-screen survival answer in four compact panels."),
+    ).toBeInTheDocument();
     expect(screen.getAllByText("Single teen").length).toBeGreaterThan(0);
-    expect(screen.getByText("Step map")).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: /^country$/i })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: /japan/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /build my survival blueprint/i })).toBeInTheDocument();
+    expect(screen.getByText("Panel deck")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /set home base/i })).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: /^country$/i })).not.toBeInTheDocument();
   });
 });

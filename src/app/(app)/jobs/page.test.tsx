@@ -1,7 +1,12 @@
 import { render, screen, within } from "@testing-library/react";
+import { HOME_LOCATION_STORAGE_KEY } from "@/modules/home-location/home-location";
 import JobsPage from "./page";
 
 describe("JobsPage", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
   it("wraps the jobs hub in the reusable mobile panel frame", async () => {
     const view = await JobsPage();
     render(view);
@@ -23,6 +28,11 @@ describe("JobsPage", () => {
   });
 
   it("renders the compact filter summary and explicit job-card cues", async () => {
+    window.localStorage.setItem(
+      HOME_LOCATION_STORAGE_KEY,
+      JSON.stringify({ countryCode: "SG", stateCode: "01" }),
+    );
+
     const view = await JobsPage();
     render(view);
 
@@ -34,6 +44,7 @@ describe("JobsPage", () => {
     expect(screen.getByText("$45,000")).toBeInTheDocument();
     expect(screen.getAllByText("raise income fast").length).toBeGreaterThan(0);
     expect(screen.getAllByText("stabilize schedule").length).toBeGreaterThan(0);
+    expect(screen.getByText("01, Singapore")).toBeInTheDocument();
     expect(
       screen.getByText("Steady remote support role with a solid base salary and clear hours."),
     ).toBeInTheDocument();

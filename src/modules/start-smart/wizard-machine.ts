@@ -1,10 +1,8 @@
 export const startSmartWizardSteps = [
-  "template",
-  "region",
-  "household",
-  "money",
-  "review",
-  "blueprint",
+  "lane",
+  "homeBase",
+  "moneySnapshot",
+  "survivalPlan",
 ] as const;
 
 export type StartSmartWizardStep = (typeof startSmartWizardSteps)[number];

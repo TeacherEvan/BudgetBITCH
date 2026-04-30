@@ -37,4 +37,5 @@ describe("SearchableCombobox", () => {
 
     expect(onChange).toHaveBeenCalledWith("dublin_ie");
   });
+
 });

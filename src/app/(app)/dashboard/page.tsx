@@ -1,4 +1,5 @@
 import { BroadcastBar } from "@/components/dashboard/broadcast-bar";
+import { HomeLocationCard } from "@/components/home-location/home-location-card";
 import { LauncherGrid } from "@/components/dashboard/launcher-grid";
 import { LiveBriefingRail } from "@/components/dashboard/live-briefing-rail";
 import { MobilePanelFrame } from "@/components/mobile/mobile-panel-frame";
@@ -80,6 +81,17 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                   {launchProfile?.motionPreset ?? "cinematic"}
                 </span>
               </article>
+            </div>
+
+            <div className="mt-4">
+              <HomeLocationCard
+                kicker="Home base"
+                title="Sticky home location"
+                description="Dashboard keeps this shared location ready for Start Smart and jobs so local context is not re-entered." 
+                emptyStateCopy="No home base saved yet. Set one in Start Smart to keep this board anchored to one region."
+                actionHref="/start-smart"
+                actionLabel="Open setup wizard"
+              />
             </div>
           </article>
 

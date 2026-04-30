@@ -8,18 +8,14 @@ const prepareLaunchTransitionResources = vi.hoisted(() => vi.fn(() => Promise.re
 const launchProfile = {
   completed: true as const,
   completedAt: "2026-04-10T12:00:00.000Z",
-  city: "Dublin",
-  layoutPreset: "launcher_grid" as const,
-  motionPreset: "cinematic" as const,
-  themePreset: "midnight" as const,
-  cryptoPlatform: "later" as const,
+  expenses: [{ title: "Rent or mortgage", amount: 1200 }],
 };
 
 vi.mock("@/components/launch/launch-wizard", () => ({
   LAUNCH_PROFILE_STORAGE_KEY: "budgetbitch:launch-profile",
   default: ({ onComplete }: { onComplete: (profile: typeof launchProfile) => void }) => (
     <button onClick={() => onComplete(launchProfile)} type="button">
-      Mock launch wizard
+      Mock startup questionnaire
     </button>
   ),
 }));
@@ -38,24 +34,24 @@ vi.mock("next-intl", () => ({
       brand: "BudgetBITCH",
       heading: "Open your BudgetBITCH board",
       description:
-        "Sign in to unlock your root flow. After that, BudgetBITCH can send you into the setup wizard or straight to the landing board based on your saved launch profile.",
+        "Sign in to unlock your root flow. After that, BudgetBITCH can send you into the one-time startup questionnaire or straight to the landing board based on your saved startup progress.",
       openSignIn: "Open sign in",
       openSignUp: "Open sign-up",
       quickReasonsAria: "Welcome quick reasons",
       "quickReasons.signInFirst.title": "Sign in first",
       "quickReasons.signInFirst.description": "Open your account before the app decides whether you need setup or your landing board.",
       "quickReasons.keepItShort.title": "Keep the first step short",
-      "quickReasons.keepItShort.description": "The setup wizard only appears after sign-in and only when your launch profile is still incomplete.",
+      "quickReasons.keepItShort.description": "The startup questionnaire only appears after sign-in and only when your first-run progress is still incomplete.",
       "quickReasons.moveWithoutSprawl.title": "Move without the sprawl",
       "quickReasons.moveWithoutSprawl.description": "BudgetBITCH keeps the entry path dense, readable, and ready for quick scanning on smaller screens.",
       rootFlow: "Root flow",
       authFirstThenSetup: "Auth first, then setup",
       rootFlowDescription:
-        "Signed-out visitors stay on this welcome window. Signed-in visitors move into the wizard only when the launch profile still needs to be completed.",
+        "Signed-out visitors stay on this welcome window. Signed-in visitors move into the startup questionnaire only when first-run setup still needs to be completed.",
       whatChangesNext: "What changes next",
       "nextSteps.signIn": "Sign in when you already have an account.",
       "nextSteps.signUp": "Sign up when you need a fresh account before setup begins.",
-      "nextSteps.finishWizard": "Finish the launch wizard once, then return to the landing board on future visits.",
+      "nextSteps.finishWizard": "Finish the startup questionnaire once, then return to the landing board on future visits.",
       label: "Language",
       "options.en": "English",
       "options.zh": "简体中文",
@@ -117,7 +113,9 @@ describe("Home", () => {
       "href",
       "/sign-up?redirectTo=%2F",
     );
-    expect(screen.queryByRole("button", { name: /mock launch wizard/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /mock startup questionnaire/i }),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: /plan first\. panic less\./i }),
     ).not.toBeInTheDocument();
@@ -166,14 +164,14 @@ describe("Home", () => {
     render(<Home />);
 
     expect(
-      await screen.findByRole("button", { name: /mock launch wizard/i }),
+      await screen.findByRole("button", { name: /mock startup questionnaire/i }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: /open your budgetbitch board/i }),
     ).not.toBeInTheDocument();
   });
 
-  it("shows the launch wizard for signed-in users without a saved profile", async () => {
+  it("shows the startup questionnaire for signed-in users without saved startup progress", async () => {
     render(<Home />);
 
     expect(
@@ -184,7 +182,7 @@ describe("Home", () => {
       screen.queryByRole("heading", { name: /plan first\. panic less\./i }),
     ).not.toBeInTheDocument();
 
-    const wizardButton = await screen.findByRole("button", { name: /mock launch wizard/i });
+    const wizardButton = await screen.findByRole("button", { name: /mock startup questionnaire/i });
     expect(wizardButton).toBeInTheDocument();
 
     expect(screen.queryByRole("heading", { name: /open your budgetbitch board/i })).not.toBeInTheDocument();
@@ -205,7 +203,7 @@ describe("Home", () => {
     });
 
     expect(screen.getByTestId("mobile-panel-frame")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /mock launch wizard/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /mock startup questionnaire/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /open your budgetbitch board/i })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /route lanes/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /build lane/i })).toBeInTheDocument();
@@ -220,7 +218,7 @@ describe("Home", () => {
 
     render(<Home />);
 
-    const wizardButton = await screen.findByRole("button", { name: /mock launch wizard/i });
+    const wizardButton = await screen.findByRole("button", { name: /mock startup questionnaire/i });
 
     vi.useFakeTimers();
 
@@ -236,10 +234,10 @@ describe("Home", () => {
     }
   });
 
-  it("shows the landing board after the wizard completes", async () => {
+  it("shows the landing board after the startup questionnaire completes", async () => {
     render(<Home />);
 
-    const wizardButton = await screen.findByRole("button", { name: /mock launch wizard/i });
+    const wizardButton = await screen.findByRole("button", { name: /mock startup questionnaire/i });
 
     fireEvent.click(wizardButton);
 

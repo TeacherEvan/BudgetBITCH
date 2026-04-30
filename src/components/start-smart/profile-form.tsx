@@ -2,6 +2,13 @@ import { countryOptions } from "@/modules/start-smart/country-options";
 import type { StartSmartProfileInput } from "@/modules/start-smart/profile-schema";
 
 type ProfileFieldErrors = Partial<Record<keyof StartSmartProfileInput, string>>;
+export type ProfileFormField =
+  | "countryCode"
+  | "stateCode"
+  | "housing"
+  | "incomePattern"
+  | "dependents"
+  | "pets";
 
 type ProfileFormProps = {
   values: StartSmartProfileInput;
@@ -10,6 +17,10 @@ type ProfileFormProps = {
     value: StartSmartProfileInput[K],
   ) => void;
   errors?: ProfileFieldErrors;
+  fields?: ProfileFormField[];
+  kicker?: string;
+  title?: string;
+  description?: string;
 };
 
 const sharedFieldClassName =
@@ -31,23 +42,40 @@ function getDescribedByIds(field: keyof StartSmartProfileInput, hasError: boolea
   return ids.join(" ");
 }
 
-export function ProfileForm({ values, onChange, errors = {} }: ProfileFormProps) {
+export function ProfileForm({
+  values,
+  onChange,
+  errors = {},
+  fields = [
+    "countryCode",
+    "stateCode",
+    "housing",
+    "incomePattern",
+    "dependents",
+    "pets",
+  ],
+  kicker = "Fast profile",
+  title = "Regional + household checks",
+  description =
+    "Required fields stay starred. Choose a supported country and use a 2- to 3-character region code so the local assumptions stay useful.",
+}: ProfileFormProps) {
+  const fieldSet = new Set<ProfileFormField>(fields);
   const selectedCountry = countryOptions.find((option) => option.code === values.countryCode) ?? null;
 
   return (
     <section className="rounded-[28px] border border-white/10 bg-black/20 p-6 backdrop-blur">
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-sm uppercase tracking-[0.25em] text-yellow-200">Fast profile</p>
-          <h2 className="mt-2 text-2xl font-semibold text-white">Regional + household checks</h2>
+          <p className="text-sm uppercase tracking-[0.25em] text-yellow-200">{kicker}</p>
+          <h2 className="mt-2 text-2xl font-semibold text-white">{title}</h2>
         </div>
         <p className="max-w-2xl text-sm text-emerald-50/80">
-          Required fields stay starred. Choose a supported country and use a 2- to 3-character
-          region code so the local assumptions stay useful.
+          {description}
         </p>
       </div>
 
       <div className="grid gap-5 md:grid-cols-2">
+        {fieldSet.has("countryCode") ? (
         <label className="grid gap-2 text-sm text-emerald-50/85">
           <span>
             Country <span aria-hidden="true">*</span>
@@ -83,7 +111,9 @@ export function ProfileForm({ values, onChange, errors = {} }: ProfileFormProps)
             </span>
           ) : null}
         </label>
+        ) : null}
 
+        {fieldSet.has("stateCode") ? (
         <label className="grid gap-2 text-sm text-emerald-50/85">
           <span>
             State or region <span aria-hidden="true">*</span>
@@ -115,7 +145,9 @@ export function ProfileForm({ values, onChange, errors = {} }: ProfileFormProps)
             </span>
           ) : null}
         </label>
+        ) : null}
 
+        {fieldSet.has("housing") ? (
         <label className="grid gap-2 text-sm text-emerald-50/85">
           Housing
           <select
@@ -133,7 +165,9 @@ export function ProfileForm({ values, onChange, errors = {} }: ProfileFormProps)
             <option value="housing_insecure">Housing insecure</option>
           </select>
         </label>
+        ) : null}
 
+        {fieldSet.has("incomePattern") ? (
         <label className="grid gap-2 text-sm text-emerald-50/85">
           Income pattern
           <select
@@ -153,7 +187,9 @@ export function ProfileForm({ values, onChange, errors = {} }: ProfileFormProps)
             <option value="none">None</option>
           </select>
         </label>
+        ) : null}
 
+        {fieldSet.has("dependents") ? (
         <label className="grid gap-2 text-sm text-emerald-50/85">
           Dependents
           <input
@@ -165,7 +201,9 @@ export function ProfileForm({ values, onChange, errors = {} }: ProfileFormProps)
             className={buildFieldClassName(Boolean(errors.dependents), "bg-white/5")}
           />
         </label>
+        ) : null}
 
+        {fieldSet.has("pets") ? (
         <label className="grid gap-2 text-sm text-emerald-50/85">
           Pets
           <input
@@ -177,6 +215,7 @@ export function ProfileForm({ values, onChange, errors = {} }: ProfileFormProps)
             className={buildFieldClassName(Boolean(errors.pets), "bg-white/5")}
           />
         </label>
+        ) : null}
       </div>
     </section>
   );

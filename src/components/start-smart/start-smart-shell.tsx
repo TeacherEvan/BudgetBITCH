@@ -1,5 +1,6 @@
 "use client";
 
+import type { FormEvent } from "react";
 import {
   startSmartProfileSchema,
   type StartSmartProfileInput,
@@ -15,19 +16,21 @@ import {
   startSmartWizardSteps,
   type StartSmartWizardStep,
 } from "@/modules/start-smart/wizard-machine";
+import { parseHomeLocation, type HomeLocation } from "@/modules/home-location/home-location";
+import { useHomeLocation } from "@/modules/home-location/use-home-location";
 import {
+  ArrowLeft,
+  ArrowRight,
   CheckCircle2,
-  ClipboardList,
   MapPin,
   Sparkles,
-  Users,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BlueprintPanel } from "./blueprint-panel";
 import { ConfidenceBadge } from "./confidence-badge";
-import { ProfileForm } from "./profile-form";
+import { ProfileForm, type ProfileFormField } from "./profile-form";
 import { TemplatePicker } from "./template-picker";
 
 type StartSmartFieldErrors = Partial<Record<keyof StartSmartProfileInput, string>>;
@@ -65,47 +68,52 @@ const wizardStepMeta: Record<
   StartSmartWizardStep,
   { label: string; cue: string; icon: LucideIcon }
 > = {
-  template: {
-    label: "Template",
-    cue: "Pick the closest life lane.",
+  lane: {
+    label: "Lane",
+    cue: "Choose the starting route that matches the current pressure.",
     icon: Sparkles,
   },
-  region: {
-    label: "Region",
-    cue: "Lock in local assumptions.",
+  homeBase: {
+    label: "Home Base",
+    cue: "Set the sticky region once for Start Smart, dashboard, and jobs.",
     icon: MapPin,
   },
-  household: {
-    label: "Household",
-    cue: "Size up dependents and housing.",
-    icon: Users,
-  },
-  money: {
-    label: "Money",
-    cue: "Capture cash-flow texture fast.",
+  moneySnapshot: {
+    label: "Money Snapshot",
+    cue: "Keep only the fields needed for a first survival answer.",
     icon: Wallet,
   },
-  review: {
-    label: "Review",
-    cue: "Sanity check the profile.",
-    icon: ClipboardList,
-  },
-  blueprint: {
-    label: "Blueprint",
-    cue: "Read the survival plan.",
+  survivalPlan: {
+    label: "Survival Plan",
+    cue: "Read the seven-day answer and the next move.",
     icon: CheckCircle2,
   },
 };
 
-function mergeTemplateIntoProfile(templateId: StartSmartTemplateId): StartSmartProfileInput {
+const stepFields: Partial<Record<StartSmartWizardStep, ProfileFormField[]>> = {
+  homeBase: ["countryCode", "stateCode"],
+  moneySnapshot: ["housing", "incomePattern", "dependents", "pets"],
+};
+
+function mergeTemplateIntoProfile(
+  templateId: StartSmartTemplateId,
+  homeLocation?: HomeLocation | null,
+): StartSmartProfileInput {
   const defaults = getStartSmartTemplate(templateId)?.defaults ?? {};
 
   return {
     ...fallbackProfile,
     ...defaults,
-    countryCode: "",
-    stateCode: "",
+    countryCode: homeLocation?.countryCode ?? "",
+    stateCode: homeLocation?.stateCode ?? "",
   };
+}
+
+function getProfileHomeLocation(values: StartSmartProfileInput) {
+  return parseHomeLocation({
+    countryCode: values.countryCode,
+    stateCode: values.stateCode,
+  });
 }
 
 function validateProfile(values: StartSmartProfileInput): StartSmartFieldErrors {
@@ -135,11 +143,25 @@ function formatLaneLabel(value: string) {
   return value.replaceAll("_", " ");
 }
 
+function pickFieldErrors(
+  errors: StartSmartFieldErrors,
+  fields: readonly (keyof StartSmartProfileInput)[],
+) {
+  return fields.reduce((nextErrors, field) => {
+    if (errors[field]) {
+      nextErrors[field] = errors[field];
+    }
+
+    return nextErrors;
+  }, {} as StartSmartFieldErrors);
+}
+
 export function StartSmartShell() {
   const templates = useMemo(() => listStartSmartTemplateCards(), []);
+  const { homeLocation, homeLocationLabel, saveHomeLocation } = useHomeLocation();
   const [selectedTemplateId, setSelectedTemplateId] =
     useState<StartSmartTemplateId>("single_teen");
-  const [step, setStep] = useState<StartSmartWizardStep>("template");
+  const [step, setStep] = useState<StartSmartWizardStep>("lane");
   const [values, setValues] = useState<StartSmartProfileInput>(() =>
     mergeTemplateIntoProfile("single_teen"),
   );
@@ -151,13 +173,53 @@ export function StartSmartShell() {
   const selectedTemplate = templates.find((template) => template.id === selectedTemplateId);
   const currentStepIndex = startSmartWizardSteps.indexOf(step);
 
+  useEffect(() => {
+    if (!homeLocation) {
+      return;
+    }
+
+    setValues((current) => {
+      if (
+        current.countryCode === homeLocation.countryCode &&
+        current.stateCode === homeLocation.stateCode
+      ) {
+        return current;
+      }
+
+      return {
+        ...current,
+        countryCode: homeLocation.countryCode,
+        stateCode: homeLocation.stateCode,
+      };
+    });
+  }, [homeLocation]);
+
+  useEffect(() => {
+    const nextHomeLocation = getProfileHomeLocation(values);
+
+    if (!nextHomeLocation) {
+      return;
+    }
+
+    if (
+      homeLocation?.countryCode === nextHomeLocation.countryCode &&
+      homeLocation?.stateCode === nextHomeLocation.stateCode
+    ) {
+      return;
+    }
+
+    saveHomeLocation(nextHomeLocation);
+  }, [homeLocation, saveHomeLocation, values]);
+
   function handleTemplateSelect(templateId: StartSmartTemplateId) {
+    const nextHomeLocation = getProfileHomeLocation(values) ?? homeLocation;
+
     setSelectedTemplateId(templateId);
-    setValues(mergeTemplateIntoProfile(templateId));
+    setValues(mergeTemplateIntoProfile(templateId, nextHomeLocation));
     setResult(null);
     setFieldErrors({});
     setErrorMessage(null);
-    setStep("region");
+    setStep("homeBase");
   }
 
   function handleFieldChange<K extends keyof StartSmartProfileInput>(
@@ -182,9 +244,37 @@ export function StartSmartShell() {
     setErrorMessage(null);
   }
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function handleAdvanceStep() {
+    if (step === "lane") {
+      setStep(nextWizardStep(step));
+      return;
+    }
+
+    if (step === "homeBase") {
+      const nextErrors = pickFieldErrors(validateProfile(values), ["countryCode", "stateCode"]);
+
+      if (Object.keys(nextErrors).length > 0) {
+        setFieldErrors((current) => ({ ...current, ...nextErrors }));
+        setErrorMessage("Fix the highlighted fields to continue.");
+        return;
+      }
+
+      setStep(nextWizardStep(step));
+      return;
+    }
+
+    if (step === "survivalPlan") {
+      setStep("moneySnapshot");
+    }
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage(null);
+
+    if (step !== "moneySnapshot") {
+      return;
+    }
 
     const validationErrors = validateProfile(values);
 
@@ -216,7 +306,7 @@ export function StartSmartShell() {
 
       const payload = (await response.json()) as BlueprintResponse;
       setResult(payload);
-      setStep("blueprint");
+      setStep("survivalPlan");
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Unable to build blueprint right now.",
@@ -226,22 +316,143 @@ export function StartSmartShell() {
     }
   }
 
+  const currentPanelMeta = wizardStepMeta[step];
+  const isSubmitStep = step === "moneySnapshot";
+
+  function renderRouteSummary() {
+    return (
+      <aside className="grid gap-3 self-start">
+        <article className="rounded-[28px] border border-white/10 bg-white/5 p-5">
+          <p className="text-sm uppercase tracking-[0.25em] text-yellow-200">Current route</p>
+          <h2 className="mt-2 text-2xl font-semibold text-white">{selectedTemplate?.label}</h2>
+          <p className="mt-2 text-sm text-emerald-50/75">{selectedTemplate?.summary}</p>
+
+          <div className="mt-4 grid gap-3 text-sm text-emerald-50/80">
+            <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+              <p className="text-xs uppercase tracking-[0.2em] text-emerald-100/65">Lane</p>
+              <p className="mt-1 font-medium text-white">
+                {selectedTemplate ? formatLaneLabel(selectedTemplate.lane) : "household"}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+              <p className="text-xs uppercase tracking-[0.2em] text-emerald-100/65">
+                Home base
+              </p>
+              <p className="mt-1 font-medium text-white">{homeLocationLabel}</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+              <p className="text-xs uppercase tracking-[0.2em] text-emerald-100/65">
+                Household snapshot
+              </p>
+              <p className="mt-1 font-medium text-white">
+                {values.adults} adult{values.adults === 1 ? "" : "s"} · {values.dependents} dependent
+                {values.dependents === 1 ? "" : "s"} · {values.pets} pet{values.pets === 1 ? "" : "s"}
+              </p>
+            </div>
+          </div>
+        </article>
+
+        <article className="rounded-[28px] border border-white/10 bg-black/20 p-5">
+          <p className="text-sm uppercase tracking-[0.25em] text-yellow-200">Assumption quality</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <ConfidenceBadge confidence="verified" />
+            <ConfidenceBadge confidence="estimated" />
+            <ConfidenceBadge confidence="user_entered" />
+          </div>
+        </article>
+      </aside>
+    );
+  }
+
+  function renderActivePanel() {
+    if (step === "lane") {
+      return (
+        <div className="grid h-full gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <TemplatePicker
+            templates={templates}
+            selectedTemplateId={selectedTemplateId}
+            onSelect={handleTemplateSelect}
+          />
+          {renderRouteSummary()}
+        </div>
+      );
+    }
+
+    if (step === "homeBase") {
+      return (
+        <div className="grid h-full gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <ProfileForm
+            values={values}
+            onChange={handleFieldChange}
+            errors={fieldErrors}
+            fields={stepFields.homeBase}
+            kicker="Home base"
+            title="Set one sticky region"
+            description="Choose the country and region once. Start Smart, dashboard, and jobs will keep reusing this home base instead of asking again."
+          />
+          {renderRouteSummary()}
+        </div>
+      );
+    }
+
+    if (step === "moneySnapshot") {
+      return (
+        <div className="grid h-full gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <ProfileForm
+            values={values}
+            onChange={handleFieldChange}
+            errors={fieldErrors}
+            fields={stepFields.moneySnapshot}
+            kicker="Money snapshot"
+            title="Only the minimum survival inputs"
+            description="Keep this panel tight: housing, income pattern, dependents, and pets are enough to produce the first survival answer without another tall setup page."
+          />
+          {renderRouteSummary()}
+        </div>
+      );
+    }
+
+    return result ? (
+      <BlueprintPanel
+        blueprint={result.blueprint}
+        assumptions={
+          result.regional.housing
+            ? [
+                {
+                  label: "Housing",
+                  confidence: result.regional.housing.confidence,
+                },
+              ]
+            : []
+        }
+      />
+    ) : (
+      <section className="rounded-[28px] border border-white/10 bg-black/20 p-6 text-white">
+        <p className="text-sm uppercase tracking-[0.25em] text-yellow-200">Survival plan</p>
+        <h2 className="mt-2 text-3xl font-semibold">Build the answer first</h2>
+        <p className="mt-3 max-w-2xl text-sm text-emerald-50/80">
+          Finish the money snapshot panel to generate the seven-day survival plan and the next action.
+        </p>
+      </section>
+    );
+  }
+
   return (
-    <main className="min-h-screen px-6 py-10 text-white">
-      <section className="mx-auto max-w-7xl rounded-[36px] border border-white/10 bg-black/20 p-6 backdrop-blur md:p-8">
-        <header className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
+    <main className="min-h-screen overflow-hidden px-4 py-4 text-white">
+      <section className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-7xl flex-col overflow-hidden rounded-[36px] border border-white/10 bg-black/20 p-5 backdrop-blur md:p-6">
+        <header className="grid gap-5 border-b border-white/10 pb-5 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
           <div>
             <p className="text-sm uppercase tracking-[0.3em] text-yellow-200">Start Smart</p>
             <h1 className="mt-3 text-3xl font-bold sm:text-4xl">
-              Build your survival blueprint in one quick pass.
+              Build a fixed-screen survival answer in four compact panels.
             </h1>
             <p className="mt-3 max-w-3xl text-sm text-emerald-50/85 sm:text-base">
-              Pick a life lane, confirm the location + household details, and read the next-step
-              plan without drowning in setup copy.
+              Lane first, home base once, money snapshot second, and the survival plan last. The
+              page never needs to turn back into a tall setup wizard.
             </p>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-3">
-              <article className="rounded-[24px] border border-white/10 bg-white/6 p-4">
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <article className="rounded-3xl border border-white/10 bg-white/6 p-4">
                 <p className="text-xs uppercase tracking-[0.22em] text-emerald-100/70">
                   Selected template
                 </p>
@@ -252,34 +463,44 @@ export function StartSmartShell() {
                   {selectedTemplate?.summary ?? "First money habits with low household control."}
                 </p>
               </article>
-              <article className="rounded-[24px] border border-white/10 bg-white/6 p-4">
+              <article className="rounded-3xl border border-white/10 bg-white/6 p-4">
                 <p className="text-xs uppercase tracking-[0.22em] text-emerald-100/70">
-                  Current step
+                  Active panel
                 </p>
                 <p className="mt-2 text-lg font-semibold text-white">{formatStepLabel(step)}</p>
-                <p className="mt-1 text-sm text-emerald-50/75">{wizardStepMeta[step].cue}</p>
+                <p className="mt-1 text-sm text-emerald-50/75">{currentPanelMeta.cue}</p>
               </article>
-              <article className="rounded-[24px] border border-white/10 bg-white/6 p-4">
+              <article className="rounded-3xl border border-white/10 bg-white/6 p-4">
                 <p className="text-xs uppercase tracking-[0.22em] text-emerald-100/70">
-                  Assumption quality
+                  Shared home base
                 </p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <ConfidenceBadge confidence="verified" />
-                  <ConfidenceBadge confidence="estimated" />
-                  <ConfidenceBadge confidence="user_entered" />
-                </div>
+                <p className="mt-2 text-lg font-semibold text-white">{homeLocationLabel}</p>
+                <p className="mt-1 text-sm text-emerald-50/75">
+                  Dashboard and jobs now reuse this same region context.
+                </p>
+              </article>
+              <article className="rounded-3xl border border-white/10 bg-white/6 p-4">
+                <p className="text-xs uppercase tracking-[0.22em] text-emerald-100/70">
+                  Household snapshot
+                </p>
+                <p className="mt-2 text-lg font-semibold text-white">
+                  {values.adults} adult{values.adults === 1 ? "" : "s"} · {values.dependents} dependent
+                  {values.dependents === 1 ? "" : "s"}
+                </p>
+                <p className="mt-1 text-sm text-emerald-50/75">
+                  {values.housing.replaceAll("_", " ")} · {values.incomePattern.replaceAll("_", " ")}
+                </p>
               </article>
             </div>
           </div>
 
           <aside className="rounded-[28px] border border-white/10 bg-white/5 p-5">
-            <p className="text-sm uppercase tracking-[0.25em] text-yellow-200">Step map</p>
+            <p className="text-sm uppercase tracking-[0.25em] text-yellow-200">Panel deck</p>
             <ol className="mt-4 grid gap-3">
               {startSmartWizardSteps.map((wizardStep, index) => {
                 const { icon: Icon, label, cue } = wizardStepMeta[wizardStep];
                 const isCurrent = wizardStep === step;
-                const isComplete =
-                  index < currentStepIndex || (wizardStep === "template" && step !== "template");
+                const isComplete = index < currentStepIndex;
 
                 return (
                   <li
@@ -317,70 +538,9 @@ export function StartSmartShell() {
           </aside>
         </header>
 
-        <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-          <TemplatePicker
-            templates={templates}
-            selectedTemplateId={selectedTemplateId}
-            onSelect={handleTemplateSelect}
-          />
-
-          <aside className="rounded-[28px] border border-white/10 bg-white/5 p-5">
-            <p className="text-sm uppercase tracking-[0.25em] text-yellow-200">Current route</p>
-            <h2 className="mt-2 text-2xl font-semibold text-white">{selectedTemplate?.label}</h2>
-            <p className="mt-2 text-sm text-emerald-50/75">{selectedTemplate?.summary}</p>
-
-            <div className="mt-4 grid gap-3 text-sm text-emerald-50/80">
-              <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-                <p className="text-xs uppercase tracking-[0.2em] text-emerald-100/65">Lane</p>
-                <p className="mt-1 font-medium text-white">
-                  {selectedTemplate ? formatLaneLabel(selectedTemplate.lane) : "household"}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-                <p className="text-xs uppercase tracking-[0.2em] text-emerald-100/65">
-                  Default income pattern
-                </p>
-                <p className="mt-1 font-medium text-white">{formatLaneLabel(values.incomePattern)}</p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-                <p className="text-xs uppercase tracking-[0.2em] text-emerald-100/65">
-                  Household snapshot
-                </p>
-                <p className="mt-1 font-medium text-white">
-                  {values.adults} adult{values.adults === 1 ? "" : "s"} · {values.dependents} dependent
-                  {values.dependents === 1 ? "" : "s"} · {values.pets} pet{values.pets === 1 ? "" : "s"}
-                </p>
-              </div>
-            </div>
-          </aside>
-        </div>
-
-        <form className="mt-8 grid gap-6" noValidate onSubmit={handleSubmit}>
-          <ProfileForm values={values} onChange={handleFieldChange} errors={fieldErrors} />
-
-          <div className="flex flex-wrap items-center gap-4">
-            <button
-              type="button"
-              onClick={() => setStep(previousWizardStep(step))}
-              disabled={step === "template"}
-              className="rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-emerald-50 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              Back step
-            </button>
-            <button
-              type="button"
-              onClick={() => setStep(nextWizardStep(step))}
-              className="rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-emerald-50 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-            >
-              Advance step
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="rounded-full bg-emerald-400 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {isSubmitting ? "Building..." : "Build my survival blueprint"}
-            </button>
+        <form className="mt-5 flex min-h-0 flex-1 flex-col gap-4" noValidate onSubmit={handleSubmit}>
+          <div className="min-h-0 flex-1 overflow-hidden rounded-[32px] border border-white/10 bg-white/5 p-4 md:p-5">
+            {renderActivePanel()}
           </div>
 
           {errorMessage ? (
@@ -389,21 +549,37 @@ export function StartSmartShell() {
             </p>
           ) : null}
 
-          {result ? (
-            <BlueprintPanel
-              blueprint={result.blueprint}
-              assumptions={
-                result.regional.housing
-                  ? [
-                      {
-                        label: "Housing",
-                        confidence: result.regional.housing.confidence,
-                      },
-                    ]
-                  : []
-              }
-            />
-          ) : null}
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[28px] border border-white/10 bg-black/20 p-3">
+            <button
+              type="button"
+              onClick={() => setStep(previousWizardStep(step))}
+              disabled={step === "lane" || isSubmitting}
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-emerald-50 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+              Back panel
+            </button>
+
+            <p className="text-sm text-emerald-50/75">{currentPanelMeta.cue}</p>
+
+            <button
+              type={isSubmitStep ? "submit" : "button"}
+              onClick={isSubmitStep ? undefined : handleAdvanceStep}
+              disabled={isSubmitting}
+              className="inline-flex items-center gap-2 rounded-full bg-emerald-400 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {step === "lane"
+                ? "Set home base"
+                : step === "homeBase"
+                  ? "Open money snapshot"
+                  : step === "moneySnapshot"
+                    ? isSubmitting
+                      ? "Building..."
+                      : "Build my survival blueprint"
+                    : "Tighten money snapshot"}
+              <ArrowRight aria-hidden="true" className="h-4 w-4" />
+            </button>
+          </div>
         </form>
       </section>
     </main>

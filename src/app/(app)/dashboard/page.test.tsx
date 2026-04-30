@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { HOME_LOCATION_STORAGE_KEY } from "@/modules/home-location/home-location";
 
 const getDashboardPageData = vi.hoisted(() => vi.fn());
 const redirect = vi.hoisted(() => vi.fn());
@@ -68,10 +69,16 @@ import DashboardPage from "./page";
 
 describe("DashboardPage", () => {
   afterEach(() => {
+    window.localStorage.clear();
     vi.clearAllMocks();
   });
 
   it("renders the billboard shell with the broadcast bar, launcher grid, and live briefing rail", async () => {
+    window.localStorage.setItem(
+      HOME_LOCATION_STORAGE_KEY,
+      JSON.stringify({ countryCode: "US", stateCode: "CA" }),
+    );
+
     getDashboardPageData.mockResolvedValue({
       kind: "data",
       data: {
@@ -184,9 +191,11 @@ describe("DashboardPage", () => {
     expect(screen.getByRole("heading", { name: /interactive billboard/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /local area/i })).toBeInTheDocument();
     expect(screen.getByText(/dublin/i, { selector: "p.bb-mini-copy" })).toBeInTheDocument();
+    expect(screen.getByText("CA, United States")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /popular budgeting tools/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /live briefing/i })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /open setup wizard/i })).toHaveAttribute(
+    expect(screen.getAllByRole("link", { name: /open setup wizard/i })).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: /open setup wizard/i })[0]).toHaveAttribute(
       "href",
       "/start-smart",
     );
