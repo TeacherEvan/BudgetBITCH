@@ -1,12 +1,12 @@
 # Fixed-Screen Survival Flow Design
 
 Date: 2026-04-24
-Status: Approved for specification
-Scope: Mobile-first BudgetBITCH app surfaces focused on Start Smart, calculator practicality, and shared location context
+Status: Approved for specification with 2026-05-01 onboarding amendment
+Scope: Mobile-first BudgetBITCH app surfaces focused on root entry, one-time startup onboarding, Start Smart, calculator practicality, and shared location context
 
 ## Summary
 
-BudgetBITCH should shift its core mobile budgeting experience from tall, scroll-heavy setup flows to fixed-screen panels that deliver a usable survival answer in a single pass. The immediate redesign target is the current Start Smart flow, the generic calculator surface, and the split handling of location across onboarding and budgeting surfaces.
+BudgetBITCH should shift its core mobile budgeting experience from tall, scroll-heavy setup flows to fixed-screen panels that deliver a usable survival answer in a single pass. The immediate redesign target is the signed-out welcome entry, the one-time post-login startup questionnaire, the current Start Smart flow, the generic calculator surface, and the split handling of location across onboarding and budgeting surfaces.
 
 The new model is a fixed-viewport mobile shell with three stable regions on each major screen:
 
@@ -22,6 +22,8 @@ The current app still exposes several flows as tall pages or form stacks. This c
 
 Current mismatches identified in the repository:
 
+- [src/components/welcome/welcome-window.tsx](src/components/welcome/welcome-window.tsx) introduces the app but does not yet fully summarize the app's existing feature set on first view.
+- [src/app/page.tsx](src/app/page.tsx) already owns the auth-first root gate, but the first-run sequence is not yet specified as a popup-style one-time startup questionnaire.
 - [src/components/start-smart/start-smart-shell.tsx](src/components/start-smart/start-smart-shell.tsx) behaves like a full-page wizard with stacked sections and step chrome that can push key actions below the fold.
 - [src/components/calculator/calculator.tsx](src/components/calculator/calculator.tsx) is a generic arithmetic keypad. It preserves draft state but does not answer the budgeting question users actually care about.
 - [src/components/start-smart/profile-form.tsx](src/components/start-smart/profile-form.tsx) and [src/components/launch/launch-wizard.tsx](src/components/launch/launch-wizard.tsx) manage related location inputs separately, creating repeated setup friction.
@@ -37,6 +39,9 @@ External product research reinforced the same pattern. The most popular budgetin
 
 ## Goals
 
+- Start the app with a welcome screen that summarizes and lists the main existing feature areas.
+- Keep login and sign-up as a dedicated auth entry stage after the welcome screen.
+- Launch a one-time startup questionnaire after login and before the normal signed-in landing flow.
 - Replace scroll-heavy mobile budgeting flows with fixed-screen panel navigation.
 - Turn Start Smart into a practical survival-answer flow instead of a long setup wizard.
 - Replace the generic calculator as the main budgeting tool with a compact left-to-spend utility.
@@ -45,7 +50,7 @@ External product research reinforced the same pattern. The most popular budgetin
 
 ## Non-Goals
 
-- This design does not replace the secure welcome-window login flow already implemented in the separate worktree.
+- This design does not remove the current auth-first root gate; it refines the welcome and first-run states that already live there.
 - This design does not redefine the entire desktop information architecture.
 - This design does not require bank-sync integrations before delivering value.
 - This design does not remove all lists or menus everywhere; it applies the no-page-scroll rule to the primary mobile budgeting journey.
@@ -69,6 +74,21 @@ The design should reuse existing mobile shell patterns already present in:
 
 ## Experience Model
 
+### Welcome Then Auth Then One-Time Startup
+
+The app should open in three explicit stages:
+
+1. Welcome screen
+The signed-out root surface summarizes the product and lists the core feature areas already present in the app, such as dashboard, Start Smart, calculator, notes, learn, jobs, and integrations.
+
+2. Login or sign-up screen
+The user enters the Google-only auth flow through the existing sign-in and sign-up routing surfaces.
+
+3. One-time startup questionnaire
+After login and local bootstrap succeed, first-run users complete a one-time startup sequence before the normal signed-in landing state.
+
+This keeps the product flow clear: welcome first, auth second, startup setup once, then normal use.
+
 ### Fixed-Screen Shell
 
 Each major mobile budgeting screen uses one viewport with three stable regions:
@@ -83,6 +103,41 @@ Contains the current question, answer, or task. The panel must fit within the vi
 Contains the primary action for the current state and, when needed, a back action.
 
 If a state cannot fit in the viewport because of keyboard height, content density, or device size, the state must split into another panel. It must not silently fall back to a tall page.
+
+### Startup Questionnaire Uses Popup Panels
+
+The one-time startup sequence should use popup-style panels or windows rather than a single long page.
+
+Requirements:
+
+- Only one question should dominate the viewport at a time.
+- The startup sequence should feel lighter than the fuller Start Smart budgeting flow.
+- The sequence should run once per user or device context and then yield to the normal landing flow.
+- The popup stack must remain keyboard reachable and mobile-friendly.
+
+The first required popup is `Ballpark expenses`.
+
+This popup captures rough recurring or common spending categories before deeper budgeting work begins.
+
+The initial dropdown or searchable combobox should offer these ten common expense titles:
+
+1. Rent or mortgage
+2. Groceries
+3. Utilities
+4. Transport or fuel
+5. Phone or internet
+6. Insurance
+7. Debt payments
+8. Healthcare
+9. Childcare or family support
+10. Fun or entertainment
+
+Behavior expectations:
+
+- The user selects an expense title from a dropdown or searchable combobox.
+- The user can enter a rough amount for the selected title.
+- The interface should support repeated entry for multiple categories during the same startup flow.
+- This step is for ballpark capture, not a full ledger or detailed budget table.
 
 ### Start Smart Becomes Survival Flow
 
@@ -160,6 +215,18 @@ Responsible for computing left-to-spend and survival cues from a compact set of 
 Responsible for rendering practical guidance such as top risk, next seven days, and next action without containing persistence or navigation logic.
 
 ## Data and Persistence Model
+
+### Startup questionnaire state
+
+Introduce a compact validated first-run startup record stored client-side first.
+
+Required initial support:
+
+- one-time completion state
+- selected ballpark expense categories
+- rough amount per selected category
+
+This state may later merge into richer Start Smart or server-backed profile data, but the initial implementation should stay lightweight and validated.
 
 ### Home-location state
 

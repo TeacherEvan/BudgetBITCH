@@ -3,15 +3,17 @@ import { PrivacyDisclosurePanel } from "@/components/integrations/privacy-disclo
 import { ProviderWizardShell } from "@/components/integrations/provider-wizard-shell";
 import { buildProviderActionList } from "@/modules/integrations/integration-actions";
 import { providerRegistry } from "@/modules/integrations/provider-registry";
+import { useTranslations } from "next-intl";
 
 export default function ClaudeIntegrationPage() {
     const provider = providerRegistry.claude;
+    const t = useTranslations("integrationProviderPages");
 
     return (
         <ProviderWizardShell
-            eyebrow="Claude Setup"
-            title="Connect Claude"
-            description="Use the official Anthropic path, review the privacy shield, and only then add the credential for this workspace."
+            eyebrow={t("claude.eyebrow")}
+            title={t("claude.title")}
+            description={t("claude.description")}
             actions={buildProviderActionList(provider)}
         >
             <PrivacyDisclosurePanel providerLabel={provider.label} />

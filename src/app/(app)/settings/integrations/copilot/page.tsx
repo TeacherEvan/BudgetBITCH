@@ -5,25 +5,27 @@ import { RiskChecklist } from "@/components/integrations/risk-checklist";
 import { SystemAccessWarning } from "@/components/integrations/system-access-warning";
 import { buildProviderActionList } from "@/modules/integrations/integration-actions";
 import { providerRegistry } from "@/modules/integrations/provider-registry";
+import { useTranslations } from "next-intl";
 
 export default function CopilotIntegrationPage() {
     const provider = providerRegistry.copilot;
+    const t = useTranslations("integrationProviderPages");
 
     return (
         <ProviderWizardShell
-            eyebrow="GitHub Copilot Setup"
-            title="Connect GitHub Copilot"
-            description="Review repository access, prompt exposure, and revoke controls before enabling GitHub Copilot in this workspace."
+            eyebrow={t("copilot.eyebrow")}
+            title={t("copilot.title")}
+            description={t("copilot.description")}
             actions={buildProviderActionList(provider)}
         >
             <div className="space-y-6">
-                <SystemAccessWarning message="Review extension, repository, and prompt access before enabling GitHub Copilot." />
+                <SystemAccessWarning message={t("copilot.systemAccessMessage")} />
                 <RiskChecklist
-                    title="Risk checklist"
+                    title={t("copilot.riskChecklistTitle")}
                     items={[
-                        "Confirm which repositories and files the tool can inspect.",
-                        "Use only the official GitHub Copilot authentication flow.",
-                        "Revoke access immediately if the workspace no longer requires it.",
+                        t("copilot.riskChecklistItems.repositoryAccess"),
+                        t("copilot.riskChecklistItems.officialFlow"),
+                        t("copilot.riskChecklistItems.revokeAccess"),
                     ]}
                 />
             </div>

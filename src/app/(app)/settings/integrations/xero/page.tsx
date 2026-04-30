@@ -3,15 +3,17 @@ import { PrivacyDisclosurePanel } from "@/components/integrations/privacy-disclo
 import { ProviderWizardShell } from "@/components/integrations/provider-wizard-shell";
 import { buildProviderActionList } from "@/modules/integrations/integration-actions";
 import { providerRegistry } from "@/modules/integrations/provider-registry";
+import { useTranslations } from "next-intl";
 
 export default function XeroIntegrationPage() {
     const provider = providerRegistry.xero;
+    const t = useTranslations("integrationProviderPages");
 
     return (
         <ProviderWizardShell
-            eyebrow="Xero Setup"
-            title="Connect Xero"
-            description="Follow the official Xero developer flow, confirm the privacy disclosure, and connect only after the accounting scope is clear."
+            eyebrow={t("xero.eyebrow")}
+            title={t("xero.title")}
+            description={t("xero.description")}
             actions={buildProviderActionList(provider)}
         >
             <PrivacyDisclosurePanel providerLabel={provider.label} />

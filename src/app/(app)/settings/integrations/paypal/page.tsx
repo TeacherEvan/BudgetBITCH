@@ -3,15 +3,17 @@ import { PrivacyDisclosurePanel } from "@/components/integrations/privacy-disclo
 import { ProviderWizardShell } from "@/components/integrations/provider-wizard-shell";
 import { buildProviderActionList } from "@/modules/integrations/integration-actions";
 import { providerRegistry } from "@/modules/integrations/provider-registry";
+import { useTranslations } from "next-intl";
 
 export default function PayPalIntegrationPage() {
     const provider = providerRegistry.paypal;
+    const t = useTranslations("integrationProviderPages");
 
     return (
         <ProviderWizardShell
-            eyebrow="PayPal Setup"
-            title="Connect PayPal"
-            description="Use the official PayPal developer route, review the privacy disclosure, and only complete setup for the workspace that explicitly needs it."
+            eyebrow={t("paypal.eyebrow")}
+            title={t("paypal.title")}
+            description={t("paypal.description")}
             actions={buildProviderActionList(provider)}
         >
             <PrivacyDisclosurePanel providerLabel={provider.label} />

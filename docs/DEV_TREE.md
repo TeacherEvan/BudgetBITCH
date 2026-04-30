@@ -15,9 +15,9 @@ flowchart TD
   A --> H[src/inngest]
 
   B --> B1[page.tsx\nauth-first root gate]
-  B --> B1d[sign-in\nClerk sign-in entry]
-  B --> B1e[sign-up\nClerk sign-up entry]
-  B --> B1f[(app)/auth/continue\npost-Clerk bootstrap boundary]
+  B --> B1d[sign-in\nAuth.js Google sign-in entry]
+  B --> B1e[sign-up\nredirects into sign-in]
+  B --> B1f[(app)/auth/continue\npost-auth local bootstrap boundary]
   B --> B1a[(app)/start-smart\nMoney Survival Blueprint wizard]
   B --> B1b[(app)/learn\nLearn hub + lessons]
   B --> B1c[(app)/jobs\nJobs hub + detail]
@@ -151,8 +151,9 @@ flowchart TD
 
 - `src/**` is the active application code for the root Next.js app.
 - `prisma/**` is the authoritative data model and checked-in migration history.
-- `src/components/welcome/**` holds the signed-out welcome window shown by the root auth gate.
-- `src/components/auth/**`, `src/modules/auth/**`, and `src/lib/auth/**` hold the shared auth entry UI, redirect sanitizing, Clerk checks, and local bootstrap helpers used by the root auth flow.
+- `src/components/welcome/**` holds the signed-out welcome window shown by the root auth gate and is the right entry point for feature-summary landing copy.
+- `src/components/auth/**`, `src/modules/auth/**`, and `src/lib/auth/**` hold the shared auth entry UI, redirect sanitizing, Auth.js session handling, and local bootstrap helpers used by the root auth flow.
+- `src/components/launch/**` holds the one-time startup questionnaire logic used after login and before the normal signed-in landing state.
 - `tests/e2e/**` contains Playwright journey coverage, including a split between signed-out welcome-entry auth coverage and signed-in root smoke coverage.
 - `WelcomeWindow-startup/WelcomeScreen.tsx` is a leftover visual reference and is not part of the active root auth flow.
 - `budgetbitch/` is a separate nested prototype/reference subtree and is excluded from the root TypeScript project.
@@ -164,6 +165,7 @@ flowchart TD
 - **API behavior change:** start in `src/app/api/**`, then follow calls into `src/modules/**`
 - **Schema or migration change:** start in `prisma/schema.prisma`
 - **Auth gate change:** start in `src/app/page.tsx`, `src/components/welcome/**`, `src/app/sign-in/**`, `src/app/sign-up/**`, `src/app/(app)/auth/continue/**`, then check `src/components/auth/**`, `src/modules/auth/**`, `src/lib/auth/**`, and `middleware.ts`
+- **Startup questionnaire change:** start in `src/app/page.tsx` and `src/components/launch/**`, then check `src/modules/launch/**` and the root-entry tests.
 - **Integration wizard change:** start in `src/app/(app)/settings/integrations/**` and `src/components/integrations/**`
 - **Start Smart onboarding change:** start in `src/app/(app)/start-smart/**`, then check `src/components/start-smart/**` and `src/modules/start-smart/**`
 - **Learn! lesson or recommendation change:** start in `src/app/(app)/learn/**`, then check `src/components/learn/**` and `src/modules/learn/**`

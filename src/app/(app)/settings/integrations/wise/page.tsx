@@ -3,15 +3,17 @@ import { PrivacyDisclosurePanel } from "@/components/integrations/privacy-disclo
 import { ProviderWizardShell } from "@/components/integrations/provider-wizard-shell";
 import { buildProviderActionList } from "@/modules/integrations/integration-actions";
 import { providerRegistry } from "@/modules/integrations/provider-registry";
+import { useTranslations } from "next-intl";
 
 export default function WiseIntegrationPage() {
     const provider = providerRegistry.wise;
+    const t = useTranslations("integrationProviderPages");
 
     return (
         <ProviderWizardShell
-            eyebrow="Wise Setup"
-            title="Connect Wise"
-            description="Use the official Wise route, review the privacy disclosure, and only connect the account once the workspace scope is clear."
+            eyebrow={t("wise.eyebrow")}
+            title={t("wise.title")}
+            description={t("wise.description")}
             actions={buildProviderActionList(provider)}
         >
             <PrivacyDisclosurePanel providerLabel={provider.label} />

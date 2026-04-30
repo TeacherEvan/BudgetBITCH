@@ -293,6 +293,96 @@ export const localeMessages = {
       },
       quickActions: "Quick actions",
     },
+    integrationProviderPages: {
+      claude: {
+        eyebrow: "Claude Setup",
+        title: "Connect Claude",
+        description:
+          "Use the official Anthropic path, review the privacy shield, and only then add the credential for this workspace.",
+      },
+      openai: {
+        eyebrow: "OpenAI Setup",
+        title: "Connect OpenAI",
+        description:
+          "Follow the official OpenAI path, verify the disclosure copy, and connect only if this workspace explicitly needs it.",
+      },
+      copilot: {
+        eyebrow: "GitHub Copilot Setup",
+        title: "Connect GitHub Copilot",
+        description:
+          "Review repository access, prompt exposure, and revoke controls before enabling GitHub Copilot in this workspace.",
+        systemAccessMessage:
+          "Review extension, repository, and prompt access before enabling GitHub Copilot.",
+        riskChecklistTitle: "Risk checklist",
+        riskChecklistItems: {
+          repositoryAccess: "Confirm which repositories and files the tool can inspect.",
+          officialFlow: "Use only the official GitHub Copilot authentication flow.",
+          revokeAccess: "Revoke access immediately if the workspace no longer requires it.",
+        },
+      },
+      openclaw: {
+        eyebrow: "OpenClaw Setup",
+        title: "Connect OpenClaw",
+        description:
+          "OpenClaw can introduce higher trust and system-scope concerns, so review every warning before you enable it.",
+        systemAccessMessage:
+          "Verify local system access, data paths, and model routing before enabling OpenClaw.",
+        riskChecklistTitle: "High-risk connection",
+        riskChecklistItems: {
+          localReach: "Check which local files, tools, or shells OpenClaw can reach.",
+          promptRouting: "Confirm prompt routing and storage paths before enabling the integration.",
+          oneClickRevoke: "Use one-click revoke if your trust model changes.",
+        },
+      },
+      gemini: {
+        eyebrow: "Gemini Setup",
+        title: "Connect Gemini",
+        description:
+          "Use the official Google AI Studio path, verify the privacy disclosure, and only connect Gemini when this workspace clearly needs it.",
+      },
+      perplexity: {
+        eyebrow: "Perplexity Setup",
+        title: "Connect Perplexity",
+        description:
+          "Follow the official Perplexity console flow, review the privacy disclosure, and keep the connection limited to the workspace that needs it.",
+      },
+      mistral: {
+        eyebrow: "Mistral Setup",
+        title: "Connect Mistral",
+        description:
+          "Use the official Mistral console path, confirm the privacy disclosure, and only enable the connection for workspaces that require it.",
+      },
+      wise: {
+        eyebrow: "Wise Setup",
+        title: "Connect Wise",
+        description:
+          "Use the official Wise route, review the privacy disclosure, and only connect the account once the workspace scope is clear.",
+      },
+      revolut: {
+        eyebrow: "Revolut Setup",
+        title: "Connect Revolut",
+        description:
+          "Follow the official Revolut developer path, verify the privacy disclosure, and keep the connection scoped to the workspace that needs it.",
+      },
+      paypal: {
+        eyebrow: "PayPal Setup",
+        title: "Connect PayPal",
+        description:
+          "Use the official PayPal developer route, review the privacy disclosure, and only complete setup for the workspace that explicitly needs it.",
+      },
+      deel: {
+        eyebrow: "Deel Setup",
+        title: "Connect Deel",
+        description:
+          "Use the official Deel route, review the privacy disclosure, and only enable payroll access for the workspace that needs it.",
+      },
+      xero: {
+        eyebrow: "Xero Setup",
+        title: "Connect Xero",
+        description:
+          "Follow the official Xero developer flow, confirm the privacy disclosure, and connect only after the accounting scope is clear.",
+      },
+    },
     integrationsShared: {
       backToConnectionHub: "Back to connection hub",
       tools: "Tools",
@@ -570,6 +660,82 @@ export const localeMessages = {
         guidanceOnly: "仅指导",
       },
       quickActions: "快捷操作",
+    },
+    integrationProviderPages: {
+      claude: {
+        eyebrow: "Claude 设置",
+        title: "连接 Claude",
+        description: "沿着 Anthropic 官方路径操作，先查看隐私防护，再为此工作区添加凭证。",
+      },
+      openai: {
+        eyebrow: "OpenAI 设置",
+        title: "连接 OpenAI",
+        description: "沿着 OpenAI 官方路径操作，先核对披露内容，只有在此工作区确实需要时再建立连接。",
+      },
+      copilot: {
+        eyebrow: "GitHub Copilot 设置",
+        title: "连接 GitHub Copilot",
+        description: "在此工作区启用 GitHub Copilot 前，先检查仓库访问、提示内容暴露范围和撤销控制。",
+        systemAccessMessage: "在启用 GitHub Copilot 前，先检查扩展、仓库和提示内容访问范围。",
+        riskChecklistTitle: "风险检查清单",
+        riskChecklistItems: {
+          repositoryAccess: "确认该工具可以查看哪些仓库和文件。",
+          officialFlow: "只使用 GitHub Copilot 官方认证流程。",
+          revokeAccess: "如果工作区不再需要它，立即撤销访问。",
+        },
+      },
+      openclaw: {
+        eyebrow: "OpenClaw 设置",
+        title: "连接 OpenClaw",
+        description: "OpenClaw 可能带来更高的信任和系统范围风险，因此启用前必须查看每一条警告。",
+        systemAccessMessage: "在启用 OpenClaw 前，确认本地系统访问、数据路径和模型路由。",
+        riskChecklistTitle: "高风险连接",
+        riskChecklistItems: {
+          localReach: "检查 OpenClaw 能访问哪些本地文件、工具或 shell。",
+          promptRouting: "在启用集成前，确认提示词路由和存储路径。",
+          oneClickRevoke: "如果你的信任模型发生变化，请使用一键撤销。",
+        },
+      },
+      gemini: {
+        eyebrow: "Gemini 设置",
+        title: "连接 Gemini",
+        description: "使用 Google AI Studio 官方路径，先核对隐私披露，只有在此工作区明确需要 Gemini 时再连接。",
+      },
+      perplexity: {
+        eyebrow: "Perplexity 设置",
+        title: "连接 Perplexity",
+        description: "沿着 Perplexity 官方控制台流程操作，先查看隐私披露，并将连接限制在确实需要它的工作区。",
+      },
+      mistral: {
+        eyebrow: "Mistral 设置",
+        title: "连接 Mistral",
+        description: "使用 Mistral 官方控制台路径，确认隐私披露，并且只为确实需要它的工作区启用连接。",
+      },
+      wise: {
+        eyebrow: "Wise 设置",
+        title: "连接 Wise",
+        description: "使用 Wise 官方路径，先查看隐私披露，只有在工作区范围明确后再连接账户。",
+      },
+      revolut: {
+        eyebrow: "Revolut 设置",
+        title: "连接 Revolut",
+        description: "沿着 Revolut 官方开发者路径操作，核对隐私披露，并将连接限定在需要它的工作区。",
+      },
+      paypal: {
+        eyebrow: "PayPal 设置",
+        title: "连接 PayPal",
+        description: "使用 PayPal 官方开发者路径，查看隐私披露，并且只为明确需要它的工作区完成设置。",
+      },
+      deel: {
+        eyebrow: "Deel 设置",
+        title: "连接 Deel",
+        description: "使用 Deel 官方路径，查看隐私披露，并且只为需要它的工作区启用薪资访问。",
+      },
+      xero: {
+        eyebrow: "Xero 设置",
+        title: "连接 Xero",
+        description: "沿着 Xero 官方开发者流程操作，确认隐私披露，只有在会计范围清晰后再连接。",
+      },
     },
     integrationsShared: {
       backToConnectionHub: "返回连接中心",
@@ -851,6 +1017,96 @@ export const localeMessages = {
         guidanceOnly: "ให้คำแนะนำเท่านั้น",
       },
       quickActions: "การกระทำด่วน",
+    },
+    integrationProviderPages: {
+      claude: {
+        eyebrow: "การตั้งค่า Claude",
+        title: "เชื่อมต่อ Claude",
+        description:
+          "ใช้เส้นทางทางการของ Anthropic ตรวจสอบเกราะความเป็นส่วนตัวก่อน แล้วค่อยเพิ่มข้อมูลรับรองให้เวิร์กสเปซนี้",
+      },
+      openai: {
+        eyebrow: "การตั้งค่า OpenAI",
+        title: "เชื่อมต่อ OpenAI",
+        description:
+          "ใช้เส้นทางทางการของ OpenAI ตรวจสอบข้อความเปิดเผยข้อมูลก่อน แล้วเชื่อมต่อเฉพาะเมื่อเวิร์กสเปซนี้ต้องใช้จริงเท่านั้น",
+      },
+      copilot: {
+        eyebrow: "การตั้งค่า GitHub Copilot",
+        title: "เชื่อมต่อ GitHub Copilot",
+        description:
+          "ตรวจสอบการเข้าถึงที่เก็บโค้ด การเปิดเผยพรอมป์ต และการเพิกถอนสิทธิ์ก่อนเปิดใช้ GitHub Copilot ในเวิร์กสเปซนี้",
+        systemAccessMessage:
+          "ตรวจสอบการเข้าถึงส่วนขยาย ที่เก็บโค้ด และพรอมป์ตก่อนเปิดใช้ GitHub Copilot",
+        riskChecklistTitle: "รายการตรวจสอบความเสี่ยง",
+        riskChecklistItems: {
+          repositoryAccess: "ยืนยันว่าเครื่องมือนี้ตรวจสอบที่เก็บโค้ดและไฟล์ใดได้บ้าง",
+          officialFlow: "ใช้เฉพาะกระบวนการยืนยันตัวตนทางการของ GitHub Copilot เท่านั้น",
+          revokeAccess: "เพิกถอนสิทธิ์ทันทีหากเวิร์กสเปซไม่ต้องการใช้อีกต่อไป",
+        },
+      },
+      openclaw: {
+        eyebrow: "การตั้งค่า OpenClaw",
+        title: "เชื่อมต่อ OpenClaw",
+        description:
+          "OpenClaw อาจเพิ่มความเสี่ยงด้านความเชื่อถือและขอบเขตระดับระบบ ดังนั้นต้องตรวจสอบทุกคำเตือนก่อนเปิดใช้",
+        systemAccessMessage:
+          "ตรวจสอบการเข้าถึงระบบภายใน เส้นทางข้อมูล และการกำหนดเส้นทางโมเดลก่อนเปิดใช้ OpenClaw",
+        riskChecklistTitle: "การเชื่อมต่อความเสี่ยงสูง",
+        riskChecklistItems: {
+          localReach: "ตรวจสอบว่า OpenClaw เข้าถึงไฟล์ เครื่องมือ หรือเชลล์ในเครื่องใดได้บ้าง",
+          promptRouting: "ยืนยันเส้นทางพรอมป์ตและที่เก็บข้อมูลก่อนเปิดใช้การเชื่อมต่อ",
+          oneClickRevoke: "ใช้การเพิกถอนแบบคลิกเดียวหากโมเดลความเชื่อถือของคุณเปลี่ยนไป",
+        },
+      },
+      gemini: {
+        eyebrow: "การตั้งค่า Gemini",
+        title: "เชื่อมต่อ Gemini",
+        description:
+          "ใช้เส้นทางทางการของ Google AI Studio ตรวจสอบข้อความเปิดเผยข้อมูลก่อน แล้วเชื่อมต่อ Gemini เฉพาะเมื่อเวิร์กสเปซนี้ต้องใช้จริงอย่างชัดเจน",
+      },
+      perplexity: {
+        eyebrow: "การตั้งค่า Perplexity",
+        title: "เชื่อมต่อ Perplexity",
+        description:
+          "ทำตามขั้นตอนคอนโซลทางการของ Perplexity ตรวจสอบข้อความเปิดเผยข้อมูล และจำกัดการเชื่อมต่อไว้เฉพาะเวิร์กสเปซที่ต้องใช้",
+      },
+      mistral: {
+        eyebrow: "การตั้งค่า Mistral",
+        title: "เชื่อมต่อ Mistral",
+        description:
+          "ใช้เส้นทางคอนโซลทางการของ Mistral ยืนยันข้อความเปิดเผยข้อมูล และเปิดใช้การเชื่อมต่อเฉพาะกับเวิร์กสเปซที่จำเป็น",
+      },
+      wise: {
+        eyebrow: "การตั้งค่า Wise",
+        title: "เชื่อมต่อ Wise",
+        description:
+          "ใช้เส้นทางทางการของ Wise ตรวจสอบข้อความเปิดเผยข้อมูล และเชื่อมต่อบัญชีเมื่อขอบเขตของเวิร์กสเปซชัดเจนแล้วเท่านั้น",
+      },
+      revolut: {
+        eyebrow: "การตั้งค่า Revolut",
+        title: "เชื่อมต่อ Revolut",
+        description:
+          "ทำตามเส้นทางนักพัฒนาทางการของ Revolut ยืนยันข้อความเปิดเผยข้อมูล และจำกัดการเชื่อมต่อไว้กับเวิร์กสเปซที่ต้องใช้เท่านั้น",
+      },
+      paypal: {
+        eyebrow: "การตั้งค่า PayPal",
+        title: "เชื่อมต่อ PayPal",
+        description:
+          "ใช้เส้นทางนักพัฒนาทางการของ PayPal ตรวจสอบข้อความเปิดเผยข้อมูล และทำการตั้งค่าให้เสร็จเฉพาะกับเวิร์กสเปซที่ต้องใช้จริง",
+      },
+      deel: {
+        eyebrow: "การตั้งค่า Deel",
+        title: "เชื่อมต่อ Deel",
+        description:
+          "ใช้เส้นทางทางการของ Deel ตรวจสอบข้อความเปิดเผยข้อมูล และเปิดใช้การเข้าถึงเงินเดือนเฉพาะกับเวิร์กสเปซที่ต้องใช้",
+      },
+      xero: {
+        eyebrow: "การตั้งค่า Xero",
+        title: "เชื่อมต่อ Xero",
+        description:
+          "ทำตามขั้นตอนนักพัฒนาทางการของ Xero ยืนยันข้อความเปิดเผยข้อมูล และเชื่อมต่อหลังจากขอบเขตงานบัญชีชัดเจนแล้วเท่านั้น",
+      },
     },
     integrationsShared: {
       backToConnectionHub: "กลับไปที่ศูนย์การเชื่อมต่อ",

@@ -3,7 +3,7 @@ import { vi } from "vitest";
 import OpenAiIntegrationPage from "./page";
 
 vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string, values?: Record<string, string>) => {
+  useTranslations: (namespace?: string) => (key: string, values?: Record<string, string>) => {
     const translations: Record<string, string> = {
       backToConnectionHub: "Back to connection hub",
       tools: "Tools",
@@ -14,12 +14,16 @@ vi.mock("next-intl", () => ({
       officialDocs: "Official docs",
       privacyBadge: "No silent sharing",
       systemAccessWarning: "System access warning",
+      "integrationProviderPages.openai.eyebrow": "OpenAI Setup",
+      "integrationProviderPages.openai.title": "Connect OpenAI",
+      "integrationProviderPages.openai.description":
+        "Follow the official OpenAI path, verify the disclosure copy, and connect only if this workspace explicitly needs it.",
       "disclosures.minimumData": "Only explicitly connected providers receive the minimum required data.",
       "disclosures.noSilentSharing": "No silent sharing or automatic cross-provider routing.",
       "disclosures.revokeAnyTime": "You can revoke and disconnect this provider at any time.",
     };
 
-    return translations[key] ?? key;
+    return translations[namespace ? `${namespace}.${key}` : key] ?? translations[key] ?? key;
   },
 }));
 

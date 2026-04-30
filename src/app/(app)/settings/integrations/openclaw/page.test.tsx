@@ -3,7 +3,7 @@ import { vi } from "vitest";
 import OpenClawIntegrationPage from "./page";
 
 vi.mock("next-intl", () => ({
-    useTranslations: () => (key: string, values?: Record<string, string>) => {
+    useTranslations: (namespace?: string) => (key: string, values?: Record<string, string>) => {
         const translations: Record<string, string> = {
             backToConnectionHub: "Back to connection hub",
             tools: "Tools",
@@ -14,12 +14,25 @@ vi.mock("next-intl", () => ({
             officialDocs: "Official docs",
             privacyBadge: "No silent sharing",
             systemAccessWarning: "System access warning",
+            "integrationProviderPages.openclaw.eyebrow": "OpenClaw Setup",
+            "integrationProviderPages.openclaw.title": "Connect OpenClaw",
+            "integrationProviderPages.openclaw.description":
+                "OpenClaw can introduce higher trust and system-scope concerns, so review every warning before you enable it.",
+            "integrationProviderPages.openclaw.systemAccessMessage":
+                "Verify local system access, data paths, and model routing before enabling OpenClaw.",
+            "integrationProviderPages.openclaw.riskChecklistTitle": "High-risk connection",
+            "integrationProviderPages.openclaw.riskChecklistItems.localReach":
+                "Check which local files, tools, or shells OpenClaw can reach.",
+            "integrationProviderPages.openclaw.riskChecklistItems.promptRouting":
+                "Confirm prompt routing and storage paths before enabling the integration.",
+            "integrationProviderPages.openclaw.riskChecklistItems.oneClickRevoke":
+                "Use one-click revoke if your trust model changes.",
             "disclosures.minimumData": "Only explicitly connected providers receive the minimum required data.",
             "disclosures.noSilentSharing": "No silent sharing or automatic cross-provider routing.",
             "disclosures.revokeAnyTime": "You can revoke and disconnect this provider at any time.",
         };
 
-        return translations[key] ?? key;
+        return translations[namespace ? `${namespace}.${key}` : key] ?? translations[key] ?? key;
     },
 }));
 

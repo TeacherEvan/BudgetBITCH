@@ -3,15 +3,17 @@ import { PrivacyDisclosurePanel } from "@/components/integrations/privacy-disclo
 import { ProviderWizardShell } from "@/components/integrations/provider-wizard-shell";
 import { buildProviderActionList } from "@/modules/integrations/integration-actions";
 import { providerRegistry } from "@/modules/integrations/provider-registry";
+import { useTranslations } from "next-intl";
 
 export default function OpenAiIntegrationPage() {
     const provider = providerRegistry.openai;
+    const t = useTranslations("integrationProviderPages.openai");
 
     return (
         <ProviderWizardShell
-            eyebrow="OpenAI Setup"
-            title="Connect OpenAI"
-            description="Follow the official OpenAI path, verify the disclosure copy, and connect only if this workspace explicitly needs it."
+            eyebrow={t("eyebrow")}
+            title={t("title")}
+            description={t("description")}
             actions={buildProviderActionList(provider)}
         >
             <PrivacyDisclosurePanel providerLabel={provider.label} />

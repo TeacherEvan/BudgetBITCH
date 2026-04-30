@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED: Use the `subagent-driven-development` agent (recommended) or `executing-plans` agent to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Ship the approved mobile-first redesign by turning the primary budgeting journey into a fixed-screen, no-page-scroll flow, reducing Start Smart to four survival panels, reusing one sticky home-location context across Start Smart, jobs, and dashboard, and replacing the primary calculator experience with a left-to-spend tool while preserving raw arithmetic as a secondary utility.
+**Goal:** Ship the approved mobile-first redesign by starting the app with a feature-summary welcome screen, keeping a dedicated auth entry layer, launching a one-time popup-style startup questionnaire after login, reducing Start Smart to four survival panels, reusing one sticky home-location context across Start Smart, jobs, and dashboard, and replacing the primary calculator experience with a left-to-spend tool while preserving raw arithmetic as a secondary utility.
 
-**Architecture:** Keep the current Next.js App Router, Prisma JSON persistence, and Clerk wiring intact. Add a `useSyncExternalStore`-backed home-location store in `src/modules`, add one reusable fixed-screen shell primitive in `src/components/mobile`, evolve the existing Start Smart schema and blueprint engine to accept real money-snapshot inputs, and reuse one shared left-to-spend calculation module from both Start Smart and `/calculator`. Jobs and dashboard should consume the shared home-location context through lightweight display/change affordances rather than duplicate location forms.
+**Architecture:** Keep the current Next.js App Router, Prisma JSON persistence, and Auth.js Google-only wiring intact. Reuse the current root auth gate in `src/app/page.tsx`, extend the existing launch flow into a popup-style one-time startup questionnaire, add a `useSyncExternalStore`-backed home-location store in `src/modules`, add one reusable fixed-screen shell primitive in `src/components/mobile`, evolve the existing Start Smart schema and blueprint engine to accept real money-snapshot inputs, and reuse one shared left-to-spend calculation module from both Start Smart and `/calculator`. Jobs and dashboard should consume the shared home-location context through lightweight display/change affordances rather than duplicate location forms.
 
 **Tech Stack:** Next.js 16 App Router, React 19, TypeScript, Zod, localStorage with `useSyncExternalStore`, Prisma JSON persistence, Vitest, Testing Library, Playwright.
 
@@ -14,21 +14,25 @@
 
 This plan covers one coupled redesign slice inside the tracked `src/**` app:
 
-1. Fixed-screen mobile shell behavior for the primary budgeting journey.
-2. A four-panel Start Smart survival flow.
-3. One sticky home-location context reused across Start Smart, jobs, and dashboard.
-4. A left-to-spend primary budgeting tool on `/calculator` with raw arithmetic demoted behind a secondary control.
-5. Targeted unit, component, page, and Playwright updates.
+1. Root welcome-screen content that summarizes existing feature areas.
+2. A one-time post-login startup questionnaire presented as popup-style panels.
+3. Fixed-screen mobile shell behavior for the primary budgeting journey.
+4. A four-panel Start Smart survival flow.
+5. One sticky home-location context reused across Start Smart, jobs, and dashboard.
+6. A left-to-spend primary budgeting tool on `/calculator` with raw arithmetic demoted behind a secondary control.
+7. Targeted unit, component, page, and Playwright updates.
 
 Do not widen this into a desktop information architecture rewrite, auth changes, bank-sync work, or Prisma schema migration work. The current `StartSmartProfile.profileJson` and `MoneyBlueprintSnapshot.blueprintJson` fields already accept richer JSON payloads, so this redesign should stay inside application code and tests.
 
 ## Milestones
 
-1. **Foundation:** add the shared home-location store, the shared left-to-spend math module, and the fixed-screen shell primitive.
-2. **Start Smart:** collapse the current six-step wizard into four panels and make the survival result depend on real money snapshot inputs.
-3. **Shared context:** surface the sticky home-location summary and `Change home base` affordance in dashboard and jobs.
-4. **Calculator:** replace the generic calculator-first page with a left-to-spend tool and keep raw arithmetic behind a secondary reveal.
-5. **Regression:** update focused Vitest and Playwright coverage, then refresh docs and run repo checks.
+1. **Root entry:** refresh welcome copy so the signed-out screen summarizes core features clearly.
+2. **Startup questionnaire:** extend the existing first-run launch flow into popup-style panels, starting with Ballpark expenses.
+3. **Foundation:** add the shared home-location store, the shared left-to-spend math module, and the fixed-screen shell primitive.
+4. **Start Smart:** collapse the current six-step wizard into four panels and make the survival result depend on real money snapshot inputs.
+5. **Shared context:** surface the sticky home-location summary and `Change home base` affordance in dashboard and jobs.
+6. **Calculator:** replace the generic calculator-first page with a left-to-spend tool and keep raw arithmetic behind a secondary reveal.
+7. **Regression:** update focused Vitest and Playwright coverage, then refresh docs and run repo checks.
 
 ## File structure and responsibilities
 
@@ -39,6 +43,19 @@ Do not widen this into a desktop information architecture rewrite, auth changes,
 - Create: `src/modules/home-location/home-location-store.test.ts` — corrupted-state fallback and update propagation coverage.
 - Create: `src/modules/budgeting/left-to-spend.ts` — shared budgeting math for Start Smart and calculator.
 - Create: `src/modules/budgeting/left-to-spend.test.ts` — stable, tight, and at-risk money-left cases.
+
+### Root entry and startup questionnaire
+
+- Modify: `src/app/page.tsx` — keep welcome -> auth -> one-time startup gating explicit.
+- Modify: `src/app/page.test.tsx` — cover feature-summary welcome content and first-run startup routing.
+- Modify: `src/components/welcome/welcome-window.tsx` — summarize the main app feature areas in the signed-out entry surface.
+- Modify: `src/components/welcome/welcome-window.test.tsx` — verify feature-summary copy remains visible and localized.
+- Modify: `src/components/launch/launch-wizard.tsx` — present the first-run startup flow as popup-style panels.
+- Modify: `src/components/launch/launch-wizard.test.tsx` — cover first-run popup sequencing and stored completion state.
+- Modify: `src/components/launch/searchable-combobox.tsx` — support the ballpark-expense dropdown interaction if existing behavior is too narrow.
+- Modify: `src/components/launch/searchable-combobox.test.tsx` — preserve dropdown search and selection behavior.
+- Modify: `src/modules/launch/option-catalog.ts` — add the curated top-10 expense titles for the Ballpark expenses step.
+- Modify: `src/modules/launch/option-catalog.test.ts` — verify the new expense options stay stable.
 
 ### Fixed-screen shell primitives
 
@@ -96,6 +113,7 @@ Do not widen this into a desktop information architecture rewrite, auth changes,
 
 ### End-to-end and docs
 
+- Modify: `tests/e2e/welcome-auth.spec.ts` — verify the welcome screen lists the main features and routes first-run users into startup only after auth.
 - Modify: `tests/e2e/start-smart.spec.ts` — verify a survival result appears inside the visible viewport without page scroll.
 - Modify: `tests/e2e/jobs.spec.ts` — verify the jobs surface reads the sticky home base.
 - Modify: `tests/e2e/dashboard.spec.ts` — verify the dashboard reads the sticky home base.
@@ -105,6 +123,12 @@ Do not widen this into a desktop information architecture rewrite, auth changes,
 - Modify: `docs/DEV_TREE.md` — reflect the new fixed-screen shell and Start Smart panel structure.
 
 ## Risk notes
+
+- **Risk: the startup questionnaire overlaps awkwardly with Start Smart and creates two competing onboarding flows.**
+  Mitigation: keep the startup sequence intentionally lighter, scoped to first-login essentials like ballpark expenses, while Start Smart remains the deeper survival-planning flow.
+
+- **Risk: the ballpark-expense popup grows into a long data-entry form.**
+  Mitigation: cap the first version to a curated top-10 category list, rough amount entry, and repeated popup-based capture instead of a full spreadsheet.
 
 - **Risk: mobile `100vh` and keyboard behavior still cause clipped content.**
   Mitigation: use `100dvh`, keep the active panel `min-h-0`, and split content into more panels before allowing any page scroll.
@@ -126,6 +150,7 @@ Do not widen this into a desktop information architecture rewrite, auth changes,
 
 ## Focused validation matrix
 
+- Root entry and startup questionnaire: `npm test -- src/app/page.test.tsx src/components/welcome/welcome-window.test.tsx src/components/launch/launch-wizard.test.tsx src/components/launch/searchable-combobox.test.tsx src/modules/launch/option-catalog.test.ts`
 - Shared domain: `npm test -- src/modules/home-location/home-location-store.test.ts src/modules/budgeting/left-to-spend.test.ts`
 - Fixed-screen shell: `npm test -- src/components/mobile/fixed-screen-shell.test.tsx src/components/mobile/mobile-app-shell.test.tsx`
 - Start Smart: `npm test -- src/modules/start-smart/wizard-machine.test.ts src/modules/start-smart/profile-schema.test.ts src/modules/start-smart/blueprint-engine.test.ts src/components/start-smart/start-smart-shell.test.tsx src/components/start-smart/blueprint-panel.test.tsx src/app/api/v1/start-smart/blueprint/route.test.ts src/app/(app)/start-smart/page.test.tsx`
@@ -162,6 +187,10 @@ Expected: PASS.
 Use this checklist text:
 
 ```md
+- [ ] Root welcome screen summarizes core features before auth
+- [ ] Login and sign-up stay a dedicated auth entry layer
+- [ ] First-login users see a one-time popup-style startup questionnaire before the normal landing state
+- [ ] Startup questionnaire begins with Ballpark expenses and uses a curated top-10 expense list
 - [ ] No page-level scroll on the primary mobile budgeting journey
 - [ ] Start Smart is exactly four panels: lane, home base, money snapshot, survival plan
 - [ ] Sticky home-location state is validated and reused across Start Smart, jobs, and dashboard
@@ -175,7 +204,69 @@ Use this checklist text:
 Run: `npx playwright test tests/e2e/start-smart.spec.ts tests/e2e/calculator.spec.ts tests/e2e/jobs.spec.ts tests/e2e/dashboard.spec.ts --project=chromium --workers=1`
 Expected: Current tests pass before the redesign begins.
 
-### Task 1: Add the shared home-location store and shared budgeting math
+### Task 1: Refresh root entry and add the first startup questionnaire popup
+
+**Files:**
+
+- Modify: `src/app/page.tsx`
+- Modify: `src/app/page.test.tsx`
+- Modify: `src/components/welcome/welcome-window.tsx`
+- Modify: `src/components/welcome/welcome-window.test.tsx`
+- Modify: `src/components/launch/launch-wizard.tsx`
+- Modify: `src/components/launch/launch-wizard.test.tsx`
+- Modify: `src/components/launch/searchable-combobox.tsx`
+- Modify: `src/components/launch/searchable-combobox.test.tsx`
+- Modify: `src/modules/launch/option-catalog.ts`
+- Modify: `src/modules/launch/option-catalog.test.ts`
+
+- [ ] **Step 1: Expand the welcome surface into a feature-summary entry screen**
+
+Update the signed-out root entry so it explicitly lists the current feature areas already present in the app.
+
+The welcome summary should name practical surfaces such as:
+
+- Dashboard
+- Start Smart
+- Calculator
+- Notes
+- Learn
+- Jobs
+- Integrations
+
+- [ ] **Step 2: Keep auth separate from the startup questionnaire**
+
+Do not collapse the welcome screen and sign-in screen into one page. The root welcome stays public, `/sign-in` remains the Google-only auth entry, and the startup questionnaire starts only after auth and first-run detection succeed.
+
+- [ ] **Step 3: Add the first popup panel for Ballpark expenses**
+
+Extend the existing startup or launch wizard with a popup-style Ballpark expenses step.
+
+The first version should offer these ten expense titles:
+
+- Rent or mortgage
+- Groceries
+- Utilities
+- Transport or fuel
+- Phone or internet
+- Insurance
+- Debt payments
+- Healthcare
+- Childcare or family support
+- Fun or entertainment
+
+Behavior:
+
+- Let the user choose a title from a dropdown or searchable combobox.
+- Let the user enter a rough amount for that title.
+- Allow repeated entry for more than one category during the same startup session.
+- Persist enough validated local state so the questionnaire is still one-time and recoverable after refresh.
+
+- [ ] **Step 4: Run the focused welcome/startup validation slice**
+
+Run: `npm test -- src/app/page.test.tsx src/components/welcome/welcome-window.test.tsx src/components/launch/launch-wizard.test.tsx src/components/launch/searchable-combobox.test.tsx src/modules/launch/option-catalog.test.ts`
+Expected: PASS.
+
+### Task 2: Add the shared home-location store and shared budgeting math
 
 **Files:**
 

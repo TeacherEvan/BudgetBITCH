@@ -3,15 +3,17 @@ import { PrivacyDisclosurePanel } from "@/components/integrations/privacy-disclo
 import { ProviderWizardShell } from "@/components/integrations/provider-wizard-shell";
 import { buildProviderActionList } from "@/modules/integrations/integration-actions";
 import { providerRegistry } from "@/modules/integrations/provider-registry";
+import { useTranslations } from "next-intl";
 
 export default function MistralIntegrationPage() {
     const provider = providerRegistry.mistral;
+    const t = useTranslations("integrationProviderPages");
 
     return (
         <ProviderWizardShell
-            eyebrow="Mistral Setup"
-            title="Connect Mistral"
-            description="Use the official Mistral console path, confirm the privacy disclosure, and only enable the connection for workspaces that require it."
+            eyebrow={t("mistral.eyebrow")}
+            title={t("mistral.title")}
+            description={t("mistral.description")}
             actions={buildProviderActionList(provider)}
         >
             <PrivacyDisclosurePanel providerLabel={provider.label} />

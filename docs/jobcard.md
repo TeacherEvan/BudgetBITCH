@@ -2,6 +2,24 @@
 
 This note captures the current contract for the jobs card surface in the root app.
 
+## Root App Startup Flow
+
+This section documents the root app entry sequence around onboarding. It does not replace or loosen the jobs card contract below.
+
+1. Welcome screen: the app should open with a visual welcome screen that summarizes the product and lists the current feature areas in a scan-first format.
+2. Login and sign-up screen: authentication is the next required step before protected app access.
+3. One-time startup questionnaire: after the first successful sign-in, the app should launch a one-time setup sequence built from popup windows before the user lands in the protected workspace.
+
+### First Questionnaire Popup: Ballpark Expenses
+
+- The first popup should collect ballpark expenses using familiar categories rather than blank inputs only.
+- Offer the top 10 common expense titles as suggested options: Rent, Groceries, Fuel, Utilities, Phone, Internet, Transport, Dining Out, Fun, and Subscriptions.
+- Use an explicitly labeled dropdown or combobox-style input so the user can select a suggested title quickly.
+- Preserve a path for user-entered information when the suggested titles do not fit.
+- Keep the copy practical and direct so the popup is easy to complete on first use.
+- Any user-facing labels introduced for this startup flow must follow the shared localization contract: English default, with matching Chinese and Thai translations added in the same change when implemented.
+- Any popup control described here should remain accessible with explicit labels and should not rely on color-only meaning.
+
 ## Purpose
 
 `src/components/jobs/job-card.tsx` is a scan-first card for comparing practical job options quickly. It should help the user decide whether to open the full job detail route without forcing them to read dense copy first.

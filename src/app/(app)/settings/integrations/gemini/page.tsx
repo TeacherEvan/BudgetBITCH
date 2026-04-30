@@ -3,15 +3,17 @@ import { PrivacyDisclosurePanel } from "@/components/integrations/privacy-disclo
 import { ProviderWizardShell } from "@/components/integrations/provider-wizard-shell";
 import { buildProviderActionList } from "@/modules/integrations/integration-actions";
 import { providerRegistry } from "@/modules/integrations/provider-registry";
+import { useTranslations } from "next-intl";
 
 export default function GeminiIntegrationPage() {
     const provider = providerRegistry.gemini;
+    const t = useTranslations("integrationProviderPages");
 
     return (
         <ProviderWizardShell
-            eyebrow="Gemini Setup"
-            title="Connect Gemini"
-            description="Use the official Google AI Studio path, verify the privacy disclosure, and only connect Gemini when this workspace clearly needs it."
+            eyebrow={t("gemini.eyebrow")}
+            title={t("gemini.title")}
+            description={t("gemini.description")}
             actions={buildProviderActionList(provider)}
         >
             <PrivacyDisclosurePanel providerLabel={provider.label} />

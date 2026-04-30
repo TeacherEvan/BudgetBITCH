@@ -3,15 +3,17 @@ import { PrivacyDisclosurePanel } from "@/components/integrations/privacy-disclo
 import { ProviderWizardShell } from "@/components/integrations/provider-wizard-shell";
 import { buildProviderActionList } from "@/modules/integrations/integration-actions";
 import { providerRegistry } from "@/modules/integrations/provider-registry";
+import { useTranslations } from "next-intl";
 
 export default function PerplexityIntegrationPage() {
     const provider = providerRegistry.perplexity;
+    const t = useTranslations("integrationProviderPages");
 
     return (
         <ProviderWizardShell
-            eyebrow="Perplexity Setup"
-            title="Connect Perplexity"
-            description="Follow the official Perplexity console flow, review the privacy disclosure, and keep the connection limited to the workspace that needs it."
+            eyebrow={t("perplexity.eyebrow")}
+            title={t("perplexity.title")}
+            description={t("perplexity.description")}
             actions={buildProviderActionList(provider)}
         >
             <PrivacyDisclosurePanel providerLabel={provider.label} />
