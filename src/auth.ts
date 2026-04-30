@@ -1,7 +1,12 @@
 import type { Session } from "next-auth";
-import type { JWT } from "next-auth/jwt";
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
+import {
+  getSessionUserFromToken,
+  getTokenClaimsFromProfile,
+  type SessionTokenClaims,
+  type GoogleProfileClaims,
+} from "./lib/auth/session-claims";
 
 type SessionUser = NonNullable<Session["user"]> & {
   id: string;
@@ -10,10 +15,6 @@ type SessionUser = NonNullable<Session["user"]> & {
 
 type SessionWithAppUser = Session & {
   user?: SessionUser;
-};
-
-type TokenWithSubject = JWT & {
-  sub?: string | null;
 };
 
 const googleClientId = process.env.AUTH_GOOGLE_ID ?? process.env.GOOGLE_CLIENT_ID ?? "";
@@ -40,21 +41,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   callbacks: {
     jwt({ token, profile }) {
-      if (profile?.sub) {
-        token.sub = profile.sub;
-      }
+      const profileClaims = getTokenClaimsFromProfile(
+        profile as GoogleProfileClaims | null | undefined,
+      );
+
+      token.sub = profileClaims.sub;
+      token.emailVerified = profileClaims.emailVerified;
 
       return token;
     },
     session({ session, token }) {
       if (session.user) {
         const sessionWithAppUser = session as unknown as SessionWithAppUser;
-        const tokenWithSubject = token as TokenWithSubject;
+        const tokenWithClaims = token as SessionTokenClaims;
+        const sessionUser = sessionWithAppUser.user;
 
-        sessionWithAppUser.user!.id = tokenWithSubject.sub ?? "";
-        sessionWithAppUser.user!.emailVerified = Boolean(
-          sessionWithAppUser.user!.email,
-        );
+        if (sessionUser) {
+          sessionWithAppUser.user = getSessionUserFromToken(sessionUser, tokenWithClaims);
+        }
       }
 
       return session;
