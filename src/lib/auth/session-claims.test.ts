@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  applyTokenClaimsFromProfile,
   getSessionUserFromToken,
   getTokenClaimsFromProfile,
-  type SessionTokenClaims,
 } from "./session-claims";
 
 describe("auth session claims", () => {
   it("keeps emailVerified false unless the token says the email was verified", () => {
-    const token: SessionTokenClaims = {
+    const token = {
       sub: "user_123",
       emailVerified: false,
     };
@@ -16,9 +16,11 @@ describe("auth session claims", () => {
     expect(
       getSessionUserFromToken(
         {
+          id: "user_123",
           name: "Alex",
           email: "alex@example.com",
           image: null,
+          emailVerified: false,
         },
         token,
       ),
@@ -38,6 +40,19 @@ describe("auth session claims", () => {
         email_verified: true,
       }),
     ).toEqual({
+      sub: "user_123",
+      emailVerified: true,
+    });
+  });
+
+  it("preserves token claims when jwt runs again without a profile", () => {
+    const token = {
+      sub: "user_123",
+      emailVerified: true,
+    };
+
+    expect(applyTokenClaimsFromProfile(token, undefined)).toBe(token);
+    expect(token).toEqual({
       sub: "user_123",
       emailVerified: true,
     });

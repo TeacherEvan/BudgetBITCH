@@ -1,21 +1,6 @@
-import type { Session } from "next-auth";
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
-import {
-  getSessionUserFromToken,
-  getTokenClaimsFromProfile,
-  type SessionTokenClaims,
-  type GoogleProfileClaims,
-} from "./lib/auth/session-claims";
-
-type SessionUser = NonNullable<Session["user"]> & {
-  id: string;
-  emailVerified: boolean;
-};
-
-type SessionWithAppUser = Session & {
-  user?: SessionUser;
-};
+import { applyTokenClaimsFromProfile } from "./lib/auth/session-claims";
 
 const googleClientId = process.env.AUTH_GOOGLE_ID ?? process.env.GOOGLE_CLIENT_ID ?? "";
 const googleClientSecret =
@@ -41,27 +26,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   callbacks: {
     jwt({ token, profile }) {
-      const profileClaims = getTokenClaimsFromProfile(
-        profile as GoogleProfileClaims | null | undefined,
-      );
-
-      token.sub = profileClaims.sub;
-      token.emailVerified = profileClaims.emailVerified;
-
-      return token;
+      return applyTokenClaimsFromProfile(token, profile);
     },
     session({ session, token }) {
-      if (session.user) {
-        const sessionWithAppUser = session as unknown as SessionWithAppUser;
-        const tokenWithClaims = token as SessionTokenClaims;
-        const sessionUser = sessionWithAppUser.user;
-
-        if (sessionUser) {
-          sessionWithAppUser.user = getSessionUserFromToken(sessionUser, tokenWithClaims);
-        }
+      if (!session.user) {
+        return session;
       }
 
-      return session;
+      return {
+        ...session,
+        user: {
+          ...session.user,
+          id: token.sub ?? "",
+          emailVerified: Boolean(token.emailVerified),
+        },
+      };
     },
   },
 });
