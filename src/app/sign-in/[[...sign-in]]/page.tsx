@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { auth, signIn } from "@/auth";
 import { AuthEntryPanel } from "@/components/auth/auth-entry-panel";
 import { getRequestMessages } from "@/i18n/server";
+import { isGoogleOAuthConfigured } from "@/lib/auth/oauth-config";
 import { getAuthenticatedUserId } from "@/lib/auth/session";
 import { getSafePostAuthRedirect } from "@/modules/auth/post-auth-redirect";
 
@@ -44,6 +45,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps = {})
   const redirectTarget = getSafePostAuthRedirect(getRedirectToCandidate(resolvedSearchParams));
   const forceRedirectUrl = getForceRedirectUrl(redirectTarget);
   const signUpUrl = getAuthSwitchUrl("/sign-up", redirectTarget);
+  const googleOAuthConfigured = isGoogleOAuthConfigured();
 
   const session = await auth();
   const userId = getAuthenticatedUserId(session);
@@ -71,12 +73,19 @@ export default async function SignInPage({ searchParams }: SignInPageProps = {})
         </span>
       }
     >
-      <form action={startGoogleSignIn} className="flex flex-col gap-3">
-        <button type="submit" className="bb-button-primary w-full justify-center md:w-auto">
-          {messages.signIn.continueWithGoogle}
-        </button>
-        <p className="bb-mini-copy text-sm">{messages.signIn.privacy}</p>
-      </form>
+      {googleOAuthConfigured ? (
+        <form action={startGoogleSignIn} className="flex flex-col gap-3">
+          <button type="submit" className="bb-button-primary w-full justify-center md:w-auto">
+            {messages.signIn.continueWithGoogle}
+          </button>
+          <p className="bb-mini-copy text-sm">{messages.signIn.privacy}</p>
+        </form>
+      ) : (
+        <div className="rounded-2xl border border-amber-300/30 bg-amber-300/10 p-4" role="status">
+          <p className="font-semibold text-amber-100">{messages.signIn.setupRequiredTitle}</p>
+          <p className="bb-mini-copy mt-2 text-sm">{messages.signIn.setupRequiredDescription}</p>
+        </div>
+      )}
     </AuthEntryPanel>
   );
 }

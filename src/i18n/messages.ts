@@ -137,6 +137,9 @@ export const localeMessages = {
       continueWithGoogle: "Continue with Google",
       privacy:
         "Google is only used for secure sign-in. BudgetBITCH never reads or stores Gmail inbox or message content.",
+      setupRequiredTitle: "Google sign-in is not configured",
+      setupRequiredDescription:
+        "Add Google OAuth credentials before using this sign-in method.",
     },
     authContinue: {
       eyebrow: "Continue",
@@ -552,6 +555,8 @@ export const localeMessages = {
       openSignUp: "打开注册",
       continueWithGoogle: "使用 Google 继续",
       privacy: "Google 仅用于安全登录。BudgetBITCH 不会读取或存储 Gmail 收件箱或邮件内容。",
+      setupRequiredTitle: "尚未配置 Google 登录",
+      setupRequiredDescription: "请先添加 Google OAuth 凭据，再使用此登录方式。",
     },
     authContinue: {
       eyebrow: "继续",
@@ -943,6 +948,8 @@ export const localeMessages = {
       openSignUp: "เปิดหน้าสมัครใช้งาน",
       continueWithGoogle: "ดำเนินการต่อด้วย Google",
       privacy: "Google ใช้เฉพาะเพื่อการลงชื่อเข้าใช้ที่ปลอดภัย BudgetBITCH จะไม่อ่านหรือเก็บเนื้อหาในกล่องจดหมาย Gmail หรือข้อความอีเมล",
+      setupRequiredTitle: "ยังไม่ได้กำหนดค่าการลงชื่อเข้าใช้ด้วย Google",
+      setupRequiredDescription: "เพิ่มข้อมูลรับรอง Google OAuth ก่อนใช้วิธีลงชื่อเข้าใช้นี้",
     },
     authContinue: {
       eyebrow: "ดำเนินการต่อ",

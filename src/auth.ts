@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
+import { getGoogleOAuthCredentials } from "@/lib/auth/oauth-config";
 
 const authSecret =
   process.env.AUTH_SECRET ??
@@ -7,18 +8,21 @@ const authSecret =
   (process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test"
     ? "budgetbitch-local-auth-secret"
     : undefined);
-
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  secret: authSecret,
-  providers: [
-    Google({
+const googleOAuthCredentials = getGoogleOAuthCredentials();
+const googleProvider = googleOAuthCredentials
+  ? Google({
+      ...googleOAuthCredentials,
       authorization: {
         params: {
           prompt: "select_account",
         },
       },
-    }),
-  ],
+    })
+  : undefined;
+
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  secret: authSecret,
+  providers: googleProvider ? [googleProvider] : [],
   pages: {
     signIn: "/sign-in",
   },

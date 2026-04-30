@@ -8,7 +8,7 @@ export default defineConfig({
   },
   webServer: {
     command:
-      "BUDGETBITCH_STRIP_CLERK_ENV=true node ./scripts/run-with-sanitized-env.mjs npm run dev -- --webpack --port 3100",
+      "BUDGETBITCH_STRIP_CLERK_ENV=true BUDGETBITCH_STRIP_AUTH_ENV=true node ./scripts/run-with-sanitized-env.mjs npm run dev -- --webpack --port 3100",
     url: "http://127.0.0.1:3100",
     reuseExistingServer: false,
   },

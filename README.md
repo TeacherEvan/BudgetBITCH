@@ -57,23 +57,24 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 
 - `/` is the auth-first gate: signed-out visitors stay on the welcome window, signed-in visitors without a completed launch profile move into the launch wizard, and signed-in visitors with a completed launch profile land on the root board.
 - `/sign-in` and `/sign-up` keep only sanitized in-app `redirectTo` targets. Safe root and dashboard targets are routed through `/auth/continue` before the final landing step.
-- `/auth/continue` is the post-Clerk bootstrap boundary. It shows the final local-setup panel, then the continue action resolves any missing local user and workspace records before redirecting to the safe post-auth destination.
-- `middleware.ts` recognizes `/auth/continue`, `/dashboard`, `/settings`, and `/api/v1` as the protected surface. When Clerk config is missing or invalid, protected browser routes redirect to `/sign-in` and protected API routes return JSON `503` errors.
+- `/auth/continue` is the post-auth bootstrap boundary. It shows the final local-setup panel, then the continue action resolves any missing local user and workspace records before redirecting to the safe post-auth destination.
+- `middleware.ts` recognizes `/auth/continue`, `/dashboard`, `/settings`, and `/api/v1` as the protected surface. Signed-out browser routes redirect to `/sign-in` and protected API routes return JSON authentication errors.
 
 ## Local setup
 
 1. Copy environment values from `.env.example` into `.env.local`.
 2. Install dependencies with `npm install`.
-3. Set `PROVIDER_SECRET_ENCRYPTION_KEY` to a long random server-side secret before using integration connect/revoke routes under `/settings/integrations`.
-4. When using Neon, set `DATABASE_URL` to the pooled connection string from the Neon **Connect** dialog and `DIRECT_URL` to the direct connection string.
-5. If you plan to run `prisma migrate dev`, optionally set `SHADOW_DATABASE_URL` to a dedicated direct-connection shadow database.
-6. Create or link a Convex deployment, then set `CONVEX_DEPLOYMENT`, `NEXT_PUBLIC_CONVEX_URL`, `CLERK_JWT_ISSUER_DOMAIN`, and `CONVEX_SYNC_SECRET`.
-7. If your Clerk app uses a satellite or proxy deployment, also set `NEXT_PUBLIC_CLERK_IS_SATELLITE`, plus either `NEXT_PUBLIC_CLERK_DOMAIN` or `NEXT_PUBLIC_CLERK_PROXY_URL`.
-8. Set `CRON_SECRET` in Vercel so the scheduled replay route can authenticate Vercel Cron requests.
-9. Mirror the same Neon, Clerk, and Convex environment variables in Vercel before shipping preview or production deployments.
-10. Generate the Prisma client with `npm run db:generate`.
-11. Start development with `npm run dev`.
-12. For browser tests, keep the Playwright web server on its dedicated webpack path. `playwright.config.ts` now starts `npm run dev -- --webpack --port 3100` through `scripts/run-with-sanitized-env.mjs`, with server reuse disabled, so local Clerk keys do not change the auth-root test behavior and Turbopack does not hang on the first `/` request.
+3. Set `AUTH_SECRET` to a long random server-side secret, then set `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` from a Google OAuth web client. The app also accepts `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` as local aliases.
+4. Set `PROVIDER_SECRET_ENCRYPTION_KEY` to a long random server-side secret before using integration connect/revoke routes under `/settings/integrations`.
+5. When using Neon, set `DATABASE_URL` to the pooled connection string from the Neon **Connect** dialog and `DIRECT_URL` to the direct connection string.
+6. If you plan to run `prisma migrate dev`, optionally set `SHADOW_DATABASE_URL` to a dedicated direct-connection shadow database.
+7. Create or link a Convex deployment, then set `CONVEX_DEPLOYMENT`, `NEXT_PUBLIC_CONVEX_URL`, `CLERK_JWT_ISSUER_DOMAIN`, and `CONVEX_SYNC_SECRET`.
+8. If your Clerk app uses a satellite or proxy deployment, also set `NEXT_PUBLIC_CLERK_IS_SATELLITE`, plus either `NEXT_PUBLIC_CLERK_DOMAIN` or `NEXT_PUBLIC_CLERK_PROXY_URL`.
+9. Set `CRON_SECRET` in Vercel so the scheduled replay route can authenticate Vercel Cron requests.
+10. Mirror the same Auth.js, Neon, Clerk, and Convex environment variables in Vercel before shipping preview or production deployments.
+11. Generate the Prisma client with `npm run db:generate`.
+12. Start development with `npm run dev`.
+13. For browser tests, keep the Playwright web server on its dedicated webpack path. `playwright.config.ts` now starts `npm run dev -- --webpack --port 3100` through `scripts/run-with-sanitized-env.mjs`, with server reuse disabled, so local Clerk keys do not change the auth-root test behavior and Turbopack does not hang on the first `/` request.
 
 ## Verification
 
@@ -134,7 +135,8 @@ See `.env.example` for the full list of required variables, including authentica
 
 Environment notes:
 
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, and `CLERK_JWT_ISSUER_DOMAIN` are the baseline Clerk values for local auth and Convex auth validation.
+- `AUTH_SECRET`, `AUTH_GOOGLE_ID`, and `AUTH_GOOGLE_SECRET` are required for Auth.js Google sign-in. `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are accepted aliases for local setups that already use those names.
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, and `CLERK_JWT_ISSUER_DOMAIN` remain available for Convex auth validation and legacy local environments.
 - `NEXT_PUBLIC_CLERK_IS_SATELLITE`, `NEXT_PUBLIC_CLERK_DOMAIN`, and `NEXT_PUBLIC_CLERK_PROXY_URL` are optional and only needed for Clerk satellite or proxy deployments.
 - `PROVIDER_SECRET_ENCRYPTION_KEY` is only required when you want to exercise the encrypted integration connect/revoke routes.
 - `RESEND_API_KEY`, `INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY`, and `WEBHOOK_SIGNING_SECRET` remain scaffolded placeholders for email and webhook surfaces that are not active in the current root app slice.

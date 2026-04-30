@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 
 const placeholderPattern = /replace_me|your-app/i;
 const forceStripClerkEnv = process.env.BUDGETBITCH_STRIP_CLERK_ENV === "true";
+const forceStripAuthEnv = process.env.BUDGETBITCH_STRIP_AUTH_ENV === "true";
 const variablesToSanitize = [
   "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
   "CLERK_SECRET_KEY",
@@ -9,6 +10,12 @@ const variablesToSanitize = [
   "NEXT_PUBLIC_CLERK_IS_SATELLITE",
   "NEXT_PUBLIC_CLERK_DOMAIN",
   "NEXT_PUBLIC_CLERK_PROXY_URL",
+];
+const authVariablesToSanitize = [
+  "AUTH_GOOGLE_ID",
+  "AUTH_GOOGLE_SECRET",
+  "GOOGLE_CLIENT_ID",
+  "GOOGLE_CLIENT_SECRET",
 ];
 
 const [command, ...args] = process.argv.slice(2);
@@ -30,6 +37,12 @@ for (const name of variablesToSanitize) {
 
   if (value && placeholderPattern.test(value)) {
     delete env[name];
+  }
+}
+
+if (forceStripAuthEnv) {
+  for (const name of authVariablesToSanitize) {
+    env[name] = "";
   }
 }
 

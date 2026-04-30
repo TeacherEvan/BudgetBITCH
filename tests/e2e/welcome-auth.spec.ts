@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { expectGoogleOAuthSetupNotice } from "./auth-setup";
 import { seedCompletedLaunchProfile } from "./launch-profile";
 
 test("signed-out visitors see the welcome auth surface at root", async ({ page }) => {
@@ -27,7 +28,7 @@ test("signed-out visitors still see welcome when a launch profile is already sav
   await expect(page.getByRole("heading", { name: /plan first\. panic less\./i })).toHaveCount(0);
 });
 
-test("dashboard redirects to sign-in when local Clerk setup is unavailable", async ({ page }) => {
+test("dashboard redirects to sign-in when Google OAuth setup is unavailable", async ({ page }) => {
   await page.goto("/dashboard?workspaceId=workspace-2");
 
   await expect(page).toHaveURL(
@@ -36,7 +37,7 @@ test("dashboard redirects to sign-in when local Clerk setup is unavailable", asy
   await expect(page.getByRole("heading", { name: /open your budget board/i })).toBeVisible({
     timeout: 15000,
   });
-  await expect(page.getByRole("button", { name: /continue with google/i })).toBeVisible();
+  await expectGoogleOAuthSetupNotice(page);
 });
 
 for (const authEntry of [
@@ -51,7 +52,7 @@ for (const authEntry of [
     finalUrl: /\/sign-in\?redirectTo=%2F$/,
   },
 ] as const) {
-  test(`welcome ${authEntry.label} link keeps redirectTo in the URL without local Clerk setup`, async ({ page }) => {
+  test(`welcome ${authEntry.label} link keeps redirectTo in the URL without Google OAuth setup`, async ({ page }) => {
     await page.goto("/");
 
     await Promise.all([
@@ -65,6 +66,6 @@ for (const authEntry of [
     await expect(page.getByRole("heading", { name: /open your budget board/i })).toBeVisible({
       timeout: 15000,
     });
-    await expect(page.getByRole("button", { name: /continue with google/i })).toBeVisible();
+    await expectGoogleOAuthSetupNotice(page);
   });
 }
