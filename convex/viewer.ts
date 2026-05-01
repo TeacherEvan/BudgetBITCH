@@ -17,7 +17,7 @@ export const current = query({
     const identity = await requireIdentity(ctx);
     const viewer = await getViewerRecord(ctx, identity.tokenIdentifier);
 
-    if (!viewer) {
+    if (!viewer?.profileId || !viewer.clerkUserId) {
       return {
         projectionReady: false,
         identity: {
@@ -32,13 +32,15 @@ export const current = query({
       };
     }
 
+    const profileId = viewer.profileId;
+
     const workspaceLimit = clampWorkspaceLimit(
       args.workspaceLimit ?? DEFAULT_WORKSPACE_LIMIT,
     );
     const memberships = await ctx.db
       .query("workspaceMemberships")
       .withIndex("by_profileId_and_workspaceId", (q) =>
-        q.eq("profileId", viewer.profileId),
+        q.eq("profileId", profileId),
       )
       .take(workspaceLimit);
 
@@ -79,7 +81,7 @@ export const current = query({
         name: identity.name ?? null,
       },
       user: {
-        profileId: viewer.profileId,
+        profileId,
         clerkUserId: viewer.clerkUserId,
         email: viewer.email ?? null,
         displayName: viewer.displayName ?? null,

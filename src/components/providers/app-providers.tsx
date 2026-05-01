@@ -1,7 +1,7 @@
 "use client";
 
-import { ConvexProvider, ConvexReactClient } from "convex/react";
-import { SessionProvider } from "next-auth/react";
+import { ConvexAuthNextjsProvider } from "@convex-dev/auth/nextjs";
+import { ConvexReactClient } from "convex/react";
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { PwaProvider } from "@/components/providers/pwa-provider";
 import { isAbsoluteHttpUrl } from "@/lib/url";
@@ -18,7 +18,7 @@ function ConvexAppProviders({
 }) {
   const convex = useMemo(() => new ConvexReactClient(convexUrl), [convexUrl]);
 
-  return <ConvexProvider client={convex}>{children}</ConvexProvider>;
+  return <ConvexAuthNextjsProvider client={convex}>{children}</ConvexAuthNextjsProvider>;
 }
 
 export function AppProviders({ children }: AppProvidersProps) {
@@ -38,17 +38,13 @@ export function AppProviders({ children }: AppProvidersProps) {
     );
   }, [convexUrl, convexUrlConfigured]);
 
-  const providerChildren = <SessionProvider>{children}</SessionProvider>;
-
   if (!convexUrlConfigured) {
-    return <PwaProvider>{providerChildren}</PwaProvider>;
+    return <PwaProvider>{children}</PwaProvider>;
   }
 
   return (
     <PwaProvider>
-      <SessionProvider>
-        <ConvexAppProviders convexUrl={convexUrlValue}>{children}</ConvexAppProviders>
-      </SessionProvider>
+      <ConvexAppProviders convexUrl={convexUrlValue}>{children}</ConvexAppProviders>
     </PwaProvider>
   );
 }

@@ -1,6 +1,6 @@
 # BudgetBITCH
 
-BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.js App Router, Prisma, Neon, Convex, Clerk, Inngest, Resend, Vercel, and Playwright.
+BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.js App Router, Prisma, Neon, Convex Auth, Inngest, Resend, Vercel, and Playwright.
 
 ## Navigation docs
 
@@ -32,7 +32,7 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 - Prisma 7
 - Neon Postgres
 - Convex
-- Clerk
+- Convex Auth
 - Inngest
 - Resend
 - Sentry
@@ -43,7 +43,7 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 ## Codebase shape
 
 - `src/app/**` contains routes, route groups, layouts, and API handlers
-- `src/app/page.tsx`, `src/app/sign-in/**`, `src/app/sign-up/**`, and `src/app/(app)/auth/continue/**` define the auth-first root entry and post-Clerk bootstrap path
+- `src/app/page.tsx`, `src/app/sign-in/**`, `src/app/sign-up/**`, and `src/app/(app)/auth/continue/**` define the auth-first root entry and post-auth bootstrap path
 - `src/components/start-smart/**` contains reusable UI for the Money Survival Blueprint flow
 - `src/components/learn/**` contains reusable UI for the Learn! hub and lesson detail flow
 - `src/components/jobs/**` contains reusable UI for the Jobs hub and job detail flow
@@ -64,17 +64,16 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 
 1. Copy environment values from `.env.example` into `.env.local`.
 2. Install dependencies with `npm install`.
-3. Set `AUTH_SECRET` to a long random server-side secret, then set `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` from a Google OAuth web client. The app also accepts `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` as local aliases.
+3. Create or link a Convex deployment with Convex Auth enabled, then set `CONVEX_DEPLOYMENT`, `NEXT_PUBLIC_CONVEX_URL`, and `NEXT_PUBLIC_CONVEX_SITE_URL`.
 4. Set `PROVIDER_SECRET_ENCRYPTION_KEY` to a long random server-side secret before using integration connect/revoke routes under `/settings/integrations`.
 5. When using Neon, set `DATABASE_URL` to the pooled connection string from the Neon **Connect** dialog and `DIRECT_URL` to the direct connection string.
 6. If you plan to run `prisma migrate dev`, optionally set `SHADOW_DATABASE_URL` to a dedicated direct-connection shadow database.
-7. Create or link a Convex deployment, then set `CONVEX_DEPLOYMENT`, `NEXT_PUBLIC_CONVEX_URL`, `CLERK_JWT_ISSUER_DOMAIN`, and `CONVEX_SYNC_SECRET`.
-8. If your Clerk app uses a satellite or proxy deployment, also set `NEXT_PUBLIC_CLERK_IS_SATELLITE`, plus either `NEXT_PUBLIC_CLERK_DOMAIN` or `NEXT_PUBLIC_CLERK_PROXY_URL`.
-9. Set `CRON_SECRET` in Vercel so the scheduled replay route can authenticate Vercel Cron requests.
-10. Mirror the same Auth.js, Neon, Clerk, and Convex environment variables in Vercel before shipping preview or production deployments.
-11. Generate the Prisma client with `npm run db:generate`.
-12. Start development with `npm run dev`.
-13. For browser tests, keep the Playwright web server on its dedicated webpack path. `playwright.config.ts` now starts `npm run dev -- --webpack --port 3100` through `scripts/run-with-sanitized-env.mjs`, with server reuse disabled, so local Clerk keys do not change the auth-root test behavior and Turbopack does not hang on the first `/` request.
+7. Set `CONVEX_SYNC_SECRET` for projection replay routes.
+8. Set `CRON_SECRET` in Vercel so the scheduled replay route can authenticate Vercel Cron requests.
+9. Mirror the same Neon, Convex, projection, and provider-secret variables in Vercel before shipping preview or production deployments.
+10. Generate the Prisma client with `npm run db:generate`.
+11. Start development with `npm run dev`.
+12. For browser tests, keep the Playwright web server on its dedicated webpack path. `playwright.config.ts` now starts `npm run dev -- --webpack --port 3100` through `scripts/run-with-sanitized-env.mjs`, with server reuse disabled, so local auth values do not change the auth-root test behavior and Turbopack does not hang on the first `/` request.
 
 ## Verification
 
@@ -89,7 +88,7 @@ Current workspace verification status:
 Current browser-test note:
 
 - `npm run test:e2e` uses a dedicated webpack-backed dev server on port `3100` with server reuse disabled so the suite does not attach to a hanging Turbopack process.
-- The Playwright web server strips local Clerk auth env on purpose so signed-out welcome coverage and the non-production signed-in fallback stay deterministic even when `.env.local` contains real dev keys.
+- The Playwright web server strips local auth env on purpose so signed-out welcome coverage and the non-production signed-in fallback stay deterministic even when `.env.local` contains real dev keys.
 - Playwright root coverage is split between `tests/e2e/welcome-auth.spec.ts` for signed-out entry behavior and `tests/e2e/smoke.spec.ts` for the signed-in root gate path.
 
 For deeper orientation, start with `docs/DEV_TREE.md`, then use `docs/CODEBASE_INDEX.md` to jump to the right route, module, or test.
@@ -97,7 +96,7 @@ For deeper orientation, start with `docs/DEV_TREE.md`, then use `docs/CODEBASE_I
 ## Launch wizard notes
 
 - Launch preferences remain local-only in `localStorage` under `budgetbitch:launch-profile`.
-- The signed-in root E2E override is non-production-only and uses `budgetbitch:e2e-auth-state` only to exercise the signed-in root flow when Clerk client config is missing locally.
+- The signed-in root E2E override is non-production-only and uses `budgetbitch:e2e-auth-state` only to exercise the signed-in root flow when auth client config is missing locally.
 - Searchable city suggestions are loaded on demand from a small curated catalog instead of shipping every option up front.
 - The launch loading window appears only when deferred transition work runs long enough to cross the threshold, and the money-themed art is prepared only when that loading state is needed.
 
@@ -127,7 +126,7 @@ If you have a real PostgreSQL instance available, run:
 - `/api/internal/projections/check-ins/replay` replays queued jobs into Convex using `CONVEX_SYNC_SECRET`.
 - Vercel Cron calls `/api/cron/projections/check-ins/replay` once per day by default using `CRON_SECRET`, which keeps the default `vercel.json` compatible with the lowest-cost Hobby plan.
 - If you need faster live projection on Vercel, raise the cron frequency on a Pro plan or point an external scheduler at the same route.
-- Replace any placeholder `CLERK_JWT_ISSUER_DOMAIN` value with your real Clerk issuer before relying on Convex auth in local or Vercel environments.
+- Convex Auth email/password accounts are created by users through `/sign-up`; end users do not add environment files or OAuth credentials.
 
 ## Environment variables
 
@@ -135,9 +134,7 @@ See `.env.example` for the full list of required variables, including authentica
 
 Environment notes:
 
-- `AUTH_SECRET`, `AUTH_GOOGLE_ID`, and `AUTH_GOOGLE_SECRET` are required for Auth.js Google sign-in. `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are accepted aliases for local setups that already use those names.
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, and `CLERK_JWT_ISSUER_DOMAIN` remain available for Convex auth validation and legacy local environments.
-- `NEXT_PUBLIC_CLERK_IS_SATELLITE`, `NEXT_PUBLIC_CLERK_DOMAIN`, and `NEXT_PUBLIC_CLERK_PROXY_URL` are optional and only needed for Clerk satellite or proxy deployments.
+- `CONVEX_DEPLOYMENT`, `NEXT_PUBLIC_CONVEX_URL`, and `NEXT_PUBLIC_CONVEX_SITE_URL` configure Convex Auth and live Convex data access.
 - `PROVIDER_SECRET_ENCRYPTION_KEY` is only required when you want to exercise the encrypted integration connect/revoke routes.
 - `RESEND_API_KEY`, `INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY`, and `WEBHOOK_SIGNING_SECRET` remain scaffolded placeholders for email and webhook surfaces that are not active in the current root app slice.
 

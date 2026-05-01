@@ -1,27 +1,22 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
-import {
-  getAuthenticatedUserDisplayName,
-  getAuthenticatedUserEmail,
-  getAuthenticatedUserId,
-} from "@/lib/auth/session";
+import { getConvexAuthenticatedIdentity, syncConvexLocalProfile } from "@/lib/auth/convex-session";
 import {
   bootstrapUser,
   bootstrapUserLinkConflictErrorMessage,
 } from "@/modules/auth/bootstrap-user";
 
 const missingAuthenticatedUserEmailErrorMessage =
-  "BudgetBITCH requires a verified Google email account before local setup can finish.";
+  "BudgetBITCH requires an email-backed account before local setup can finish.";
 
 export async function POST() {
-  const session = await auth();
-  const userId = getAuthenticatedUserId(session);
+  const identity = await getConvexAuthenticatedIdentity();
 
-  if (!userId) {
+  if (!identity) {
     return NextResponse.json({ error: "Authentication is required." }, { status: 401 });
   }
 
-  const email = getAuthenticatedUserEmail(session);
+  const userId = identity.tokenIdentifier;
+  const email = identity.email?.trim().toLowerCase() ?? "";
 
   if (!email) {
     return NextResponse.json(
@@ -34,7 +29,13 @@ export async function POST() {
     const result = await bootstrapUser({
       clerkUserId: userId,
       email,
-      displayName: getAuthenticatedUserDisplayName(session),
+      displayName: identity.name,
+    });
+
+    await syncConvexLocalProfile({
+      profileId: result.userId,
+      email,
+      displayName: identity.name,
     });
 
     return NextResponse.json(result);

@@ -1,6 +1,5 @@
-import { auth } from "@/auth";
 import type { Prisma } from "@prisma/client";
-import { getAuthenticatedUserId } from "@/lib/auth/session";
+import { getConvexAuthenticatedIdentity } from "@/lib/auth/convex-session";
 import { getPrismaClient } from "@/lib/prisma";
 import {
   createSeededDashboardBriefing,
@@ -337,8 +336,8 @@ export async function getDashboardPageData(
   }
 
   const redirectTarget = getDashboardRedirectTarget(requestedWorkspaceId);
-  const session = await auth();
-  const userId = getAuthenticatedUserId(session);
+  const identity = await getConvexAuthenticatedIdentity();
+  const userId = identity?.tokenIdentifier ?? "";
 
   if (!userId) {
     return {

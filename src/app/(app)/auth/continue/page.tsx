@@ -1,13 +1,8 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
 import { AuthAccountRecoveryButton } from "@/components/auth/auth-account-recovery-button";
 import { AuthEntryPanel } from "@/components/auth/auth-entry-panel";
 import { getRequestMessages } from "@/i18n/server";
-import {
-  getAuthenticatedUserDisplayName,
-  getAuthenticatedUserEmail,
-  getAuthenticatedUserId,
-} from "@/lib/auth/session";
+import { getConvexAuthenticatedIdentity, syncConvexLocalProfile } from "@/lib/auth/convex-session";
 import {
   bootstrapUser,
   bootstrapUserLinkConflictErrorMessage,
@@ -52,15 +47,15 @@ export default async function AuthContinuePage({ searchParams }: AuthContinuePag
   const redirectTarget = getSafePostAuthRedirect(getSearchParam(resolvedSearchParams, "redirectTo"));
   const errorCode = getSearchParam(resolvedSearchParams, "error");
 
-  const session = await auth();
-  const userId = getAuthenticatedUserId(session);
+  const identity = await getConvexAuthenticatedIdentity();
 
-  if (!userId) {
+  if (!identity) {
     redirect(`/sign-in?redirectTo=${encodeURIComponent(redirectTarget)}`);
   }
 
-  const authenticatedUserId = userId;
-  const email = getAuthenticatedUserEmail(session);
+  const authenticatedUserId = identity.tokenIdentifier;
+  const email = identity.email?.trim().toLowerCase() ?? "";
+  const displayName = identity.name;
 
   if (!email) {
     return (
@@ -82,7 +77,13 @@ export default async function AuthContinuePage({ searchParams }: AuthContinuePag
       const result = await bootstrapUser({
         clerkUserId: authenticatedUserId,
         email,
-        displayName: getAuthenticatedUserDisplayName(session),
+        displayName,
+      });
+
+      await syncConvexLocalProfile({
+        profileId: result.userId,
+        email,
+        displayName,
       });
 
       redirect(getPostBootstrapRedirect(redirectTarget, result.workspaceId));

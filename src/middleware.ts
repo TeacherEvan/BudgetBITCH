@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { convexAuthNextjsMiddleware } from "@convex-dev/auth/nextjs/server";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
@@ -54,7 +54,7 @@ function hasSignedInE2eOverride(request: NextRequest) {
     .some((cookie) => cookie === `${e2eAuthOverrideCookieName}=signed-in`);
 }
 
-export default auth((request) => {
+export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
   const pathname = getRequestPathname(request as NextRequest);
 
   if (!isProtectedPath(pathname)) {
@@ -65,7 +65,7 @@ export default auth((request) => {
     return NextResponse.next();
   }
 
-  if (request.auth?.user) {
+  if (await convexAuth.isAuthenticated()) {
     return NextResponse.next();
   }
 
@@ -79,7 +79,7 @@ export default auth((request) => {
   signInUrl.searchParams.set("redirectTo", redirectTarget);
 
   return NextResponse.redirect(signInUrl);
-});
+}, { apiRoute: "/api/convex-auth" });
 
 export const config = {
   matcher: ["/((?!_next|.*\\..*).*)", "/"],

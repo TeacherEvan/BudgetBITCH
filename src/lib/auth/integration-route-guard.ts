@@ -1,5 +1,4 @@
-import { auth } from "@/auth";
-import { getAuthenticatedUserId } from "@/lib/auth/session";
+import { getConvexAuthenticatedIdentity } from "@/lib/auth/convex-session";
 import { getPrismaClient } from "@/lib/prisma";
 import { canManageIntegrations } from "@/modules/workspaces/permissions";
 
@@ -21,8 +20,8 @@ export type AuthorizedIntegrationActor = {
 export async function authorizeIntegrationMutation(
   workspaceId: string,
 ): Promise<AuthorizedIntegrationActor> {
-  const session = await auth();
-  const userId = getAuthenticatedUserId(session);
+  const identity = await getConvexAuthenticatedIdentity();
+  const userId = identity?.tokenIdentifier ?? "";
 
   if (!userId) {
     throw new IntegrationRouteGuardError("Authentication is required.", 401);

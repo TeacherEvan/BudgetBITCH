@@ -12,7 +12,7 @@ export type BootstrapUserResult = {
 };
 
 export const bootstrapUserLinkConflictErrorMessage =
-  "A different Clerk account is already linked to this local profile.";
+  "A different auth account is already linked to this local profile.";
 
 function getPersonalWorkspaceName(displayName: string | null | undefined, email: string) {
   const trimmedDisplayName = displayName?.trim();
@@ -40,7 +40,7 @@ export async function bootstrapUser({
   const normalizedDisplayName = displayName?.trim() || null;
 
   if (!normalizedClerkUserId) {
-    throw new Error("A Clerk user id is required to bootstrap a local user.");
+    throw new Error("An auth user id is required to bootstrap a local user.");
   }
 
   if (!normalizedEmail) {

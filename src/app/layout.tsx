@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import { NextIntlClientProvider } from "next-intl";
 import { Fraunces, Inter } from "next/font/google";
 import { AppProviders } from "@/components/providers/app-providers";
@@ -38,7 +39,9 @@ export default async function RootLayout({
     >
       <body className="antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <AppProviders>{children}</AppProviders>
+          <ConvexAuthNextjsServerProvider apiRoute="/api/convex-auth">
+            <AppProviders>{children}</AppProviders>
+          </ConvexAuthNextjsServerProvider>
         </NextIntlClientProvider>
       </body>
     </html>

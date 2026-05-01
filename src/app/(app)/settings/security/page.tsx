@@ -25,24 +25,14 @@ export default async function SecuritySettingsPage() {
                 {messages.securitySettings.googleAccountDescription}
               </p>
 
-              <div className="mt-5 flex flex-wrap gap-3">
-                <a
-                  className="bb-button-primary"
-                  href="https://myaccount.google.com/security"
-                  rel="noreferrer"
-                  target="_blank"
-                >
+              <ul className="mt-5 grid gap-3 text-sm text-slate-100/85">
+                <li className="rounded-[22px] border border-white/10 bg-black/15 px-4 py-3">
                   {messages.securitySettings.openGoogleSecurity}
-                </a>
-                <a
-                  className="bb-button-secondary"
-                  href="https://myaccount.google.com/permissions"
-                  rel="noreferrer"
-                  target="_blank"
-                >
+                </li>
+                <li className="rounded-[22px] border border-white/10 bg-black/15 px-4 py-3">
                   {messages.securitySettings.openGooglePermissions}
-                </a>
-              </div>
+                </li>
+              </ul>
             </section>
 
             <aside className="grid gap-4 self-start">

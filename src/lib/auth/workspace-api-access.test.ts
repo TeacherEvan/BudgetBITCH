@@ -38,7 +38,7 @@ describe("resolveWorkspaceApiAccess", () => {
     vi.unstubAllEnvs();
   });
 
-  it("allows the local demo workspace during local development when Clerk is not configured", async () => {
+  it("allows the local demo workspace during local development when auth is not configured", async () => {
     vi.stubEnv("NODE_ENV", "development");
 
     await expect(resolveWorkspaceApiAccess(localDemoWorkspaceId)).resolves.toEqual({
@@ -50,7 +50,7 @@ describe("resolveWorkspaceApiAccess", () => {
     expect(authorizeWorkspaceMutationMock).not.toHaveBeenCalled();
   });
 
-  it("rejects non-demo workspaces when Clerk is not configured", async () => {
+  it("rejects non-demo workspaces when auth is not configured", async () => {
     vi.stubEnv("NODE_ENV", "test");
 
     await expect(resolveWorkspaceApiAccess("workspace-1")).rejects.toMatchObject({
@@ -61,9 +61,9 @@ describe("resolveWorkspaceApiAccess", () => {
     expect(authorizeWorkspaceMutationMock).not.toHaveBeenCalled();
   });
 
-  it("allows the local demo workspace for the stripped Clerk test harness", async () => {
+  it("allows the local demo workspace for the stripped auth test harness", async () => {
     vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("BUDGETBITCH_STRIP_CLERK_ENV", "true");
+    vi.stubEnv("BUDGETBITCH_STRIP_AUTH_ENV", "true");
 
     await expect(resolveWorkspaceApiAccess(localDemoWorkspaceId)).resolves.toEqual({
       workspaceId: localDemoWorkspaceId,

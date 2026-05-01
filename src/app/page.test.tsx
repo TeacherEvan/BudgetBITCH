@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Home, { HOME_E2E_AUTH_OVERRIDE_STORAGE_KEY } from "./page";
 
-const useSessionMock = vi.hoisted(() => vi.fn());
+const useConvexAuthMock = vi.hoisted(() => vi.fn());
 const prepareLaunchTransitionResources = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 
 const launchProfile = {
@@ -24,8 +24,8 @@ vi.mock("@/components/launch/load-money-loading-art", () => ({
   prepareLaunchTransitionResources,
 }));
 
-vi.mock("next-auth/react", () => ({
-  useSession: useSessionMock,
+vi.mock("@convex-dev/auth/react", () => ({
+  useConvexAuth: useConvexAuthMock,
 }));
 
 vi.mock("next-intl", () => ({
@@ -69,10 +69,12 @@ vi.mock("next/navigation", () => ({
 
 describe("Home", () => {
   beforeEach(() => {
+    vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "https://steady-ox-280.convex.cloud");
     window.localStorage.clear();
-    useSessionMock.mockReset();
-    useSessionMock.mockReturnValue({
-      status: "authenticated",
+    useConvexAuthMock.mockReset();
+    useConvexAuthMock.mockReturnValue({
+      isLoading: false,
+      isAuthenticated: true,
     });
     prepareLaunchTransitionResources.mockReset();
     prepareLaunchTransitionResources.mockImplementation(() => Promise.resolve());
@@ -92,12 +94,14 @@ describe("Home", () => {
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     vi.restoreAllMocks();
   });
 
   it("shows the welcome window for signed-out users", async () => {
-    useSessionMock.mockReturnValue({
-      status: "unauthenticated",
+    useConvexAuthMock.mockReturnValue({
+      isLoading: false,
+      isAuthenticated: false,
     });
 
     render(<Home />);
@@ -122,8 +126,9 @@ describe("Home", () => {
   });
 
   it("shows an explicit loading window while session auth is unresolved", () => {
-    useSessionMock.mockReturnValue({
-      status: "loading",
+    useConvexAuthMock.mockReturnValue({
+      isLoading: true,
+      isAuthenticated: false,
     });
 
     render(<Home />);
@@ -136,8 +141,9 @@ describe("Home", () => {
   });
 
   it("shows the welcome window when the session is unauthenticated", async () => {
-    useSessionMock.mockReturnValue({
-      status: "unauthenticated",
+    useConvexAuthMock.mockReturnValue({
+      isLoading: false,
+      isAuthenticated: false,
     });
 
     render(<Home />);
@@ -156,8 +162,9 @@ describe("Home", () => {
   });
 
   it("keeps the signed-in root flow available for the local signed-in override in non-production tests", async () => {
-    useSessionMock.mockReturnValue({
-      status: "unauthenticated",
+    useConvexAuthMock.mockReturnValue({
+      isLoading: false,
+      isAuthenticated: false,
     });
     window.localStorage.setItem(HOME_E2E_AUTH_OVERRIDE_STORAGE_KEY, "signed-in");
 

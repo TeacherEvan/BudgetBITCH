@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { expectGoogleOAuthSetupNotice } from "./auth-setup";
+import { expectConvexPasswordAuthEntry } from "./auth-setup";
 import { seedCompletedLaunchProfile } from "./launch-profile";
 
 test("signed-out visitors see the welcome auth surface at root", async ({ page }) => {
@@ -28,7 +28,7 @@ test("signed-out visitors still see welcome when a launch profile is already sav
   await expect(page.getByRole("heading", { name: /plan first\. panic less\./i })).toHaveCount(0);
 });
 
-test("dashboard redirects to sign-in when Google OAuth setup is unavailable", async ({ page }) => {
+test("dashboard redirects to Convex Auth sign-in when signed out", async ({ page }) => {
   await page.goto("/dashboard?workspaceId=workspace-2");
 
   await expect(page).toHaveURL(
@@ -37,7 +37,7 @@ test("dashboard redirects to sign-in when Google OAuth setup is unavailable", as
   await expect(page.getByRole("heading", { name: /open your budget board/i })).toBeVisible({
     timeout: 15000,
   });
-  await expectGoogleOAuthSetupNotice(page);
+  await expectConvexPasswordAuthEntry(page);
 });
 
 for (const authEntry of [
@@ -45,14 +45,18 @@ for (const authEntry of [
     label: "sign in",
     linkName: /open sign in/i,
     finalUrl: /\/sign-in\?redirectTo=%2F$/,
+    headingName: /open your budget board/i,
+    submitName: /sign in/i,
   },
   {
     label: "sign up",
     linkName: /open sign-up/i,
-    finalUrl: /\/sign-in\?redirectTo=%2F$/,
+    finalUrl: /\/sign-up\?redirectTo=%2F$/,
+    headingName: /create your budget account/i,
+    submitName: /create account/i,
   },
 ] as const) {
-  test(`welcome ${authEntry.label} link keeps redirectTo in the URL without Google OAuth setup`, async ({ page }) => {
+  test(`welcome ${authEntry.label} link keeps redirectTo in the URL`, async ({ page }) => {
     await page.goto("/");
 
     await Promise.all([
@@ -63,9 +67,9 @@ for (const authEntry of [
     ]);
 
     await expect(page).toHaveURL(authEntry.finalUrl);
-    await expect(page.getByRole("heading", { name: /open your budget board/i })).toBeVisible({
+    await expect(page.getByRole("heading", { name: authEntry.headingName })).toBeVisible({
       timeout: 15000,
     });
-    await expectGoogleOAuthSetupNotice(page);
+    await expectConvexPasswordAuthEntry(page, authEntry.submitName);
   });
 }

@@ -1,14 +1,20 @@
 "use client";
 
-import { signOut } from "next-auth/react";
+import { useAuthActions } from "@convex-dev/auth/react";
+import { useRouter } from "next/navigation";
 
 type AuthAccountRecoveryButtonProps = {
   redirectTo: string;
 };
 
 export function AuthAccountRecoveryButton({ redirectTo }: AuthAccountRecoveryButtonProps) {
+  const { signOut } = useAuthActions();
+  const router = useRouter();
+
   async function handleClick() {
-    await signOut({ redirectTo: `/sign-in?redirectTo=${encodeURIComponent(redirectTo)}` });
+    await signOut();
+    router.push(`/sign-in?redirectTo=${encodeURIComponent(redirectTo)}`);
+    router.refresh();
   }
 
   return (

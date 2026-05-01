@@ -41,14 +41,16 @@ export async function requireWorkspaceAccess(
   const identity = await requireIdentity(ctx);
   const viewer = await getViewerRecord(ctx, identity.tokenIdentifier);
 
-  if (!viewer) {
+  if (!viewer?.profileId) {
     throw new Error("Viewer is not ready in Convex yet.");
   }
+
+  const profileId = viewer.profileId;
 
   const membership = await ctx.db
     .query("workspaceMemberships")
     .withIndex("by_profileId_and_workspaceId", (q) =>
-      q.eq("profileId", viewer.profileId).eq("workspaceId", workspaceId),
+      q.eq("profileId", profileId).eq("workspaceId", workspaceId),
     )
     .unique();
 

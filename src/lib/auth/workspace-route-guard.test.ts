@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const authMock = vi.hoisted(() => vi.fn());
+const getConvexAuthenticatedIdentityMock = vi.hoisted(() => vi.fn());
 const prismaMock = vi.hoisted(() => ({
   userProfile: {
     findUnique: vi.fn(),
@@ -10,8 +10,8 @@ const prismaMock = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("@/auth", () => ({
-  auth: authMock,
+vi.mock("@/lib/auth/convex-session", () => ({
+  getConvexAuthenticatedIdentity: getConvexAuthenticatedIdentityMock,
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -29,7 +29,7 @@ describe("authorizeWorkspaceMutation", () => {
   });
 
   it("rejects anonymous requests", async () => {
-    authMock.mockResolvedValue(null);
+    getConvexAuthenticatedIdentityMock.mockResolvedValue(null);
 
     await expect(authorizeWorkspaceMutation("workspace-1")).rejects.toMatchObject({
       status: 401,
@@ -39,7 +39,7 @@ describe("authorizeWorkspaceMutation", () => {
   });
 
   it("rejects users without a local profile", async () => {
-    authMock.mockResolvedValue({ user: { id: "google-sub-1" } });
+    getConvexAuthenticatedIdentityMock.mockResolvedValue({ tokenIdentifier: "convex|user-1" });
     prismaMock.userProfile.findUnique.mockResolvedValue(null);
 
     await expect(authorizeWorkspaceMutation("workspace-1")).rejects.toMatchObject({
@@ -50,7 +50,7 @@ describe("authorizeWorkspaceMutation", () => {
   });
 
   it("rejects users without workspace membership", async () => {
-    authMock.mockResolvedValue({ user: { id: "google-sub-1" } });
+    getConvexAuthenticatedIdentityMock.mockResolvedValue({ tokenIdentifier: "convex|user-1" });
     prismaMock.userProfile.findUnique.mockResolvedValue({ id: "profile-1" });
     prismaMock.workspaceMember.findUnique.mockResolvedValue(null);
 
@@ -62,7 +62,7 @@ describe("authorizeWorkspaceMutation", () => {
   });
 
   it("returns the workspace actor for any valid workspace member", async () => {
-    authMock.mockResolvedValue({ user: { id: "google-sub-1" } });
+    getConvexAuthenticatedIdentityMock.mockResolvedValue({ tokenIdentifier: "convex|user-1" });
     prismaMock.userProfile.findUnique.mockResolvedValue({ id: "profile-1" });
     prismaMock.workspaceMember.findUnique.mockResolvedValue({ role: "editor" });
 

@@ -475,7 +475,7 @@ describe("bootstrapUser", () => {
     ).toBe(false);
   });
 
-  it("rejects claiming a local profile already linked to another Clerk account", async () => {
+  it("rejects claiming a local profile already linked to another auth account", async () => {
     prismaMock.__state.userProfiles.push({
       id: "profile-existing",
       clerkUserId: "legacy_clerk_user",
@@ -489,7 +489,7 @@ describe("bootstrapUser", () => {
         email: "alex@example.com",
         displayName: "Alex Example",
       }),
-    ).rejects.toThrow("A different Clerk account is already linked to this local profile.");
+    ).rejects.toThrow("A different auth account is already linked to this local profile.");
 
     expect(prismaMock.__state.userProfiles).toEqual([
       {

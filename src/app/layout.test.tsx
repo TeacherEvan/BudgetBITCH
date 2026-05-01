@@ -11,6 +11,11 @@ const nextIntlProviderMock = vi.hoisted(() =>
     <div data-testid="next-intl-provider">{children}</div>
   )),
 );
+const convexAuthServerProviderMock = vi.hoisted(() =>
+  vi.fn(({ children }: { children: ReactNode }) => (
+    <div data-testid="convex-auth-server-provider">{children}</div>
+  )),
+);
 
 vi.mock("next/font/google", () => ({
   Fraunces: () => ({ variable: "font-display" }),
@@ -19,6 +24,10 @@ vi.mock("next/font/google", () => ({
 
 vi.mock("next-intl", () => ({
   NextIntlClientProvider: nextIntlProviderMock,
+}));
+
+vi.mock("@convex-dev/auth/nextjs/server", () => ({
+  ConvexAuthNextjsServerProvider: convexAuthServerProviderMock,
 }));
 
 vi.mock("@/components/providers/app-providers", () => ({
@@ -49,10 +58,12 @@ describe("RootLayout", () => {
     })) as ReactElement<React.HTMLAttributes<HTMLHtmlElement>>;
     const body = layout.props.children as ReactElement<React.HTMLAttributes<HTMLBodyElement>>;
     const intlWrapper = body.props.children as ReactElement;
-    const providerWrapper = intlWrapper.props.children as ReactElement;
+    const convexAuthWrapper = intlWrapper.props.children as ReactElement;
+    const providerWrapper = convexAuthWrapper.props.children as ReactElement;
 
     expect(body.type).toBe("body");
     expect(intlWrapper.type).toBe(nextIntlProviderMock);
+    expect(convexAuthWrapper.type).toBe(convexAuthServerProviderMock);
     expect(providerWrapper.type).toBe(appProvidersMock);
     expect(providerWrapper.props.children.type).toBe("main");
   });

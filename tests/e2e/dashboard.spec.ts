@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { expectGoogleOAuthSetupNotice } from "./auth-setup";
+import { expectConvexPasswordAuthEntry } from "./auth-setup";
 
-test("dashboard redirects to sign-in under the local no-Google-OAuth harness", async ({ page }) => {
+test("dashboard redirects to sign-in under the local no-auth harness", async ({ page }) => {
   test.slow();
 
   await page.setViewportSize({ width: 1440, height: 980 });
@@ -12,5 +12,5 @@ test("dashboard redirects to sign-in under the local no-Google-OAuth harness", a
     "href",
     "/sign-up?redirectTo=%2Fdashboard%3FworkspaceId%3Dworkspace-2",
   );
-  await expectGoogleOAuthSetupNotice(page);
+  await expectConvexPasswordAuthEntry(page);
 });

@@ -3,9 +3,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthAccountRecoveryButton } from "./auth-account-recovery-button";
 
 const signOutMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const pushMock = vi.hoisted(() => vi.fn());
+const refreshMock = vi.hoisted(() => vi.fn());
 
-vi.mock("next-auth/react", () => ({
-  signOut: signOutMock,
+vi.mock("@convex-dev/auth/react", () => ({
+  useAuthActions: () => ({ signOut: signOutMock }),
+}));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: pushMock, refresh: refreshMock }),
 }));
 
 describe("AuthAccountRecoveryButton", () => {
@@ -19,9 +25,9 @@ describe("AuthAccountRecoveryButton", () => {
     fireEvent.click(screen.getByRole("button", { name: /sign out and switch account/i }));
 
     await waitFor(() => {
-      expect(signOutMock).toHaveBeenCalledWith({
-        redirectTo: "/sign-in?redirectTo=%2F",
-      });
+      expect(signOutMock).toHaveBeenCalledWith();
+      expect(pushMock).toHaveBeenCalledWith("/sign-in?redirectTo=%2F");
+      expect(refreshMock).toHaveBeenCalledWith();
     });
   });
 
@@ -31,9 +37,11 @@ describe("AuthAccountRecoveryButton", () => {
     fireEvent.click(screen.getByRole("button", { name: /sign out and switch account/i }));
 
     await waitFor(() => {
-      expect(signOutMock).toHaveBeenCalledWith({
-        redirectTo: "/sign-in?redirectTo=%2Fdashboard%3Ffrom%3Dwelcome",
-      });
+      expect(signOutMock).toHaveBeenCalledWith();
+      expect(pushMock).toHaveBeenCalledWith(
+        "/sign-in?redirectTo=%2Fdashboard%3Ffrom%3Dwelcome",
+      );
+      expect(refreshMock).toHaveBeenCalledWith();
     });
   });
 });

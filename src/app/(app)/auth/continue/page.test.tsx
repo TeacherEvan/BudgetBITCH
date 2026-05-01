@@ -2,10 +2,11 @@ import { render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const authMock = vi.hoisted(() => vi.fn());
+const getConvexAuthenticatedIdentityMock = vi.hoisted(() => vi.fn());
+const syncConvexLocalProfileMock = vi.hoisted(() => vi.fn());
 const bootstrapUserMock = vi.hoisted(() => vi.fn());
 const bootstrapUserLinkConflictErrorMessage = vi.hoisted(
-  () => "A different Clerk account is already linked to this local profile.",
+  () => "A different auth account is already linked to this local profile.",
 );
 const redirectMock = vi.hoisted(() =>
   vi.fn((path: string) => {
@@ -13,8 +14,9 @@ const redirectMock = vi.hoisted(() =>
   }),
 );
 
-vi.mock("@/auth", () => ({
-  auth: authMock,
+vi.mock("@/lib/auth/convex-session", () => ({
+  getConvexAuthenticatedIdentity: getConvexAuthenticatedIdentityMock,
+  syncConvexLocalProfile: syncConvexLocalProfileMock,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -40,25 +42,25 @@ vi.mock("@/i18n/server", () => ({
   getRequestMessages: async () => ({
     authPanel: {
       secureAccess: "Secure access",
-      useGoogleToStart: "Use Google to start",
-      useGoogleToContinue: "Use Google to continue",
-      googleOnly: "Google is the only sign-in method for this app.",
-      secureSignIn: "Google is only used for secure sign-in and account verification.",
-      gmailPrivacy: "BudgetBITCH never reads or stores Gmail inbox or message content.",
+      useGoogleToStart: "Create your account",
+      useGoogleToContinue: "Use your account",
+      googleOnly: "Convex Auth creates and protects BudgetBITCH accounts.",
+      secureSignIn: "Use your email and password to open the same account on any device.",
+      gmailPrivacy: "No Google OAuth client or user-managed env file is required for login.",
       minimalData:
         "BudgetBITCH keeps only the minimal account, workspace, preference, and integration data it needs to run.",
       whyThisStepExists: "Why this step exists",
       localProfileFirst: "Local profile first",
       localProfileDescription:
-        "BudgetBITCH uses Google to verify who you are, then creates your local profile, personal workspace, and default workspace preference once so the app can load the right data shape on the server.",
+        "BudgetBITCH verifies the Convex Auth account, then creates your local profile, personal workspace, and default workspace preference once so the app can load the right data shape on the server.",
     },
     authContinue: {
       eyebrow: "Continue",
       missingEmailTitle: "Add an email to finish setup",
       missingEmailDescription:
-        "BudgetBITCH requires a verified Google email account before local setup can finish.",
+        "BudgetBITCH requires an email-backed Convex account before local setup can finish.",
       missingEmailHelp:
-        "Use the Google sign-in flow with a verified email account, then return here to finish setup.",
+        "Create or sign in with an email and password account, then return here to finish setup.",
       title: "Finish your local setup",
       description:
         "BudgetBITCH needs one local profile and one personal workspace before the dashboard can load server-side data for this account.",
@@ -104,7 +106,7 @@ describe("AuthContinuePage", () => {
   });
 
   it("redirects anonymous visitors to sign-in with an auth continue target", async () => {
-    authMock.mockResolvedValue(null);
+    getConvexAuthenticatedIdentityMock.mockResolvedValue(null);
 
     await expect(AuthContinuePage()).rejects.toThrow(
       "REDIRECT:/sign-in?redirectTo=%2Fauth%2Fcontinue",
@@ -113,7 +115,7 @@ describe("AuthContinuePage", () => {
   });
 
   it("preserves a safe root target when auth continue has to send users back to sign-in", async () => {
-    authMock.mockResolvedValue(null);
+    getConvexAuthenticatedIdentityMock.mockResolvedValue(null);
 
     await expect(
       AuthContinuePage({ searchParams: Promise.resolve({ redirectTo: "/" }) }),
@@ -122,13 +124,10 @@ describe("AuthContinuePage", () => {
   });
 
   it("renders recovery guidance when the authenticated session has no verified email", async () => {
-    authMock.mockResolvedValue({
-      user: {
-        id: "google-sub-1",
-        email: "alex@example.com",
-        name: "Alex Example",
-        emailVerified: false,
-      },
+    getConvexAuthenticatedIdentityMock.mockResolvedValue({
+      tokenIdentifier: "convex|user-1",
+      email: null,
+      name: "Alex Example",
     });
 
     const view = await AuthContinuePage();
@@ -136,18 +135,15 @@ describe("AuthContinuePage", () => {
 
     expect(screen.getByRole("heading", { name: /add an email to finish setup/i })).toBeInTheDocument();
     expect(
-      screen.getByText(/use the google sign-in flow with a verified email account/i),
+      screen.getByText(/create or sign in with an email and password account/i),
     ).toBeInTheDocument();
   });
 
   it("renders the continue action for email-backed users", async () => {
-    authMock.mockResolvedValue({
-      user: {
-        id: "google-sub-1",
-        email: "alex@example.com",
-        name: "Alex Example",
-        emailVerified: true,
-      },
+    getConvexAuthenticatedIdentityMock.mockResolvedValue({
+      tokenIdentifier: "convex|user-1",
+      email: "alex@example.com",
+      name: "Alex Example",
     });
 
     const view = await AuthContinuePage();
@@ -158,13 +154,10 @@ describe("AuthContinuePage", () => {
   });
 
   it("renders recovery guidance when bootstrap hits an account link conflict", async () => {
-    authMock.mockResolvedValue({
-      user: {
-        id: "google-sub-1",
-        email: "alex@example.com",
-        name: "Alex Example",
-        emailVerified: true,
-      },
+    getConvexAuthenticatedIdentityMock.mockResolvedValue({
+      tokenIdentifier: "convex|user-1",
+      email: "alex@example.com",
+      name: "Alex Example",
     });
 
     const view = await AuthContinuePage({
@@ -182,18 +175,16 @@ describe("AuthContinuePage", () => {
   });
 
   it("boots the local workspace and redirects to the dashboard when the continue action runs", async () => {
-    authMock.mockResolvedValue({
-      user: {
-        id: "google-sub-1",
-        email: "alex@example.com",
-        name: "Alex Example",
-        emailVerified: true,
-      },
+    getConvexAuthenticatedIdentityMock.mockResolvedValue({
+      tokenIdentifier: "convex|user-1",
+      email: "alex@example.com",
+      name: "Alex Example",
     });
     bootstrapUserMock.mockResolvedValue({
       userId: "profile-1",
       workspaceId: "workspace-1",
     });
+    syncConvexLocalProfileMock.mockResolvedValue({ syncedAt: Date.now() });
 
     const view = await AuthContinuePage();
     const form = getContinueForm(view as ReactElement<{ children: ReactElement | ReactElement[] | null }>);
@@ -202,7 +193,12 @@ describe("AuthContinuePage", () => {
       "REDIRECT:/dashboard?workspaceId=workspace-1",
     );
     expect(bootstrapUserMock).toHaveBeenCalledWith({
-      clerkUserId: "google-sub-1",
+      clerkUserId: "convex|user-1",
+      email: "alex@example.com",
+      displayName: "Alex Example",
+    });
+    expect(syncConvexLocalProfileMock).toHaveBeenCalledWith({
+      profileId: "profile-1",
       email: "alex@example.com",
       displayName: "Alex Example",
     });
@@ -210,13 +206,10 @@ describe("AuthContinuePage", () => {
   });
 
   it("preserves a safe dashboard target until bootstrap finishes", async () => {
-    authMock.mockResolvedValue({
-      user: {
-        id: "google-sub-1",
-        email: "alex@example.com",
-        name: "Alex Example",
-        emailVerified: true,
-      },
+    getConvexAuthenticatedIdentityMock.mockResolvedValue({
+      tokenIdentifier: "convex|user-1",
+      email: "alex@example.com",
+      name: "Alex Example",
     });
     bootstrapUserMock.mockResolvedValue({
       userId: "profile-1",
@@ -237,13 +230,10 @@ describe("AuthContinuePage", () => {
   });
 
   it("returns to the root gate when bootstrap finishes with a safe root target", async () => {
-    authMock.mockResolvedValue({
-      user: {
-        id: "google-sub-1",
-        email: "alex@example.com",
-        name: "Alex Example",
-        emailVerified: true,
-      },
+    getConvexAuthenticatedIdentityMock.mockResolvedValue({
+      tokenIdentifier: "convex|user-1",
+      email: "alex@example.com",
+      name: "Alex Example",
     });
     bootstrapUserMock.mockResolvedValue({
       userId: "profile-1",
@@ -260,13 +250,10 @@ describe("AuthContinuePage", () => {
   });
 
   it("redirects back to auth continue recovery when bootstrap finds an account link conflict", async () => {
-    authMock.mockResolvedValue({
-      user: {
-        id: "google-sub-1",
-        email: "alex@example.com",
-        name: "Alex Example",
-        emailVerified: true,
-      },
+    getConvexAuthenticatedIdentityMock.mockResolvedValue({
+      tokenIdentifier: "convex|user-1",
+      email: "alex@example.com",
+      name: "Alex Example",
     });
     bootstrapUserMock.mockRejectedValue(new Error(bootstrapUserLinkConflictErrorMessage));
 
@@ -280,13 +267,10 @@ describe("AuthContinuePage", () => {
   });
 
   it("preserves a safe root target when bootstrap hits a relink conflict", async () => {
-    authMock.mockResolvedValue({
-      user: {
-        id: "google-sub-1",
-        email: "alex@example.com",
-        name: "Alex Example",
-        emailVerified: true,
-      },
+    getConvexAuthenticatedIdentityMock.mockResolvedValue({
+      tokenIdentifier: "convex|user-1",
+      email: "alex@example.com",
+      name: "Alex Example",
     });
     bootstrapUserMock.mockRejectedValue(new Error(bootstrapUserLinkConflictErrorMessage));
 
@@ -304,13 +288,10 @@ describe("AuthContinuePage", () => {
   });
 
   it("offers an account-switch recovery action that preserves a safe root target", async () => {
-    authMock.mockResolvedValue({
-      user: {
-        id: "google-sub-1",
-        email: "alex@example.com",
-        name: "Alex Example",
-        emailVerified: true,
-      },
+    getConvexAuthenticatedIdentityMock.mockResolvedValue({
+      tokenIdentifier: "convex|user-1",
+      email: "alex@example.com",
+      name: "Alex Example",
     });
 
     const view = await AuthContinuePage({

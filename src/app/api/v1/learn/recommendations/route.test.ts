@@ -140,7 +140,7 @@ describe("POST /api/v1/learn/recommendations", () => {
     expect(findLatestBlueprintMock).not.toHaveBeenCalled();
   });
 
-  it("allows the approved no-Clerk demo workspace path", async () => {
+  it("allows the approved no-auth demo workspace path", async () => {
     resolveWorkspaceApiAccessMock.mockResolvedValue({
       workspaceId: localDemoWorkspaceId,
       accessMode: "demo",
@@ -160,7 +160,7 @@ describe("POST /api/v1/learn/recommendations", () => {
     expect(json.primary[0].key).toBe("budgeting_basics");
   });
 
-  it("rejects arbitrary no-Clerk workspace access", async () => {
+  it("rejects arbitrary no-auth workspace access", async () => {
     resolveWorkspaceApiAccessMock.mockRejectedValue(
       new WorkspaceApiAccessError(
         "Local demo API access is limited to the demo workspace.",

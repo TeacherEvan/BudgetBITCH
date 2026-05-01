@@ -2,25 +2,19 @@ import type { ReactNode } from "react";
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const sessionProviderMock = vi.hoisted(() =>
+const convexAuthProviderMock = vi.hoisted(() =>
   vi.fn(({ children }: { children: ReactNode }) => (
-    <div data-testid="session-provider">{children}</div>
-  )),
-);
-const convexProviderMock = vi.hoisted(() =>
-  vi.fn(({ children }: { children: ReactNode }) => (
-    <div data-testid="convex-provider">{children}</div>
+    <div data-testid="convex-auth-provider">{children}</div>
   )),
 );
 const convexClientMock = vi.hoisted(() => vi.fn());
 
-vi.mock("next-auth/react", () => ({
-  SessionProvider: sessionProviderMock,
+vi.mock("@convex-dev/auth/nextjs", () => ({
+  ConvexAuthNextjsProvider: convexAuthProviderMock,
 }));
 
 vi.mock("convex/react", () => ({
   ConvexReactClient: convexClientMock,
-  ConvexProvider: convexProviderMock,
 }));
 
 import { AppProviders } from "./app-providers";
@@ -32,7 +26,7 @@ describe("AppProviders", () => {
     vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "");
   });
 
-  it("always wraps children in the session provider", () => {
+  it("renders children without Convex Auth when the URL is missing", () => {
     render(
       <AppProviders>
         <main>BudgetBITCH</main>
@@ -40,8 +34,7 @@ describe("AppProviders", () => {
     );
 
     expect(screen.getByText("BudgetBITCH")).toBeInTheDocument();
-    expect(screen.getByTestId("session-provider")).toBeInTheDocument();
-    expect(screen.queryByTestId("convex-provider")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("convex-auth-provider")).not.toBeInTheDocument();
   });
 
   it("skips Convex when the URL is not absolute", () => {
@@ -53,12 +46,11 @@ describe("AppProviders", () => {
       </AppProviders>,
     );
 
-    expect(screen.getByTestId("session-provider")).toBeInTheDocument();
-    expect(screen.queryByTestId("convex-provider")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("convex-auth-provider")).not.toBeInTheDocument();
     expect(convexClientMock).not.toHaveBeenCalled();
   });
 
-  it("wraps children in the session provider and Convex when the URL is configured", () => {
+  it("wraps children in Convex Auth when the URL is configured", () => {
     vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "https://happy-animal-123.convex.cloud");
 
     render(
@@ -67,8 +59,7 @@ describe("AppProviders", () => {
       </AppProviders>,
     );
 
-    expect(screen.getByTestId("session-provider")).toBeInTheDocument();
-    expect(screen.getByTestId("convex-provider")).toBeInTheDocument();
+    expect(screen.getByTestId("convex-auth-provider")).toBeInTheDocument();
     expect(convexClientMock).toHaveBeenCalledWith(
       "https://happy-animal-123.convex.cloud",
     );

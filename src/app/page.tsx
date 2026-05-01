@@ -1,8 +1,8 @@
 "use client";
 
+import { useConvexAuth } from "@convex-dev/auth/react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
-import { useSession } from "next-auth/react";
 import {
   ArrowRight,
   BookOpen,
@@ -19,6 +19,7 @@ import LaunchWizard, { LAUNCH_PROFILE_STORAGE_KEY, type LaunchWizardProfile } fr
 import { useLaunchTransition } from "@/components/launch/use-launch-transition";
 import { MobilePanelFrame } from "@/components/mobile/mobile-panel-frame";
 import { WelcomeWindow } from "@/components/welcome/welcome-window";
+import { isAbsoluteHttpUrl } from "@/lib/url";
 
 export const HOME_E2E_AUTH_OVERRIDE_STORAGE_KEY = "budgetbitch:e2e-auth-state";
 
@@ -327,7 +328,7 @@ function subscribeToFallbackHomeAuthState() {
 }
 
 function HomeWithSessionAuth() {
-  const { status } = useSession();
+  const { isLoading, isAuthenticated } = useConvexAuth();
   const fallbackAuthState = useSyncExternalStore(
     subscribeToFallbackHomeAuthState,
     getFallbackHomeAuthStateValue,
@@ -335,9 +336,9 @@ function HomeWithSessionAuth() {
   );
 
   const sessionAuthState: HomeAuthState =
-    status === "authenticated"
+    isAuthenticated
       ? { isLoaded: true, isSignedIn: true }
-      : status === "unauthenticated"
+      : !isLoading
         ? { isLoaded: true, isSignedIn: false }
         : { isLoaded: false, isSignedIn: false };
 
@@ -351,6 +352,24 @@ function HomeWithSessionAuth() {
   return <HomeContent isLoaded={authState.isLoaded} isSignedIn={authState.isSignedIn} />;
 }
 
+function HomeWithFallbackAuth() {
+  const fallbackAuthState = useSyncExternalStore(
+    subscribeToFallbackHomeAuthState,
+    getFallbackHomeAuthStateValue,
+    () => "default",
+  );
+  const authState: HomeAuthState =
+    fallbackAuthState === "signed-in"
+      ? { isLoaded: true, isSignedIn: true }
+      : { isLoaded: true, isSignedIn: false };
+
+  return <HomeContent isLoaded={authState.isLoaded} isSignedIn={authState.isSignedIn} />;
+}
+
 export default function Home() {
+  if (!isAbsoluteHttpUrl(process.env.NEXT_PUBLIC_CONVEX_URL)) {
+    return <HomeWithFallbackAuth />;
+  }
+
   return <HomeWithSessionAuth />;
 }

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const authMock = vi.hoisted(() => vi.fn());
+const getConvexAuthenticatedIdentityMock = vi.hoisted(() => vi.fn());
 
 const prismaMock = {
   userProfile: {
@@ -11,8 +11,8 @@ const prismaMock = {
   },
 };
 
-vi.mock("@/auth", () => ({
-  auth: authMock,
+vi.mock("@/lib/auth/convex-session", () => ({
+  getConvexAuthenticatedIdentity: getConvexAuthenticatedIdentityMock,
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -25,7 +25,7 @@ describe("getDashboardPageData", () => {
   const originalDatabaseUrl = process.env.DATABASE_URL;
 
   beforeEach(() => {
-    authMock.mockReset();
+    getConvexAuthenticatedIdentityMock.mockReset();
     prismaMock.userProfile.findUnique.mockReset();
     prismaMock.dailyCheckIn.findUnique.mockReset();
     process.env.DATABASE_URL = "postgres://budgetbitch:test@localhost:5432/budgetbitch";
@@ -36,7 +36,7 @@ describe("getDashboardPageData", () => {
   });
 
   it("returns an auth-required result instead of demo data when the visitor is anonymous", async () => {
-    authMock.mockResolvedValue(null);
+    getConvexAuthenticatedIdentityMock.mockResolvedValue(null);
 
     await expect(getDashboardPageData("workspace-2")).resolves.toEqual({
       kind: "auth-required",
@@ -45,7 +45,7 @@ describe("getDashboardPageData", () => {
   });
 
   it("returns a setup-required result instead of demo data when the account has no local profile", async () => {
-    authMock.mockResolvedValue({ user: { id: "google-sub-1" } });
+    getConvexAuthenticatedIdentityMock.mockResolvedValue({ tokenIdentifier: "convex|user-1" });
     prismaMock.userProfile.findUnique.mockResolvedValue(null);
 
     await expect(getDashboardPageData("workspace-2")).resolves.toEqual({

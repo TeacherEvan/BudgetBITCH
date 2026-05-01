@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { authTables } from "@convex-dev/auth/server";
 
 const workspaceTypeValidator = v.union(
   v.literal("personal"),
@@ -32,15 +33,24 @@ const alertSeverityValidator = v.union(
 );
 
 export default defineSchema({
+  ...authTables,
+
   users: defineTable({
-    tokenIdentifier: v.string(),
-    clerkUserId: v.string(),
-    profileId: v.string(),
+    name: v.optional(v.string()),
+    image: v.optional(v.string()),
     email: v.optional(v.string()),
+    emailVerificationTime: v.optional(v.number()),
+    phone: v.optional(v.string()),
+    phoneVerificationTime: v.optional(v.number()),
+    isAnonymous: v.optional(v.boolean()),
+    tokenIdentifier: v.optional(v.string()),
+    clerkUserId: v.optional(v.string()),
+    profileId: v.optional(v.string()),
     displayName: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
-    lastSyncedAt: v.number(),
+    lastSyncedAt: v.optional(v.number()),
   })
+    .index("email", ["email"])
     .index("by_tokenIdentifier", ["tokenIdentifier"])
     .index("by_clerkUserId", ["clerkUserId"])
     .index("by_profileId", ["profileId"]),

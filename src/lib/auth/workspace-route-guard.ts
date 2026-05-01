@@ -1,5 +1,4 @@
-import { auth } from "@/auth";
-import { getAuthenticatedUserId } from "@/lib/auth/session";
+import { getConvexAuthenticatedIdentity } from "@/lib/auth/convex-session";
 import { getPrismaClient } from "@/lib/prisma";
 
 export type WorkspaceRouteGuardErrorReason =
@@ -27,8 +26,8 @@ export type AuthorizedWorkspaceActor = {
 export async function authorizeWorkspaceMutation(
   workspaceId: string,
 ): Promise<AuthorizedWorkspaceActor> {
-  const session = await auth();
-  const userId = getAuthenticatedUserId(session);
+  const identity = await getConvexAuthenticatedIdentity();
+  const userId = identity?.tokenIdentifier ?? "";
 
   if (!userId) {
     throw new WorkspaceRouteGuardError(

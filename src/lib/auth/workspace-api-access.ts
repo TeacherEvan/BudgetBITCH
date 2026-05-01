@@ -52,6 +52,7 @@ function isWorkspaceApiDemoModeEnabled() {
   return (
     nodeEnv === "development" ||
     nodeEnv === "test" ||
+    process.env.BUDGETBITCH_STRIP_AUTH_ENV?.trim() === "true" ||
     process.env.BUDGETBITCH_STRIP_CLERK_ENV?.trim() === "true"
   );
 }

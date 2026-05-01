@@ -16,8 +16,7 @@ Treat them as distinct systems. The root app is the one to extend unless a task 
 - Next.js App Router
 - React 19 + TypeScript
 - Prisma 7 + Neon Postgres
-- Convex for derived live state
-- Clerk for auth
+- Convex for derived live state and Convex Auth email/password accounts
 - Inngest for async/event-driven jobs
 - Resend for email
 - Sentry for observability
