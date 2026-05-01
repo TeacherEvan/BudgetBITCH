@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { getConvexAuthenticatedIdentity, syncConvexLocalProfile } from "@/lib/auth/convex-session";
+import {
+  authBootstrapAuthenticationRequiredMessage,
+  getConvexAuthenticatedIdentity,
+  isAuthBootstrapError,
+  syncConvexLocalProfile,
+  toAuthBootstrapErrorResponse,
+} from "@/lib/auth/convex-session";
 import {
   bootstrapUser,
   bootstrapUserLinkConflictErrorMessage,
@@ -8,20 +14,42 @@ import {
 const missingAuthenticatedUserEmailErrorMessage =
   "BudgetBITCH requires an email-backed account before local setup can finish.";
 
+function authBootstrapJsonError(code: string, message: string, status: number) {
+  return NextResponse.json({ error: { code, message } }, { status });
+}
+
+
 export async function POST() {
-  const identity = await getConvexAuthenticatedIdentity();
+  let identity;
+
+  try {
+    identity = await getConvexAuthenticatedIdentity();
+  } catch (error) {
+    if (isAuthBootstrapError(error)) {
+      return NextResponse.json(toAuthBootstrapErrorResponse(error), {
+        status: error.status,
+      });
+    }
+
+    throw error;
+  }
 
   if (!identity) {
-    return NextResponse.json({ error: "Authentication is required." }, { status: 401 });
+    return authBootstrapJsonError(
+      "missing-session",
+      authBootstrapAuthenticationRequiredMessage,
+      401,
+    );
   }
 
   const userId = identity.tokenIdentifier;
   const email = identity.email?.trim().toLowerCase() ?? "";
 
   if (!email) {
-    return NextResponse.json(
-      { error: missingAuthenticatedUserEmailErrorMessage },
-      { status: 400 },
+    return authBootstrapJsonError(
+      "missing-email",
+      missingAuthenticatedUserEmailErrorMessage,
+      400,
     );
   }
 
@@ -43,10 +71,17 @@ export async function POST() {
       error instanceof Error &&
       error.message === bootstrapUserLinkConflictErrorMessage
     ) {
-      return NextResponse.json(
-        { error: bootstrapUserLinkConflictErrorMessage },
-        { status: 409 },
+      return authBootstrapJsonError(
+        "relink-conflict",
+        bootstrapUserLinkConflictErrorMessage,
+        409,
       );
+    }
+
+    if (isAuthBootstrapError(error)) {
+      return NextResponse.json(toAuthBootstrapErrorResponse(error), {
+        status: error.status,
+      });
     }
 
     throw error;

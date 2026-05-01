@@ -86,7 +86,10 @@ describe("middleware", () => {
     expect(nextResponseRedirectMock).not.toHaveBeenCalled();
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toEqual({
-      error: "Authentication is required.",
+      error: {
+        code: "missing-session",
+        message: "Authentication is required.",
+      },
     });
   });
 
@@ -132,7 +135,10 @@ describe("middleware", () => {
 
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toEqual({
-      error: "Authentication is required.",
+      error: {
+        code: "missing-session",
+        message: "Authentication is required.",
+      },
     });
   });
 

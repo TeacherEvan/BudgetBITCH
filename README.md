@@ -68,7 +68,7 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 4. Set `PROVIDER_SECRET_ENCRYPTION_KEY` to a long random server-side secret before using integration connect/revoke routes under `/settings/integrations`.
 5. When using Neon, set `DATABASE_URL` to the pooled connection string from the Neon **Connect** dialog and `DIRECT_URL` to the direct connection string.
 6. If you plan to run `prisma migrate dev`, optionally set `SHADOW_DATABASE_URL` to a dedicated direct-connection shadow database.
-7. Set `CONVEX_SYNC_SECRET` for projection replay routes.
+7. Set `CONVEX_SYNC_SECRET` in both the Next.js/Vercel environment and the Convex deployment so auth bootstrap profile sync and projection replay use the same trusted secret.
 8. Set `CRON_SECRET` in Vercel so the scheduled replay route can authenticate Vercel Cron requests.
 9. Mirror the same Neon, Convex, projection, and provider-secret variables in Vercel before shipping preview or production deployments.
 10. Generate the Prisma client with `npm run db:generate`.
@@ -138,6 +138,7 @@ Environment notes:
 - `NEXT_PUBLIC_CONVEX_URL` must be the Convex cloud URL, for example `https://steady-ox-280.convex.cloud`. Because it is a public Next.js variable, Vercel bakes it into the browser bundle at build time, so changing it requires a redeploy.
 - `CONVEX_SITE_URL` must be the Convex site URL used as the Convex Auth issuer, for example `https://steady-ox-280.convex.site`.
 - `SITE_URL` must be the app origin accepted by Convex Auth redirects, for example `http://localhost:3000` locally and `https://budget-bitch-green.vercel.app` in production.
+- `CONVEX_SYNC_SECRET` must be set to the same long random value in the Next.js/Vercel environment and in the Convex deployment; `/auth/continue` and projection replay both depend on it for trusted server-side Convex sync.
 - `PROVIDER_SECRET_ENCRYPTION_KEY` is only required when you want to exercise the encrypted integration connect/revoke routes.
 - `RESEND_API_KEY`, `INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY`, and `WEBHOOK_SIGNING_SECRET` remain scaffolded placeholders for email and webhook surfaces that are not active in the current root app slice.
 

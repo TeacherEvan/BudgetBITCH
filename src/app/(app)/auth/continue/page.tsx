@@ -2,7 +2,13 @@ import { redirect } from "next/navigation";
 import { AuthAccountRecoveryButton } from "@/components/auth/auth-account-recovery-button";
 import { AuthEntryPanel } from "@/components/auth/auth-entry-panel";
 import { getRequestMessages } from "@/i18n/server";
-import { getConvexAuthenticatedIdentity, syncConvexLocalProfile } from "@/lib/auth/convex-session";
+import {
+  authBootstrapErrorCodes,
+  getConvexAuthenticatedIdentity,
+  isAuthBootstrapError,
+  isAuthBootstrapErrorCode,
+  syncConvexLocalProfile,
+} from "@/lib/auth/convex-session";
 import {
   bootstrapUser,
   bootstrapUserLinkConflictErrorMessage,
@@ -41,13 +47,46 @@ function getPostBootstrapRedirect(redirectTarget: string, workspaceId: string) {
   return `${dashboardUrl.pathname}?${dashboardUrl.searchParams.toString()}`;
 }
 
+function getAuthContinueUrl(redirectTarget: string, errorCode: string) {
+  const authContinueUrl = new URL("/auth/continue", "https://budgetbitch.local");
+  authContinueUrl.searchParams.set("error", errorCode);
+
+  if (redirectTarget !== "/auth/continue") {
+    authContinueUrl.searchParams.set("redirectTo", redirectTarget);
+  }
+
+  return `${authContinueUrl.pathname}?${authContinueUrl.searchParams.toString()}`;
+}
+
 export default async function AuthContinuePage({ searchParams }: AuthContinuePageProps = {}) {
   const resolvedSearchParams = (await searchParams) ?? undefined;
   const messages = await getRequestMessages();
   const redirectTarget = getSafePostAuthRedirect(getSearchParam(resolvedSearchParams, "redirectTo"));
   const errorCode = getSearchParam(resolvedSearchParams, "error");
+  const bootstrapErrorCode = isAuthBootstrapErrorCode(errorCode) ? errorCode : null;
 
-  const identity = await getConvexAuthenticatedIdentity();
+  let identity;
+
+  try {
+    identity = await getConvexAuthenticatedIdentity();
+  } catch (error) {
+    if (isAuthBootstrapError(error)) {
+      return (
+        <AuthEntryPanel
+          eyebrow={messages.authContinue.eyebrow}
+          title={messages.authContinue.bootstrapIssueTitle}
+          description={messages.authContinue.bootstrapIssueDescription}
+          copy={messages.authPanel}
+        >
+          <p className="bb-mini-copy text-sm" role="alert">
+            {messages.authContinue.bootstrapIssueHelp}
+          </p>
+        </AuthEntryPanel>
+      );
+    }
+
+    throw error;
+  }
 
   if (!identity) {
     redirect(`/sign-in?redirectTo=${encodeURIComponent(redirectTarget)}`);
@@ -91,16 +130,15 @@ export default async function AuthContinuePage({ searchParams }: AuthContinuePag
         error instanceof Error &&
         error.message === bootstrapUserLinkConflictErrorMessage
       ) {
-        const relinkConflictUrl = new URL("/auth/continue", "https://budgetbitch.local");
-        relinkConflictUrl.searchParams.set("error", "relink-conflict");
+        redirect(getAuthContinueUrl(redirectTarget, "relink-conflict"));
+      }
 
-        if (redirectTarget !== "/auth/continue") {
-          relinkConflictUrl.searchParams.set("redirectTo", redirectTarget);
+      if (isAuthBootstrapError(error)) {
+        if (error.code === authBootstrapErrorCodes.authenticationRequired) {
+          redirect(`/sign-in?redirectTo=${encodeURIComponent(redirectTarget)}`);
         }
 
-        redirect(
-          `${relinkConflictUrl.pathname}?${relinkConflictUrl.searchParams.toString()}`,
-        );
+        redirect(getAuthContinueUrl(redirectTarget, error.code));
       }
 
       throw error;
@@ -128,6 +166,11 @@ export default async function AuthContinuePage({ searchParams }: AuthContinuePag
           </p>
           <AuthAccountRecoveryButton redirectTo={redirectTarget} />
         </div>
+      ) : null}
+      {bootstrapErrorCode ? (
+        <p className="mb-4 text-sm text-amber-100" role="alert">
+          {messages.authContinue.bootstrapIssueHelp}
+        </p>
       ) : null}
       <form action={completeBootstrapAction} className="flex flex-col gap-3">
         <button type="submit" className="bb-button-primary w-full justify-center md:w-auto">

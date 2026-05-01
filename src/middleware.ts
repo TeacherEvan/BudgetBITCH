@@ -9,6 +9,12 @@ const protectedApiPathPrefixes = [
   "/api/v1/integrations",
 ];
 const e2eAuthOverrideCookieName = "budgetbitch:e2e-auth-state";
+const missingSessionApiError = {
+  error: {
+    code: "missing-session",
+    message: "Authentication is required.",
+  },
+};
 
 function isProtectedPath(pathname: string) {
   return [...protectedPathPrefixes, ...protectedApiPathPrefixes].some(
@@ -70,7 +76,7 @@ export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
   }
 
   if (isApiPath(pathname)) {
-    return Response.json({ error: "Authentication is required." }, { status: 401 });
+    return Response.json(missingSessionApiError, { status: 401 });
   }
 
   const redirectTarget = getRedirectTarget(request as NextRequest);

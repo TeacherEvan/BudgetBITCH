@@ -14,9 +14,13 @@ vi.mock("convex/nextjs", () => ({
 }));
 
 import {
+  AuthBootstrapError,
+  authBootstrapErrorCodes,
   convexProfileSyncErrorMessage,
   getConvexAuthenticatedIdentity,
+  isAuthBootstrapError,
   syncConvexLocalProfile,
+  toAuthBootstrapErrorResponse,
 } from "./convex-session";
 
 describe("getConvexAuthenticatedIdentity", () => {
@@ -30,6 +34,19 @@ describe("getConvexAuthenticatedIdentity", () => {
 
     await expect(getConvexAuthenticatedIdentity()).resolves.toBeNull();
     expect(fetchQueryMock).not.toHaveBeenCalled();
+  });
+
+  it("wraps Convex identity fetch failures in a structured bootstrap error", async () => {
+    convexAuthNextjsTokenMock.mockResolvedValue("convex-token");
+    fetchQueryMock.mockRejectedValue(new Error("Convex is unavailable"));
+
+    await expect(getConvexAuthenticatedIdentity()).rejects.toMatchObject({
+      name: "AuthBootstrapError",
+      code: authBootstrapErrorCodes.convexIdentityFetchFailed,
+      status: 503,
+      message:
+        "BudgetBITCH could not verify your Convex Auth session. Try again in a moment.",
+    });
   });
 });
 
@@ -47,7 +64,11 @@ describe("syncConvexLocalProfile", () => {
 
     await expect(
       syncConvexLocalProfile({ profileId: "profile-1", displayName: null }),
-    ).rejects.toThrow("Authentication is required.");
+    ).rejects.toMatchObject({
+      code: authBootstrapErrorCodes.authenticationRequired,
+      status: 401,
+      message: "Authentication is required.",
+    });
     expect(fetchMutationMock).not.toHaveBeenCalled();
   });
 
@@ -56,8 +77,47 @@ describe("syncConvexLocalProfile", () => {
 
     await expect(
       syncConvexLocalProfile({ profileId: "profile-1", displayName: null }),
-    ).rejects.toThrow(convexProfileSyncErrorMessage);
+    ).rejects.toMatchObject({
+      code: authBootstrapErrorCodes.missingConvexSyncSecret,
+      status: 503,
+      message: convexProfileSyncErrorMessage,
+    });
     expect(fetchMutationMock).not.toHaveBeenCalled();
+  });
+
+  it("exposes the missing sync secret as an identifiable bootstrap error", async () => {
+    vi.stubEnv("CONVEX_SYNC_SECRET", "");
+
+    try {
+      await syncConvexLocalProfile({ profileId: "profile-1", displayName: null });
+      throw new Error("Expected syncConvexLocalProfile to reject");
+    } catch (error) {
+      expect(isAuthBootstrapError(error)).toBe(true);
+      expect(error).toBeInstanceOf(AuthBootstrapError);
+
+      if (isAuthBootstrapError(error)) {
+        expect(toAuthBootstrapErrorResponse(error)).toEqual({
+          error: {
+            code: authBootstrapErrorCodes.missingConvexSyncSecret,
+            message: convexProfileSyncErrorMessage,
+          },
+        });
+      }
+    }
+  });
+
+  it("wraps Convex profile sync failures in a structured bootstrap error", async () => {
+    process.env.CONVEX_SYNC_SECRET = "budgetbitch-sync-secret";
+    fetchMutationMock.mockRejectedValue(new Error("Convex mutation failed"));
+
+    await expect(
+      syncConvexLocalProfile({ profileId: "profile-1", displayName: null }),
+    ).rejects.toMatchObject({
+      code: authBootstrapErrorCodes.convexProfileSyncFailed,
+      status: 503,
+      message:
+        "BudgetBITCH could not sync your local profile with Convex. Try again in a moment.",
+    });
   });
 
   it("sends the trusted sync secret without caller email", async () => {

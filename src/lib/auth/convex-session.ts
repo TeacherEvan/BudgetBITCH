@@ -5,6 +5,78 @@ import { api } from "../../../convex/_generated/api";
 export const convexProfileSyncErrorMessage =
   "CONVEX_SYNC_SECRET is not configured for Convex profile sync.";
 
+export const authBootstrapAuthenticationRequiredMessage = "Authentication is required.";
+
+export const authBootstrapErrorCodes = {
+  authenticationRequired: "authentication-required",
+  missingConvexSyncSecret: "missing-convex-sync-secret",
+  convexIdentityFetchFailed: "convex-identity-fetch-failed",
+  convexProfileSyncFailed: "convex-profile-sync-failed",
+} as const;
+
+export type AuthBootstrapErrorCode =
+  (typeof authBootstrapErrorCodes)[keyof typeof authBootstrapErrorCodes];
+
+export type AuthBootstrapErrorShape = {
+  code: AuthBootstrapErrorCode;
+  message: string;
+  status: number;
+};
+
+export type AuthBootstrapErrorResponse = {
+  error: Pick<AuthBootstrapErrorShape, "code" | "message">;
+};
+
+const knownAuthBootstrapErrorCodes = new Set<string>(
+  Object.values(authBootstrapErrorCodes),
+);
+
+export class AuthBootstrapError extends Error implements AuthBootstrapErrorShape {
+  readonly code: AuthBootstrapErrorCode;
+  readonly status: number;
+  readonly cause?: unknown;
+
+  constructor(input: AuthBootstrapErrorShape & { cause?: unknown }) {
+    super(input.message);
+    this.name = "AuthBootstrapError";
+    this.code = input.code;
+    this.status = input.status;
+    this.cause = input.cause;
+  }
+}
+
+export function isAuthBootstrapError(error: unknown): error is AuthBootstrapErrorShape {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const candidate = error as Error & Partial<AuthBootstrapErrorShape>;
+
+  return (
+    typeof candidate.code === "string" &&
+    knownAuthBootstrapErrorCodes.has(candidate.code) &&
+    typeof candidate.status === "number" &&
+    typeof candidate.message === "string"
+  );
+}
+
+export function isAuthBootstrapErrorCode(
+  code: string | null | undefined,
+): code is AuthBootstrapErrorCode {
+  return typeof code === "string" && knownAuthBootstrapErrorCodes.has(code);
+}
+
+export function toAuthBootstrapErrorResponse(
+  error: AuthBootstrapErrorShape,
+): AuthBootstrapErrorResponse {
+  return {
+    error: {
+      code: error.code,
+      message: error.message,
+    },
+  };
+}
+
 export type ConvexAuthenticatedIdentity = {
   tokenIdentifier: string;
   subject: string;
@@ -20,7 +92,17 @@ export async function getConvexAuthenticatedIdentity(): Promise<ConvexAuthentica
     return null;
   }
 
-  return await fetchQuery(api.authSession.currentIdentity, {}, { token });
+  try {
+    return await fetchQuery(api.authSession.currentIdentity, {}, { token });
+  } catch (error) {
+    throw new AuthBootstrapError({
+      code: authBootstrapErrorCodes.convexIdentityFetchFailed,
+      message:
+        "BudgetBITCH could not verify your Convex Auth session. Try again in a moment.",
+      status: 503,
+      cause: error,
+    });
+  }
 }
 
 export async function syncConvexLocalProfile(input: {
@@ -31,16 +113,34 @@ export async function syncConvexLocalProfile(input: {
   const syncSecret = process.env.CONVEX_SYNC_SECRET?.trim();
 
   if (!token) {
-    throw new Error("Authentication is required.");
+    throw new AuthBootstrapError({
+      code: authBootstrapErrorCodes.authenticationRequired,
+      message: authBootstrapAuthenticationRequiredMessage,
+      status: 401,
+    });
   }
 
   if (!syncSecret) {
-    throw new Error(convexProfileSyncErrorMessage);
+    throw new AuthBootstrapError({
+      code: authBootstrapErrorCodes.missingConvexSyncSecret,
+      message: convexProfileSyncErrorMessage,
+      status: 503,
+    });
   }
 
-  return await fetchMutation(
-    api.authSession.syncLocalProfile,
-    { ...input, syncSecret },
-    { token },
-  );
+  try {
+    return await fetchMutation(
+      api.authSession.syncLocalProfile,
+      { ...input, syncSecret },
+      { token },
+    );
+  } catch (error) {
+    throw new AuthBootstrapError({
+      code: authBootstrapErrorCodes.convexProfileSyncFailed,
+      message:
+        "BudgetBITCH could not sync your local profile with Convex. Try again in a moment.",
+      status: 503,
+      cause: error,
+    });
+  }
 }

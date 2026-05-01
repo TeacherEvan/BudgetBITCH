@@ -173,6 +173,11 @@ export const localeMessages = {
         "The continue action creates any missing records once, reuses them on later sign-ins, and then opens your dashboard with the resulting workspace selected.",
       relinkConflict:
         "This email is already linked to a different account. Sign out here, switch to the original sign-in method, or contact support before continuing.",
+      bootstrapIssueTitle: "Setup needs attention",
+      bootstrapIssueDescription:
+        "BudgetBITCH could not finish the secure Convex setup step for this session.",
+      bootstrapIssueHelp:
+        "Try again after the app owner checks Convex Auth and CONVEX_SYNC_SECRET settings.",
       continueToDashboard: "Continue to dashboard",
       rerunSafe: "This is safe to run again if your session already created the local records.",
     },
@@ -670,6 +675,9 @@ export const localeMessages = {
       oneSafeBootstrapDescription:
         "继续操作会一次性创建缺失记录，后续登录会复用这些记录，然后打开已选定工作区的仪表板。",
       relinkConflict: "这个邮箱已关联到另一个账户。请先退出，切换回原来的登录方式，或联系支持后再继续。",
+      bootstrapIssueTitle: "设置需要处理",
+      bootstrapIssueDescription: "BudgetBITCH 无法为此会话完成安全的 Convex 设置步骤。",
+      bootstrapIssueHelp: "请在应用所有者检查 Convex Auth 和 CONVEX_SYNC_SECRET 设置后重试。",
       continueToDashboard: "继续前往仪表板",
       rerunSafe: "如果当前会话已经创建好本地记录，重复执行也是安全的。",
     },
@@ -1163,6 +1171,9 @@ export const localeMessages = {
       oneSafeBootstrapDescription:
         "การดำเนินการต่อจะสร้างข้อมูลที่ยังขาดอยู่เพียงครั้งเดียว ใช้ข้อมูลเดิมในครั้งถัดไป และเปิดแดชบอร์ดพร้อมเลือกพื้นที่ทำงานที่ได้ผลลัพธ์ไว้แล้ว",
       relinkConflict: "อีเมลนี้เชื่อมกับอีกบัญชีหนึ่งอยู่แล้ว โปรดออกจากระบบ สลับไปใช้วิธีลงชื่อเข้าใช้เดิม หรือติดต่อฝ่ายช่วยเหลือก่อนดำเนินการต่อ",
+      bootstrapIssueTitle: "การตั้งค่าต้องตรวจสอบ",
+      bootstrapIssueDescription: "BudgetBITCH ยังทำขั้นตอนตั้งค่า Convex แบบปลอดภัยสำหรับเซสชันนี้ไม่สำเร็จ",
+      bootstrapIssueHelp: "ลองอีกครั้งหลังจากเจ้าของแอปตรวจสอบ Convex Auth และค่า CONVEX_SYNC_SECRET แล้ว",
       continueToDashboard: "ไปยังแดชบอร์ดต่อ",
       rerunSafe: "สามารถเรียกใช้อีกครั้งได้อย่างปลอดภัย หากเซสชันนี้ได้สร้างข้อมูลภายในไว้แล้ว",
     },

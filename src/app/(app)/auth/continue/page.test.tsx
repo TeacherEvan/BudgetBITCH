@@ -5,6 +5,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const getConvexAuthenticatedIdentityMock = vi.hoisted(() => vi.fn());
 const syncConvexLocalProfileMock = vi.hoisted(() => vi.fn());
 const bootstrapUserMock = vi.hoisted(() => vi.fn());
+const authBootstrapErrorCodes = vi.hoisted(() => ({
+  authenticationRequired: "authentication-required",
+  missingConvexSyncSecret: "missing-convex-sync-secret",
+  convexIdentityFetchFailed: "convex-identity-fetch-failed",
+  convexProfileSyncFailed: "convex-profile-sync-failed",
+}));
 const bootstrapUserLinkConflictErrorMessage = vi.hoisted(
   () => "A different auth account is already linked to this local profile.",
 );
@@ -14,8 +20,32 @@ const redirectMock = vi.hoisted(() =>
   }),
 );
 
+function makeAuthBootstrapError(input: {
+  code: string;
+  message: string;
+  status: number;
+}) {
+  const error = new Error(input.message) as Error & {
+    code: string;
+    status: number;
+  };
+  error.name = "AuthBootstrapError";
+  error.code = input.code;
+  error.status = input.status;
+  return error;
+}
+
 vi.mock("@/lib/auth/convex-session", () => ({
+  authBootstrapErrorCodes,
   getConvexAuthenticatedIdentity: getConvexAuthenticatedIdentityMock,
+  isAuthBootstrapError: (error: unknown) =>
+    error instanceof Error &&
+    "code" in error &&
+    "status" in error &&
+    typeof (error as { code: unknown }).code === "string" &&
+    typeof (error as { status: unknown }).status === "number",
+  isAuthBootstrapErrorCode: (code: unknown) =>
+    typeof code === "string" && Object.values(authBootstrapErrorCodes).includes(code),
   syncConvexLocalProfile: syncConvexLocalProfileMock,
 }));
 
@@ -70,6 +100,11 @@ vi.mock("@/i18n/server", () => ({
         "The continue action creates any missing records once, reuses them on later sign-ins, and then opens your dashboard with the resulting workspace selected.",
       relinkConflict:
         "This email is already linked to a different account. Sign out here, switch to the original sign-in method, or contact support before continuing.",
+      bootstrapIssueTitle: "Setup needs attention",
+      bootstrapIssueDescription:
+        "BudgetBITCH could not finish the secure Convex setup step for this session.",
+      bootstrapIssueHelp:
+        "Try again after the app owner checks Convex Auth and CONVEX_SYNC_SECRET settings.",
       continueToDashboard: "Continue to dashboard",
       rerunSafe:
         "This is safe to run again if your session already created the local records.",
@@ -139,6 +174,25 @@ describe("AuthContinuePage", () => {
     ).toBeInTheDocument();
   });
 
+  it("renders setup recovery guidance when Convex identity verification fails", async () => {
+    getConvexAuthenticatedIdentityMock.mockRejectedValue(
+      makeAuthBootstrapError({
+        code: authBootstrapErrorCodes.convexIdentityFetchFailed,
+        message:
+          "BudgetBITCH could not verify your Convex Auth session. Try again in a moment.",
+        status: 503,
+      }),
+    );
+
+    const view = await AuthContinuePage();
+    render(view);
+
+    expect(screen.getByRole("heading", { name: /setup needs attention/i })).toBeInTheDocument();
+    expect(
+      screen.getByText(/checks convex auth and convex_sync_secret settings/i),
+    ).toBeInTheDocument();
+  });
+
   it("renders the continue action for email-backed users", async () => {
     getConvexAuthenticatedIdentityMock.mockResolvedValue({
       tokenIdentifier: "convex|user-1",
@@ -172,6 +226,24 @@ describe("AuthContinuePage", () => {
       "data-redirect-to",
       "/auth/continue",
     );
+  });
+
+  it("renders guided setup copy when bootstrap returns with a known config error", async () => {
+    getConvexAuthenticatedIdentityMock.mockResolvedValue({
+      tokenIdentifier: "convex|user-1",
+      email: "alex@example.com",
+      name: "Alex Example",
+    });
+
+    const view = await AuthContinuePage({
+      searchParams: Promise.resolve({ error: "missing-convex-sync-secret" }),
+    });
+    render(view);
+
+    expect(
+      screen.getByText(/checks convex auth and convex_sync_secret settings/i),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /continue to dashboard/i })).toBeInTheDocument();
   });
 
   it("boots the local workspace and redirects to the dashboard when the continue action runs", async () => {
@@ -263,6 +335,62 @@ describe("AuthContinuePage", () => {
       "REDIRECT:/auth/continue?error=relink-conflict",
     );
     expect(redirectMock).toHaveBeenCalledWith("/auth/continue?error=relink-conflict");
+  });
+
+  it("redirects back to auth continue recovery when profile sync has a known config failure", async () => {
+    getConvexAuthenticatedIdentityMock.mockResolvedValue({
+      tokenIdentifier: "convex|user-1",
+      email: "alex@example.com",
+      name: "Alex Example",
+    });
+    bootstrapUserMock.mockResolvedValue({
+      userId: "profile-1",
+      workspaceId: "workspace-1",
+    });
+    syncConvexLocalProfileMock.mockRejectedValue(
+      makeAuthBootstrapError({
+        code: authBootstrapErrorCodes.missingConvexSyncSecret,
+        message: "CONVEX_SYNC_SECRET is not configured for Convex profile sync.",
+        status: 503,
+      }),
+    );
+
+    const view = await AuthContinuePage();
+    const form = getContinueForm(view as ReactElement<{ children: ReactElement | ReactElement[] | null }>);
+
+    await expect(form.props.action()).rejects.toThrow(
+      "REDIRECT:/auth/continue?error=missing-convex-sync-secret",
+    );
+    expect(redirectMock).toHaveBeenCalledWith(
+      "/auth/continue?error=missing-convex-sync-secret",
+    );
+  });
+
+  it("redirects to sign-in when profile sync loses authentication", async () => {
+    getConvexAuthenticatedIdentityMock.mockResolvedValue({
+      tokenIdentifier: "convex|user-1",
+      email: "alex@example.com",
+      name: "Alex Example",
+    });
+    bootstrapUserMock.mockResolvedValue({
+      userId: "profile-1",
+      workspaceId: "workspace-1",
+    });
+    syncConvexLocalProfileMock.mockRejectedValue(
+      makeAuthBootstrapError({
+        code: authBootstrapErrorCodes.authenticationRequired,
+        message: "Authentication is required.",
+        status: 401,
+      }),
+    );
+
+    const view = await AuthContinuePage({
+      searchParams: Promise.resolve({ redirectTo: "/" }),
+    });
+    const form = getContinueForm(view as ReactElement<{ children: ReactElement | ReactElement[] | null }>);
+
+    await expect(form.props.action()).rejects.toThrow("REDIRECT:/sign-in?redirectTo=%2F");
+    expect(redirectMock).toHaveBeenCalledWith("/sign-in?redirectTo=%2F");
   });
 
   it("preserves a safe root target when bootstrap hits a relink conflict", async () => {
