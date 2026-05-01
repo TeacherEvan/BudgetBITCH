@@ -201,6 +201,9 @@ export const localeMessages = {
         signInOnly: "Convex Auth verifies sign-in and returns your account identity.",
         minimalData:
           "BudgetBITCH keeps only the local account, workspace, preference, and integration data it needs to run.",
+        noMarketingData: "No marketing data is recorded or sold.",
+        personalizationUserOnly:
+          "Personalization stays user-only and is not shared with brokers or third-party advertisers.",
         gmailPrivacy: "No Google OAuth client or user-managed environment file is required for login.",
       },
     },
@@ -700,6 +703,8 @@ export const localeMessages = {
       privacyItems: {
         signInOnly: "Convex Auth 会验证登录并返回你的账户身份。",
         minimalData: "BudgetBITCH 仅保留运行所需的本地账户、工作区、偏好设置和集成数据。",
+        noMarketingData: "不会记录或出售任何营销数据。",
+        personalizationUserOnly: "个性化仅供用户本人使用，不会分享给数据经纪商或第三方广告商。",
         gmailPrivacy: "登录不需要 Google OAuth 客户端，也不需要用户自己添加环境文件。",
       },
     },
@@ -1197,6 +1202,9 @@ export const localeMessages = {
         signInOnly: "Convex Auth ตรวจสอบการลงชื่อเข้าใช้และส่งคืนตัวตนของบัญชีคุณ",
         minimalData:
           "BudgetBITCH จะเก็บเฉพาะข้อมูลบัญชีภายใน พื้นที่ทำงาน การตั้งค่า และการเชื่อมต่อที่จำเป็นต่อการทำงาน",
+        noMarketingData: "ไม่มีการบันทึกหรือขายข้อมูลการตลาด",
+        personalizationUserOnly:
+          "การปรับแต่งจะใช้สำหรับผู้ใช้คนนั้นเท่านั้น และไม่แชร์กับนายหน้าข้อมูลหรือผู้ลงโฆษณาภายนอก",
         gmailPrivacy: "การเข้าสู่ระบบไม่ต้องใช้ Google OAuth client หรือไฟล์ env จากผู้ใช้",
       },
     },

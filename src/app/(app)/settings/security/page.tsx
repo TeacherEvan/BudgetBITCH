@@ -57,6 +57,12 @@ export default async function SecuritySettingsPage() {
                     {messages.securitySettings.privacyItems.minimalData}
                   </li>
                   <li className="rounded-[22px] border border-white/10 bg-black/15 px-4 py-3">
+                    {messages.securitySettings.privacyItems.noMarketingData}
+                  </li>
+                  <li className="rounded-[22px] border border-white/10 bg-black/15 px-4 py-3">
+                    {messages.securitySettings.privacyItems.personalizationUserOnly}
+                  </li>
+                  <li className="rounded-[22px] border border-white/10 bg-black/15 px-4 py-3">
                     {messages.securitySettings.privacyItems.gmailPrivacy}
                   </li>
                 </ul>

@@ -9,7 +9,6 @@ describe("mobileRouteConfig", () => {
       "/calculator",
       "/notes",
       "/learn",
-      "/settings/integrations",
       "/jobs",
     ]);
   });

@@ -7,6 +7,7 @@ import {
   getConvexAuthenticatedIdentity,
   isAuthBootstrapError,
   isAuthBootstrapErrorCode,
+  reportAuthBootstrapError,
   syncConvexLocalProfile,
 } from "@/lib/auth/convex-session";
 import {
@@ -65,12 +66,17 @@ export default async function AuthContinuePage({ searchParams }: AuthContinuePag
   const errorCode = getSearchParam(resolvedSearchParams, "error");
   const bootstrapErrorCode = isAuthBootstrapErrorCode(errorCode) ? errorCode : null;
 
-  let identity;
+  let identity: Awaited<ReturnType<typeof getConvexAuthenticatedIdentity>>;
 
   try {
     identity = await getConvexAuthenticatedIdentity();
   } catch (error) {
     if (isAuthBootstrapError(error)) {
+      reportAuthBootstrapError(error, {
+        operation: "identity-verification",
+        surface: "auth-continue-page",
+      });
+
       return (
         <AuthEntryPanel
           eyebrow={messages.authContinue.eyebrow}
@@ -134,6 +140,11 @@ export default async function AuthContinuePage({ searchParams }: AuthContinuePag
       }
 
       if (isAuthBootstrapError(error)) {
+        reportAuthBootstrapError(error, {
+          operation: "profile-sync",
+          surface: "auth-continue-page",
+        });
+
         if (error.code === authBootstrapErrorCodes.authenticationRequired) {
           redirect(`/sign-in?redirectTo=${encodeURIComponent(redirectTarget)}`);
         }

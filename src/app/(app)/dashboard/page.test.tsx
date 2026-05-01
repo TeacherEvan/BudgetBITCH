@@ -1,9 +1,9 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { HOME_LOCATION_STORAGE_KEY } from "@/modules/home-location/home-location";
 
 const getDashboardPageData = vi.hoisted(() => vi.fn());
 const redirect = vi.hoisted(() => vi.fn());
+const refresh = vi.hoisted(() => vi.fn());
 
 vi.mock("@/modules/dashboard/dashboard-data", () => ({
   getDashboardPageData,
@@ -11,97 +11,8 @@ vi.mock("@/modules/dashboard/dashboard-data", () => ({
 
 vi.mock("next/navigation", () => ({
   redirect,
-}));
-
-vi.mock("next-intl", () => ({
-  useLocale: () => "en",
-  useTranslations: (namespace: string) => (key: string, values?: Record<string, number>) => {
-    const translations: Record<string, Record<string, string>> = {
-      broadcastBar: {
-        kicker: "Local area",
-        title: "Local area",
-        fallbackTicker: "Budget updates",
-      },
-      dailyCheckIn: {
-        kicker: "Check-in lane",
-        title: "Log today's number",
-        description: "One number keeps Acme Studio aligned.",
-        liveSubmissionUnavailable: "Live entry locked",
-        submitting: "Sending",
-        submittedToday: "Sent today",
-        readyToSubmit: "Ready now",
-        plannedSpendLabel: "Planned spend for today",
-        lockedDate: "Locked to Apr 9, 2026 for Acme Studio.",
-        disabledHint: "Sign in to send live check-ins.",
-        submitButton: "Send today's check-in",
-        submittingButton: "Sending check-in",
-        emptyHeadline: "No check-in yet for this workspace.",
-        noCheckInYet: "No check-in yet.",
-        submittedAt: "Sent Apr 9, 9:00 AM.",
-        plannedSpendMetric: "Planned spend",
-        openAlertsMetric: "Open alerts",
-        netCashAfterPlanMetric: "Net cash after plan",
-        emptyAlertsTitle: "No alerts yet.",
-        emptyAlertsDescription: "Send again when you need a refresh.",
-      },
-      liveAlerts: {
-        kicker: "Alert lane",
-        title: "Watch the pressure points",
-        description: "Projected alerts land here first.",
-        selectWorkspace: "Select a workspace to see alerts.",
-        standbyNoUrl: "Standby. Add the Convex URL to enable alerts.",
-        standbyNoBridge: "Standby. Realtime auth is not ready yet.",
-        loading: "Loading alerts...",
-        viewerSync: "Viewer sync in progress. Alerts appear after it finishes.",
-        workspaceSync: "Waiting on workspace access sync.",
-        empty: "No live alerts yet. They appear after the first projected check-in.",
-        checkInDate: "Check-in 2026-04-09",
-      },
-      launcherGrid: {
-        kicker: "Tools",
-        title: "Popular budgeting tools",
-        description: "Open the next tool without the extra scroll.",
-      },
-      liveBriefing: {
-        kicker: "Briefing",
-        title: "Live briefing",
-        description: "Trusted topics, trimmed for quick scanning.",
-        "sourceStatus.live": "Live",
-        "sourceStatus.fallback": "Fallback",
-        fieldCount: `${values?.count ?? 0} fields`,
-        emptyState: "No briefing topics yet. Check back after the next refresh.",
-      },
-    };
-
-    return translations[namespace]?.[key] ?? key;
-  },
-}));
-
-vi.mock("@/i18n/server", () => ({
-  getRequestMessages: async () => ({
-    dashboardPage: {
-      eyebrow: "Dashboard",
-      title: "Interactive billboard",
-      description: "Keep your workspace, tools, and live signals in one board.",
-      workspaceLabel: "Workspace",
-      cityLabel: "City",
-      motionLabel: "Motion",
-      currentModeEyebrow: "Current mode",
-      checkInSubmitted: "Checked in",
-      checkInNeeded: "Check-in due",
-      demoWorkspace: "Demo",
-      liveMembership: "Live member",
-      windowProfileEyebrow: "Window profile",
-      layoutLabel: "Layout",
-      motionValueLabel: "Motion",
-      noWorkspaceSelected: "No workspace selected",
-      noWorkspaceRole: "none",
-      homeBaseKicker: "Board anchor",
-      homeBaseTitle: "Shared home base",
-      homeBaseDescription: "Keep one shared region ready for setup and jobs.",
-      homeBaseEmptyState: "No shared region saved yet.",
-      homeBaseActionLabel: "Open setup wizard",
-    },
+  useRouter: () => ({
+    refresh,
   }),
 }));
 
@@ -109,39 +20,151 @@ import DashboardPage from "./page";
 
 describe("DashboardPage", () => {
   afterEach(() => {
-    window.localStorage.clear();
     vi.clearAllMocks();
   });
 
-  it("renders the billboard shell with the broadcast bar, launcher grid, and live briefing rail", async () => {
-    window.localStorage.setItem(
-      HOME_LOCATION_STORAGE_KEY,
-      JSON.stringify({ countryCode: "US", stateCode: "CA" }),
-    );
-
+  it("renders the fixed money dashboard with record, local, and privacy flows", async () => {
     getDashboardPageData.mockResolvedValue({
       kind: "data",
       data: {
         activeWorkspace: {
-          id: "workspace-2",
-          workspaceId: "workspace-2",
-          name: "Side Hustle",
+          id: "workspace-1",
+          workspaceId: "workspace-1",
+          name: "Household",
           role: "owner",
+        },
+        accounting: {
+          snapshot: {
+            categories: [
+              {
+                id: "food",
+                name: "Food",
+                monthlyLimit: 400,
+                spent: 330,
+                remaining: 70,
+                ratio: 0.825,
+                status: "at_risk",
+              },
+            ],
+            dueSoonBills: [{ id: "rent", title: "Rent", amount: 1000, dueInDays: 2 }],
+            cashflow: {
+              availableCash: 1250,
+              dueSoonTotal: 1000,
+              spentTotal: 330,
+              netCashflow: -80,
+              status: "negative",
+            },
+          },
+          advice: [
+            {
+              id: "negative-cashflow",
+              title: "Cover essentials before anything flexible.",
+              detail: "Your near-term cashflow is below zero. Re-rank bills and discretionary spending today.",
+              learnSlug: "cashflow-triage",
+              severity: "critical",
+            },
+          ],
+          expenseForm: {
+            workspaceId: "workspace-1",
+            accountOptions: [{ value: "checking", label: "Checking" }],
+            categoryOptions: [{ value: "food", label: "Food" }],
+            defaultOccurredAt: "2026-05-01",
+          },
+          recentExpenses: [
+            {
+              id: "txn-1",
+              merchantName: "Corner Store",
+              amount: 18.25,
+              occurredAt: "2026-05-01T00:00:00.000Z",
+              categoryName: "Food",
+            },
+          ],
         },
         dailyCheckIn: {
           status: "submitted",
-          checkInDate: "2026-04-09",
+          checkInDate: "2026-05-01",
           headline: "Today is still inside the plan.",
           plannedSpend: 42,
           alertCount: 0,
           alerts: [],
           cashStatus: "positive",
           netCashflow: 310,
-          lastSubmittedAt: "2026-04-09T09:00:00.000Z",
+          lastSubmittedAt: "2026-05-01T09:00:00.000Z",
+        },
+        homeLocation: {
+          city: "Austin",
+          stateCode: "TX",
+          countryCode: "US",
+          label: "Austin, TX",
+          source: "user_selected",
         },
         isDemo: false,
+        launcherTools: [],
+        launchProfile: null,
+        briefing: {
+          generatedAt: "2026-05-01T12:00:00.000Z",
+          sourceStatus: "live",
+          topics: [{ id: "rates", label: "Rates hold steady" }],
+        },
+        localAreaLabel: "Austin, TX",
+        localSignals: {
+          officialJobSearchHref:
+            "https://www.indeed.com/jobs?q=budget+assistant&l=Austin%2C%20TX",
+          jobMatches: [
+            {
+              slug: "weekend-bookkeeping-assistant",
+              title: "Weekend Bookkeeping Assistant",
+              company: "Pine & Paper",
+              location: "Remote",
+              workplace: "remote",
+              salaryMin: 24000,
+              salaryMax: 32000,
+              salaryLabel: "$24k-$32k",
+              jobType: "part_time",
+              industry: "bookkeeping",
+              experienceLevel: "entry",
+              schedule: "weekend",
+              benefits: ["remote_stipend"],
+              visaStatus: "no_sponsorship_needed",
+              postingAgeDays: 8,
+              fitGoals: ["raise_income_fast"],
+              fitSignals: ["second_job_friendly", "flexible_hours", "no_degree_pathway"],
+              summary: "Part-time remote work suited for second-income support and bookkeeping exposure.",
+              reasons: ["Explicitly matches your requested role: bookkeeping."],
+              score: 33,
+            },
+          ],
+          financeHeadlines: [{ id: "rates", title: "Rates hold steady" }],
+        },
         matchedRequestedWorkspace: true,
-        requestedWorkspaceId: "workspace-2",
+        personalization: {
+          profile: {
+            genderIdentity: "woman",
+            pronouns: "she_her",
+            communicationStyle: "direct",
+            coachingIntensity: "focused",
+            privacyVersion: "v1",
+            consented: true,
+          },
+          jobPreferences: {
+            roleInterests: ["bookkeeping"],
+            certifications: [],
+            licenseTypes: [],
+            careWorkInterest: false,
+            childCareInterest: false,
+            petCareInterest: false,
+            nursingInterest: false,
+            teachingInterest: false,
+            notificationEnabled: true,
+          },
+        },
+        privacyCommitments: [
+          "No marketing data is recorded or sold.",
+          "Email stays private and is only used for account authority, sign-in, and verification.",
+          "Personalization stays user-only and is not shared with brokers or third-party advertisers.",
+          "Home location stores city and state only.",
+        ],
+        requestedWorkspaceId: "workspace-1",
         resolutionSource: "requested",
         userDisplayName: "Avery",
         workspaces: [
@@ -149,116 +172,64 @@ describe("DashboardPage", () => {
             id: "workspace-1",
             workspaceId: "workspace-1",
             name: "Household",
-            role: "editor",
+            role: "owner",
             isDefault: true,
           },
-          {
-            id: "workspace-2",
-            workspaceId: "workspace-2",
-            name: "Side Hustle",
-            role: "owner",
-          },
         ],
-        launchProfile: {
-          city: "Dublin",
-          layoutPreset: "launcher_grid",
-          motionPreset: "cinematic",
-          themePreset: "midnight",
-        },
-        localAreaLabel: "Dublin",
-        launcherTools: [
-          {
-            title: "Open setup wizard",
-            href: "/start-smart",
-            detail: "Tune the board before anything else.",
-            label: "Wizard",
-          },
-          {
-            title: "Open Learn",
-            href: "/learn",
-            detail: "Short lessons when the board needs backup.",
-            label: "Learn",
-          },
-          {
-            title: "Open Jobs",
-            href: "/jobs",
-            detail: "Income options for the current lane.",
-            label: "Jobs",
-          },
-          {
-            title: "Open bills",
-            href: "/bills",
-            detail: "Track due dates and pressure points.",
-            label: "Bills",
-          },
-          {
-            title: "Open savings",
-            href: "/savings",
-            detail: "Grow buffers without adding clutter.",
-            label: "Savings",
-          },
-          {
-            title: "Open cashflow",
-            href: "/cashflow",
-            detail: "See the burn before it gets noisy.",
-            label: "Cashflow",
-          },
-          {
-            title: "Open calculator",
-            href: "/calculator",
-            detail: "Quick arithmetic without leaving the board.",
-            label: "Calculator",
-          },
-          {
-            title: "Open notes",
-            href: "/notes",
-            detail: "Scratchpad for budget thoughts and reminders.",
-            label: "Notes",
-          },
-        ],
-        briefing: {
-          generatedAt: "2026-04-10T12:00:00.000Z",
-          sourceStatus: "live",
-          topics: [],
-        },
       },
     });
 
     const view = await DashboardPage({
-      searchParams: Promise.resolve({ workspaceId: "workspace-2" }),
+      searchParams: Promise.resolve({ workspaceId: "workspace-1" }),
     });
     render(view);
 
-    expect(getDashboardPageData).toHaveBeenCalledWith("workspace-2");
-    expect(screen.getByTestId("mobile-panel-frame")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /interactive billboard/i })).toBeInTheDocument();
+    expect(getDashboardPageData).toHaveBeenCalledWith("workspace-1");
+    expect(screen.getByRole("heading", { name: /money dashboard/i })).toBeInTheDocument();
     expect(
-      screen.getByText(/keep your workspace, tools, and live signals in one board\./i),
+      screen.getByText(/record expenses, protect the plan, and keep privacy promises visible\./i),
     ).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /local area/i })).toBeInTheDocument();
-    expect(screen.getByText(/dublin/i, { selector: "p.bb-mini-copy" })).toBeInTheDocument();
-    expect(screen.getByText("CA, United States")).toBeInTheDocument();
-    expect(screen.getByText(/shared home base/i)).toBeInTheDocument();
-    expect(screen.getByText(/keep one shared region ready for setup and jobs\./i)).toBeInTheDocument();
-    expect(screen.getByText("Side Hustle")).toBeInTheDocument();
-    expect(screen.getByText(/checked in/i)).toBeInTheDocument();
-    expect(screen.getByText(/live member/i)).toBeInTheDocument();
-    expect(screen.getByText("Budget updates")).toBeInTheDocument();
-    expect(screen.queryByText(/budget updates\s+·\s+launcher grid\s+·\s+live briefing/i)).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /popular budgeting tools/i })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /live briefing/i })).toBeInTheDocument();
-    expect(screen.getByText(/no briefing topics yet\. check back after the next refresh\./i)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /log today's number/i })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /watch the pressure points/i })).toBeInTheDocument();
-    expect(screen.getByText(/projected alerts land here first\./i)).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: /open setup wizard/i })).toHaveLength(2);
-    expect(screen.getAllByRole("link", { name: /open setup wizard/i })[0]).toHaveAttribute(
+    expect(screen.queryByRole("heading", { name: /interactive billboard/i })).not.toBeInTheDocument();
+    expect(screen.getByText("Household")).toBeInTheDocument();
+    expect(screen.getByText("Austin, TX")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /record/i })).toBeInTheDocument();
+    expect(screen.getAllByText(/food/i).length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { name: /recent activity/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/amount/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/category/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/account/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /save expense/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: /budget/i }));
+
+    expect(screen.getByRole("heading", { name: /budget snapshot/i })).toBeInTheDocument();
+    expect(screen.getByText(/\$70\.00 left/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: /local/i }));
+
+    expect(screen.getByRole("heading", { name: /local signals/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /local/i })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /^city$/i })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /^state$/i })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /store only city and state/i })).toBeChecked();
+    expect(screen.getByRole("button", { name: /save home area/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /open official job search/i })).toHaveAttribute(
       "href",
-      "/start-smart",
+      "https://www.indeed.com/jobs?q=budget+assistant&l=Austin%2C%20TX",
     );
-    expect(screen.getByRole("link", { name: /open cashflow/i })).toHaveAttribute(
+    expect(screen.getByText(/rates hold steady/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: /privacy/i }));
+
+    expect(screen.getByRole("heading", { name: /privacy promise/i })).toBeInTheDocument();
+    expect(screen.getAllByText(/no marketing data is recorded or sold/i).length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { name: /personalization/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/gender identity/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/pronouns/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /save privacy settings/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /open official docs/i })).toHaveAttribute(
       "href",
-      "/cashflow",
+      "/settings/integrations",
     );
   });
 

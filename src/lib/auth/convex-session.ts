@@ -1,4 +1,5 @@
 import { convexAuthNextjsToken } from "@convex-dev/auth/nextjs/server";
+import * as Sentry from "@sentry/nextjs";
 import { fetchMutation, fetchQuery } from "convex/nextjs";
 import { api } from "../../../convex/_generated/api";
 
@@ -25,6 +26,11 @@ export type AuthBootstrapErrorShape = {
 
 export type AuthBootstrapErrorResponse = {
   error: Pick<AuthBootstrapErrorShape, "code" | "message">;
+};
+
+export type AuthBootstrapErrorReportContext = {
+  operation: "identity-verification" | "profile-sync";
+  surface: "auth-bootstrap-api" | "auth-continue-page";
 };
 
 const knownAuthBootstrapErrorCodes = new Set<string>(
@@ -75,6 +81,44 @@ export function toAuthBootstrapErrorResponse(
       message: error.message,
     },
   };
+}
+
+function getCauseType(error: AuthBootstrapErrorShape) {
+  const cause = "cause" in error ? error.cause : undefined;
+
+  if (cause instanceof Error) {
+    return cause.name;
+  }
+
+  if (cause === undefined || cause === null) {
+    return "none";
+  }
+
+  return typeof cause;
+}
+
+export function reportAuthBootstrapError(
+  error: AuthBootstrapErrorShape,
+  context: AuthBootstrapErrorReportContext,
+) {
+  if (error.status < 500) {
+    return;
+  }
+
+  Sentry.captureMessage("Handled auth bootstrap error", {
+    contexts: {
+      authBootstrap: {
+        causeType: getCauseType(error),
+        status: error.status,
+      },
+    },
+    level: "error",
+    tags: {
+      authBootstrapCode: error.code,
+      authBootstrapOperation: context.operation,
+      authBootstrapSurface: context.surface,
+    },
+  });
 }
 
 export type ConvexAuthenticatedIdentity = {

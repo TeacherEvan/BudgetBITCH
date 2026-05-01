@@ -1,11 +1,17 @@
 import type { Prisma } from "@prisma/client";
 import { getConvexAuthenticatedIdentity } from "@/lib/auth/convex-session";
+import { localDemoWorkspaceId } from "@/lib/auth/workspace-api-access";
 import { getPrismaClient } from "@/lib/prisma";
+import { buildBudgetAdvice, type BudgetAdviceCard } from "@/modules/accounting/advice-engine";
+import { buildBudgetSnapshot } from "@/modules/accounting/budget-engine";
 import {
   createSeededDashboardBriefing,
   loadDashboardBriefing,
 } from "@/modules/dashboard/briefing/fetch-briefing";
 import type { DashboardBriefingSnapshot } from "@/modules/dashboard/briefing/types";
+import { buildJobNotifications } from "@/modules/jobs/job-notification-engine";
+import { listJobs } from "@/modules/jobs/job-catalog";
+import { normalizeUserJobPreference } from "@/modules/personalization/personalization-schema";
 import {
   resolveActiveWorkspace,
   type ActiveWorkspaceResolutionSource,
@@ -33,6 +39,64 @@ export type DashboardLaunchProfile = {
   themePreset: string;
 };
 
+export type DashboardSelectOption = {
+  value: string;
+  label: string;
+};
+
+export type DashboardRecentExpense = {
+  id: string;
+  merchantName: string | null;
+  amount: number;
+  occurredAt: string;
+  categoryName: string | null;
+};
+
+export type DashboardHomeLocation = {
+  city: string;
+  stateCode: string;
+  countryCode: string;
+  label: string;
+  source: string;
+};
+
+export type DashboardPersonalizationProfile = {
+  genderIdentity: string | null;
+  pronouns: string | null;
+  communicationStyle: string | null;
+  coachingIntensity: string | null;
+  privacyVersion: string | null;
+  consented: boolean;
+};
+
+export type DashboardJobPreferenceSummary = ReturnType<typeof normalizeUserJobPreference>;
+
+export type DashboardAccountingState = {
+  snapshot: ReturnType<typeof buildBudgetSnapshot>;
+  advice: BudgetAdviceCard[];
+  expenseForm: {
+    workspaceId: string | null;
+    accountOptions: DashboardSelectOption[];
+    categoryOptions: DashboardSelectOption[];
+    defaultOccurredAt: string;
+  };
+  recentExpenses: DashboardRecentExpense[];
+};
+
+export type DashboardLocalSignals = {
+  officialJobSearchHref: string;
+  jobMatches: ReturnType<typeof buildJobNotifications>;
+  financeHeadlines: Array<{
+    id: string;
+    title: string;
+  }>;
+};
+
+export type DashboardPersonalizationState = {
+  profile: DashboardPersonalizationProfile | null;
+  jobPreferences: DashboardJobPreferenceSummary;
+};
+
 export type DashboardLauncherTool = {
   title: string;
   href: string;
@@ -54,13 +118,18 @@ export type DashboardDailyCheckInState = {
 
 export type DashboardPageData = {
   activeWorkspace: DashboardWorkspaceOption | null;
+  accounting: DashboardAccountingState;
   briefing: DashboardBriefingSnapshot;
   dailyCheckIn: DashboardDailyCheckInState;
+  homeLocation: DashboardHomeLocation | null;
   isDemo: boolean;
   launcherTools: DashboardLauncherTool[];
   launchProfile: DashboardLaunchProfile | null;
   localAreaLabel: string;
+  localSignals: DashboardLocalSignals;
   matchedRequestedWorkspace: boolean;
+  personalization: DashboardPersonalizationState;
+  privacyCommitments: string[];
   requestedWorkspaceId: string | null;
   resolutionSource: ActiveWorkspaceResolutionSource;
   userDisplayName: string | null;
@@ -91,6 +160,14 @@ function getTodayIsoDate() {
 
 function getUtcDate(checkInDate: string) {
   return new Date(`${checkInDate}T00:00:00.000Z`);
+}
+
+function getMonthWindow(today: string) {
+  const [year, month] = today.split("-").map(Number);
+  const start = new Date(Date.UTC(year, month - 1, 1));
+  const end = new Date(Date.UTC(month === 12 ? year + 1 : year, month === 12 ? 0 : month, 1));
+
+  return { start, end };
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -176,6 +253,235 @@ function getDashboardRedirectTarget(requestedWorkspaceId?: string | null) {
   return `/dashboard${search}`;
 }
 
+function toNumber(value: Prisma.Decimal | number) {
+  return typeof value === "number" ? value : value.toNumber();
+}
+
+function formatLocalArea(city: string, stateCode: string) {
+  return `${city}, ${stateCode}`;
+}
+
+function buildPrivacyCommitments() {
+  return [
+    "No marketing data is recorded or sold.",
+    "Email stays private and is only used for account authority, sign-in, and verification.",
+    "Personalization stays user-only and is not shared with brokers or third-party advertisers.",
+    "Home location stores city and state only.",
+  ];
+}
+
+function buildEmptyJobPreferences(): DashboardJobPreferenceSummary {
+  return normalizeUserJobPreference({
+    roleInterests: [],
+    certifications: [],
+    licenseTypes: [],
+  });
+}
+
+function buildOfficialJobSearchHref(localAreaLabel: string) {
+  return `https://www.indeed.com/jobs?q=budget+assistant&l=${encodeURIComponent(localAreaLabel)}`;
+}
+
+function buildEmptyAccounting(today: string): DashboardAccountingState {
+  const snapshot = buildBudgetSnapshot({
+    categories: [],
+    expenses: [],
+    bills: [],
+    accounts: [],
+  });
+
+  return {
+    snapshot,
+    advice: buildBudgetAdvice(snapshot),
+    expenseForm: {
+      workspaceId: null,
+      accountOptions: [],
+      categoryOptions: [],
+      defaultOccurredAt: today,
+    },
+    recentExpenses: [],
+  };
+}
+
+function buildDemoAccounting(today: string): DashboardAccountingState {
+  const snapshot = buildBudgetSnapshot({
+    categories: [
+      { id: "food", name: "Food", monthlyLimit: 420 },
+      { id: "transit", name: "Transit", monthlyLimit: 160 },
+    ],
+    expenses: [
+      { budgetCategoryId: "food", amount: 188 },
+      { budgetCategoryId: "food", amount: 122 },
+      { budgetCategoryId: "transit", amount: 48 },
+    ],
+    bills: [{ id: "rent", title: "Rent", amount: 950, dueInDays: 4 }],
+    accounts: [{ balance: 1640 }],
+  });
+
+  return {
+    snapshot,
+    advice: buildBudgetAdvice(snapshot),
+    expenseForm: {
+      workspaceId: localDemoWorkspaceId,
+      accountOptions: [{ value: "checking", label: "Checking" }],
+      categoryOptions: [
+        { value: "food", label: "Food" },
+        { value: "transit", label: "Transit" },
+      ],
+      defaultOccurredAt: today,
+    },
+    recentExpenses: [
+      {
+        id: "demo-expense-1",
+        merchantName: "Market Hall",
+        amount: 28.4,
+        occurredAt: `${today}T00:00:00.000Z`,
+        categoryName: "Food",
+      },
+    ],
+  };
+}
+
+function buildLocalSignals(
+  localAreaLabel: string,
+  jobPreferences: DashboardJobPreferenceSummary,
+  briefing: DashboardBriefingSnapshot,
+): DashboardLocalSignals {
+  const jobs = listJobs();
+  const matchedJobs =
+    jobPreferences.roleInterests.length > 0 ||
+    jobPreferences.certifications.length > 0 ||
+    jobPreferences.licenseTypes.length > 0 ||
+    jobPreferences.nursingInterest ||
+    jobPreferences.teachingInterest ||
+    jobPreferences.childCareInterest ||
+    jobPreferences.petCareInterest
+      ? buildJobNotifications({ preferences: jobPreferences, jobs })
+      : jobs.filter((job) => job.location === localAreaLabel || job.workplace === "remote").slice(0, 3).map((job) => ({
+          ...job,
+          reasons: [job.location === localAreaLabel ? "Matches your saved home area." : "Remote role kept available as a fallback."],
+          score: job.location === localAreaLabel ? 80 : 60,
+        }));
+
+  return {
+    officialJobSearchHref: buildOfficialJobSearchHref(localAreaLabel),
+    jobMatches: matchedJobs,
+    financeHeadlines: (briefing?.topics ?? []).map((topic, index) => ({
+      id: `${index}-${topic.label}`,
+      title: topic.label,
+    })),
+  };
+}
+
+function buildPersonalizationState(profile: {
+  personalizationProfile?: {
+    genderIdentity: string | null;
+    pronouns: string | null;
+    communicationStyle: string | null;
+    coachingIntensity: string | null;
+    privacyVersion: string | null;
+    consentedAt: Date | null;
+  } | null;
+  jobPreferences?: Array<{
+    roleInterests: string[];
+    certifications: string[];
+    licenseTypes: string[];
+    careWorkInterest: boolean;
+    childCareInterest: boolean;
+    petCareInterest: boolean;
+    nursingInterest: boolean;
+    teachingInterest: boolean;
+    notificationEnabled: boolean;
+  }>;
+}): DashboardPersonalizationState {
+  const consented = profile.personalizationProfile?.consentedAt !== null;
+
+  return {
+    profile: profile.personalizationProfile
+      ? {
+          genderIdentity: consented ? profile.personalizationProfile.genderIdentity : null,
+          pronouns: consented ? profile.personalizationProfile.pronouns : null,
+          communicationStyle: consented ? profile.personalizationProfile.communicationStyle : null,
+          coachingIntensity: consented ? profile.personalizationProfile.coachingIntensity : null,
+          privacyVersion: profile.personalizationProfile.privacyVersion,
+          consented,
+        }
+      : null,
+    jobPreferences: normalizeUserJobPreference(profile.jobPreferences?.[0] ?? buildEmptyJobPreferences()),
+  };
+}
+
+function buildAccountingState(input: {
+  workspaceId: string;
+  today: string;
+  categories: Array<{ id: string; name: string; monthlyLimit: Prisma.Decimal | number }>;
+  accounts: Array<{ id: string; name: string; balance: Prisma.Decimal | number }>;
+  bills: Array<{ id: string; title: string; amount: Prisma.Decimal | number; dueDate: Date }>;
+  currentPeriodTransactions: Array<{
+    id: string;
+    amount: Prisma.Decimal | number;
+    occurredAt: Date;
+    merchantName: string | null;
+    budgetCategoryId: string | null;
+    budgetCategory?: { name: string } | null;
+  }>;
+  recentTransactions: Array<{
+    id: string;
+    amount: Prisma.Decimal | number;
+    occurredAt: Date;
+    merchantName: string | null;
+    budgetCategoryId: string | null;
+    budgetCategory?: { name: string } | null;
+  }>;
+}): DashboardAccountingState {
+  const todayDate = new Date(`${input.today}T00:00:00.000Z`);
+  const snapshot = buildBudgetSnapshot({
+    categories: input.categories.map((category) => ({
+      id: category.id,
+      name: category.name,
+      monthlyLimit: toNumber(category.monthlyLimit),
+    })),
+    expenses: input.currentPeriodTransactions.map((transaction) => ({
+      budgetCategoryId: transaction.budgetCategoryId,
+      amount: toNumber(transaction.amount),
+    })),
+    bills: input.bills.map((bill) => ({
+      id: bill.id,
+      title: bill.title,
+      amount: toNumber(bill.amount),
+      dueInDays: Math.max(
+        0,
+        Math.ceil((bill.dueDate.getTime() - todayDate.getTime()) / (24 * 60 * 60 * 1000)),
+      ),
+    })),
+    accounts: input.accounts.map((account) => ({
+      balance: toNumber(account.balance),
+    })),
+  });
+
+  return {
+    snapshot,
+    advice: buildBudgetAdvice(snapshot),
+    expenseForm: {
+      workspaceId: input.workspaceId,
+      accountOptions: input.accounts.map((account) => ({ value: account.id, label: account.name })),
+      categoryOptions: input.categories.map((category) => ({ value: category.id, label: category.name })),
+      defaultOccurredAt: input.today,
+    },
+    recentExpenses: input.recentTransactions
+      .slice()
+      .sort((left, right) => right.occurredAt.getTime() - left.occurredAt.getTime())
+      .slice(0, 5)
+      .map((transaction) => ({
+        id: transaction.id,
+        merchantName: transaction.merchantName,
+        amount: toNumber(transaction.amount),
+        occurredAt: transaction.occurredAt.toISOString(),
+        categoryName: transaction.budgetCategory?.name ?? null,
+      })),
+  };
+}
+
 
 function buildLauncherTools(): DashboardLauncherTool[] {
   return [
@@ -254,9 +560,33 @@ function buildDemoData(requestedWorkspaceId?: string | null): DashboardPageData 
   const resolution = resolveActiveWorkspace(workspaces, requestedWorkspaceId);
   const today = getTodayIsoDate();
   const briefing = createSeededDashboardBriefing(new Date(today + "T12:00:00.000Z"));
+  const homeLocation = {
+    city: "Dublin",
+    stateCode: "CA",
+    countryCode: "US",
+    label: "Dublin, CA",
+    source: "user_selected",
+  } satisfies DashboardHomeLocation;
+  const personalization = {
+    profile: {
+      genderIdentity: "prefer_not_to_say",
+      pronouns: "name_only",
+      communicationStyle: "balanced",
+      coachingIntensity: "focused",
+      privacyVersion: "v1",
+      consented: true,
+    },
+    jobPreferences: normalizeUserJobPreference({
+      roleInterests: ["bookkeeping"],
+      certifications: [],
+      licenseTypes: [],
+    }),
+  } satisfies DashboardPersonalizationState;
+  const localAreaLabel = homeLocation.label;
 
   return {
     activeWorkspace: resolution.activeWorkspace,
+    accounting: buildDemoAccounting(today),
     briefing,
     dailyCheckIn:
       resolution.activeWorkspace?.workspaceId === "workspace-side-hustle"
@@ -280,8 +610,12 @@ function buildDemoData(requestedWorkspaceId?: string | null): DashboardPageData 
       motionPreset: "cinematic",
       themePreset: "midnight",
     },
-    localAreaLabel: "Dublin",
+    homeLocation,
+    localAreaLabel,
+    localSignals: buildLocalSignals(localAreaLabel, personalization.jobPreferences, briefing),
     matchedRequestedWorkspace: resolution.matchedRequestedWorkspace,
+    personalization,
+    privacyCommitments: buildPrivacyCommitments(),
     requestedWorkspaceId: resolution.requestedWorkspaceId,
     resolutionSource: resolution.resolutionSource,
     userDisplayName: null,
@@ -369,6 +703,32 @@ export async function getDashboardPageData(
           isDefault: true,
         },
       },
+      personalizationProfile: {
+        select: {
+          genderIdentity: true,
+          pronouns: true,
+          communicationStyle: true,
+          coachingIntensity: true,
+          privacyVersion: true,
+          consentedAt: true,
+        },
+      },
+      jobPreferences: {
+        where: { notificationEnabled: true },
+        orderBy: { updatedAt: "desc" },
+        take: 1,
+        select: {
+          roleInterests: true,
+          certifications: true,
+          licenseTypes: true,
+          careWorkInterest: true,
+          childCareInterest: true,
+          petCareInterest: true,
+          nursingInterest: true,
+          teachingInterest: true,
+          notificationEnabled: true,
+        },
+      },
     },
   });
 
@@ -383,19 +743,28 @@ export async function getDashboardPageData(
   const resolution = resolveActiveWorkspace(workspaces, requestedWorkspaceId);
   const today = getTodayIsoDate();
   const briefing = await loadDashboardBriefing();
+  const personalization = buildPersonalizationState(profile);
+  const monthWindow = getMonthWindow(today);
 
   if (!resolution.activeWorkspace) {
+    const localAreaLabel = "Local area";
+
     return {
       kind: "data",
       data: {
         activeWorkspace: null,
+        accounting: buildEmptyAccounting(today),
         briefing,
         dailyCheckIn: buildEmptyCheckIn(today),
+        homeLocation: null,
         isDemo: false,
         launcherTools: buildLauncherTools(),
         launchProfile: null,
-        localAreaLabel: "Local area",
+        localAreaLabel,
+        localSignals: buildLocalSignals(localAreaLabel, personalization.jobPreferences, briefing),
         matchedRequestedWorkspace: resolution.matchedRequestedWorkspace,
+        personalization,
+        privacyCommitments: buildPrivacyCommitments(),
         requestedWorkspaceId: resolution.requestedWorkspaceId,
         resolutionSource: resolution.resolutionSource,
         userDisplayName: profile.displayName,
@@ -404,32 +773,144 @@ export async function getDashboardPageData(
     };
   }
 
-  const todayCheckIn = await prisma.dailyCheckIn.findUnique({
-    where: {
-      workspaceId_checkInDate: {
-        workspaceId: resolution.activeWorkspace.workspaceId,
-        checkInDate: getUtcDate(today),
+  const [todayCheckIn, workspaceDetail, currentPeriodTransactions, recentTransactions] = await Promise.all([
+    prisma.dailyCheckIn.findUnique({
+      where: {
+        workspaceId_checkInDate: {
+          workspaceId: resolution.activeWorkspace.workspaceId,
+          checkInDate: getUtcDate(today),
+        },
       },
-    },
-    select: {
-      checkInJson: true,
-      updatedAt: true,
-    },
-  });
+      select: {
+        checkInJson: true,
+        updatedAt: true,
+      },
+    }),
+    prisma.workspace.findUnique({
+      where: { id: resolution.activeWorkspace.workspaceId },
+      select: {
+        id: true,
+        name: true,
+        accounts: {
+          select: {
+            id: true,
+            name: true,
+            balance: true,
+          },
+          orderBy: { name: "asc" },
+        },
+        categories: {
+          select: {
+            id: true,
+            name: true,
+            monthlyLimit: true,
+          },
+          orderBy: { name: "asc" },
+        },
+        bills: {
+          select: {
+            id: true,
+            title: true,
+            amount: true,
+            dueDate: true,
+          },
+          orderBy: { dueDate: "asc" },
+        },
+        homeLocations: {
+          select: {
+            city: true,
+            stateCode: true,
+            countryCode: true,
+            source: true,
+            consentedAt: true,
+          },
+          orderBy: { updatedAt: "desc" },
+          take: 1,
+        },
+      },
+    }),
+    prisma.financialTransaction.findMany({
+      where: {
+        workspaceId: resolution.activeWorkspace.workspaceId,
+        occurredAt: {
+          gte: monthWindow.start,
+          lt: monthWindow.end,
+        },
+      },
+      select: {
+        id: true,
+        amount: true,
+        occurredAt: true,
+        merchantName: true,
+        budgetCategoryId: true,
+        budgetCategory: {
+          select: {
+            name: true,
+          },
+        },
+      },
+      orderBy: { occurredAt: "desc" },
+    }),
+    prisma.financialTransaction.findMany({
+      where: {
+        workspaceId: resolution.activeWorkspace.workspaceId,
+      },
+      select: {
+        id: true,
+        amount: true,
+        occurredAt: true,
+        merchantName: true,
+        budgetCategoryId: true,
+        budgetCategory: {
+          select: {
+            name: true,
+          },
+        },
+      },
+      orderBy: { occurredAt: "desc" },
+      take: 5,
+    }),
+  ]);
+  const latestHomeLocation = workspaceDetail?.homeLocations[0] ?? null;
+  const homeLocation = latestHomeLocation
+    ? {
+        city: latestHomeLocation.city,
+        stateCode: latestHomeLocation.stateCode,
+        countryCode: latestHomeLocation.countryCode,
+        label: formatLocalArea(latestHomeLocation.city, latestHomeLocation.stateCode),
+        source: latestHomeLocation.source,
+      }
+    : null;
+  const localAreaLabel = homeLocation?.label ?? resolution.activeWorkspace.name;
 
   return {
     kind: "data",
     data: {
       activeWorkspace: resolution.activeWorkspace,
+      accounting: workspaceDetail
+        ? buildAccountingState({
+            workspaceId: workspaceDetail.id,
+            today,
+            categories: workspaceDetail.categories,
+            accounts: workspaceDetail.accounts,
+            bills: workspaceDetail.bills,
+            currentPeriodTransactions,
+            recentTransactions,
+          })
+        : buildEmptyAccounting(today),
       briefing,
       dailyCheckIn: todayCheckIn
         ? parseCheckInJson(todayCheckIn.checkInJson, todayCheckIn.updatedAt, today)
         : buildEmptyCheckIn(today),
+      homeLocation,
       isDemo: false,
       launcherTools: buildLauncherTools(),
       launchProfile: null,
-      localAreaLabel: resolution.activeWorkspace.name,
+      localAreaLabel,
+      localSignals: buildLocalSignals(localAreaLabel, personalization.jobPreferences, briefing),
       matchedRequestedWorkspace: resolution.matchedRequestedWorkspace,
+      personalization,
+      privacyCommitments: buildPrivacyCommitments(),
       requestedWorkspaceId: resolution.requestedWorkspaceId,
       resolutionSource: resolution.resolutionSource,
       userDisplayName: profile.displayName,

@@ -3,6 +3,7 @@ import {
   authBootstrapAuthenticationRequiredMessage,
   getConvexAuthenticatedIdentity,
   isAuthBootstrapError,
+  reportAuthBootstrapError,
   syncConvexLocalProfile,
   toAuthBootstrapErrorResponse,
 } from "@/lib/auth/convex-session";
@@ -18,14 +19,18 @@ function authBootstrapJsonError(code: string, message: string, status: number) {
   return NextResponse.json({ error: { code, message } }, { status });
 }
 
-
 export async function POST() {
-  let identity;
+  let identity: Awaited<ReturnType<typeof getConvexAuthenticatedIdentity>>;
 
   try {
     identity = await getConvexAuthenticatedIdentity();
   } catch (error) {
     if (isAuthBootstrapError(error)) {
+      reportAuthBootstrapError(error, {
+        operation: "identity-verification",
+        surface: "auth-bootstrap-api",
+      });
+
       return NextResponse.json(toAuthBootstrapErrorResponse(error), {
         status: error.status,
       });
@@ -79,6 +84,11 @@ export async function POST() {
     }
 
     if (isAuthBootstrapError(error)) {
+      reportAuthBootstrapError(error, {
+        operation: "profile-sync",
+        surface: "auth-bootstrap-api",
+      });
+
       return NextResponse.json(toAuthBootstrapErrorResponse(error), {
         status: error.status,
       });

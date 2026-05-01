@@ -29,6 +29,9 @@ vi.mock("@/i18n/server", () => ({
         signInOnly: "Convex Auth verifies sign-in and returns your account identity.",
         minimalData:
           "BudgetBITCH keeps only the local account, workspace, preference, and integration data it needs to run.",
+        noMarketingData: "No marketing data is recorded or sold.",
+        personalizationUserOnly:
+          "Personalization stays user-only and is not shared with brokers or third-party advertisers.",
         gmailPrivacy: "No Google OAuth client or user-managed environment file is required for login.",
       },
     },
@@ -53,6 +56,10 @@ describe("SecuritySettingsPage", () => {
       "data-redirect-to",
       "/",
     );
+    expect(screen.getByText(/no marketing data is recorded or sold/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/personalization stays user-only and is not shared with brokers/i),
+    ).toBeInTheDocument();
     expect(screen.getByText(/no google oauth client/i)).toBeInTheDocument();
   });
 });

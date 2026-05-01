@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const convexAuthNextjsTokenMock = vi.hoisted(() => vi.fn());
+const captureMessageMock = vi.hoisted(() => vi.fn());
 const fetchMutationMock = vi.hoisted(() => vi.fn());
 const fetchQueryMock = vi.hoisted(() => vi.fn());
 
@@ -13,15 +14,76 @@ vi.mock("convex/nextjs", () => ({
   fetchQuery: fetchQueryMock,
 }));
 
+vi.mock("@sentry/nextjs", () => ({
+  captureMessage: captureMessageMock,
+}));
+
 import {
   AuthBootstrapError,
   authBootstrapErrorCodes,
   convexProfileSyncErrorMessage,
   getConvexAuthenticatedIdentity,
   isAuthBootstrapError,
+  reportAuthBootstrapError,
   syncConvexLocalProfile,
   toAuthBootstrapErrorResponse,
 } from "./convex-session";
+
+describe("reportAuthBootstrapError", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("reports handled server bootstrap failures with sanitized metadata", () => {
+    const error = new AuthBootstrapError({
+      cause: new Error("Convex mutation failed with budgetbitch-sync-secret"),
+      code: authBootstrapErrorCodes.missingConvexSyncSecret,
+      message: convexProfileSyncErrorMessage,
+      status: 503,
+    });
+
+    reportAuthBootstrapError(error, {
+      operation: "profile-sync",
+      surface: "auth-bootstrap-api",
+    });
+
+    expect(captureMessageMock).toHaveBeenCalledWith(
+      "Handled auth bootstrap error",
+      {
+        contexts: {
+          authBootstrap: {
+            causeType: "Error",
+            status: 503,
+          },
+        },
+        level: "error",
+        tags: {
+          authBootstrapCode: authBootstrapErrorCodes.missingConvexSyncSecret,
+          authBootstrapOperation: "profile-sync",
+          authBootstrapSurface: "auth-bootstrap-api",
+        },
+      },
+    );
+    expect(JSON.stringify(captureMessageMock.mock.calls)).not.toContain(
+      "budgetbitch-sync-secret",
+    );
+  });
+
+  it("does not report expected authentication handoffs", () => {
+    const error = new AuthBootstrapError({
+      code: authBootstrapErrorCodes.authenticationRequired,
+      message: "Authentication is required.",
+      status: 401,
+    });
+
+    reportAuthBootstrapError(error, {
+      operation: "profile-sync",
+      surface: "auth-continue-page",
+    });
+
+    expect(captureMessageMock).not.toHaveBeenCalled();
+  });
+});
 
 describe("getConvexAuthenticatedIdentity", () => {
   beforeEach(() => {

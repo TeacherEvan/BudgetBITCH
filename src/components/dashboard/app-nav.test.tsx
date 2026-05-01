@@ -66,15 +66,12 @@ describe("AppNav", () => {
   });
 
   it("keeps the parent route active for nested pages", () => {
-    mockPathname = "/settings/integrations/openai";
+    mockPathname = "/jobs/weekend-bookkeeping-assistant";
 
     render(<AppNav />);
 
-    expect(screen.getByRole("link", { name: "Integrations" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-    expect(screen.getByRole("link", { name: "Jobs" })).not.toHaveAttribute("aria-current");
+    expect(screen.getByRole("link", { name: "Jobs" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Dashboard" })).not.toHaveAttribute("aria-current");
   });
 
   it("renders safely when pathname is unavailable", () => {

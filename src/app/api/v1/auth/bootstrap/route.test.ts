@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const getConvexAuthenticatedIdentityMock = vi.hoisted(() => vi.fn());
+const reportAuthBootstrapErrorMock = vi.hoisted(() => vi.fn());
 const syncConvexLocalProfileMock = vi.hoisted(() => vi.fn());
 const bootstrapUserMock = vi.hoisted(() => vi.fn());
 const authBootstrapErrorCodes = vi.hoisted(() => ({
@@ -42,6 +43,7 @@ vi.mock("@/lib/auth/convex-session", () => ({
     "status" in error &&
     typeof (error as { code: unknown }).code === "string" &&
     typeof (error as { status: unknown }).status === "number",
+  reportAuthBootstrapError: reportAuthBootstrapErrorMock,
   syncConvexLocalProfile: syncConvexLocalProfileMock,
   toAuthBootstrapErrorResponse: (error: { code: string; message: string }) => ({
     error: {
@@ -79,14 +81,14 @@ describe("POST /api/v1/auth/bootstrap", () => {
   });
 
   it("returns a structured error when Convex identity lookup fails", async () => {
-    getConvexAuthenticatedIdentityMock.mockRejectedValue(
-      makeAuthBootstrapError({
-        code: authBootstrapErrorCodes.convexIdentityFetchFailed,
-        message:
-          "BudgetBITCH could not verify your Convex Auth session. Try again in a moment.",
-        status: 503,
-      }),
-    );
+    const error = makeAuthBootstrapError({
+      code: authBootstrapErrorCodes.convexIdentityFetchFailed,
+      message:
+        "BudgetBITCH could not verify your Convex Auth session. Try again in a moment.",
+      status: 503,
+    });
+
+    getConvexAuthenticatedIdentityMock.mockRejectedValue(error);
 
     const response = await POST();
 
@@ -97,6 +99,10 @@ describe("POST /api/v1/auth/bootstrap", () => {
         message:
           "BudgetBITCH could not verify your Convex Auth session. Try again in a moment.",
       },
+    });
+    expect(reportAuthBootstrapErrorMock).toHaveBeenCalledWith(error, {
+      operation: "identity-verification",
+      surface: "auth-bootstrap-api",
     });
     expect(bootstrapUserMock).not.toHaveBeenCalled();
   });
@@ -189,6 +195,12 @@ describe("POST /api/v1/auth/bootstrap", () => {
   });
 
   it("returns a structured config error when profile sync is missing its secret", async () => {
+    const error = makeAuthBootstrapError({
+      code: authBootstrapErrorCodes.missingConvexSyncSecret,
+      message: convexProfileSyncErrorMessage,
+      status: 503,
+    });
+
     getConvexAuthenticatedIdentityMock.mockResolvedValue({
       tokenIdentifier: "convex|user-1",
       email: "alex@example.com",
@@ -198,13 +210,7 @@ describe("POST /api/v1/auth/bootstrap", () => {
       userId: "profile-1",
       workspaceId: "workspace-1",
     });
-    syncConvexLocalProfileMock.mockRejectedValue(
-      makeAuthBootstrapError({
-        code: authBootstrapErrorCodes.missingConvexSyncSecret,
-        message: convexProfileSyncErrorMessage,
-        status: 503,
-      }),
-    );
+    syncConvexLocalProfileMock.mockRejectedValue(error);
 
     const response = await POST();
 
@@ -214,6 +220,10 @@ describe("POST /api/v1/auth/bootstrap", () => {
         code: "missing-convex-sync-secret",
         message: convexProfileSyncErrorMessage,
       },
+    });
+    expect(reportAuthBootstrapErrorMock).toHaveBeenCalledWith(error, {
+      operation: "profile-sync",
+      surface: "auth-bootstrap-api",
     });
   });
 });

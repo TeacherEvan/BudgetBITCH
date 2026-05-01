@@ -23,7 +23,9 @@ enum AuditAction {
   workspace_created
   workspace_member_added
   budget_category_created
+  expense_recorded
   bill_created
+  home_location_saved
   reminder_created
   notification_sent
   api_token_created
@@ -31,6 +33,34 @@ enum AuditAction {
   integration_connected
   integration_revoked
   consent_recorded
+  personalization_updated
+}
+
+enum TransactionType {
+  expense
+  income
+  adjustment
+}
+
+enum TransactionSource {
+  manual
+}
+
+enum GenderIdentity {
+  woman
+  man
+  nonbinary
+  self_describe
+  prefer_not_to_say
+}
+
+enum PronounPreference {
+  she_her
+  he_him
+  they_them
+  name_only
+  self_describe
+  prefer_not_to_say
 }
 
 enum StartSmartStatus {
@@ -84,6 +114,9 @@ model UserProfile {
   memberships          WorkspaceMember[]
   auditEvents          AuditEvent[]
   dailyCheckIns        DailyCheckIn[]
+  financialTransactions FinancialTransaction[]
+  jobPreferences       UserJobPreference[]
+  personalizationProfile UserPersonalizationProfile?
   workspacePreferences WorkspaceUserPreference[]
 }
 
@@ -97,6 +130,8 @@ model Workspace {
   accounts           Account[]
   categories         BudgetCategory[]
   bills              Bill[]
+  financialTransactions FinancialTransaction[]
+  homeLocations      WorkspaceHomeLocation[]
   reminderRules      ReminderRule[]
   notifications      NotificationPreference[]
   auditEvents        AuditEvent[]
@@ -265,7 +300,8 @@ model Account {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  financialTransactions FinancialTransaction[]
 }
 
 model BudgetCategory {
@@ -276,7 +312,86 @@ model BudgetCategory {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  workspace Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  financialTransactions FinancialTransaction[]
+}
+
+model FinancialTransaction {
+  id               String            @id @default(cuid())
+  workspaceId      String
+  actorUserId      String?
+  accountId        String?
+  budgetCategoryId String?
+  type             TransactionType   @default(expense)
+  source           TransactionSource @default(manual)
+  merchantName     String?
+  amount           Decimal           @db.Decimal(12, 2)
+  occurredAt       DateTime
+  note             String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  actor          UserProfile?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  account        Account?        @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  budgetCategory BudgetCategory? @relation(fields: [budgetCategoryId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, occurredAt])
+  @@index([workspaceId, budgetCategoryId, occurredAt])
+}
+
+model WorkspaceHomeLocation {
+  id          String   @id @default(cuid())
+  workspaceId String
+  city        String
+  stateCode   String
+  countryCode String
+  source      String   @default("user_selected")
+  consentedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, city, stateCode, countryCode])
+  @@index([countryCode, stateCode, city])
+}
+
+model UserPersonalizationProfile {
+  id                     String             @id @default(cuid())
+  userId                 String             @unique
+  genderIdentity         GenderIdentity?
+  genderSelfDescription  String?
+  pronouns               PronounPreference?
+  pronounSelfDescription String?
+  communicationStyle     String?
+  coachingIntensity      String?
+  consentedAt            DateTime?
+  privacyVersion         String?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  user UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserJobPreference {
+  id                 String   @id @default(cuid())
+  userId             String
+  roleInterests      String[]
+  certifications     String[]
+  licenseTypes       String[]
+  careWorkInterest   Boolean  @default(false)
+  childCareInterest  Boolean  @default(false)
+  petCareInterest    Boolean  @default(false)
+  nursingInterest    Boolean  @default(false)
+  teachingInterest   Boolean  @default(false)
+  notificationEnabled Boolean @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, notificationEnabled])
 }
 
 model Bill {

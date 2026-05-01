@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const getConvexAuthenticatedIdentityMock = vi.hoisted(() => vi.fn());
+const reportAuthBootstrapErrorMock = vi.hoisted(() => vi.fn());
 const syncConvexLocalProfileMock = vi.hoisted(() => vi.fn());
 const bootstrapUserMock = vi.hoisted(() => vi.fn());
 const authBootstrapErrorCodes = vi.hoisted(() => ({
@@ -46,6 +47,7 @@ vi.mock("@/lib/auth/convex-session", () => ({
     typeof (error as { status: unknown }).status === "number",
   isAuthBootstrapErrorCode: (code: unknown) =>
     typeof code === "string" && Object.values(authBootstrapErrorCodes).includes(code),
+  reportAuthBootstrapError: reportAuthBootstrapErrorMock,
   syncConvexLocalProfile: syncConvexLocalProfileMock,
 }));
 
@@ -175,14 +177,14 @@ describe("AuthContinuePage", () => {
   });
 
   it("renders setup recovery guidance when Convex identity verification fails", async () => {
-    getConvexAuthenticatedIdentityMock.mockRejectedValue(
-      makeAuthBootstrapError({
-        code: authBootstrapErrorCodes.convexIdentityFetchFailed,
-        message:
-          "BudgetBITCH could not verify your Convex Auth session. Try again in a moment.",
-        status: 503,
-      }),
-    );
+    const error = makeAuthBootstrapError({
+      code: authBootstrapErrorCodes.convexIdentityFetchFailed,
+      message:
+        "BudgetBITCH could not verify your Convex Auth session. Try again in a moment.",
+      status: 503,
+    });
+
+    getConvexAuthenticatedIdentityMock.mockRejectedValue(error);
 
     const view = await AuthContinuePage();
     render(view);
@@ -191,6 +193,10 @@ describe("AuthContinuePage", () => {
     expect(
       screen.getByText(/checks convex auth and convex_sync_secret settings/i),
     ).toBeInTheDocument();
+    expect(reportAuthBootstrapErrorMock).toHaveBeenCalledWith(error, {
+      operation: "identity-verification",
+      surface: "auth-continue-page",
+    });
   });
 
   it("renders the continue action for email-backed users", async () => {
@@ -338,6 +344,12 @@ describe("AuthContinuePage", () => {
   });
 
   it("redirects back to auth continue recovery when profile sync has a known config failure", async () => {
+    const error = makeAuthBootstrapError({
+      code: authBootstrapErrorCodes.missingConvexSyncSecret,
+      message: "CONVEX_SYNC_SECRET is not configured for Convex profile sync.",
+      status: 503,
+    });
+
     getConvexAuthenticatedIdentityMock.mockResolvedValue({
       tokenIdentifier: "convex|user-1",
       email: "alex@example.com",
@@ -347,13 +359,7 @@ describe("AuthContinuePage", () => {
       userId: "profile-1",
       workspaceId: "workspace-1",
     });
-    syncConvexLocalProfileMock.mockRejectedValue(
-      makeAuthBootstrapError({
-        code: authBootstrapErrorCodes.missingConvexSyncSecret,
-        message: "CONVEX_SYNC_SECRET is not configured for Convex profile sync.",
-        status: 503,
-      }),
-    );
+    syncConvexLocalProfileMock.mockRejectedValue(error);
 
     const view = await AuthContinuePage();
     const form = getContinueForm(view as ReactElement<{ children: ReactElement | ReactElement[] | null }>);
@@ -364,6 +370,10 @@ describe("AuthContinuePage", () => {
     expect(redirectMock).toHaveBeenCalledWith(
       "/auth/continue?error=missing-convex-sync-secret",
     );
+    expect(reportAuthBootstrapErrorMock).toHaveBeenCalledWith(error, {
+      operation: "profile-sync",
+      surface: "auth-continue-page",
+    });
   });
 
   it("redirects to sign-in when profile sync loses authentication", async () => {

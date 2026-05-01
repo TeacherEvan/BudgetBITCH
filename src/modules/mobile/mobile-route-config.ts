@@ -6,7 +6,6 @@ export type MobileRouteConfigItem = {
     | "calculator"
     | "notes"
     | "learn"
-    | "integrations"
     | "jobs";
 };
 
@@ -16,6 +15,5 @@ export const mobileRouteConfig: readonly MobileRouteConfigItem[] = [
   { href: "/calculator", labelKey: "calculator" },
   { href: "/notes", labelKey: "notes" },
   { href: "/learn", labelKey: "learn" },
-  { href: "/settings/integrations", labelKey: "integrations" },
   { href: "/jobs", labelKey: "jobs" },
 ];
