@@ -82,7 +82,6 @@ export default async function AuthContinuePage({ searchParams }: AuthContinuePag
 
       await syncConvexLocalProfile({
         profileId: result.userId,
-        email,
         displayName,
       });
 

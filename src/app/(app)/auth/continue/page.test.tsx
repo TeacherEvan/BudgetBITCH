@@ -199,7 +199,6 @@ describe("AuthContinuePage", () => {
     });
     expect(syncConvexLocalProfileMock).toHaveBeenCalledWith({
       profileId: "profile-1",
-      email: "alex@example.com",
       displayName: "Alex Example",
     });
     expect(redirectMock).toHaveBeenCalledWith("/dashboard?workspaceId=workspace-1");

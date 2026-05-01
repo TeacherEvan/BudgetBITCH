@@ -64,7 +64,7 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 
 1. Copy environment values from `.env.example` into `.env.local`.
 2. Install dependencies with `npm install`.
-3. Create or link a Convex deployment with Convex Auth enabled, then set `CONVEX_DEPLOYMENT`, `NEXT_PUBLIC_CONVEX_URL`, and `NEXT_PUBLIC_CONVEX_SITE_URL`.
+3. Create or link a Convex deployment with Convex Auth enabled, then set `CONVEX_DEPLOYMENT`, `NEXT_PUBLIC_CONVEX_URL`, `CONVEX_SITE_URL`, and `SITE_URL`.
 4. Set `PROVIDER_SECRET_ENCRYPTION_KEY` to a long random server-side secret before using integration connect/revoke routes under `/settings/integrations`.
 5. When using Neon, set `DATABASE_URL` to the pooled connection string from the Neon **Connect** dialog and `DIRECT_URL` to the direct connection string.
 6. If you plan to run `prisma migrate dev`, optionally set `SHADOW_DATABASE_URL` to a dedicated direct-connection shadow database.
@@ -134,7 +134,10 @@ See `.env.example` for the full list of required variables, including authentica
 
 Environment notes:
 
-- `CONVEX_DEPLOYMENT`, `NEXT_PUBLIC_CONVEX_URL`, and `NEXT_PUBLIC_CONVEX_SITE_URL` configure Convex Auth and live Convex data access.
+- `CONVEX_DEPLOYMENT` identifies the Convex deployment for CLI/codegen commands.
+- `NEXT_PUBLIC_CONVEX_URL` must be the Convex cloud URL, for example `https://steady-ox-280.convex.cloud`. Because it is a public Next.js variable, Vercel bakes it into the browser bundle at build time, so changing it requires a redeploy.
+- `CONVEX_SITE_URL` must be the Convex site URL used as the Convex Auth issuer, for example `https://steady-ox-280.convex.site`.
+- `SITE_URL` must be the app origin accepted by Convex Auth redirects, for example `http://localhost:3000` locally and `https://budget-bitch-green.vercel.app` in production.
 - `PROVIDER_SECRET_ENCRYPTION_KEY` is only required when you want to exercise the encrypted integration connect/revoke routes.
 - `RESEND_API_KEY`, `INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY`, and `WEBHOOK_SIGNING_SECRET` remain scaffolded placeholders for email and webhook surfaces that are not active in the current root app slice.
 

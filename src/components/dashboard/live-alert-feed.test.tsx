@@ -74,12 +74,21 @@ describe("LiveAlertFeed", () => {
     expect(useQueryMock).not.toHaveBeenCalled();
   });
 
-  it("shows a graceful fallback when the Convex URL is not absolute", () => {
-    vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "steady-ox-280.convex.cloud");
+  it("shows a graceful fallback when the Convex URL cannot be normalized", () => {
+    vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "not a url");
 
     render(<LiveAlertFeed workspaceId="workspace-1" />);
 
     expect(screen.getByText(/standby\. add the convex url to enable alerts\./i)).toBeInTheDocument();
+    expect(useQueryMock).not.toHaveBeenCalled();
+  });
+
+  it("uses the realtime bridge when the Convex cloud host omits the scheme", () => {
+    vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "steady-ox-280.convex.cloud");
+
+    render(<LiveAlertFeed workspaceId="workspace-1" />);
+
+    expect(screen.getByText(/standby\. realtime auth is not ready yet\./i)).toBeInTheDocument();
     expect(useQueryMock).not.toHaveBeenCalled();
   });
 

@@ -76,7 +76,6 @@ describe("POST /api/v1/auth/bootstrap", () => {
     });
     expect(syncConvexLocalProfileMock).toHaveBeenCalledWith({
       profileId: "profile-1",
-      email: "alex@example.com",
       displayName: "Alex Example",
     });
     await expect(response.json()).resolves.toEqual({

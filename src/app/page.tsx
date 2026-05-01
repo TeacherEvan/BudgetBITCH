@@ -19,7 +19,7 @@ import LaunchWizard, { LAUNCH_PROFILE_STORAGE_KEY, type LaunchWizardProfile } fr
 import { useLaunchTransition } from "@/components/launch/use-launch-transition";
 import { MobilePanelFrame } from "@/components/mobile/mobile-panel-frame";
 import { WelcomeWindow } from "@/components/welcome/welcome-window";
-import { isAbsoluteHttpUrl } from "@/lib/url";
+import { normalizeConvexCloudUrl } from "@/lib/url";
 
 export const HOME_E2E_AUTH_OVERRIDE_STORAGE_KEY = "budgetbitch:e2e-auth-state";
 
@@ -367,7 +367,7 @@ function HomeWithFallbackAuth() {
 }
 
 export default function Home() {
-  if (!isAbsoluteHttpUrl(process.env.NEXT_PUBLIC_CONVEX_URL)) {
+  if (!normalizeConvexCloudUrl(process.env.NEXT_PUBLIC_CONVEX_URL)) {
     return <HomeWithFallbackAuth />;
   }
 

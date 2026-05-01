@@ -34,7 +34,6 @@ export async function POST() {
 
     await syncConvexLocalProfile({
       profileId: result.userId,
-      email,
       displayName: identity.name,
     });
 

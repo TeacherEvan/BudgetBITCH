@@ -4,7 +4,7 @@ import { useQuery } from "convex/react";
 import { ShieldCheck, Siren, TriangleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "../../../convex/_generated/api";
-import { isAbsoluteHttpUrl } from "@/lib/url";
+import { normalizeConvexCloudUrl } from "@/lib/url";
 
 type LiveAlertFeedProps = {
   workspaceId: string | null;
@@ -90,8 +90,9 @@ function LiveAlertFeedBody({ workspaceId }: LiveAlertFeedProps) {
 
 export function LiveAlertFeed({ workspaceId }: LiveAlertFeedProps) {
   const t = useTranslations("liveAlerts");
-  const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL?.trim();
-  const convexUrlConfigured = isAbsoluteHttpUrl(convexUrl);
+  const convexUrlConfigured = Boolean(
+    normalizeConvexCloudUrl(process.env.NEXT_PUBLIC_CONVEX_URL),
+  );
   const convexRealtimeAuthReady = isConvexRealtimeAuthReady();
 
   return (

@@ -37,8 +37,38 @@ describe("AppProviders", () => {
     expect(screen.queryByTestId("convex-auth-provider")).not.toBeInTheDocument();
   });
 
-  it("skips Convex when the URL is not absolute", () => {
+  it("normalizes a Convex cloud host without a scheme", () => {
     vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "steady-ox-280.convex.cloud");
+
+    render(
+      <AppProviders>
+        <main>BudgetBITCH</main>
+      </AppProviders>,
+    );
+
+    expect(screen.getByTestId("convex-auth-provider")).toBeInTheDocument();
+    expect(convexClientMock).toHaveBeenCalledWith(
+      "https://steady-ox-280.convex.cloud",
+    );
+  });
+
+  it("normalizes a Convex deployment value", () => {
+    vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "prod:steady-ox-280");
+
+    render(
+      <AppProviders>
+        <main>BudgetBITCH</main>
+      </AppProviders>,
+    );
+
+    expect(screen.getByTestId("convex-auth-provider")).toBeInTheDocument();
+    expect(convexClientMock).toHaveBeenCalledWith(
+      "https://steady-ox-280.convex.cloud",
+    );
+  });
+
+  it("skips Convex when the URL cannot be normalized", () => {
+    vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "not a url");
 
     render(
       <AppProviders>
@@ -51,7 +81,7 @@ describe("AppProviders", () => {
   });
 
   it("wraps children in Convex Auth when the URL is configured", () => {
-    vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "https://happy-animal-123.convex.cloud");
+    vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "https://happy-ledger-123.convex.cloud");
 
     render(
       <AppProviders>
@@ -61,7 +91,7 @@ describe("AppProviders", () => {
 
     expect(screen.getByTestId("convex-auth-provider")).toBeInTheDocument();
     expect(convexClientMock).toHaveBeenCalledWith(
-      "https://happy-animal-123.convex.cloud",
+      "https://happy-ledger-123.convex.cloud",
     );
   });
 });

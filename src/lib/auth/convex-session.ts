@@ -2,6 +2,9 @@ import { convexAuthNextjsToken } from "@convex-dev/auth/nextjs/server";
 import { fetchMutation, fetchQuery } from "convex/nextjs";
 import { api } from "../../../convex/_generated/api";
 
+export const convexProfileSyncErrorMessage =
+  "CONVEX_SYNC_SECRET is not configured for Convex profile sync.";
+
 export type ConvexAuthenticatedIdentity = {
   tokenIdentifier: string;
   subject: string;
@@ -22,14 +25,22 @@ export async function getConvexAuthenticatedIdentity(): Promise<ConvexAuthentica
 
 export async function syncConvexLocalProfile(input: {
   profileId: string;
-  email: string;
   displayName: string | null;
 }) {
   const token = await convexAuthNextjsToken();
+  const syncSecret = process.env.CONVEX_SYNC_SECRET?.trim();
 
   if (!token) {
     throw new Error("Authentication is required.");
   }
 
-  return await fetchMutation(api.authSession.syncLocalProfile, input, { token });
+  if (!syncSecret) {
+    throw new Error(convexProfileSyncErrorMessage);
+  }
+
+  return await fetchMutation(
+    api.authSession.syncLocalProfile,
+    { ...input, syncSecret },
+    { token },
+  );
 }
