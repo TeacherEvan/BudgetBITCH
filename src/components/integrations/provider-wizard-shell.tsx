@@ -29,9 +29,9 @@ export function ProviderWizardShell({
         >
           {t("backToConnectionHub")}
         </Link>
-        <p className="text-sm uppercase tracking-[0.3em] text-yellow-200">{eyebrow}</p>
+        <p className="mt-5 text-sm uppercase tracking-[0.3em] text-yellow-200">{eyebrow}</p>
         <h1 className="mt-4 text-4xl font-bold">{title}</h1>
-        <p className="mt-4 max-w-2xl text-base text-emerald-50/85">{description}</p>
+        <p className="mt-3 max-w-xl text-sm text-emerald-50/80 sm:text-base">{description}</p>
         <div className="mt-8">
           <ToolRail title={t("tools") as string} actions={actions} />
         </div>

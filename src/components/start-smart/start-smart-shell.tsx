@@ -70,22 +70,22 @@ const wizardStepMeta: Record<
 > = {
   lane: {
     label: "Lane",
-    cue: "Choose the starting route that matches the current pressure.",
+    cue: "Pick the closest route.",
     icon: Sparkles,
   },
   homeBase: {
     label: "Home Base",
-    cue: "Set the sticky region once for Start Smart, dashboard, and jobs.",
+    cue: "Save your region once.",
     icon: MapPin,
   },
   moneySnapshot: {
     label: "Money Snapshot",
-    cue: "Keep only the fields needed for a first survival answer.",
+    cue: "Keep the essentials only.",
     icon: Wallet,
   },
   survivalPlan: {
     label: "Survival Plan",
-    cue: "Read the seven-day answer and the next move.",
+    cue: "Review the first moves.",
     icon: CheckCircle2,
   },
 };
@@ -320,8 +320,8 @@ export function StartSmartShell() {
     void handleBuildBlueprint();
   }
 
-  const currentPanelMeta = wizardStepMeta[step];
   const isSubmitStep = step === "moneySnapshot";
+  const panelCounterLabel = `Panel ${currentStepIndex + 1} of ${startSmartWizardSteps.length}`;
 
   function renderRouteSummary() {
     return (
@@ -392,7 +392,7 @@ export function StartSmartShell() {
             fields={stepFields.homeBase}
             kicker="Home base"
             title="Set one sticky region"
-            description="Choose the country and region once. Start Smart, dashboard, and jobs will keep reusing this home base instead of asking again."
+            description="Choose the country and region once. The rest of the app reuses it."
           />
           {renderRouteSummary()}
         </div>
@@ -408,8 +408,8 @@ export function StartSmartShell() {
             errors={fieldErrors}
             fields={stepFields.moneySnapshot}
             kicker="Money snapshot"
-            title="Only the minimum survival inputs"
-            description="Keep this panel tight: housing, income pattern, dependents, and pets are enough to produce the first survival answer without another tall setup page."
+            title="Only the core survival inputs"
+            description="Housing, income, dependents, and pets are enough for the first pass."
           />
           {renderRouteSummary()}
         </div>
@@ -433,9 +433,9 @@ export function StartSmartShell() {
     ) : (
       <section className="rounded-[28px] border border-white/10 bg-black/20 p-6 text-white">
         <p className="text-sm uppercase tracking-[0.25em] text-yellow-200">Survival plan</p>
-        <h2 className="mt-2 text-3xl font-semibold">Build the answer first</h2>
+        <h2 className="mt-2 text-3xl font-semibold">Build the first answer</h2>
         <p className="mt-3 max-w-2xl text-sm text-emerald-50/80">
-          Finish the money snapshot panel to generate the seven-day survival plan and the next action.
+          Finish the money snapshot to generate the plan.
         </p>
       </section>
     );
@@ -447,15 +447,12 @@ export function StartSmartShell() {
         <header className="grid gap-5 border-b border-white/10 pb-5 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
           <div>
             <p className="text-sm uppercase tracking-[0.3em] text-yellow-200">Start Smart</p>
-            <h1 className="mt-3 text-3xl font-bold sm:text-4xl">
-              Build a fixed-screen survival answer in four compact panels.
-            </h1>
+            <h1 className="mt-3 text-3xl font-bold sm:text-4xl">Build your first survival answer</h1>
             <p className="mt-3 max-w-3xl text-sm text-emerald-50/85 sm:text-base">
-              Lane first, home base once, money snapshot second, and the survival plan last. The
-              page never needs to turn back into a tall setup wizard.
+              Move through four short panels and keep the core context in view.
             </p>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <article className="rounded-3xl border border-white/10 bg-white/6 p-4">
                 <p className="text-xs uppercase tracking-[0.22em] text-emerald-100/70">
                   Selected template
@@ -472,28 +469,7 @@ export function StartSmartShell() {
                   Active panel
                 </p>
                 <p className="mt-2 text-lg font-semibold text-white">{formatStepLabel(step)}</p>
-                <p className="mt-1 text-sm text-emerald-50/75">{currentPanelMeta.cue}</p>
-              </article>
-              <article className="rounded-3xl border border-white/10 bg-white/6 p-4">
-                <p className="text-xs uppercase tracking-[0.22em] text-emerald-100/70">
-                  Shared home base
-                </p>
-                <p className="mt-2 text-lg font-semibold text-white">{homeLocationLabel}</p>
-                <p className="mt-1 text-sm text-emerald-50/75">
-                  Dashboard and jobs now reuse this same region context.
-                </p>
-              </article>
-              <article className="rounded-3xl border border-white/10 bg-white/6 p-4">
-                <p className="text-xs uppercase tracking-[0.22em] text-emerald-100/70">
-                  Household snapshot
-                </p>
-                <p className="mt-2 text-lg font-semibold text-white">
-                  {values.adults} adult{values.adults === 1 ? "" : "s"} · {values.dependents} dependent
-                  {values.dependents === 1 ? "" : "s"}
-                </p>
-                <p className="mt-1 text-sm text-emerald-50/75">
-                  {values.housing.replaceAll("_", " ")} · {values.incomePattern.replaceAll("_", " ")}
-                </p>
+                <p className="mt-1 text-sm text-emerald-50/75">{panelCounterLabel}</p>
               </article>
             </div>
           </div>
@@ -505,6 +481,7 @@ export function StartSmartShell() {
                 const { icon: Icon, label, cue } = wizardStepMeta[wizardStep];
                 const isCurrent = wizardStep === step;
                 const isComplete = index < currentStepIndex;
+                const stateLabel = isCurrent ? "Current" : isComplete ? "Done" : "Next";
 
                 return (
                   <li
@@ -531,7 +508,12 @@ export function StartSmartShell() {
                         <Icon aria-hidden="true" className="h-4 w-4" />
                       </span>
                       <div>
-                        <p className="text-sm font-semibold text-white">{label}</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-semibold text-white">{label}</p>
+                          <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-100/80">
+                            {stateLabel}
+                          </span>
+                        </div>
                         <p className="mt-1 text-sm text-emerald-50/75">{cue}</p>
                       </div>
                     </div>
@@ -564,7 +546,7 @@ export function StartSmartShell() {
               Back panel
             </button>
 
-            <p className="text-sm text-emerald-50/75">{currentPanelMeta.cue}</p>
+            <p className="text-sm text-emerald-50/75">{panelCounterLabel}</p>
 
             <button
               type="button"

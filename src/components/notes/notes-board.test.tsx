@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { localeMessages } from "@/i18n/messages";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NotesBoard } from "./notes-board";
 
@@ -9,7 +10,7 @@ vi.mock("next-intl", () => ({
       inputLabel: "New note",
       inputPlaceholder: "Type a note and press Enter or Add note…",
       addNote: "Add note",
-      emptyState: "No notes yet — add your first one above.",
+      emptyState: "No notes yet. Add one above.",
       deleteNote: `Delete ${values?.text ?? ""}`.trim(),
     };
 
@@ -52,7 +53,7 @@ describe("NotesBoard", () => {
     expect(
       screen.getByText(/notes, calculator, and launch settings stay available on this device/i),
     ).toBeInTheDocument();
-    expect(screen.getByText(/no notes yet/i)).toBeInTheDocument();
+    expect(screen.getByText("No notes yet. Add one above.")).toBeInTheDocument();
   });
 
   it("adds a note when the user types and clicks Add note", () => {
@@ -92,5 +93,10 @@ describe("NotesBoard", () => {
     render(<NotesBoard />);
 
     expect(screen.getByText(/no notes yet/i)).toBeInTheDocument();
+  });
+
+  it("keeps zh and th empty states aligned with the shorter copy", () => {
+    expect(localeMessages.zh.notesBoard.emptyState).toBe("还没有笔记。先在上方添加一条。");
+    expect(localeMessages.th.notesBoard.emptyState).toBe("ยังไม่มีโน้ต เพิ่มด้านบนได้เลย");
   });
 });

@@ -4,13 +4,12 @@ import { getRequestMessages } from "@/i18n/server";
 import { getPrismaClient } from "@/lib/prisma";
 import { extractLearnSignalsFromBlueprint } from "@/modules/learn/blueprint-bridge";
 import { resolveLearnRecommendations } from "@/modules/learn/recommendation-engine";
-import { ArrowRight, Lightbulb, Sparkles } from "lucide-react";
+import { ArrowRight, Lightbulb } from "lucide-react";
 
 function shouldUseSeededLearnFallback(error: unknown) {
   return (
     error instanceof Error &&
-    (error.message === "DATABASE_URL is not configured for Prisma runtime access." ||
-      error.name.startsWith("PrismaClient"))
+    error.message === "DATABASE_URL is not configured for Prisma runtime access."
   );
 }
 
@@ -74,7 +73,7 @@ export default async function LearnPage() {
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#34d399_0%,#14532d_45%,#052e16_100%)] px-6 py-10 text-white">
       <MobilePanelFrame>
       <section className="mx-auto max-w-7xl rounded-[36px] border border-white/10 bg-black/20 p-6 backdrop-blur md:p-8">
-        <header className="flex flex-wrap items-end justify-between gap-4">
+        <header>
           <div>
             <p className="text-sm uppercase tracking-[0.3em] text-yellow-200">{messages.learnPage.eyebrow}</p>
             <h1 className="mt-3 text-3xl font-bold sm:text-4xl">
@@ -83,17 +82,6 @@ export default async function LearnPage() {
             <p className="mt-3 max-w-3xl text-sm text-emerald-50/85 sm:text-base">
               {messages.learnPage.description}
             </p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {recommendations.explainers.map((explainer) => (
-              <span
-                key={explainer}
-                className="inline-flex rounded-full border border-white/10 bg-white/10 px-3 py-2 text-xs font-medium text-emerald-50/85"
-              >
-                {explainer}
-              </span>
-            ))}
           </div>
         </header>
 
@@ -122,10 +110,6 @@ export default async function LearnPage() {
                 <h3 className="mt-2 text-xl font-semibold text-white">{cue.title}</h3>
 
                 <div className="mt-4 grid gap-3 text-sm text-emerald-50/85">
-                  <p className="flex items-start gap-3">
-                    <Sparkles aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-yellow-200" />
-                    <span>{cue.scene.absurdScenario}</span>
-                  </p>
                   <p className="flex items-start gap-3">
                     <Lightbulb aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-emerald-200" />
                     <span>{cue.scene.plainEnglish}</span>

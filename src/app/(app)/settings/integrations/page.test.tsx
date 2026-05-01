@@ -1,4 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
+import { localeMessages } from "@/i18n/messages";
 import { vi } from "vitest";
 
 vi.mock("next-intl", () => ({
@@ -44,38 +45,47 @@ vi.mock("@/i18n/server", () => ({
       eyebrow: "Connection Hub",
       title: "Connect only the providers you can scan and trust fast.",
       description:
-        "Every group below leads with the official route, the risk level, and the easiest next action so you can move without reading a giant safety essay first.",
+        "Each section keeps the official route, risk, and next action easy to scan.",
       guardrails: {
-        officialRoutesFirst: "Official routes first",
-        noSilentSharing: "No silent sharing",
-        revokePathStaysObvious: "Revoke path stays obvious",
+        officialRoutesFirst: {
+          label: "Official routes",
+          title: "Use the provider's official login, docs, or setup route first.",
+        },
+        noSilentSharing: {
+          label: "No silent sharing",
+          title: "Only providers you explicitly connect receive the minimum required data.",
+        },
+        revokePathStaysObvious: {
+          label: "Easy revoke path",
+          title: "You should always be able to find the disconnect or revoke path quickly.",
+        },
       },
       groupedScan: "Grouped scan",
       providerCount: "{count} providers",
       categories: {
         ai: {
           label: "AI copilots",
-          summary: "Model-powered helpers, planning copilots, and prompt-heavy workflow tools.",
+          summary: "Model helpers and prompt-heavy workflow tools.",
         },
         banking: {
           label: "Banking rails",
-          summary: "Account verification and banking connections that should feel official, not sneaky.",
+          summary: "Account verification and official banking connections.",
         },
         investing: {
           label: "Investing",
-          summary: "Brokerage and portfolio tools that belong behind clear permissions and revoke paths.",
+          summary: "Brokerage and portfolio access with clear permissions.",
         },
         payroll: {
           label: "Payroll",
-          summary: "Income, pay runs, and worker details that need low-friction but careful setup.",
+          summary: "Income and worker setup with clear checks.",
         },
         tax: {
           label: "Tax and accounting",
-          summary: "Documents, filings, and ledger access where trust cues must be obvious.",
+          summary: "Documents and ledger access with visible trust cues.",
         },
         finance_ops: {
           label: "Finance operations",
-          summary: "Expense, card, and ops tooling for the parts of money management that stay boring on purpose.",
+          summary: "Expense, card, and ops tooling kept simple on purpose.",
         },
       },
     },
@@ -88,7 +98,27 @@ describe("IntegrationsPage", () => {
   it("renders provider cards with explicit action labels for setup flows", async () => {
     render(await IntegrationsPage());
 
+    const [officialRoutesGuardrail] = screen.getAllByText("Official routes");
+    const [noSilentSharingGuardrail] = screen.getAllByText("No silent sharing");
+    const [easyRevokePathGuardrail] = screen.getAllByText("Easy revoke path");
+
     expect(screen.getByTestId("mobile-panel-frame")).toBeInTheDocument();
+    expect(officialRoutesGuardrail).toHaveAttribute(
+      "title",
+      "Use the provider's official login, docs, or setup route first.",
+    );
+    expect(noSilentSharingGuardrail).toHaveAttribute(
+      "title",
+      "Only providers you explicitly connect receive the minimum required data.",
+    );
+    expect(easyRevokePathGuardrail).toHaveAttribute(
+      "title",
+      "You should always be able to find the disconnect or revoke path quickly.",
+    );
+    expect(screen.getByText("7 providers")).toBeInTheDocument();
+    expect(screen.getAllByText("3 providers")).toHaveLength(2);
+    expect(screen.getByText("Model helpers and prompt-heavy workflow tools.")).toBeInTheDocument();
+    expect(screen.getByText("Account verification and official banking connections.")).toBeInTheDocument();
 
     const providers = [
       {
@@ -185,5 +215,24 @@ describe("IntegrationsPage", () => {
         within(card as HTMLElement).getByRole("link", { name: "Open official docs" }),
       ).toHaveAttribute("href", provider.docsUrl);
     }
+  });
+
+  it("keeps zh and th integrations guardrails aligned with the compact object shape", () => {
+    expect(localeMessages.zh.integrationsHub.guardrails.officialRoutesFirst).toEqual({
+      label: "官方入口",
+      title: "优先使用服务提供商官方登录、文档或设置路径。",
+    });
+    expect(localeMessages.zh.integrationsHub.guardrails.noSilentSharing).toEqual({
+      label: "绝不静默共享",
+      title: "只有你明确连接的服务提供商才会接收所需的最少数据。",
+    });
+    expect(localeMessages.th.integrationsHub.guardrails.officialRoutesFirst).toEqual({
+      label: "เส้นทางทางการ",
+      title: "ใช้เส้นทางเข้าสู่ระบบ เอกสาร หรือการตั้งค่าทางการของผู้ให้บริการก่อน",
+    });
+    expect(localeMessages.th.integrationsHub.guardrails.revokePathStaysObvious).toEqual({
+      label: "ทางยกเลิกชัดเจน",
+      title: "คุณควรหาเส้นทางตัดการเชื่อมต่อหรือเพิกถอนได้อย่างรวดเร็วเสมอ",
+    });
   });
 });

@@ -4,6 +4,7 @@ test("calculator page renders and performs basic arithmetic", async ({ page }) =
   await page.goto("/calculator");
 
   await expect(page.getByRole("heading", { level: 1, name: "Calculator" })).toBeVisible();
+  await expect(page.getByText("Quick arithmetic for budget checks.")).toBeVisible();
   await expect(page.getByRole("status")).toHaveText("0");
 
   await page.getByRole("button", { name: "3" }).click();

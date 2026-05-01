@@ -57,7 +57,7 @@ export function ProfileForm({
   kicker = "Fast profile",
   title = "Regional + household checks",
   description =
-    "Required fields stay starred. Choose a supported country and use a 2- to 3-character region code so the local assumptions stay useful.",
+    "Use a supported country and short region code so the local assumptions stay useful.",
 }: ProfileFormProps) {
   const fieldSet = new Set<ProfileFormField>(fields);
   const selectedCountry = countryOptions.find((option) => option.code === values.countryCode) ?? null;
@@ -103,7 +103,7 @@ export function ProfileForm({
             ))}
           </select>
           <span id="countryCode-hint" className="text-xs text-emerald-100/65">
-            Choose one of the supported countries for regional seeding.
+            Choose a supported country.
           </span>
           {errors.countryCode ? (
             <span id="countryCode-error" className="text-xs text-rose-200">
@@ -136,8 +136,8 @@ export function ProfileForm({
           />
           <span id="stateCode-hint" className="text-xs text-emerald-100/65">
             {selectedCountry
-              ? `Use the supported code for ${selectedCountry.label}, like ${selectedCountry.regionExample}.`
-              : "Select a country first, then enter its supported 2- or 3-character region code."}
+              ? `Use ${selectedCountry.regionExample} for ${selectedCountry.label}.`
+              : "Pick a country first, then enter its region code."}
           </span>
           {errors.stateCode ? (
             <span id="stateCode-error" className="text-xs text-rose-200">

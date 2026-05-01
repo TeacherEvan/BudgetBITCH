@@ -34,6 +34,17 @@ const categoryMeta: Record<ProviderCategory, { icon: LucideIcon }> = {
   },
 };
 
+type GuardrailMessage =
+  | string
+  | {
+      label: string;
+      title?: string;
+    };
+
+function normalizeGuardrail(item: GuardrailMessage) {
+  return typeof item === "string" ? { label: item } : item;
+}
+
 export default async function IntegrationsPage() {
   const messages = await getRequestMessages();
   const providersByCategory = Object.values(providerRegistry).reduce(
@@ -70,14 +81,19 @@ export default async function IntegrationsPage() {
             messages.integrationsHub.guardrails.officialRoutesFirst,
             messages.integrationsHub.guardrails.noSilentSharing,
             messages.integrationsHub.guardrails.revokePathStaysObvious,
-          ].map((item) => (
+          ].map((item) => {
+            const guardrail = normalizeGuardrail(item);
+
+            return (
             <div
-              key={item}
+              key={guardrail.label}
+              title={guardrail.title}
               className="rounded-[24px] border border-white/10 bg-white/6 px-4 py-3 text-sm text-emerald-50/80"
             >
-              {item}
+              {guardrail.label}
             </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="mt-8 grid gap-6">

@@ -29,6 +29,12 @@ describe("JobDetailPage", () => {
     expect(screen.getByText("Northstar · Remote")).toBeInTheDocument();
     expect(screen.getByText("$48k-$62k")).toBeInTheDocument();
     expect(screen.getByText("daytime · remote")).toBeInTheDocument();
+    expect(
+      screen.getByText("Strong fit to stabilize schedule and raise income fast."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Steady remote support role with a solid base salary and clear hours."),
+    ).toBeInTheDocument();
     expect(screen.getByText("Benefits")).toBeInTheDocument();
     expect(screen.getByText("healthcare")).toBeInTheDocument();
     expect(screen.getByText("pto")).toBeInTheDocument();

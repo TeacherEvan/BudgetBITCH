@@ -116,7 +116,7 @@ export function NotesBoard() {
       </div>
 
       {notes.length === 0 ? (
-        <p className="bb-mini-copy mt-6 text-center text-sm">{t("emptyState")}</p>
+        <p className="bb-helper-copy mt-5 text-center">{t("emptyState")}</p>
       ) : (
         <ul className="mt-4 grid gap-2" aria-label={t("regionLabel")}>
           {notes.map((note) => (

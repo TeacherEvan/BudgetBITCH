@@ -30,6 +30,8 @@ describe("Calculator", () => {
       screen.getByText(/notes, calculator, and launch settings stay available on this device/i),
     ).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("0");
+    expect(screen.getByRole("button", { name: "Clear" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "=" })).toBeEnabled();
   });
 
   it("appends digit on button press", () => {

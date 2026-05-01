@@ -9,6 +9,7 @@ type BroadcastBarProps = {
 export function BroadcastBar({ cityLabel, tickerItems }: BroadcastBarProps) {
   const t = useTranslations("broadcastBar");
   const tickerText = tickerItems.length > 0 ? tickerItems.join("  ·  ") : t("fallbackTicker");
+  const showLoopDuplicate = tickerItems.length > 0;
 
   return (
     <section className="bb-panel bb-panel-accent overflow-hidden p-4" aria-labelledby="local-area-heading">
@@ -29,7 +30,7 @@ export function BroadcastBar({ cityLabel, tickerItems }: BroadcastBarProps) {
         <div className="flex-1 overflow-hidden rounded-full border border-white/10 bg-black/20 px-3 py-2">
           <div className="flex min-w-max items-center gap-3 whitespace-nowrap text-xs font-medium text-white/90">
             <span>{tickerText}</span>
-            <span aria-hidden="true">{tickerText}</span>
+            {showLoopDuplicate ? <span aria-hidden="true">{tickerText}</span> : null}
           </div>
         </div>
       </div>

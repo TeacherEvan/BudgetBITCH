@@ -1,5 +1,5 @@
 import { JobFitBadge } from "@/components/jobs/job-fit-badge";
-import { getJobBySlug } from "@/modules/jobs/job-catalog";
+import { listRecommendedJobs } from "@/modules/jobs/recommended-jobs";
 import { notFound } from "next/navigation";
 
 type JobDetailPageProps = {
@@ -8,7 +8,8 @@ type JobDetailPageProps = {
 
 export default async function JobDetailPage({ params }: JobDetailPageProps) {
   const { slug } = await params;
-  const job = getJobBySlug(slug);
+  const recommendedJobs = await listRecommendedJobs();
+  const job = recommendedJobs.find((candidate) => candidate.slug === slug);
 
   if (!job) {
     notFound();
@@ -30,7 +31,8 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
               <JobFitBadge key={signal} label={signal} />
             ))}
           </div>
-          <p className="mt-4 text-sm text-emerald-50/85">{job.summary}</p>
+          <p className="mt-4 text-sm text-emerald-50">{job.fitSummary}</p>
+          <p className="mt-3 text-sm text-emerald-50/85">{job.summary}</p>
         </article>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-2">

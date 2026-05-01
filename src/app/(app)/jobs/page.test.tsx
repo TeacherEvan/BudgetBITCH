@@ -20,10 +20,18 @@ describe("JobsPage", () => {
 
     expect(screen.getByText("Jobs")).toBeInTheDocument();
     expect(screen.getByText("Quick job routes for real-life pressure.")).toBeInTheDocument();
+    expect(screen.getByText("Scan by relief type, then open the full brief.")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Quick route board" })).toBeInTheDocument();
     expect(screen.getByText("Career pivot lane")).toBeInTheDocument();
     expect(screen.getByText("Fast cash lane")).toBeInTheDocument();
     expect(screen.getByText("Steady routine lane")).toBeInTheDocument();
+    expect(screen.getByText("Cleaner systems experience with room to move up.")).toBeInTheDocument();
+    expect(screen.getByText("Faster pay bumps and low-friction extra income.")).toBeInTheDocument();
+    expect(screen.getByText("Predictable hours with fewer schedule swings.")).toBeInTheDocument();
+    expect(screen.getByText("Relief routes live.")).toBeInTheDocument();
+    expect(screen.getByText("Remote-first.")).toBeInTheDocument();
+    expect(screen.getByText("Top live salary.")).toBeInTheDocument();
+    expect(screen.getByText("Board preference")).toBeInTheDocument();
     expect(screen.getByText("Remote Customer Support Specialist")).toBeInTheDocument();
   });
 
@@ -37,17 +45,29 @@ describe("JobsPage", () => {
     render(view);
 
     expect(screen.getByText("Route brief")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Compact filter summary" })).toBeInTheDocument();
-    expect(screen.getByText("Workplace")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Compact board cues" })).toBeInTheDocument();
+    expect(screen.getByText("Preferred workplace")).toBeInTheDocument();
     expect(screen.getAllByText("remote").length).toBeGreaterThan(0);
-    expect(screen.getByText("Salary floor")).toBeInTheDocument();
+    expect(screen.getByText("Pay target")).toBeInTheDocument();
     expect(screen.getByText("$45,000")).toBeInTheDocument();
+    expect(screen.getByText("Lane count")).toBeInTheDocument();
+    expect(screen.getByText("3 lanes")).toBeInTheDocument();
+    expect(screen.getByText("Priority fit")).toBeInTheDocument();
     expect(screen.getAllByText("raise income fast").length).toBeGreaterThan(0);
     expect(screen.getAllByText("stabilize schedule").length).toBeGreaterThan(0);
+    expect(screen.getByText("Saved home base")).toBeInTheDocument();
     expect(screen.getByText("01, Singapore")).toBeInTheDocument();
+    expect(screen.getByText("Recommended matches")).toBeInTheDocument();
+    expect(screen.getByText("5 recommended matches")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /open setup wizard/i })).toBeInTheDocument();
     expect(
-      screen.getByText("Steady remote support role with a solid base salary and clear hours."),
-    ).toBeInTheDocument();
+      screen.queryByText(
+        "Keep the board tight: remote-first, salary-floor guarded, and matched to the two most urgent blueprint goals.",
+      ),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Steady remote support role with a solid base salary and clear hours."),
+    ).not.toBeInTheDocument();
 
     const remoteSupportCard = screen
       .getByText("Remote Customer Support Specialist")
@@ -55,7 +75,9 @@ describe("JobsPage", () => {
 
     expect(remoteSupportCard).not.toBeNull();
     expect(within(remoteSupportCard as HTMLElement).getByText("daytime")).toBeInTheDocument();
-    expect(within(remoteSupportCard as HTMLElement).getByText("full time")).toBeInTheDocument();
+    expect(
+      within(remoteSupportCard as HTMLElement).getByText(/remote\s*·\s*full time/i),
+    ).toBeInTheDocument();
     expect(
       within(remoteSupportCard as HTMLElement).getByText("Posted 4 days ago"),
     ).toBeInTheDocument();

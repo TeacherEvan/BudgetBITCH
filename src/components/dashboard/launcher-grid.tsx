@@ -27,7 +27,7 @@ export function LauncherGrid({ tools }: LauncherGridProps) {
           <h2 id="popular-budgeting-tools-heading" className="mt-2 text-2xl font-semibold">
             {t("title")}
           </h2>
-          <p className="bb-mini-copy mt-2 max-w-2xl text-sm">
+          <p className="bb-helper-copy mt-2 max-w-2xl text-sm">
             {t("description")}
           </p>
         </div>
@@ -44,7 +44,9 @@ export function LauncherGrid({ tools }: LauncherGridProps) {
             </div>
             <div>
               <h3 className="text-lg font-semibold text-white">{tool.title}</h3>
-              <p className="bb-mini-copy mt-1 text-sm">{tool.detail}</p>
+              <p className="bb-mini-copy bb-summary-clip mt-1 text-sm" title={tool.detail}>
+                {tool.detail}
+              </p>
             </div>
           </Link>
         ))}

@@ -116,6 +116,19 @@ describe("middleware", () => {
     expect(response).toBe("next-response");
   });
 
+  it("allows protected routes for the non-production e2e signed-in override cookie", () => {
+    const request = new Request("http://localhost/settings/integrations", {
+      headers: {
+        cookie: "budgetbitch:e2e-auth-state=signed-in",
+      },
+    });
+    const response = middleware(request as never, undefined as never);
+
+    expect(nextResponseRedirectMock).not.toHaveBeenCalled();
+    expect(nextResponseNextMock).toHaveBeenCalledTimes(1);
+    expect(response).toBe("next-response");
+  });
+
   it.each(protectedApiRoutes)("protects %s when no session exists", async (pathname) => {
     const request = new Request(`http://localhost${pathname}`);
     const response = middleware(request as never, undefined as never) as Response;

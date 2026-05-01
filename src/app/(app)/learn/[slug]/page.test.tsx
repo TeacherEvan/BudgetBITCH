@@ -14,7 +14,7 @@ vi.mock("next/navigation", () => ({
 import LearnLessonPage from "./page";
 
 describe("LearnLessonPage", () => {
-  it("renders the story scenes and practical takeaways", async () => {
+  it("retains the full story scenes and deeper practical actions", async () => {
     const view = await LearnLessonPage({
       params: Promise.resolve({ slug: "budgeting-basics" }),
     });
@@ -35,6 +35,11 @@ describe("LearnLessonPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Plain-English breakdown")).toBeInTheDocument();
     expect(screen.getByText("Apply this now")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "List fixed bills first, then assign the remaining money to savings, food, and flexible spending.",
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByText("Takeaways")).toBeInTheDocument();
     expect(
       screen.getByText("A budget is a plan, not a punishment."),

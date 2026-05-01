@@ -15,7 +15,10 @@ vi.mock("next-intl", () => ({
       backToConnectionHub: "Back to connection hub",
       tools: "Tools",
       privacyShieldTitle: "Privacy Shield",
-      privacyShieldDescription: `Review how ${values?.providerLabel ?? ""} receives data before enabling any connection.`.trim(),
+      privacyShieldDescription: `Check what ${values?.providerLabel ?? ""} can receive before you connect it.`.trim(),
+      "disclosureHeadings.minimumData": "Minimum data",
+      "disclosureHeadings.noSilentSharing": "No silent sharing",
+      "disclosureHeadings.revokeAnyTime": "Revoke any time",
       officialLinksTitle: "Official links",
       officialLogin: "Official login",
       officialDocs: "Official docs",
@@ -24,35 +27,35 @@ vi.mock("next-intl", () => ({
       "integrationProviderPages.deel.eyebrow": "Deel Setup",
       "integrationProviderPages.deel.title": "Connect Deel",
       "integrationProviderPages.deel.description":
-        "Use the official Deel route, review the privacy disclosure, and only enable payroll access for the workspace that needs it.",
+        "Use the official Deel route first. Safety details stay below.",
       "integrationProviderPages.gemini.eyebrow": "Gemini Setup",
       "integrationProviderPages.gemini.title": "Connect Gemini",
       "integrationProviderPages.gemini.description":
-        "Use the official Google AI Studio path, verify the privacy disclosure, and only connect Gemini when this workspace clearly needs it.",
+        "Use the official Google AI Studio route first. Safety details stay below.",
       "integrationProviderPages.mistral.eyebrow": "Mistral Setup",
       "integrationProviderPages.mistral.title": "Connect Mistral",
       "integrationProviderPages.mistral.description":
-        "Use the official Mistral console path, confirm the privacy disclosure, and only enable the connection for workspaces that require it.",
+        "Use the official Mistral route first. Safety details stay below.",
       "integrationProviderPages.paypal.eyebrow": "PayPal Setup",
       "integrationProviderPages.paypal.title": "Connect PayPal",
       "integrationProviderPages.paypal.description":
-        "Use the official PayPal developer route, review the privacy disclosure, and only complete setup for the workspace that explicitly needs it.",
+        "Use the official PayPal route first. Safety details stay below.",
       "integrationProviderPages.perplexity.eyebrow": "Perplexity Setup",
       "integrationProviderPages.perplexity.title": "Connect Perplexity",
       "integrationProviderPages.perplexity.description":
-        "Follow the official Perplexity console flow, review the privacy disclosure, and keep the connection limited to the workspace that needs it.",
+        "Use the official Perplexity route first. Safety details stay below.",
       "integrationProviderPages.revolut.eyebrow": "Revolut Setup",
       "integrationProviderPages.revolut.title": "Connect Revolut",
       "integrationProviderPages.revolut.description":
-        "Follow the official Revolut developer path, verify the privacy disclosure, and keep the connection scoped to the workspace that needs it.",
+        "Use the official Revolut route first. Safety details stay below.",
       "integrationProviderPages.wise.eyebrow": "Wise Setup",
       "integrationProviderPages.wise.title": "Connect Wise",
       "integrationProviderPages.wise.description":
-        "Use the official Wise route, review the privacy disclosure, and only connect the account once the workspace scope is clear.",
+        "Use the official Wise route first. Safety details stay below.",
       "integrationProviderPages.xero.eyebrow": "Xero Setup",
       "integrationProviderPages.xero.title": "Connect Xero",
       "integrationProviderPages.xero.description":
-        "Follow the official Xero developer flow, confirm the privacy disclosure, and connect only after the accounting scope is clear.",
+        "Use the official Xero route first. Safety details stay below.",
       "disclosures.minimumData": "Only explicitly connected providers receive the minimum required data.",
       "disclosures.noSilentSharing": "No silent sharing or automatic cross-provider routing.",
       "disclosures.revokeAnyTime": "You can revoke and disconnect this provider at any time.",
@@ -154,6 +157,12 @@ describe("integration provider route pages", () => {
         "href",
         docsUrl,
       );
+      expect(screen.getByRole("heading", { name: "Privacy Shield" })).toBeInTheDocument();
+      expect(screen.getByText("Minimum data")).toBeInTheDocument();
+      expect(
+        screen.getByText("Only explicitly connected providers receive the minimum required data."),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Official links" })).toBeInTheDocument();
     },
   );
 });

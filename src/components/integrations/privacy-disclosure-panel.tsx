@@ -7,9 +7,18 @@ type PrivacyDisclosurePanelProps = {
 export function PrivacyDisclosurePanel({ providerLabel }: PrivacyDisclosurePanelProps) {
     const t = useTranslations("integrationsShared");
     const disclosures = [
-        t("disclosures.minimumData"),
-        t("disclosures.noSilentSharing"),
-        t("disclosures.revokeAnyTime"),
+        {
+            heading: t("disclosureHeadings.minimumData"),
+            detail: t("disclosures.minimumData"),
+        },
+        {
+            heading: t("disclosureHeadings.noSilentSharing"),
+            detail: t("disclosures.noSilentSharing"),
+        },
+        {
+            heading: t("disclosureHeadings.revokeAnyTime"),
+            detail: t("disclosures.revokeAnyTime"),
+        },
     ];
 
     return (
@@ -20,7 +29,12 @@ export function PrivacyDisclosurePanel({ providerLabel }: PrivacyDisclosurePanel
             </p>
             <ul className="mt-4 space-y-3 text-sm text-white">
                 {disclosures.map((item) => (
-                    <li key={item}>{item}</li>
+                    <li key={item.heading} className="rounded-3xl border border-emerald-200/15 bg-black/10 px-4 py-3">
+                        <span className="block text-xs font-semibold uppercase tracking-[0.2em] text-emerald-50/80">
+                            {item.heading}
+                        </span>
+                        <span className="mt-1 block text-sm text-white/90">{item.detail}</span>
+                    </li>
                 ))}
             </ul>
         </div>

@@ -7,7 +7,7 @@ vi.mock("next-intl", () => ({
     const translations: Record<string, string> = {
       kicker: "Tools",
       title: "Popular budgeting tools",
-      description: "Open the lanes you actually use without stacking another scrolling page.",
+      description: "Open the next tool without the extra scroll.",
     };
 
     return translations[key] ?? key;
@@ -72,6 +72,7 @@ describe("LauncherGrid", () => {
     );
 
     expect(screen.getByRole("heading", { name: /popular budgeting tools/i })).toBeInTheDocument();
+    expect(screen.getByText(/open the next tool without the extra scroll\./i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /open setup wizard/i })).toHaveAttribute(
       "href",
       "/start-smart",

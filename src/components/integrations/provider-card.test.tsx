@@ -18,12 +18,12 @@ vi.mock("next-intl", () => ({
         "categoryLabel.payroll": "Payroll",
         "categoryLabel.tax": "Tax",
         "categoryLabel.finance_ops": "Finance ops",
-        "categorySummary.ai": "Prompt-heavy tools and assistant access.",
-        "categorySummary.banking": "Bank connections and verification rails.",
-        "categorySummary.investing": "Portfolio, account, and brokerage access.",
-        "categorySummary.payroll": "Income and worker operations.",
-        "categorySummary.tax": "Tax filings, books, and accounting workflows.",
-        "categorySummary.finance_ops": "Operational money tooling and expense controls.",
+        "categorySummary.ai": "Assistant tools and prompt access.",
+        "categorySummary.banking": "Official bank and account links.",
+        "categorySummary.investing": "Portfolio and brokerage access.",
+        "categorySummary.payroll": "Income and worker setup.",
+        "categorySummary.tax": "Tax and ledger workflows.",
+        "categorySummary.finance_ops": "Expense and money ops tools.",
         "risk.low": "Low risk",
         "risk.medium": "Medium risk",
         "risk.high": "High risk",
@@ -41,6 +41,16 @@ vi.mock("next-intl", () => ({
 }));
 
 describe("ProviderCard", () => {
+  it("keeps the category, summary, risk, privacy, and setup state easy to scan", () => {
+    render(<ProviderCard provider={providerRegistry.openai} />);
+
+    expect(screen.getByText("AI")).toBeInTheDocument();
+    expect(screen.getByText("Assistant tools and prompt access.")).toBeInTheDocument();
+    expect(screen.getByText("Medium risk")).toBeInTheDocument();
+    expect(screen.getByText("No silent sharing")).toBeInTheDocument();
+    expect(screen.getByText("Setup wizard")).toBeInTheDocument();
+  });
+
   it("renders explicit setup and official action labels for internal flows", () => {
     render(<ProviderCard provider={providerRegistry.openai} />);
 

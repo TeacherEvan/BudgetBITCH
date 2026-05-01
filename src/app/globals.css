@@ -4,24 +4,27 @@
   color-scheme: dark;
   --font-body: "Inter", system-ui, sans-serif;
   --font-display: "Fraunces", Georgia, serif;
-  --page-bg-top: oklch(0.82 0.11 155);
-  --page-bg-middle: oklch(0.32 0.07 162);
-  --page-bg-bottom: oklch(0.22 0.04 170);
-  --surface-1: color-mix(in srgb, #081512 84%, white 16%);
-  --surface-2: color-mix(in srgb, #0d1d18 90%, white 10%);
-  --surface-3: color-mix(in srgb, #122820 92%, white 8%);
-  --surface-accent: color-mix(in srgb, #10261d 72%, #d9b85c 28%);
-  --border-soft: color-mix(in srgb, #b9fbc0 18%, transparent 82%);
-  --border-strong: color-mix(in srgb, #f5d673 42%, transparent 58%);
+  --page-bg-top: oklch(0.79 0.05 148);
+  --page-bg-middle: oklch(0.3 0.035 195);
+  --page-bg-bottom: oklch(0.22 0.02 215);
+  --surface-1: color-mix(in srgb, #101817 86%, #d6ddd8 14%);
+  --surface-2: color-mix(in srgb, #121c1d 90%, #d3dbd9 10%);
+  --surface-3: color-mix(in srgb, #172225 92%, #d8ddd9 8%);
+  --surface-accent: color-mix(in srgb, #162127 74%, #c9b88b 26%);
+  --border-soft: color-mix(in srgb, #c7d7ce 16%, transparent 84%);
+  --border-strong: color-mix(in srgb, #d4c39a 36%, transparent 64%);
   --text-1: #f8fbf8;
   --text-2: color-mix(in srgb, #f8fbf8 82%, #98b3a5 18%);
   --text-muted: color-mix(in srgb, #f8fbf8 56%, #8aa190 44%);
-  --accent: #8ee29f;
-  --accent-strong: #d8b85a;
-  --accent-ink: #102017;
+  --accent: #9dcab7;
+  --accent-strong: #ccb37a;
+  --accent-ink: #13211b;
   --shadow-soft: 0 24px 80px rgba(1, 10, 8, 0.28);
   --shadow-card: 0 18px 48px rgba(0, 0, 0, 0.24);
-  --radius-panel: 2rem;
+  --radius-panel: 1.5rem;
+  --radius-card: 1.2rem;
+  --radius-badge: 0.9rem;
+  --pill-min-height: 1.9rem;
   --radius-pill: 999px;
 }
 
@@ -64,7 +67,7 @@
     font-variation-settings:
       "SOFT" 60,
       "WONK" 0;
-    letter-spacing: -0.03em;
+    letter-spacing: 0;
     text-wrap: balance;
   }
 
@@ -118,8 +121,8 @@ body {
     border-radius: var(--radius-panel);
     background: linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.08),
-      rgba(255, 255, 255, 0.03)
+      rgba(244, 246, 244, 0.07),
+      rgba(244, 246, 244, 0.025)
     );
     box-shadow: var(--shadow-card);
     backdrop-filter: blur(18px);
@@ -128,8 +131,8 @@ body {
   .bb-panel-strong {
     background: linear-gradient(
       160deg,
-      rgba(8, 21, 18, 0.88),
-      rgba(17, 40, 31, 0.7)
+      rgba(13, 23, 24, 0.9),
+      rgba(24, 35, 38, 0.72)
     );
     border-color: var(--border-strong);
     box-shadow: var(--shadow-soft);
@@ -138,16 +141,16 @@ body {
   .bb-panel-muted {
     background: linear-gradient(
       180deg,
-      rgba(12, 24, 20, 0.84),
-      rgba(12, 24, 20, 0.68)
+      rgba(16, 24, 24, 0.84),
+      rgba(16, 24, 24, 0.7)
     );
   }
 
   .bb-panel-accent {
     background: linear-gradient(
       180deg,
-      rgba(31, 46, 37, 0.96),
-      rgba(21, 35, 29, 0.86)
+      rgba(31, 39, 40, 0.95),
+      rgba(24, 31, 35, 0.86)
     );
     border-color: var(--border-strong);
   }
@@ -156,7 +159,7 @@ body {
     color: var(--accent-strong);
     font-size: 0.74rem;
     font-weight: 700;
-    letter-spacing: 0.28em;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
   }
 
@@ -231,7 +234,7 @@ body {
 
   .bb-link-card {
     border: 1px solid transparent;
-    border-radius: 1.4rem;
+    border-radius: var(--radius-card);
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
@@ -256,7 +259,7 @@ body {
       rgba(255, 255, 255, 0.04)
     );
     border: 1px solid color-mix(in srgb, var(--accent-strong) 32%, transparent 68%);
-    border-radius: 1rem;
+    border-radius: var(--radius-badge);
     color: var(--accent-strong);
     display: inline-flex;
     height: 2.75rem;
@@ -268,7 +271,7 @@ body {
   .bb-cluster,
   .bb-lane-link {
     border: 1px solid var(--border-soft);
-    border-radius: 1.5rem;
+    border-radius: var(--radius-card);
     background: rgba(255, 255, 255, 0.05);
   }
 
@@ -311,10 +314,45 @@ body {
     display: inline-flex;
     font-size: 0.73rem;
     font-weight: 700;
-    letter-spacing: 0.12em;
-    min-height: 2rem;
+    justify-content: center;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    min-height: var(--pill-min-height);
     padding: 0.35rem 0.75rem;
     text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .bb-meta-row {
+    align-items: center;
+    color: var(--text-muted);
+    column-gap: 0.6rem;
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 0.88rem;
+    line-height: 1.4;
+    row-gap: 0.25rem;
+  }
+
+  .bb-helper-copy {
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    line-height: 1.45;
+    max-width: 62ch;
+  }
+
+  .bb-pill-stable {
+    justify-content: center;
+    min-height: var(--pill-min-height);
+    min-width: 5.25rem;
+    text-align: center;
+  }
+
+  .bb-summary-clip {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
   }
 

@@ -8,15 +8,15 @@ test("home page shows the launch wizard before the landing board for the signed-
   await page.goto("/");
 
   await expect(
-    page.getByRole("heading", { name: /launch your dashboard window/i }),
+    page.getByRole("heading", { level: 1, name: "Ballpark expenses" }),
   ).toBeVisible({ timeout: 15000 });
   await expect(
-    page.getByText(/notes, calculator, and launch settings stay available on this device/i),
+    page.getByText(/startup questionnaire/i),
   ).toBeVisible();
   await expect(
-    page.getByText(/dashboard, jobs, integrations, and other sync-required routes still need a live connection/i),
+    page.getByText(/Add rough recurring costs first so BudgetBITCH can open with a practical money baseline/i),
   ).toBeVisible();
-  await expect(page.getByText(/no precise location data is collected/i)).toBeVisible();
+  await expect(page.getByText(/This first popup stays lightweight/i).first()).toBeVisible();
 
   await expect.poll(
     () =>
@@ -39,14 +39,10 @@ test("home page shows the launch wizard before the landing board for the signed-
     { timeout: 2_000 },
   ).toBeLessThanOrEqual(16);
 
-  await page.getByRole("combobox", { name: "City" }).click();
-  await page.getByRole("combobox", { name: "City" }).fill("Dub");
-  await page.getByRole("option", { name: /dublin/i }).click();
-  await page.getByLabel("Visual style").selectOption("billboard");
-  await page.getByLabel("Motion level").selectOption("cinematic");
-  await page.getByLabel("Theme").selectOption("midnight");
-  await page.getByLabel("Crypto platform placeholder").selectOption("later");
-  await page.getByRole("button", { name: /save launch settings/i }).click();
+  await page.getByRole("textbox", { name: "Custom expense title" }).fill("Rent");
+  await page.getByRole("spinbutton", { name: "Rough monthly amount" }).fill("1200");
+  await page.getByRole("button", { name: "Add expense" }).click();
+  await page.getByRole("button", { name: "Finish startup" }).click();
 
   await expect(page.getByRole("heading", { name: "Plan first. Panic less." })).toBeVisible();
   await expect(page.getByRole("heading", { name: /route lanes/i })).toBeVisible();

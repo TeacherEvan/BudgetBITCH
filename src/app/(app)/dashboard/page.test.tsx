@@ -14,6 +14,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("next-intl", () => ({
+  useLocale: () => "en",
   useTranslations: (namespace: string) => (key: string, values?: Record<string, number>) => {
     const translations: Record<string, Record<string, string>> = {
       broadcastBar: {
@@ -21,18 +22,54 @@ vi.mock("next-intl", () => ({
         title: "Local area",
         fallbackTicker: "Budget updates",
       },
+      dailyCheckIn: {
+        kicker: "Check-in lane",
+        title: "Log today's number",
+        description: "One number keeps Acme Studio aligned.",
+        liveSubmissionUnavailable: "Live entry locked",
+        submitting: "Sending",
+        submittedToday: "Sent today",
+        readyToSubmit: "Ready now",
+        plannedSpendLabel: "Planned spend for today",
+        lockedDate: "Locked to Apr 9, 2026 for Acme Studio.",
+        disabledHint: "Sign in to send live check-ins.",
+        submitButton: "Send today's check-in",
+        submittingButton: "Sending check-in",
+        emptyHeadline: "No check-in yet for this workspace.",
+        noCheckInYet: "No check-in yet.",
+        submittedAt: "Sent Apr 9, 9:00 AM.",
+        plannedSpendMetric: "Planned spend",
+        openAlertsMetric: "Open alerts",
+        netCashAfterPlanMetric: "Net cash after plan",
+        emptyAlertsTitle: "No alerts yet.",
+        emptyAlertsDescription: "Send again when you need a refresh.",
+      },
+      liveAlerts: {
+        kicker: "Alert lane",
+        title: "Watch the pressure points",
+        description: "Projected alerts land here first.",
+        selectWorkspace: "Select a workspace to see alerts.",
+        standbyNoUrl: "Standby. Add the Convex URL to enable alerts.",
+        standbyNoBridge: "Standby. Realtime auth is not ready yet.",
+        loading: "Loading alerts...",
+        viewerSync: "Viewer sync in progress. Alerts appear after it finishes.",
+        workspaceSync: "Waiting on workspace access sync.",
+        empty: "No live alerts yet. They appear after the first projected check-in.",
+        checkInDate: "Check-in 2026-04-09",
+      },
       launcherGrid: {
         kicker: "Tools",
         title: "Popular budgeting tools",
-        description: "Open the lanes you actually use without stacking another scrolling page.",
+        description: "Open the next tool without the extra scroll.",
       },
       liveBriefing: {
         kicker: "Briefing",
         title: "Live briefing",
-        description: "Five trusted topics, three short fields each, trimmed for fast scanning.",
+        description: "Trusted topics, trimmed for quick scanning.",
         "sourceStatus.live": "Live",
         "sourceStatus.fallback": "Fallback",
         fieldCount: `${values?.count ?? 0} fields`,
+        emptyState: "No briefing topics yet. Check back after the next refresh.",
       },
     };
 
@@ -45,22 +82,25 @@ vi.mock("@/i18n/server", () => ({
     dashboardPage: {
       eyebrow: "Dashboard",
       title: "Interactive billboard",
-      description:
-        "Keep the city label, the tool deck, and the live briefing in one visible window.",
+      description: "Keep your workspace, tools, and live signals in one board.",
       workspaceLabel: "Workspace",
       cityLabel: "City",
       motionLabel: "Motion",
       currentModeEyebrow: "Current mode",
-      checkInSubmitted: "Submitted today",
-      checkInNeeded: "Needs today’s check-in",
-      demoWorkspace:
-        "Demo workspace context is showing until a live membership is available.",
-      liveMembership: "Live membership is synced.",
+      checkInSubmitted: "Checked in",
+      checkInNeeded: "Check-in due",
+      demoWorkspace: "Demo",
+      liveMembership: "Live member",
       windowProfileEyebrow: "Window profile",
       layoutLabel: "Layout",
       motionValueLabel: "Motion",
       noWorkspaceSelected: "No workspace selected",
       noWorkspaceRole: "none",
+      homeBaseKicker: "Board anchor",
+      homeBaseTitle: "Shared home base",
+      homeBaseDescription: "Keep one shared region ready for setup and jobs.",
+      homeBaseEmptyState: "No shared region saved yet.",
+      homeBaseActionLabel: "Open setup wizard",
     },
   }),
 }));
@@ -84,6 +124,7 @@ describe("DashboardPage", () => {
       data: {
         activeWorkspace: {
           id: "workspace-2",
+          workspaceId: "workspace-2",
           name: "Side Hustle",
           role: "owner",
         },
@@ -106,12 +147,14 @@ describe("DashboardPage", () => {
         workspaces: [
           {
             id: "workspace-1",
+            workspaceId: "workspace-1",
             name: "Household",
             role: "editor",
             isDefault: true,
           },
           {
             id: "workspace-2",
+            workspaceId: "workspace-2",
             name: "Side Hustle",
             role: "owner",
           },
@@ -189,11 +232,25 @@ describe("DashboardPage", () => {
     expect(getDashboardPageData).toHaveBeenCalledWith("workspace-2");
     expect(screen.getByTestId("mobile-panel-frame")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /interactive billboard/i })).toBeInTheDocument();
+    expect(
+      screen.getByText(/keep your workspace, tools, and live signals in one board\./i),
+    ).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /local area/i })).toBeInTheDocument();
     expect(screen.getByText(/dublin/i, { selector: "p.bb-mini-copy" })).toBeInTheDocument();
     expect(screen.getByText("CA, United States")).toBeInTheDocument();
+    expect(screen.getByText(/shared home base/i)).toBeInTheDocument();
+    expect(screen.getByText(/keep one shared region ready for setup and jobs\./i)).toBeInTheDocument();
+    expect(screen.getByText("Side Hustle")).toBeInTheDocument();
+    expect(screen.getByText(/checked in/i)).toBeInTheDocument();
+    expect(screen.getByText(/live member/i)).toBeInTheDocument();
+    expect(screen.getByText("Budget updates")).toBeInTheDocument();
+    expect(screen.queryByText(/budget updates\s+·\s+launcher grid\s+·\s+live briefing/i)).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /popular budgeting tools/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /live briefing/i })).toBeInTheDocument();
+    expect(screen.getByText(/no briefing topics yet\. check back after the next refresh\./i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /log today's number/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /watch the pressure points/i })).toBeInTheDocument();
+    expect(screen.getByText(/projected alerts land here first\./i)).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: /open setup wizard/i })).toHaveLength(2);
     expect(screen.getAllByRole("link", { name: /open setup wizard/i })[0]).toHaveAttribute(
       "href",

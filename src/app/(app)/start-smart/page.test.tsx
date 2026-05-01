@@ -7,7 +7,7 @@ describe("StartSmartPage", () => {
 
     expect(screen.getByTestId("mobile-panel-frame")).toBeInTheDocument();
     expect(
-      screen.getByText("Build a fixed-screen survival answer in four compact panels."),
+      screen.getByText("Move through four short panels and keep the core context in view."),
     ).toBeInTheDocument();
     expect(screen.getAllByText("Single teen").length).toBeGreaterThan(0);
     expect(screen.getByText("Panel deck")).toBeInTheDocument();

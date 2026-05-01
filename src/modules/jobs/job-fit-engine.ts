@@ -68,9 +68,12 @@ export function scoreJobsForBlueprint(input: {
         fitSummarySignals.push("second_job_friendly");
       }
 
+      const hasSpecificFitCue = fitSummarySignals.length > 0;
+
       return {
         ...job,
         score,
+        hasSpecificFitCue,
         fitSummary: buildFitSummary(fitSummarySignals),
       };
     })

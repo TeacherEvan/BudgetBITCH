@@ -22,24 +22,35 @@ const laneMeta: Record<
 > = {
   household: {
     label: "Household basics",
-    summary: "Common starting setups for solo adults, couples, and families.",
+    summary: "Common solo, couple, and family starts.",
   },
   solo_situation: {
     label: "Solo situations",
-    summary: "Independent setups with career, caregiving, or life-stage twists.",
+    summary: "Independent starts with work or caregiving pressure.",
   },
   high_friction: {
     label: "High-friction starts",
-    summary: "Templates built for urgent pressure, instability, or reset mode.",
+    summary: "Urgent starts for instability or reset mode.",
   },
   custom_starter: {
     label: "Custom starter",
-    summary: "Skip the pre-built story and start from your own baseline.",
+    summary: "Skip presets and start from your own baseline.",
   },
 };
 
 function formatLaneLabel(lane: StartSmartTemplateLane) {
   return lane.replaceAll("_", " ");
+}
+
+function getCompactTemplateSummary(summary: string) {
+  const [firstSentence] = summary.split(".");
+  const compactSummary = firstSentence.trim();
+
+  if (compactSummary.length <= 72) {
+    return compactSummary;
+  }
+
+  return `${compactSummary.slice(0, 69).trimEnd()}...`;
 }
 
 export function TemplatePicker({
@@ -64,10 +75,10 @@ export function TemplatePicker({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-sm uppercase tracking-[0.3em] text-yellow-200">Starting paths</p>
-          <h2 className="mt-2 text-2xl font-semibold text-white">Choose a life lane first</h2>
+          <h2 className="mt-2 text-2xl font-semibold text-white">Choose a starting lane</h2>
         </div>
         <p className="max-w-2xl text-sm text-emerald-50/75">
-          Pick the lane that looks most like your current pressure, then grab the closest template.
+          Pick the lane that fits best, then choose the closest template.
         </p>
       </div>
 
@@ -109,6 +120,7 @@ export function TemplatePicker({
                 key={template.id}
                 type="button"
                 onClick={() => onSelect(template.id)}
+                aria-pressed={isActive}
                 className={`rounded-[24px] border p-4 text-left transition ${
                   isActive
                     ? "border-emerald-300/50 bg-emerald-400/10 shadow-[0_0_0_1px_rgba(110,231,183,0.2)]"
@@ -128,7 +140,7 @@ export function TemplatePicker({
                     </span>
                   ) : null}
                 </div>
-                <p className="mt-2 text-sm text-emerald-50/80">{template.summary}</p>
+                <p className="mt-2 text-sm text-emerald-50/80">{getCompactTemplateSummary(template.summary)}</p>
               </button>
             );
           })}

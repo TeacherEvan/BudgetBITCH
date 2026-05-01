@@ -7,10 +7,11 @@ vi.mock("next-intl", () => ({
     const translations: Record<string, string> = {
       kicker: "Briefing",
       title: "Live briefing",
-      description: "Five trusted topics, three short fields each, trimmed for fast scanning.",
+      description: "Trusted topics, trimmed for quick scanning.",
       "sourceStatus.live": "Live",
       "sourceStatus.fallback": "Fallback",
       fieldCount: `${values?.count ?? 0} fields`,
+      emptyState: "No briefing topics yet. Check back after the next refresh.",
     };
 
     return translations[key] ?? key;
@@ -175,10 +176,11 @@ const briefing = {
 };
 
 describe("LiveBriefingRail", () => {
-  it("renders five core elements with three fields each", () => {
+  it("renders briefing fields as label, source, and quieter summary lines", () => {
     render(<LiveBriefingRail briefing={briefing} />);
 
     expect(screen.getByRole("heading", { name: /live briefing/i })).toBeInTheDocument();
+    expect(screen.getByText("Live")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /politics/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /science/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /agriculture/i })).toBeInTheDocument();
@@ -186,5 +188,28 @@ describe("LiveBriefingRail", () => {
     expect(screen.getByRole("heading", { name: /investments/i })).toBeInTheDocument();
     expect(screen.getAllByRole("article")).toHaveLength(5);
     expect(screen.getAllByRole("listitem")).toHaveLength(15);
+    expect(screen.getAllByText("3 fields").length).toBeGreaterThan(0);
+    expect(screen.getByText("Policies")).toBeInTheDocument();
+    expect(screen.getByText("Reuters Politics")).toBeInTheDocument();
+    expect(screen.getByText("Policy moves stay active.")).toBeInTheDocument();
+    expect(screen.queryByText("Policies · Policy moves stay active.")).not.toBeInTheDocument();
+  });
+
+  it("shows an empty-state message when no topics are available", () => {
+    render(
+      <LiveBriefingRail
+        briefing={{
+          generatedAt: "2026-04-10T12:00:00.000Z",
+          sourceStatus: "fallback",
+          topics: [],
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Fallback")).toBeInTheDocument();
+    expect(
+      screen.getByText(/no briefing topics yet\. check back after the next refresh\./i),
+    ).toBeInTheDocument();
+    expect(screen.queryAllByRole("article")).toHaveLength(0);
   });
 });

@@ -3,7 +3,8 @@ import { expect, test } from "@playwright/test";
 test("notes page renders empty state on first visit", async ({ page }) => {
   await page.goto("/notes");
   await expect(page.getByRole("heading", { level: 1, name: "Notes" })).toBeVisible();
-  await expect(page.getByText(/no notes yet/i)).toBeVisible();
+  await expect(page.getByText("A quick place for reminders and rough budget thoughts.")).toBeVisible();
+  await expect(page.getByText("No notes yet. Add one above.")).toBeVisible();
 });
 
 test("notes page — add and delete a note", async ({ page }) => {
@@ -17,7 +18,7 @@ test("notes page — add and delete a note", async ({ page }) => {
   await page.getByRole("button", { name: /delete buy oat milk/i }).click();
 
   await expect(page.getByText("Buy oat milk")).not.toBeVisible();
-  await expect(page.getByText(/no notes yet/i)).toBeVisible();
+  await expect(page.getByText("No notes yet. Add one above.")).toBeVisible();
 });
 
 test("notes page has a working home nav link", async ({ page }) => {

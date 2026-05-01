@@ -2,6 +2,7 @@
 
 import { useQuery } from "convex/react";
 import { ShieldCheck, Siren, TriangleAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { api } from "../../../convex/_generated/api";
 import { isAbsoluteHttpUrl } from "@/lib/url";
 
@@ -28,6 +29,7 @@ function severityIcon(severity: "info" | "warning" | "critical") {
 }
 
 function LiveAlertFeedBody({ workspaceId }: LiveAlertFeedProps) {
+  const t = useTranslations("liveAlerts");
   const viewer = useQuery(api.viewer.current, {
     workspaceLimit: VIEWER_WORKSPACE_LIMIT,
   });
@@ -40,35 +42,23 @@ function LiveAlertFeedBody({ workspaceId }: LiveAlertFeedProps) {
   );
 
   if (viewer === undefined) {
-    return <p className="bb-mini-copy mt-4">Loading live alerts...</p>;
+    return <p className="bb-mini-copy mt-4">{t("loading")}</p>;
   }
 
   if (!viewer.projectionReady) {
-    return (
-      <p className="bb-mini-copy mt-4">
-        Live alerts will appear here after your Convex viewer profile finishes syncing.
-      </p>
-    );
+    return <p className="bb-mini-copy mt-4">{t("viewerSync")}</p>;
   }
 
   if (!canReadWorkspace) {
-    return (
-      <p className="bb-mini-copy mt-4">
-        Live alerts are waiting for this workspace membership to finish syncing.
-      </p>
-    );
+    return <p className="bb-mini-copy mt-4">{t("workspaceSync")}</p>;
   }
 
   if (rows === undefined) {
-    return <p className="bb-mini-copy mt-4">Loading live alerts...</p>;
+    return <p className="bb-mini-copy mt-4">{t("loading")}</p>;
   }
 
   if (rows.length === 0) {
-    return (
-      <p className="bb-mini-copy mt-4">
-        Live alerts will appear here after the first projected check-in.
-      </p>
-    );
+    return <p className="bb-mini-copy mt-4">{t("empty")}</p>;
   }
 
   return (
@@ -86,10 +76,10 @@ function LiveAlertFeedBody({ workspaceId }: LiveAlertFeedProps) {
                 <div>
                   <p className="font-semibold text-white">{row.title}</p>
                   <p className="bb-mini-copy mt-1">{row.message}</p>
-                  <p className="bb-mini-copy mt-3">Check-in {row.checkInDate}</p>
+                  <p className="bb-mini-copy mt-3">{t("checkInDate", { date: row.checkInDate })}</p>
                 </div>
               </div>
-              <span className="bb-status-pill">{row.severity}</span>
+              <span className="bb-status-pill">{t(`severity.${row.severity}`)}</span>
             </div>
           </article>
         );
@@ -99,6 +89,7 @@ function LiveAlertFeedBody({ workspaceId }: LiveAlertFeedProps) {
 }
 
 export function LiveAlertFeed({ workspaceId }: LiveAlertFeedProps) {
+  const t = useTranslations("liveAlerts");
   const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL?.trim();
   const convexUrlConfigured = isAbsoluteHttpUrl(convexUrl);
   const convexRealtimeAuthReady = isConvexRealtimeAuthReady();
@@ -107,27 +98,20 @@ export function LiveAlertFeed({ workspaceId }: LiveAlertFeedProps) {
     <section className="bb-panel bb-panel-muted p-6" aria-labelledby="live-alerts-heading">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="bb-kicker">Live alerts</p>
+          <p className="bb-kicker">{t("kicker")}</p>
           <h2 id="live-alerts-heading" className="mt-3 text-3xl font-semibold">
-            Watch the pressure points
+            {t("title")}
           </h2>
-          <p className="bb-mini-copy mt-3 max-w-md">
-            Keep the latest projected alerts visible even while the rest of the board is still
-            warming up.
-          </p>
+          <p className="bb-helper-copy mt-3 max-w-md">{t("description")}</p>
         </div>
       </div>
 
       {!workspaceId ? (
-        <p className="bb-mini-copy mt-4">Select a workspace to view live alerts.</p>
+        <p className="bb-mini-copy mt-4">{t("selectWorkspace")}</p>
       ) : !convexUrlConfigured ? (
-        <p className="bb-mini-copy mt-4">
-          Live alerts stay on standby until the Convex URL is configured for this dashboard.
-        </p>
+        <p className="bb-mini-copy mt-4">{t("standbyNoUrl")}</p>
       ) : !convexRealtimeAuthReady ? (
-        <p className="bb-mini-copy mt-4">
-          Live alerts stay on standby until the Convex realtime auth bridge is ready for this dashboard.
-        </p>
+        <p className="bb-mini-copy mt-4">{t("standbyNoBridge")}</p>
       ) : (
         <LiveAlertFeedBody workspaceId={workspaceId} />
       )}

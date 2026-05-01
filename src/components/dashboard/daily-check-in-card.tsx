@@ -2,6 +2,7 @@
 
 import { AlertTriangle, CheckCircle2, LoaderCircle } from "lucide-react";
 import { type FormEvent, useMemo, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import type { DashboardDailyCheckInState } from "@/modules/dashboard/dashboard-data";
 
 type DailyCheckInCardProps = {
@@ -28,17 +29,19 @@ type DailyCheckInSubmissionResponse = {
   }>;
 };
 
-const currencyFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-});
+class DailyCheckInSubmitError extends Error {}
 
-function formatCurrency(value: number | null) {
-  return value === null ? "—" : currencyFormatter.format(value);
+function formatCurrency(value: number | null, locale: string) {
+  return value === null
+    ? "—"
+    : new Intl.NumberFormat(locale, {
+        style: "currency",
+        currency: "USD",
+      }).format(value);
 }
 
-function formatCheckInDate(value: string) {
-  return new Date(`${value}T00:00:00.000Z`).toLocaleDateString("en-US", {
+function formatCheckInDate(value: string, locale: string) {
+  return new Date(`${value}T00:00:00.000Z`).toLocaleDateString(locale, {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -46,17 +49,17 @@ function formatCheckInDate(value: string) {
   });
 }
 
-function formatSubmittedAt(value: string | null) {
+function formatSubmittedAt(value: string | null, locale: string) {
   if (!value) {
-    return "No check-in submitted yet.";
+    return null;
   }
 
-  return `Last submitted ${new Date(value).toLocaleString("en-US", {
+  return new Date(value).toLocaleString(locale, {
     month: "short",
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
-  })}.`;
+  });
 }
 
 export function DailyCheckInCard({
@@ -65,6 +68,8 @@ export function DailyCheckInCard({
   workspaceId,
   workspaceName,
 }: DailyCheckInCardProps) {
+  const locale = useLocale();
+  const t = useTranslations("dailyCheckIn");
   const [plannedSpendInput, setPlannedSpendInput] = useState(
     initialCheckIn.plannedSpend?.toString() ?? "",
   );
@@ -74,15 +79,15 @@ export function DailyCheckInCard({
 
   const statusLabel = useMemo(() => {
     if (!canSubmit) {
-      return "Live submission unavailable";
+      return t("liveSubmissionUnavailable");
     }
 
     if (isSubmitting) {
-      return "Submitting";
+      return t("submitting");
     }
 
-    return checkInState.status === "submitted" ? "Submitted today" : "Ready to submit";
-  }, [canSubmit, checkInState.status, isSubmitting]);
+    return checkInState.status === "submitted" ? t("submittedToday") : t("readyToSubmit");
+  }, [canSubmit, checkInState.status, isSubmitting, t]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -91,10 +96,15 @@ export function DailyCheckInCard({
       return;
     }
 
+    if (plannedSpendInput.trim() === "") {
+      setErrorMessage(t("validationError"));
+      return;
+    }
+
     const plannedSpend = Number(plannedSpendInput);
 
     if (!Number.isFinite(plannedSpend) || plannedSpend < 0) {
-      setErrorMessage("Enter a non-negative planned spend before submitting today’s check-in.");
+      setErrorMessage(t("validationError"));
       return;
     }
 
@@ -117,7 +127,7 @@ export function DailyCheckInCard({
 
       if (!response.ok) {
         const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(payload?.error ?? "Unable to submit today’s check-in right now.");
+        throw new DailyCheckInSubmitError(payload?.error ?? t("submitError"));
       }
 
       const payload = (await response.json()) as DailyCheckInSubmissionResponse;
@@ -143,23 +153,26 @@ export function DailyCheckInCard({
       });
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : "Unable to submit today’s check-in right now.",
+        error instanceof DailyCheckInSubmitError ? error.message : t("submitError"),
       );
     } finally {
       setIsSubmitting(false);
     }
   }
 
+  const resolvedWorkspaceName = workspaceName ?? t("workspaceFallback");
+  const submittedAtLabel = formatSubmittedAt(checkInState.lastSubmittedAt, locale);
+
   return (
     <section className="bb-panel bb-panel-muted p-6" aria-labelledby="daily-check-in-heading">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="bb-kicker">Daily check-in</p>
+          <p className="bb-kicker">{t("kicker")}</p>
           <h2 id="daily-check-in-heading" className="mt-3 text-3xl font-semibold">
-            Submit today&apos;s check-in
+            {t("title")}
           </h2>
-          <p className="bb-mini-copy mt-3 max-w-2xl">
-            Use one planned-spend number to refresh today&apos;s board for {workspaceName ?? "this workspace"}.
+          <p className="bb-helper-copy mt-3 max-w-2xl">
+            {t("description", { workspaceName: resolvedWorkspaceName })}
           </p>
         </div>
         <span className="bb-status-pill">{statusLabel}</span>
@@ -172,7 +185,7 @@ export function DailyCheckInCard({
               htmlFor="dashboard-planned-spend"
               className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-50/75"
             >
-              Planned spend for today
+              {t("plannedSpendLabel")}
             </label>
             <input
               id="dashboard-planned-spend"
@@ -187,13 +200,16 @@ export function DailyCheckInCard({
               placeholder="0.00"
             />
             <p className="bb-mini-copy mt-3">
-              Date locked to {formatCheckInDate(checkInState.checkInDate)} for {workspaceName ?? "this workspace"}.
+              {t("lockedDate", {
+                dateLabel: formatCheckInDate(checkInState.checkInDate, locale),
+                workspaceName: resolvedWorkspaceName,
+              })}
             </p>
           </div>
 
           {!canSubmit ? (
             <p className="bb-mini-copy rounded-[1.2rem] border border-white/10 bg-black/20 px-4 py-3">
-              Live check-in submission needs an authenticated workspace membership.
+              {t("disabledHint")}
             </p>
           ) : null}
 
@@ -207,10 +223,10 @@ export function DailyCheckInCard({
             {isSubmitting ? (
               <>
                 <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
-                Submitting check-in
+                {t("submittingButton")}
               </>
             ) : (
-              "Submit today's check-in"
+              t("submitButton")
             )}
           </button>
         </form>
@@ -220,9 +236,13 @@ export function DailyCheckInCard({
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <span className="font-semibold text-white">
-                  {checkInState.headline ?? "No check-in submitted for this workspace yet."}
+                  {checkInState.headline ?? t("emptyHeadline")}
                 </span>
-                <p className="bb-mini-copy mt-2">{formatSubmittedAt(checkInState.lastSubmittedAt)}</p>
+                <p className="bb-mini-copy mt-2">
+                  {submittedAtLabel
+                    ? t("submittedAt", { submittedAt: submittedAtLabel })
+                    : t("noCheckInYet")}
+                </p>
               </div>
               {checkInState.status === "submitted" ? (
                 <CheckCircle2 className="h-5 w-5 text-emerald-200" aria-hidden="true" />
@@ -233,18 +253,18 @@ export function DailyCheckInCard({
 
             <div className="grid gap-3 md:grid-cols-3">
               <div>
-                <p className="bb-mini-copy">Planned spend</p>
-                <span className="bb-metric-value">{formatCurrency(checkInState.plannedSpend)}</span>
+                <p className="bb-mini-copy">{t("plannedSpendMetric")}</p>
+                <span className="bb-metric-value">{formatCurrency(checkInState.plannedSpend, locale)}</span>
               </div>
               <div>
-                <p className="bb-mini-copy">Open alerts</p>
+                <p className="bb-mini-copy">{t("openAlertsMetric")}</p>
                 <span className="bb-metric-value">{checkInState.alertCount}</span>
               </div>
               <div>
-                <p className="bb-mini-copy">Net cash after plan</p>
-                <span className="bb-metric-value">{formatCurrency(checkInState.netCashflow)}</span>
+                <p className="bb-mini-copy">{t("netCashAfterPlanMetric")}</p>
+                <span className="bb-metric-value">{formatCurrency(checkInState.netCashflow, locale)}</span>
                 {checkInState.cashStatus ? (
-                  <span className="bb-mini-copy mt-1 block capitalize">{checkInState.cashStatus}</span>
+                  <span className="bb-mini-copy mt-1 block">{t(`cashStatus.${checkInState.cashStatus}`)}</span>
                 ) : null}
               </div>
             </div>
@@ -258,16 +278,14 @@ export function DailyCheckInCard({
                     <span className="font-semibold text-white">{alert.title}</span>
                     <p className="bb-mini-copy mt-2">{alert.message}</p>
                   </div>
-                  <span className="bb-status-pill">{alert.severity}</span>
+                  <span className="bb-status-pill">{t(`severity.${alert.severity}`)}</span>
                 </div>
               </article>
             ))
           ) : (
             <article className="bb-compact-card">
-              <span className="font-semibold text-white">No open alerts from today&apos;s check-in.</span>
-              <p className="bb-mini-copy mt-2">
-                Submit the next check-in whenever this workspace needs a fresh read.
-              </p>
+              <span className="font-semibold text-white">{t("emptyAlertsTitle")}</span>
+              <p className="bb-mini-copy mt-2">{t("emptyAlertsDescription")}</p>
             </article>
           )}
         </div>

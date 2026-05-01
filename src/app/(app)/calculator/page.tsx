@@ -11,7 +11,7 @@ export default async function CalculatorPage() {
       <section className="mx-auto max-w-7xl">
         <p className="bb-kicker">{messages.calculatorPage.eyebrow}</p>
         <h1 className="mt-3 text-4xl font-semibold">{messages.calculatorPage.title}</h1>
-        <p className="bb-copy mt-3 max-w-xl text-sm">
+        <p className="bb-helper-copy mt-3 max-w-xl text-sm">
           {messages.calculatorPage.description}
         </p>
         <div className="mt-8">

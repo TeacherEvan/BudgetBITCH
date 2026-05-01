@@ -8,6 +8,7 @@ const protectedApiPathPrefixes = [
   "/api/v1/check-ins",
   "/api/v1/integrations",
 ];
+const e2eAuthOverrideCookieName = "budgetbitch:e2e-auth-state";
 
 function isProtectedPath(pathname: string) {
   return [...protectedPathPrefixes, ...protectedApiPathPrefixes].some(
@@ -36,10 +37,31 @@ function getRedirectTarget(request: NextRequest) {
   return `${pathname}${search}`;
 }
 
+function hasSignedInE2eOverride(request: NextRequest) {
+  if (process.env.NODE_ENV === "production") {
+    return false;
+  }
+
+  const cookieHeader = request.headers.get("cookie");
+
+  if (!cookieHeader) {
+    return false;
+  }
+
+  return cookieHeader
+    .split(";")
+    .map((cookie) => cookie.trim())
+    .some((cookie) => cookie === `${e2eAuthOverrideCookieName}=signed-in`);
+}
+
 export default auth((request) => {
   const pathname = getRequestPathname(request as NextRequest);
 
   if (!isProtectedPath(pathname)) {
+    return NextResponse.next();
+  }
+
+  if (hasSignedInE2eOverride(request as NextRequest)) {
     return NextResponse.next();
   }
 

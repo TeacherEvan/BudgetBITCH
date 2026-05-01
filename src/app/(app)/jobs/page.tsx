@@ -1,11 +1,8 @@
 import { JobCard } from "@/components/jobs/job-card";
 import { JobsFilterPanel } from "@/components/jobs/jobs-filter-panel";
 import { MobilePanelFrame } from "@/components/mobile/mobile-panel-frame";
-import { getPrismaClient } from "@/lib/prisma";
-import { extractJobSignalsFromBlueprint } from "@/modules/jobs/blueprint-bridge";
-import { listJobs } from "@/modules/jobs/job-catalog";
-import { scoreJobsForBlueprint } from "@/modules/jobs/job-fit-engine";
 import type { JobSearchFilters } from "@/modules/jobs/job-schema";
+import { listRecommendedJobs, type RecommendedJob } from "@/modules/jobs/recommended-jobs";
 import { Clock3, Compass, Rocket, Sparkles, type LucideIcon } from "lucide-react";
 
 const defaultFilters: JobSearchFilters = {
@@ -14,8 +11,6 @@ const defaultFilters: JobSearchFilters = {
   benefits: [],
   fitGoals: ["raise_income_fast", "stabilize_schedule"],
 };
-
-type RecommendedJob = Awaited<ReturnType<typeof getRecommendedJobs>>[number];
 
 type JobLaneDefinition = {
   key: string;
@@ -29,78 +24,25 @@ const jobLaneDefinitions: JobLaneDefinition[] = [
   {
     key: "build_new_career_path",
     title: "Career pivot lane",
-    summary: "Roles that add cleaner systems experience and the next rung up.",
+    summary: "Cleaner systems experience with room to move up.",
     icon: Compass,
     matches: (job) => job.fitGoals.includes("build_new_career_path"),
   },
   {
     key: "raise_income_fast",
     title: "Fast cash lane",
-    summary: "Highest-speed pay bumps and low-friction second-income routes.",
+    summary: "Faster pay bumps and low-friction extra income.",
     icon: Rocket,
     matches: (job) => job.fitGoals.includes("raise_income_fast"),
   },
   {
     key: "stabilize_schedule",
     title: "Steady routine lane",
-    summary: "Predictable hours and fewer schedule surprises for the household.",
+    summary: "Predictable hours with fewer schedule swings.",
     icon: Clock3,
     matches: (job) => job.fitGoals.includes("stabilize_schedule"),
   },
 ];
-
-function shouldUseSeededJobFallback(error: unknown) {
-  return (
-    error instanceof Error &&
-    (error.message === "DATABASE_URL is not configured for Prisma runtime access." ||
-      error.name.startsWith("PrismaClient"))
-  );
-}
-
-async function getRecommendedJobs() {
-  try {
-    const prisma = getPrismaClient();
-    const latestBlueprint = await prisma.moneyBlueprintSnapshot.findFirst({
-      where: { workspaceId: "demo_workspace" },
-      orderBy: { createdAt: "desc" },
-    });
-
-    const blueprintJson =
-      latestBlueprint &&
-      typeof latestBlueprint.blueprintJson === "object" &&
-      latestBlueprint.blueprintJson !== null
-        ? latestBlueprint.blueprintJson
-        : {};
-
-    const blueprintSignals = extractJobSignalsFromBlueprint(
-      blueprintJson as {
-        priorityStack?: string[];
-        riskWarnings?: string[];
-        learnModuleKeys?: string[];
-      },
-    );
-
-    return scoreJobsForBlueprint({
-      blueprint: {
-        priorityStack: blueprintSignals.priorityStack,
-        riskWarnings: blueprintSignals.riskWarnings,
-      },
-      jobs: listJobs(),
-    });
-  } catch (error) {
-    if (shouldUseSeededJobFallback(error)) {
-      return scoreJobsForBlueprint({
-        blueprint: {
-          priorityStack: ["cover_essentials", "stabilize_cash_flow"],
-          riskWarnings: ["income_volatility_risk"],
-        },
-        jobs: listJobs(),
-      });
-    }
-
-    throw error;
-  }
-}
 
 function groupJobsIntoLanes(recommendedJobs: RecommendedJob[]) {
   const assignedJobs = new Set<string>();
@@ -137,23 +79,23 @@ function groupJobsIntoLanes(recommendedJobs: RecommendedJob[]) {
 }
 
 export default async function JobsPage() {
-  const recommendedJobs = await getRecommendedJobs();
+  const recommendedJobs = await listRecommendedJobs();
   const jobLanes = groupJobsIntoLanes(recommendedJobs);
   const quickStats = [
     {
       label: "Active lanes",
       value: `${jobLanes.length}`,
-      cue: "Fast cash, steady routine, or a bigger pivot.",
+      cue: "Relief routes live.",
     },
     {
-      label: "Locked filter",
+      label: "Board preference",
       value: defaultFilters.workplace ?? "Any",
-      cue: "Remote-first and compact by default.",
+      cue: "Remote-first.",
     },
     {
       label: "Top board pay",
       value: recommendedJobs[0]?.salaryLabel ?? "Live",
-      cue: "Highest-scoring route in the current stack.",
+      cue: "Top live salary.",
     },
   ];
 
@@ -168,8 +110,7 @@ export default async function JobsPage() {
               Quick job routes for real-life pressure.
             </h1>
             <p className="mt-3 max-w-3xl text-sm text-emerald-50/85 sm:text-base">
-              Scan the board by the kind of relief you need next instead of reading a wall of
-              job copy.
+                  Scan by relief type, then open the full brief.
             </p>
           </div>
 
@@ -210,7 +151,7 @@ export default async function JobsPage() {
                 </h2>
               </div>
               <p className="text-sm text-emerald-50/75">
-                Each card sits in the first lane where it helps the blueprint fastest.
+                Each card lands in the first lane that helps fastest.
               </p>
             </div>
 
@@ -248,6 +189,7 @@ export default async function JobsPage() {
                           company: job.company,
                           location: job.location,
                           salaryLabel: job.salaryLabel,
+                          hasSpecificFitCue: job.hasSpecificFitCue,
                           fitSummary: job.fitSummary,
                           summary: job.summary,
                           workplace: job.workplace,

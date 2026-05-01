@@ -26,45 +26,33 @@ function resolveLessonSet(keys: LearnModuleKey[]) {
     .filter((lesson): lesson is LearnLesson => Boolean(lesson));
 }
 
-function buildExplainers(input: ResolveLearnRecommendationsInput) {
-  const explainers: string[] = [];
+function derivePrimaryKeys(input: ResolveLearnRecommendationsInput) {
+  const requestedKeys = unique(input.learnModuleKeys);
+  const resolvedRequestedKeys = resolveLessonSet(requestedKeys).map((lesson) => lesson.key);
 
-  if (
-    input.priorityStack.includes("cover_essentials") &&
-    input.priorityStack.includes("reduce_debt_damage")
-  ) {
-    explainers.push(
-      "These lessons are recommended because your blueprint prioritizes essentials and debt damage control.",
-    );
+  if (resolvedRequestedKeys.length > 0) {
+    return resolvedRequestedKeys;
   }
 
-  if (input.riskWarnings.includes("income_volatility_risk")) {
-    explainers.push(
-      "Your blueprint shows income volatility risk, so the lesson order emphasizes stability and low-month planning.",
-    );
-  }
+  const blueprintSignals = new Set([
+    ...input.priorityStack,
+    ...input.riskWarnings,
+  ]);
 
-  if (input.riskWarnings.includes("benefits_change_risk")) {
-    explainers.push(
-      "Your blueprint flags benefits-change risk, so the recommendations emphasize documentation and timing awareness.",
-    );
-  }
+  const signalMatchedKeys = listLearnModules()
+    .filter((lesson) =>
+      lesson.blueprintSignals.some((signal) => blueprintSignals.has(signal)),
+    )
+    .map((lesson) => lesson.key)
+    .slice(0, 4);
 
-  if (explainers.length === 0) {
-    explainers.push(
-      "These lessons are matched to your current blueprint priorities so the learning stays practical.",
-    );
-  }
-
-  return explainers;
+  return signalMatchedKeys.length > 0 ? signalMatchedKeys : evergreenFallbackKeys;
 }
 
 export function resolveLearnRecommendations(
   input: ResolveLearnRecommendationsInput,
 ) {
-  const requestedKeys = unique(input.learnModuleKeys);
-  const primaryKeys =
-    requestedKeys.length > 0 ? requestedKeys : evergreenFallbackKeys;
+  const primaryKeys = derivePrimaryKeys(input);
   const primary = resolveLessonSet(primaryKeys);
   const evergreen = listLearnModules().filter(
     (lesson) => !primary.some((primaryLesson) => primaryLesson.key === lesson.key),
@@ -73,9 +61,5 @@ export function resolveLearnRecommendations(
   return {
     primary,
     evergreen,
-    explainers: buildExplainers({
-      ...input,
-      learnModuleKeys: requestedKeys,
-    }),
   };
 }

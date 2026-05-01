@@ -11,7 +11,7 @@ const rawLearnModules = [
     title: "Budgeting Basics",
     category: "budgeting",
     tone: "chaotic_comedy",
-    summary: "Give every dollar a job before your money wanders off wearing sunglasses.",
+    summary: "Plan your essentials, savings, and flexible spending before the month starts.",
     whyItMatters:
       "Budgeting is the base layer for essentials, optional spending, and emergency breathing room.",
     blueprintSignals: ["cover_essentials", "build_emergency_buffer"],
@@ -38,7 +38,7 @@ const rawLearnModules = [
     title: "Income Variability",
     category: "income",
     tone: "chaotic_comedy",
-    summary: "When your paycheck behaves like weather, your budget needs umbrellas.",
+    summary: "Build a spending plan that works even when income changes month to month.",
     whyItMatters:
       "Variable income requires buffer planning, low-month survival rules, and realistic bill timing.",
     blueprintSignals: ["stabilize_cash_flow", "income_volatility_risk"],
@@ -65,7 +65,7 @@ const rawLearnModules = [
     title: "Debt Triage",
     category: "debt",
     tone: "chaotic_comedy",
-    summary: "Debt gets louder when ignored, so this lesson teaches orderly panic management.",
+    summary: "Sort urgent debt pressure first so you can protect essentials and minimums.",
     whyItMatters:
       "When debt pressure is high, protecting essentials and minimums matters more than fantasy spreadsheets.",
     blueprintSignals: ["reduce_debt_damage", "high_debt_pressure"],
@@ -92,7 +92,7 @@ const rawLearnModules = [
     title: "Benefits Protection",
     category: "benefits",
     tone: "chaotic_comedy",
-    summary: "Keep support programs from disappearing because of accidental paperwork gymnastics.",
+    summary: "Keep renewal dates, documents, and reporting steps clear so support stays in place.",
     whyItMatters:
       "Households with benefits dependence need planning that avoids preventable support disruptions.",
     blueprintSignals: ["protect_benefits", "benefits_dependency"],
@@ -119,7 +119,7 @@ const rawLearnModules = [
     title: "Investing Basics",
     category: "investing",
     tone: "chaotic_comedy",
-    summary: "How to stop confusing long-term investing with glittery guessing.",
+    summary: "Start investing only after cash flow and emergency savings are steady.",
     whyItMatters:
       "A stable investing habit works better when it sits on top of cash flow and emergency reserves.",
     blueprintSignals: ["build_investing_habit", "build_emergency_buffer"],
@@ -146,7 +146,7 @@ const rawLearnModules = [
     title: "Crypto Risk",
     category: "speculation",
     tone: "chaotic_comedy",
-    summary: "Volatility, hype, and the difference between curiosity and financial self-sabotage.",
+    summary: "Treat speculative assets as optional risk, not money needed for bills.",
     whyItMatters:
       "Speculative assets can magnify risk when essentials and buffers are not already secure.",
     blueprintSignals: ["build_emergency_buffer", "stabilize_cash_flow"],
@@ -173,7 +173,7 @@ const rawLearnModules = [
     title: "NFT Speculation",
     category: "speculation",
     tone: "chaotic_comedy",
-    summary: "Scarcity stories are not the same thing as stable value.",
+    summary: "Keep hype purchases separate from savings and essential spending.",
     whyItMatters:
       "Hype-driven assets can distract from boring but necessary financial priorities.",
     blueprintSignals: ["cover_essentials", "build_emergency_buffer"],
@@ -200,7 +200,7 @@ const rawLearnModules = [
     title: "Gold Basics",
     category: "commodities",
     tone: "chaotic_comedy",
-    summary: "Shiny metal can play a role, but it is not a magical anti-chaos amulet.",
+    summary: "Know what role an asset plays before you add it to your plan.",
     whyItMatters:
       "Commodity exposure should be understood as one piece of a broader risk picture, not a universal answer.",
     blueprintSignals: ["build_investing_habit", "stability"],
@@ -227,7 +227,7 @@ const rawLearnModules = [
     title: "Oil and Commodities",
     category: "commodities",
     tone: "chaotic_comedy",
-    summary: "Commodity prices ripple into daily life even when you never trade them directly.",
+    summary: "Notice which budget categories move fastest when prices rise.",
     whyItMatters:
       "Understanding commodity swings helps explain cost spikes in transport, goods, and household budgets.",
     blueprintSignals: ["stabilize_cash_flow", "inflation_risk"],
@@ -254,7 +254,7 @@ const rawLearnModules = [
     title: "Labor Income",
     category: "labor",
     tone: "chaotic_comedy",
-    summary: "Your paycheck is a financial engine, not just a line item that appears by wizardry.",
+    summary: "Track the pay drivers that make your income stable or fragile.",
     whyItMatters:
       "Most financial plans are powered by labor income, so pay stability and growth deserve direct attention.",
     blueprintSignals: ["grow_income", "stabilize_cash_flow"],
@@ -281,7 +281,7 @@ const rawLearnModules = [
     title: "Taxes Basics",
     category: "taxes",
     tone: "chaotic_comedy",
-    summary: "Taxes are less mysterious when you stop treating every form like an ancient curse tablet.",
+    summary: "Plan from take-home pay and keep tax deadlines visible.",
     whyItMatters:
       "Tax surprises can wreck cash flow if withholding, self-employment obligations, or due dates are ignored.",
     blueprintSignals: ["stabilize_cash_flow", "grow_income"],
@@ -308,7 +308,7 @@ const rawLearnModules = [
     title: "Inflation and Opportunity Cost",
     category: "behavior",
     tone: "chaotic_comedy",
-    summary: "Why the price of waiting and the cost of drifting both matter.",
+    summary: "Small spending choices matter because money can only do one job at a time.",
     whyItMatters:
       "Inflation erodes idle cash over time, while every dollar spent one way cannot do another job.",
     blueprintSignals: ["build_emergency_buffer", "cover_essentials"],
@@ -335,7 +335,7 @@ const rawLearnModules = [
     title: "Money Behavior",
     category: "behavior",
     tone: "chaotic_comedy",
-    summary: "Your habits, defaults, and moods are secretly in the group chat with your bank account.",
+    summary: "Change one trigger or habit so good money choices need less effort.",
     whyItMatters:
       "Financial progress depends on systems and behavior, not just knowledge.",
     blueprintSignals: ["cover_essentials", "stability"],

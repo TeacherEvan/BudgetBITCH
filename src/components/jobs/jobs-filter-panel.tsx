@@ -18,19 +18,19 @@ type SummaryChip = {
 export function JobsFilterPanel({ filters, jobCount, laneCount }: JobsFilterPanelProps) {
   const summaryChips: SummaryChip[] = [
     {
-      label: "Workplace",
+      label: "Preferred workplace",
       value: filters.workplace ?? "Any",
       icon: MapPin,
     },
     {
-      label: "Salary floor",
+      label: "Pay target",
       value:
         typeof filters.salaryMin === "number" ? `$${filters.salaryMin.toLocaleString()}` : "Any",
       icon: DollarSign,
     },
     {
-      label: "Route style",
-      value: laneCount === 1 ? "1 lane live" : `${laneCount} lanes live`,
+      label: "Lane count",
+      value: laneCount === 1 ? "1 lane" : `${laneCount} lanes`,
       icon: Filter,
     },
   ];
@@ -42,12 +42,8 @@ export function JobsFilterPanel({ filters, jobCount, laneCount }: JobsFilterPane
     >
       <p className="text-sm uppercase tracking-[0.25em] text-yellow-200">Route brief</p>
       <h2 id="jobs-filter-summary" className="mt-2 text-xl font-semibold text-white">
-        Compact filter summary
+        Compact board cues
       </h2>
-      <p className="mt-2 text-sm text-emerald-50/75">
-        Keep the board tight: remote-first, salary-floor guarded, and matched to the two most
-        urgent blueprint goals.
-      </p>
 
       <div className="mt-5 grid gap-3">
         {summaryChips.map(({ label, value, icon: Icon }) => (
@@ -80,17 +76,18 @@ export function JobsFilterPanel({ filters, jobCount, laneCount }: JobsFilterPane
 
       <HomeLocationCard
         kicker="Home base"
-        title="Sticky home location"
-        description="Jobs can now reuse the same saved home base that Start Smart and dashboard read."
-        emptyStateCopy="No home base saved yet. Set one in Start Smart so regional job cues have one shared anchor."
+        title="Saved home base"
+        description="Use the same saved home base across Start Smart and jobs."
+        emptyStateCopy="No home base saved yet. Set one in Start Smart."
         actionHref="/start-smart"
         actionLabel="Open setup wizard"
         className="mt-5 p-4"
       />
 
-      <p className="mt-5 text-sm text-emerald-50/75">
-        {jobCount} seeded matches are already sorted into fast-scan recommendation lanes.
-      </p>
+      <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+        <p className="text-xs uppercase tracking-[0.2em] text-emerald-100/65">Recommended matches</p>
+        <p className="mt-1 text-sm font-medium text-white">{jobCount} recommended matches</p>
+      </div>
     </section>
   );
 }

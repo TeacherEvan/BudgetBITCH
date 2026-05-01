@@ -36,13 +36,13 @@ test("user can open Start Smart and generate a survival blueprint", async ({
     name: /open money snapshot/i,
   });
   await openMoneySnapshotButton.click({ force: true });
-  await expect(page.getByRole("heading", { name: /only the minimum survival inputs/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /only the core survival inputs/i })).toBeVisible();
   const buildBlueprintButton = page.getByRole("button", {
     name: /build my survival blueprint/i,
   });
   await buildBlueprintButton.click({ force: true });
 
   await expect(page.getByText("Money Survival Blueprint")).toBeVisible();
-  await expect(page.getByText(/what must i cover first/i)).toBeVisible();
+  await expect(page.getByRole("heading", { name: /first moves/i })).toBeVisible();
   await expect(page.getByText("Build starter emergency buffer")).toBeVisible();
 });
