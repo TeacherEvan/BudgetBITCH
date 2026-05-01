@@ -169,4 +169,45 @@ describe("MoneyDashboard", () => {
       expect(refreshMock).toHaveBeenCalled();
     });
   });
+
+  it("saves job preference signals from the local panel and refreshes the dashboard", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ jobPreference: { id: "job-pref-1" } }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<MoneyDashboard data={createDashboardData()} />);
+
+    fireEvent.click(screen.getByRole("tab", { name: /local/i }));
+    fireEvent.change(screen.getByLabelText(/requested roles/i), {
+      target: { value: "teacher, dog walker" },
+    });
+    fireEvent.change(screen.getByLabelText(/certifications/i), {
+      target: { value: "RN" },
+    });
+    fireEvent.click(screen.getByRole("checkbox", { name: /teaching/i }));
+    fireEvent.submit(screen.getByRole("button", { name: /save job signals/i }).closest("form")!);
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/v1/personalization/job-preferences",
+        expect.objectContaining({ method: "POST" }),
+      );
+      expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+        body: JSON.stringify({
+          roleInterests: ["teacher", "dog walker"],
+          certifications: ["RN"],
+          licenseTypes: [],
+          careWorkInterest: false,
+          childCareInterest: false,
+          petCareInterest: false,
+          nursingInterest: false,
+          teachingInterest: true,
+          notificationEnabled: true,
+        }),
+      });
+      expect(refreshMock).toHaveBeenCalled();
+    });
+  });
 });

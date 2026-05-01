@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type {
   DashboardPageData,
+  DashboardJobPreferenceSummary,
   DashboardPersonalizationProfile,
 } from "@/modules/dashboard/dashboard-data";
 
@@ -89,6 +90,27 @@ function buildInitialPrivacyForm(profile: DashboardPersonalizationProfile | null
   };
 }
 
+function buildInitialJobPreferenceForm(jobPreferences: DashboardJobPreferenceSummary) {
+  return {
+    roleInterests: jobPreferences.roleInterests.join(", "),
+    certifications: jobPreferences.certifications.join(", "),
+    licenseTypes: jobPreferences.licenseTypes.join(", "),
+    careWorkInterest: jobPreferences.careWorkInterest,
+    childCareInterest: jobPreferences.childCareInterest,
+    petCareInterest: jobPreferences.petCareInterest,
+    nursingInterest: jobPreferences.nursingInterest,
+    teachingInterest: jobPreferences.teachingInterest,
+    notificationEnabled: jobPreferences.notificationEnabled,
+  };
+}
+
+function splitList(value: string) {
+  return value
+    .split(/[,\n]/)
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
 export function MoneyDashboard({ data }: MoneyDashboardProps) {
   const router = useRouter();
   const [activePanel, setActivePanel] = useState<PanelId>("record");
@@ -110,9 +132,14 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
   const [locationState, setLocationState] = useState<SubmitState>({ status: "idle", message: null });
   const [privacyForm, setPrivacyForm] = useState(buildInitialPrivacyForm(data.personalization.profile));
   const [privacyState, setPrivacyState] = useState<SubmitState>({ status: "idle", message: null });
+  const [jobPreferenceForm, setJobPreferenceForm] = useState(
+    buildInitialJobPreferenceForm(data.personalization.jobPreferences),
+  );
+  const [jobPreferenceState, setJobPreferenceState] = useState<SubmitState>({ status: "idle", message: null });
   const [isSubmittingExpense, setIsSubmittingExpense] = useState(false);
   const [isSubmittingLocation, setIsSubmittingLocation] = useState(false);
   const [isSubmittingPrivacy, setIsSubmittingPrivacy] = useState(false);
+  const [isSubmittingJobPreferences, setIsSubmittingJobPreferences] = useState(false);
 
   const workspaceName = data.activeWorkspace?.name ?? "No workspace selected";
   const localAreaLabel = data.homeLocation?.label ?? data.localAreaLabel;
@@ -203,6 +230,39 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
       });
     } finally {
       setIsSubmittingPrivacy(false);
+    }
+  }
+
+  async function handleJobPreferenceSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    setIsSubmittingJobPreferences(true);
+    setJobPreferenceState({ status: "idle", message: null });
+
+    try {
+      await postJson("/api/v1/personalization/job-preferences", {
+        roleInterests: splitList(jobPreferenceForm.roleInterests),
+        certifications: splitList(jobPreferenceForm.certifications),
+        licenseTypes: splitList(jobPreferenceForm.licenseTypes),
+        careWorkInterest: jobPreferenceForm.careWorkInterest,
+        childCareInterest: jobPreferenceForm.childCareInterest,
+        petCareInterest: jobPreferenceForm.petCareInterest,
+        nursingInterest: jobPreferenceForm.nursingInterest,
+        teachingInterest: jobPreferenceForm.teachingInterest,
+        notificationEnabled: jobPreferenceForm.notificationEnabled,
+      });
+      setJobPreferenceState({
+        status: "success",
+        message: "Job preference signals saved. Matches will refresh for your stated interests.",
+      });
+      router.refresh();
+    } catch (error) {
+      setJobPreferenceState({
+        status: "error",
+        message: error instanceof Error ? error.message : "Job preference save failed.",
+      });
+    } finally {
+      setIsSubmittingJobPreferences(false);
     }
   }
 
@@ -601,6 +661,94 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
               </form>
 
               <div className="mt-5 grid gap-3">
+                <article className="rounded-[22px] border border-amber-100/10 bg-black/18 p-4">
+                  <p className={microLabelClass()}>Match signals</p>
+                  <h3 className="mt-2 text-lg font-semibold text-stone-50">Job preference signals</h3>
+                  <p className="mt-2 text-sm leading-6 text-stone-200/75">
+                    Matches only use the roles, licenses, certifications, and care-work interests you explicitly save here.
+                  </p>
+
+                  <form className="mt-4 grid gap-3" onSubmit={handleJobPreferenceSubmit}>
+                    <label className="grid gap-2 text-sm font-medium text-stone-100">
+                      Requested roles
+                      <input
+                        value={jobPreferenceForm.roleInterests}
+                        onChange={(event) =>
+                          setJobPreferenceForm((current) => ({ ...current, roleInterests: event.target.value }))
+                        }
+                        className="rounded-2xl border border-amber-100/15 bg-black/20 px-4 py-3 text-sm text-stone-100 outline-none"
+                        placeholder="bookkeeping, nurse, dog walker"
+                      />
+                    </label>
+                    <label className="grid gap-2 text-sm font-medium text-stone-100">
+                      Certifications
+                      <input
+                        value={jobPreferenceForm.certifications}
+                        onChange={(event) =>
+                          setJobPreferenceForm((current) => ({ ...current, certifications: event.target.value }))
+                        }
+                        className="rounded-2xl border border-amber-100/15 bg-black/20 px-4 py-3 text-sm text-stone-100 outline-none"
+                        placeholder="RN, CPR"
+                      />
+                    </label>
+                    <label className="grid gap-2 text-sm font-medium text-stone-100">
+                      License types
+                      <input
+                        value={jobPreferenceForm.licenseTypes}
+                        onChange={(event) =>
+                          setJobPreferenceForm((current) => ({ ...current, licenseTypes: event.target.value }))
+                        }
+                        className="rounded-2xl border border-amber-100/15 bg-black/20 px-4 py-3 text-sm text-stone-100 outline-none"
+                        placeholder="registered_nurse, state_teaching_license"
+                      />
+                    </label>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {([
+                        ["careWorkInterest", "General care work"],
+                        ["childCareInterest", "Childcare"],
+                        ["petCareInterest", "Pet care"],
+                        ["nursingInterest", "Nursing"],
+                        ["teachingInterest", "Teaching"],
+                        ["notificationEnabled", "Keep job notifications on"],
+                      ] as const).map(([key, label]) => (
+                        <label
+                          key={key}
+                          className="flex items-start gap-3 rounded-[22px] border border-amber-100/10 bg-black/18 px-4 py-3 text-sm text-stone-100"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={jobPreferenceForm[key]}
+                            onChange={(event) =>
+                              setJobPreferenceForm((current) => ({ ...current, [key]: event.target.checked }))
+                            }
+                            className="mt-1 h-4 w-4 rounded border-amber-300/40 bg-black/20"
+                          />
+                          <span>{label}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        type="submit"
+                        disabled={isSubmittingJobPreferences}
+                        className="rounded-full border border-amber-300/60 bg-amber-200/15 px-5 py-2.5 text-sm font-semibold text-amber-50 transition hover:bg-amber-200/22 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isSubmittingJobPreferences ? "Saving job signals..." : "Save job signals"}
+                      </button>
+                      {jobPreferenceState.message ? (
+                        <p
+                          className={[
+                            "text-sm",
+                            jobPreferenceState.status === "error" ? "text-rose-300" : "text-emerald-300",
+                          ].join(" ")}
+                        >
+                          {jobPreferenceState.message}
+                        </p>
+                      ) : null}
+                    </div>
+                  </form>
+                </article>
+
                 <article className="rounded-[22px] border border-amber-100/10 bg-black/18 p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>

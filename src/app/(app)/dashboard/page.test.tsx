@@ -213,6 +213,9 @@ describe("DashboardPage", () => {
     expect(screen.getByRole("textbox", { name: /^state$/i })).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: /store only city and state/i })).toBeChecked();
     expect(screen.getByRole("button", { name: /save home area/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /job preference signals/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/requested roles/i)).toHaveValue("bookkeeping");
+    expect(screen.getByRole("button", { name: /save job signals/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /open official job search/i })).toHaveAttribute(
       "href",
       "https://www.indeed.com/jobs?q=budget+assistant&l=Austin%2C%20TX",

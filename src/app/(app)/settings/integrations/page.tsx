@@ -88,7 +88,7 @@ export default async function IntegrationsPage() {
             <div
               key={guardrail.label}
               title={guardrail.title}
-              className="rounded-[24px] border border-white/10 bg-white/6 px-4 py-3 text-sm text-emerald-50/80"
+              className="rounded-3xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-emerald-50/80"
             >
               {guardrail.label}
             </div>

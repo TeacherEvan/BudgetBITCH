@@ -36,7 +36,7 @@ export function ProviderCard({ provider, actions }: ProviderCardProps) {
     });
 
   return (
-    <article className="rounded-[24px] border border-white/10 bg-black/25 p-5 backdrop-blur">
+    <article className="rounded-3xl border border-white/10 bg-black/25 p-5 backdrop-blur">
       <div>
         <p className="text-xs uppercase tracking-[0.25em] text-yellow-200">
           {t(`categoryLabel.${provider.category}`)}

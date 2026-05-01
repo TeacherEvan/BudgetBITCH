@@ -1,15 +1,18 @@
 # Design: Accounting Home Reset
+
 **Date:** 2026-05-01
 **Status:** Approved
 **Scope Tier:** V1
 **Author:** Brainstorm session with user
 
 ## Problem Statement
+
 BudgetBITCH currently feels too integration-led and scattered: the dashboard points users toward many outside providers while claiming product value that is not fully present in the app itself. V1 should make the app-owned accounting core the source of truth: recording expenses, tracking budgets, giving practical budgeting advice, and using coarse location data for useful job/news routes without collecting marketing data.
 
 The primary user is a mobile-first person who needs a private, direct money control panel: fast expense capture, clear budget status, calm advice, and safe links to local opportunities and finance news.
 
 ## Success Metrics
+
 - [ ] Users can record an expense from a compact mobile panel without page scrolling.
 - [ ] Dashboard budget status is driven by durable app-owned records, not placeholder claims.
 - [ ] Integrations no longer dominate primary navigation or dashboard messaging.
@@ -19,8 +22,9 @@ The primary user is a mobile-first person who needs a private, direct money cont
 - [ ] Lint, unit tests, build, and targeted Playwright coverage pass for changed surfaces.
 
 ## Constraints
+
 | Category | Constraint | Source |
-|----------|------------|--------|
+| -------- | ---------- | ------ |
 | Product | App-owned accounting features must become the center of gravity | User request |
 | UX | Core money screens must be mobile-focused and avoid page scrolling | User request |
 | UX | Inputs should favor dropdowns, pickers, segmented controls, and fixed active panels | User request |
@@ -35,6 +39,7 @@ The primary user is a mobile-first person who needs a private, direct money cont
 ## Design
 
 ### Architecture Overview
+
 V1 reshapes the app into an app-owned accounting product. The primary dashboard becomes a fixed mobile control panel with four zones:
 
 1. **Record**: fast expense entry and recent recorded activity.
@@ -47,10 +52,11 @@ The dashboard must only claim what is backed by real records. Daily check-in rem
 Integrations move out of the main product experience. V1 can keep official login/docs links where helpful, but the connection-style hub should not be a primary destination unless a provider is actually implemented, privacy-reviewed, and maintainable.
 
 ### Components
+
 Recommended component boundaries:
 
 | Component | Responsibility |
-|-----------|----------------|
+| --------- | -------------- |
 | `MoneyDashboard` | Fixed mobile shell, active panel state, top status strip, bottom actions |
 | `ExpenseEntrySheet` | Compact dropdown-driven expense capture |
 | `BudgetSnapshotPanel` | Category status, remaining money, bills, cashflow summary |
@@ -62,6 +68,7 @@ Recommended component boundaries:
 The fixed mobile model should use one active panel at a time. Details should use dropdowns, segmented controls, paging, or compact drill-ins rather than long stacked page sections.
 
 ### Data Flow
+
 1. User records an expense with amount, category, merchant, date, payment source, and optional note.
 2. Durable app-owned records are written through server-authorized workspace APIs/modules.
 3. Budget engine recalculates category spend, remaining amounts, bill pressure, and cashflow state.
@@ -71,6 +78,7 @@ The fixed mobile model should use one active panel at a time. Details should use
 7. App stores only city/state and uses it to generate official job search links and feed-first local headline links.
 
 ### Accounting Features For V1
+
 V1 should cover the practical top needs of a budgeting app without overbuilding:
 
 - Expense tracking with fast manual entry.
@@ -85,6 +93,7 @@ V1 should cover the practical top needs of a budgeting app without overbuilding:
 - Simple progress review over the current budget period.
 
 ### Advice Rules
+
 Advice should be deterministic, explainable, and tied to user records. It may reference popular budgeting patterns, including:
 
 - 50/30/20 for broad allocation guidance.
@@ -97,6 +106,7 @@ Advice should be deterministic, explainable, and tied to user records. It may re
 Advice copy should stay short and calm. Deeper explanations should link to existing or new Learn cards instead of crowding the dashboard.
 
 ### Location, Jobs, And News
+
 The app should request location in plain language and make the privacy tradeoff obvious. V1 stores city/state only.
 
 Jobs should use location to generate official external search links to reputable job sites or employer/search pages. The app should not imply it owns live job inventory unless it does.
@@ -104,6 +114,7 @@ Jobs should use location to generate official external search links to reputable
 News should be RSS/feed-first. Where feeds are available, ingest only headline/title, source, URL, and timestamp. HTML scraping may be considered later only for vetted safe sources and only for headline/link extraction. Full article content should not be copied into the app. Users should click through to source sites.
 
 ### Privacy Disclosures
+
 Privacy copy should appear in onboarding/location request/settings and be reflected by implementation:
 
 - No marketing data of any kind is recorded.
@@ -114,16 +125,18 @@ Privacy copy should appear in onboarding/location request/settings and be reflec
 - Users can update or clear their stored home location.
 
 ## Alternatives Considered
+
 | Approach | Pros | Cons | Why Rejected |
-|----------|------|------|--------------|
+| -------- | ---- | ---- | ------------ |
 | Local Survival Board | Gives jobs/news equal weight with money tools | Risks keeping the app scattered | Accounting core must become the center of gravity |
 | Privacy Ledger First | Strong trust posture and simpler data model | Delays advice/local usefulness | V1 should include practical advice and location utility |
 | Minimal De-integration | Lowest implementation cost | Does not solve the dashboard truthfulness problem deeply enough | User requested a major critical design change |
 | Live API-heavy Local Data | Fresher local content | Higher maintenance, source, and privacy risk | V1 should prefer RSS/feed-first headline links and safe external routing |
 
 ## Risk Analysis
+
 | Risk | Probability | Impact | Mitigation | Owner |
-|------|-------------|--------|------------|-------|
+| ---- | ----------- | ------ | ---------- | ----- |
 | Privacy claims exceed actual behavior | Medium | High | Tie copy to explicit data inventory and tests; avoid marketing trackers | Implementation owner |
 | No-scroll mobile panels become cramped | Medium | Medium | Use one active panel, summaries, dropdowns, drill-ins, and responsive constraints | UI owner |
 | Existing dashboard/check-in claims remain misleading | Medium | High | Replace placeholder claims with real record-driven state | Product/UI owner |
@@ -132,8 +145,9 @@ Privacy copy should appear in onboarding/location request/settings and be reflec
 | Integration de-emphasis breaks expected routes/tests | Medium | Medium | Keep reference routes or redirects where needed; update navigation tests | App owner |
 
 ## Complexity Budget
+
 | Element | Cost Level | Justification |
-|---------|------------|---------------|
+| ------- | ---------- | ------------- |
 | Durable expense/budget records | Medium | Essential to make dashboard truthful and app-owned |
 | Fixed mobile dashboard panels | Medium | Required by no-scroll mobile goal |
 | Deterministic advice engine | Medium | Maintains practical suggestions without AI/vendor dependency |
@@ -145,12 +159,14 @@ Privacy copy should appear in onboarding/location request/settings and be reflec
 **Total complexity:** Within V1 budget if implemented in slices and no live external finance import is added.
 
 ## Rollback Plan
+
 - **Before launch:** Revert dashboard/navigation changes and Prisma migration branch if not applied.
 - **During staged rollout:** Keep old dashboard routes available behind a feature flag or route fallback until V1 passes validation.
 - **After launch:** Disable local headline discovery and integrations reference changes independently if source safety or navigation issues appear.
 - **Data recovery:** Preserve expense/budget records in additive migrations; avoid destructive schema changes in the first rollout.
 
 ## What This Design Does NOT Do
+
 - Does NOT connect to bank accounts in V1.
 - Does NOT sell, share, or collect marketing data.
 - Does NOT store exact coordinates after location resolution.
@@ -160,12 +176,14 @@ Privacy copy should appear in onboarding/location request/settings and be reflec
 - Does NOT require the nested `budgetbitch/` prototype subtree.
 
 ## Open Questions
+
 - [ ] Which existing integration routes should be hidden, redirected, or converted into reference-only pages?
 - [ ] Should income/payday tracking be part of the same V1 slice or a follow-up immediately after expenses/budgets?
 - [ ] Which safe job and local finance/news sources should be on the initial allowlist?
 - [ ] Should fixed panels allow limited internal scroll for accessibility, or must overflow always become paging/drill-in UI?
 
 ## Testing Strategy
+
 - Unit tests for expense/budget/advice calculation modules.
 - Component tests for dropdown expense entry, budget snapshot, advice panel, and privacy copy.
 - Route/page tests for dashboard state and integration de-emphasis.
