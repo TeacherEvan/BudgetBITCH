@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getConvexAuthenticatedIdentity } from "@/lib/auth/convex-session";
+import { hasNonProductionSignedInE2eOverrideFromHeaders } from "@/lib/auth/e2e-auth-override";
 import { getPrismaClient } from "@/lib/prisma";
 import { normalizePersonalizationProfile } from "@/modules/personalization/personalization-schema";
 
@@ -7,13 +8,29 @@ const privacyVersion = "v1";
 
 export async function POST(request: Request) {
   const identity = await getConvexAuthenticatedIdentity();
+  const hasSignedInOverride = hasNonProductionSignedInE2eOverrideFromHeaders(request.headers);
 
-  if (!identity?.tokenIdentifier) {
+  if (!identity?.tokenIdentifier && !hasSignedInOverride) {
     return NextResponse.json({ error: "Authentication is required." }, { status: 401 });
   }
 
   const body = await request.json();
   const input = normalizePersonalizationProfile(body);
+
+  if (!identity?.tokenIdentifier) {
+    return NextResponse.json({
+      personalizationProfile: {
+        id: "demo-personalization-profile",
+        userId: "demo-user",
+        genderIdentity: input.consented ? input.genderIdentity ?? null : null,
+        pronouns: input.consented ? input.pronouns ?? null : null,
+        communicationStyle: input.consented ? input.communicationStyle ?? null : null,
+        coachingIntensity: input.consented ? input.coachingIntensity ?? null : null,
+        privacyVersion,
+      },
+    });
+  }
+
   const prisma = getPrismaClient();
   const user = await prisma.userProfile.findUnique({
     where: { clerkUserId: identity.tokenIdentifier },

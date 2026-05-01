@@ -1,17 +1,38 @@
 import { NextResponse } from "next/server";
 import { getConvexAuthenticatedIdentity } from "@/lib/auth/convex-session";
+import { hasNonProductionSignedInE2eOverrideFromHeaders } from "@/lib/auth/e2e-auth-override";
 import { getPrismaClient } from "@/lib/prisma";
 import { normalizeUserJobPreference } from "@/modules/personalization/personalization-schema";
 
 export async function POST(request: Request) {
   const identity = await getConvexAuthenticatedIdentity();
+  const hasSignedInOverride = hasNonProductionSignedInE2eOverrideFromHeaders(request.headers);
 
-  if (!identity?.tokenIdentifier) {
+  if (!identity?.tokenIdentifier && !hasSignedInOverride) {
     return NextResponse.json({ error: "Authentication is required." }, { status: 401 });
   }
 
   const body = await request.json();
   const input = normalizeUserJobPreference(body);
+
+  if (!identity?.tokenIdentifier) {
+    return NextResponse.json({
+      jobPreference: {
+        id: "demo-job-preference",
+        userId: "demo-user",
+        roleInterests: input.roleInterests,
+        certifications: input.certifications,
+        licenseTypes: input.licenseTypes,
+        careWorkInterest: input.careWorkInterest,
+        childCareInterest: input.childCareInterest,
+        petCareInterest: input.petCareInterest,
+        nursingInterest: input.nursingInterest,
+        teachingInterest: input.teachingInterest,
+        notificationEnabled: input.notificationEnabled,
+      },
+    });
+  }
+
   const prisma = getPrismaClient();
   const user = await prisma.userProfile.findUnique({
     where: { clerkUserId: identity.tokenIdentifier },

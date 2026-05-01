@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const getConvexAuthenticatedIdentityMock = vi.hoisted(() => vi.fn());
 const loadDashboardBriefingMock = vi.hoisted(() => vi.fn());
+const cookiesMock = vi.hoisted(() => vi.fn());
 
 const prismaMock = {
   userProfile: {
@@ -22,6 +23,10 @@ vi.mock("@/lib/auth/convex-session", () => ({
   getConvexAuthenticatedIdentity: getConvexAuthenticatedIdentityMock,
 }));
 
+vi.mock("next/headers", () => ({
+  cookies: cookiesMock,
+}));
+
 vi.mock("@/lib/prisma", () => ({
   getPrismaClient: () => prismaMock,
 }));
@@ -39,6 +44,8 @@ describe("getDashboardPageData", () => {
   beforeEach(() => {
     getConvexAuthenticatedIdentityMock.mockReset();
     loadDashboardBriefingMock.mockReset();
+    cookiesMock.mockReset();
+    cookiesMock.mockResolvedValue({ get: vi.fn().mockReturnValue(undefined) });
     prismaMock.userProfile.findUnique.mockReset();
     prismaMock.workspace.findUnique.mockReset();
     prismaMock.financialTransaction.findMany.mockReset();
@@ -57,6 +64,75 @@ describe("getDashboardPageData", () => {
       kind: "auth-required",
       redirectTo: "/sign-in?redirectTo=%2Fdashboard%3FworkspaceId%3Dworkspace-2",
     });
+  });
+
+  it("returns demo data for the non-production signed-in e2e override when Convex has no session", async () => {
+    getConvexAuthenticatedIdentityMock.mockResolvedValue(null);
+    cookiesMock.mockResolvedValue({
+      get: vi.fn().mockImplementation((name: string) =>
+        name === "budgetbitch:e2e-auth-state" ? { value: "signed-in" } : undefined,
+      ),
+    });
+
+    const result = await getDashboardPageData("workspace-2");
+
+    expect(result.kind).toBe("data");
+    if (result.kind !== "data") {
+      throw new Error("Expected dashboard demo data.");
+    }
+    expect(result.data.isDemo).toBe(true);
+    expect(result.data.requestedWorkspaceId).toBe("workspace-2");
+    expect(result.data.accounting.expenseForm.workspaceId).toBe("demo_workspace");
+  });
+
+  it("prefers live dashboard data over the e2e override when a real Convex session exists", async () => {
+    getConvexAuthenticatedIdentityMock.mockResolvedValue({ tokenIdentifier: "convex|user-1" });
+    cookiesMock.mockResolvedValue({
+      get: vi.fn().mockImplementation((name: string) =>
+        name === "budgetbitch:e2e-auth-state" ? { value: "signed-in" } : undefined,
+      ),
+    });
+    loadDashboardBriefingMock.mockResolvedValue({
+      generatedAt: "2026-05-01T12:00:00.000Z",
+      sourceStatus: "live",
+      topics: [],
+    });
+    prismaMock.userProfile.findUnique.mockResolvedValue({
+      id: "profile-1",
+      displayName: "Avery",
+      memberships: [
+        {
+          role: "owner",
+          workspace: {
+            id: "workspace-1",
+            name: "Household",
+          },
+        },
+      ],
+      workspacePreferences: [{ workspaceId: "workspace-1", isDefault: true }],
+      personalizationProfile: null,
+      jobPreferences: [],
+    });
+    prismaMock.workspace.findUnique.mockResolvedValue({
+      id: "workspace-1",
+      name: "Household",
+      accounts: [{ id: "checking", name: "Checking", balance: 1250 }],
+      categories: [{ id: "food", name: "Food", monthlyLimit: 400 }],
+      bills: [],
+      homeLocations: [],
+    });
+    prismaMock.financialTransaction.findMany.mockResolvedValue([]);
+    prismaMock.dailyCheckIn.findUnique.mockResolvedValue(null);
+
+    const result = await getDashboardPageData("workspace-1");
+
+    expect(result.kind).toBe("data");
+    if (result.kind !== "data") {
+      throw new Error("Expected live dashboard data.");
+    }
+    expect(result.data.isDemo).toBe(false);
+    expect(result.data.activeWorkspace?.workspaceId).toBe("workspace-1");
+    expect(prismaMock.userProfile.findUnique).toHaveBeenCalled();
   });
 
   it("returns a setup-required result instead of demo data when the account has no local profile", async () => {

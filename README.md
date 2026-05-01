@@ -71,9 +71,10 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 7. Set `CONVEX_SYNC_SECRET` in both the Next.js/Vercel environment and the Convex deployment so auth bootstrap profile sync and projection replay use the same trusted secret.
 8. Set `CRON_SECRET` in Vercel so the scheduled replay route can authenticate Vercel Cron requests.
 9. Mirror the same Neon, Convex, projection, and provider-secret variables in Vercel before shipping preview or production deployments.
-10. Generate the Prisma client with `npm run db:generate`.
-11. Start development with `npm run dev`.
-12. For browser tests, keep the Playwright web server on its dedicated webpack path. `playwright.config.ts` now starts `npm run dev -- --webpack --port 3100` through `scripts/run-with-sanitized-env.mjs`, with server reuse disabled, so local auth values do not change the auth-root test behavior and Turbopack does not hang on the first `/` request.
+10. In Vercel, keep `DIRECT_URL` pointed at the direct Neon connection string for production deploys because production builds now run `prisma migrate deploy` before `next build`.
+11. Generate the Prisma client with `npm run db:generate`.
+12. Start development with `npm run dev`.
+13. For browser tests, keep the Playwright web server on its dedicated webpack path. `playwright.config.ts` now starts `npm run dev -- --webpack --port 3100` through `scripts/run-with-sanitized-env.mjs`, with server reuse disabled, so local auth values do not change the auth-root test behavior and Turbopack does not hang on the first `/` request.
 
 ## Verification
 
@@ -84,6 +85,11 @@ Current workspace verification status:
 - `npm run test:e2e`
 - `npm run db:generate`
 - `npm run build`
+
+Deploy-time verification note:
+
+- `npm run db:deploy` is part of the Vercel production deploy path and still needs a real deployment database with `DIRECT_URL` configured.
+- Preview deployments should use isolated database credentials before you opt them into running migrations.
 
 Current browser-test note:
 
@@ -117,6 +123,8 @@ For Neon + Prisma 7 in this repo:
 If you have a real PostgreSQL instance available, run:
 
 - `npm run db:migrate -- --name init_core_schema`
+
+For Vercel deploys, `npm run vercel-build` now runs `npm run db:deploy` only when `VERCEL_ENV=production`, then continues to `npm run build`. That keeps the production Prisma schema in sync with checked-in migrations before the app starts serving server-rendered routes like `/dashboard`, while avoiding preview-branch schema changes unless you intentionally provision isolated preview database credentials.
 
 ## Neon + Convex runtime split
 

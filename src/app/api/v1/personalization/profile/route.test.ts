@@ -106,6 +106,41 @@ describe("POST /api/v1/personalization/profile", () => {
     });
   });
 
+  it("returns a demo personalization profile for the non-production signed-in e2e override", async () => {
+    getConvexAuthenticatedIdentity.mockResolvedValue(null);
+
+    const response = await POST(
+      new Request("http://localhost/api/v1/personalization/profile", {
+        method: "POST",
+        headers: {
+          cookie: "budgetbitch:e2e-auth-state=signed-in",
+        },
+        body: JSON.stringify({
+          genderIdentity: "woman",
+          pronouns: "she_her",
+          communicationStyle: "direct",
+          coachingIntensity: "focused",
+          consented: true,
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      personalizationProfile: {
+        id: "demo-personalization-profile",
+        userId: "demo-user",
+        genderIdentity: "woman",
+        pronouns: "she_her",
+        communicationStyle: "direct",
+        coachingIntensity: "focused",
+        privacyVersion: "v1",
+      },
+    });
+    expect(prismaMock.userProfile.findUnique).not.toHaveBeenCalled();
+    expect(prismaMock.userPersonalizationProfile.upsert).not.toHaveBeenCalled();
+  });
+
   it("clears stored personalization values when consent is not granted", async () => {
     getConvexAuthenticatedIdentity.mockResolvedValue({
       tokenIdentifier: "convex|user-1",

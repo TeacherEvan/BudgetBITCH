@@ -1,6 +1,7 @@
 import { convexAuthNextjsMiddleware } from "@convex-dev/auth/nextjs/server";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { hasNonProductionSignedInE2eOverrideFromHeaders } from "@/lib/auth/e2e-auth-override";
 
 const protectedPathPrefixes = ["/dashboard", "/settings", "/auth/continue"];
 const protectedApiPathPrefixes = [
@@ -8,7 +9,6 @@ const protectedApiPathPrefixes = [
   "/api/v1/check-ins",
   "/api/v1/integrations",
 ];
-const e2eAuthOverrideCookieName = "budgetbitch:e2e-auth-state";
 const missingSessionApiError = {
   error: {
     code: "missing-session",
@@ -44,20 +44,7 @@ function getRedirectTarget(request: NextRequest) {
 }
 
 function hasSignedInE2eOverride(request: NextRequest) {
-  if (process.env.NODE_ENV === "production") {
-    return false;
-  }
-
-  const cookieHeader = request.headers.get("cookie");
-
-  if (!cookieHeader) {
-    return false;
-  }
-
-  return cookieHeader
-    .split(";")
-    .map((cookie) => cookie.trim())
-    .some((cookie) => cookie === `${e2eAuthOverrideCookieName}=signed-in`);
+  return hasNonProductionSignedInE2eOverrideFromHeaders(request.headers);
 }
 
 export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {

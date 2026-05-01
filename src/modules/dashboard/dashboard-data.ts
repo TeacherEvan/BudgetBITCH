@@ -1,5 +1,7 @@
 import type { Prisma } from "@prisma/client";
+import { cookies } from "next/headers";
 import { getConvexAuthenticatedIdentity } from "@/lib/auth/convex-session";
+import { hasNonProductionSignedInE2eOverrideFromCookieStore } from "@/lib/auth/e2e-auth-override";
 import { localDemoWorkspaceId } from "@/lib/auth/workspace-api-access";
 import { getPrismaClient } from "@/lib/prisma";
 import { buildBudgetAdvice, type BudgetAdviceCard } from "@/modules/accounting/advice-engine";
@@ -672,6 +674,14 @@ export async function getDashboardPageData(
   const redirectTarget = getDashboardRedirectTarget(requestedWorkspaceId);
   const identity = await getConvexAuthenticatedIdentity();
   const userId = identity?.tokenIdentifier ?? "";
+
+  if (!userId) {
+    const cookieStore = await cookies();
+
+    if (hasNonProductionSignedInE2eOverrideFromCookieStore(cookieStore)) {
+      return { kind: "data", data: buildDemoData(requestedWorkspaceId) };
+    }
+  }
 
   if (!userId) {
     return {

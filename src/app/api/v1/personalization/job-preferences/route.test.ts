@@ -178,4 +178,49 @@ describe("POST /api/v1/personalization/job-preferences", () => {
       error: "Authentication is required.",
     });
   });
+
+  it("returns demo job preferences for the non-production signed-in e2e override", async () => {
+    getConvexAuthenticatedIdentity.mockResolvedValue(null);
+
+    const response = await POST(
+      new Request("http://localhost/api/v1/personalization/job-preferences", {
+        method: "POST",
+        headers: {
+          cookie: "budgetbitch:e2e-auth-state=signed-in",
+        },
+        body: JSON.stringify({
+          roleInterests: [" Bookkeeping ", "dog walker"],
+          certifications: ["RN"],
+          licenseTypes: ["registered_nurse"],
+          careWorkInterest: true,
+          childCareInterest: false,
+          petCareInterest: true,
+          nursingInterest: true,
+          teachingInterest: false,
+          notificationEnabled: true,
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      jobPreference: {
+        id: "demo-job-preference",
+        userId: "demo-user",
+        roleInterests: ["bookkeeping", "dog walker"],
+        certifications: ["RN"],
+        licenseTypes: ["registered_nurse"],
+        careWorkInterest: true,
+        childCareInterest: false,
+        petCareInterest: true,
+        nursingInterest: true,
+        teachingInterest: false,
+        notificationEnabled: true,
+      },
+    });
+    expect(prismaMock.userProfile.findUnique).not.toHaveBeenCalled();
+    expect(prismaMock.userJobPreference.findFirst).not.toHaveBeenCalled();
+    expect(prismaMock.userJobPreference.create).not.toHaveBeenCalled();
+    expect(prismaMock.userJobPreference.update).not.toHaveBeenCalled();
+  });
 });
