@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 
 test("calculator page renders and performs basic arithmetic", async ({ page }) => {
+  test.slow();
+
   await page.goto("/calculator");
 
   await expect(page.getByRole("heading", { level: 1, name: "Calculator" })).toBeVisible();

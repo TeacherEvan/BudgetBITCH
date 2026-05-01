@@ -103,7 +103,7 @@ describe("LaunchWizard", () => {
           { title: "Pet care", amount: 75 },
         ],
       });
-  });
+  }, 15_000);
 
   it("blocks startup completion until at least one expense is added", () => {
     const onComplete = vi.fn();

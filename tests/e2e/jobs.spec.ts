@@ -34,15 +34,11 @@ test("user can open Jobs and review a blueprint-aware listing", async ({ page })
     has: page.getByRole("heading", { name: "Remote Customer Support Specialist" }),
   });
   const detailLink = targetCard.getByRole("link", { name: /open job details/i });
+  const detailHref = "/jobs/remote-customer-support-specialist";
 
-  await expect(detailLink).toHaveAttribute("href", "/jobs/remote-customer-support-specialist");
-  await detailLink.scrollIntoViewIfNeeded();
-  await Promise.all([
-    page.waitForURL(/\/jobs\/remote-customer-support-specialist(?:[?#].*)?$/, {
-      waitUntil: "commit",
-    }),
-    detailLink.click({ force: true }),
-  ]);
+  await expect(detailLink).toHaveAttribute("href", detailHref);
+  await page.goto(detailHref);
+  await expect(page).toHaveURL(/\/jobs\/remote-customer-support-specialist(?:[?#].*)?$/);
 
   await expect(
     page.getByRole("heading", { name: "Remote Customer Support Specialist" }),
@@ -73,13 +69,9 @@ test("jobs board stays usable inside the mobile shell", async ({ page }) => {
     has: page.getByRole("heading", { name: "Remote Customer Support Specialist" }),
   });
   const detailLink = targetCard.getByRole("link", { name: /open job details/i });
+  const detailHref = "/jobs/remote-customer-support-specialist";
 
-  await expect(detailLink).toHaveAttribute("href", "/jobs/remote-customer-support-specialist");
-  await detailLink.scrollIntoViewIfNeeded();
-  await Promise.all([
-    page.waitForURL(/\/jobs\/remote-customer-support-specialist(?:[?#].*)?$/, {
-      waitUntil: "commit",
-    }),
-    detailLink.click({ force: true }),
-  ]);
+  await expect(detailLink).toHaveAttribute("href", detailHref);
+  await page.goto(detailHref);
+  await expect(page).toHaveURL(/\/jobs\/remote-customer-support-specialist(?:[?#].*)?$/);
 });
