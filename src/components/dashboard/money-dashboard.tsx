@@ -150,6 +150,15 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
     : data.activeWorkspace?.workspaceId ?? null;
 
   useEffect(() => {
+    if (activePanel === "record" || refreshTimeoutRef.current === null) {
+      return;
+    }
+
+    window.clearTimeout(refreshTimeoutRef.current);
+    refreshTimeoutRef.current = null;
+  }, [activePanel]);
+
+  useEffect(() => {
     return () => {
       if (refreshTimeoutRef.current !== null) {
         window.clearTimeout(refreshTimeoutRef.current);
@@ -157,14 +166,14 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
     };
   }, []);
 
-  function scheduleRefresh() {
+  function scheduleRecordRefresh() {
     if (refreshTimeoutRef.current !== null) {
       window.clearTimeout(refreshTimeoutRef.current);
     }
 
     refreshTimeoutRef.current = window.setTimeout(() => {
-      router.refresh();
       refreshTimeoutRef.current = null;
+      router.refresh();
     }, 400);
   }
 
@@ -191,7 +200,7 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
       });
       setExpenseState({ status: "success", message: "Expense saved to the money dashboard." });
       setExpenseForm((current) => ({ ...current, merchantName: "", amount: "", note: "" }));
-      router.refresh();
+      scheduleRecordRefresh();
     } catch (error) {
       setExpenseState({
         status: "error",
@@ -222,7 +231,6 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
         consented: locationForm.consented,
       });
       setLocationState({ status: "success", message: "Home area saved. Only city and state are kept." });
-      scheduleRefresh();
     } catch (error) {
       setLocationState({
         status: "error",
@@ -242,7 +250,6 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
     try {
       await postJson("/api/v1/personalization/profile", privacyForm);
       setPrivacyState({ status: "success", message: "Privacy and personalization settings saved." });
-      scheduleRefresh();
     } catch (error) {
       setPrivacyState({
         status: "error",
@@ -275,7 +282,6 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
         status: "success",
         message: "Job preference signals saved. Matches will refresh for your stated interests.",
       });
-      scheduleRefresh();
     } catch (error) {
       setJobPreferenceState({
         status: "error",

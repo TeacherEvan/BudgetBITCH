@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { expectConvexPasswordAuthEntry } from "./auth-setup";
 import { seedSignedInAuthOverride } from "./auth-state";
+import { gotoWithCommit } from "./navigation";
 
 test("OpenAI setup page redirects to sign-in when auth is unavailable", async ({ page }) => {
-  await page.goto("/settings/integrations/openai");
+  await gotoWithCommit(page, "/settings/integrations/openai");
 
   await expect(page).toHaveURL(/\/sign-in\?redirectTo=%2Fsettings%2Fintegrations%2Fopenai$/);
   await expect(page.getByRole("heading", { name: /open your budget board/i })).toBeVisible();
@@ -12,7 +13,7 @@ test("OpenAI setup page redirects to sign-in when auth is unavailable", async ({
 
 test("authenticated user can scan the integrations hub and explicit provider actions", async ({ page }) => {
   await seedSignedInAuthOverride(page);
-  await page.goto("/settings/integrations");
+  await gotoWithCommit(page, "/settings/integrations");
 
   await expect(
     page.getByRole("heading", { name: /connect only the providers you can scan and trust fast/i }),

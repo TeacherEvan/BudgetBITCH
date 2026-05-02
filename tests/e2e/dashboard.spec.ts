@@ -20,6 +20,34 @@ test("dashboard signed-in local harness submits record, local, privacy, and job 
   test.slow();
 
   await seedSignedInAuthOverride(page);
+  await page.route("**/api/v1/accounting/expenses", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ expense: { id: "expense-1" } }),
+    });
+  });
+  await page.route("**/api/v1/accounting/home-location", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ homeLocation: { id: "home-location-1" } }),
+    });
+  });
+  await page.route("**/api/v1/personalization/job-preferences", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ jobPreference: { id: "job-preference-1" } }),
+    });
+  });
+  await page.route("**/api/v1/personalization/profile", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ profile: { id: "profile-1" } }),
+    });
+  });
   await page.setViewportSize({ width: 1440, height: 980 });
   await page.goto("/dashboard?workspaceId=workspace-household");
 

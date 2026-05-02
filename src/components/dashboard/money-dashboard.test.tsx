@@ -171,7 +171,40 @@ describe("MoneyDashboard", () => {
     });
   });
 
-  it("saves job preference signals from the local panel and refreshes the dashboard", async () => {
+  it("cancels the pending expense refresh after switching away from the record panel", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ expense: { id: "txn-1" } }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<MoneyDashboard data={createDashboardData()} />);
+
+    fireEvent.change(screen.getByLabelText(/merchant/i), {
+      target: { value: "Corner Store" },
+    });
+    fireEvent.change(screen.getByLabelText(/amount/i), {
+      target: { value: "18.25" },
+    });
+    fireEvent.submit(screen.getByRole("button", { name: /save expense/i }).closest("form")!);
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/v1/accounting/expenses",
+        expect.objectContaining({ method: "POST" }),
+      );
+    });
+
+    fireEvent.click(screen.getByRole("tab", { name: /local/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: /local signals/i })).toBeInTheDocument();
+    });
+
+    expect(refreshMock).not.toHaveBeenCalled();
+  });
+
+  it("saves job preference signals from the local panel without refreshing the dashboard", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: vi.fn().mockResolvedValue({ jobPreference: { id: "job-pref-1" } }),
@@ -214,13 +247,9 @@ describe("MoneyDashboard", () => {
       screen.getByText(/job preference signals saved\. matches will refresh for your stated interests\./i),
     ).toBeInTheDocument();
     expect(refreshMock).not.toHaveBeenCalled();
-
-    await waitFor(() => {
-      expect(refreshMock).toHaveBeenCalled();
-    });
   });
 
-  it("shows the home-area success message before refreshing the dashboard", async () => {
+  it("shows the home-area success message without refreshing the dashboard", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: vi.fn().mockResolvedValue({ homeLocation: { id: "home-location-1" } }),
@@ -247,9 +276,5 @@ describe("MoneyDashboard", () => {
 
     expect(screen.getByText(/home area saved\. only city and state are kept\./i)).toBeInTheDocument();
     expect(refreshMock).not.toHaveBeenCalled();
-
-    await waitFor(() => {
-      expect(refreshMock).toHaveBeenCalled();
-    });
   });
 });
