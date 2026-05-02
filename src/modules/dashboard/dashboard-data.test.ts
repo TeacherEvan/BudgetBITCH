@@ -154,6 +154,40 @@ describe("getDashboardPageData", () => {
     expect(result.data.isDemo).toBe(true);
   });
 
+  it("keeps live no-workspace fallbacks empty instead of seeding demo accounting", async () => {
+    getConvexAuthenticatedIdentityMock.mockResolvedValue({ tokenIdentifier: "convex|user-1" });
+    loadDashboardBriefingMock.mockResolvedValue({
+      generatedAt: "2026-05-01T12:00:00.000Z",
+      sourceStatus: "live",
+      topics: [],
+    });
+    prismaMock.userProfile.findUnique.mockResolvedValue({
+      id: "profile-1",
+      displayName: "Avery",
+      memberships: [],
+      workspacePreferences: [],
+      personalizationProfile: null,
+      jobPreferences: [],
+    });
+
+    const result = await getDashboardPageData("workspace-missing");
+
+    expect(result.kind).toBe("data");
+    if (result.kind !== "data") {
+      throw new Error("Expected live dashboard fallback data.");
+    }
+    expect(result.data.isDemo).toBe(false);
+    expect(result.data.activeWorkspace).toBeNull();
+    expect(result.data.accounting.expenseForm.workspaceId).toBeNull();
+    expect(result.data.accounting.snapshot.categories).toEqual([]);
+    expect(result.data.accounting.snapshot.cashflow).toMatchObject({
+      availableCash: 0,
+      dueSoonTotal: 0,
+      spentTotal: 0,
+    });
+    expect(result.data.accounting.recentExpenses).toEqual([]);
+  });
+
   it("builds the live money dashboard data from workspace accounting and personalization records", async () => {
     getConvexAuthenticatedIdentityMock.mockResolvedValue({ tokenIdentifier: "convex|user-1" });
     loadDashboardBriefingMock.mockResolvedValue({

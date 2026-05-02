@@ -2,17 +2,102 @@
 
 This index is a future-navigation cheat sheet for the active root application.
 
+## 0. Orientation graph
+
+```mermaid
+flowchart TD
+	A[README.md] --> B[src/app]
+	A --> C[src/modules]
+	A --> D[src/components]
+	A --> E[prisma]
+	A --> F[tests/e2e]
+	A --> G[src/lib]
+	A --> H[src/inngest]
+
+	B --> B1[page.tsx\nauth-first root gate]
+	B --> B1d[sign-in\nConvex Auth sign-in entry]
+	B --> B1e[sign-up\nConvex Auth sign-up entry]
+	B --> B1f[(app)/auth/continue\npost-auth local bootstrap boundary]
+	B --> B1a[(app)/start-smart\nMoney Survival Blueprint wizard]
+	B --> B1b[(app)/learn\nLearn hub + lessons]
+	B --> B1c[(app)/jobs\nJobs hub + detail]
+	B --> B2[(app)/dashboard]
+	B --> B3[(app)/settings/integrations]
+	B --> B4[api/v1]
+
+	B4 --> B40[auth/bootstrap/route.ts]
+	B4 --> B41[budgets/health/route.ts]
+	B4 --> B42[integrations/connect/route.ts]
+	B4 --> B43[integrations/revoke/route.ts]
+	B4 --> B44[start-smart/regional-data/route.ts]
+	B4 --> B45[start-smart/blueprint/route.ts]
+	B4 --> B46[learn/recommendations/route.ts]
+	B4 --> B47[learn/modules/[slug]/route.ts]
+	B4 --> B48[jobs/search/route.ts]
+	B4 --> B49[jobs/recommendations/route.ts]
+
+	C --> C1[audit]
+	C --> C3[budgets]
+	C --> C6[integrations]
+	C --> C7[jobs]
+	C --> C11[start-smart]
+	C --> C12[learn]
+	C --> C13[dashboard]
+
+	D --> D1[integrations UI primitives]
+	D --> D2[start-smart UI primitives]
+	D --> D3[learn UI primitives]
+	D --> D4[jobs UI primitives]
+	D --> D5[dashboard UI primitives]
+	E --> E1[schema.prisma]
+	E --> E2[migrations]
+	F --> F1[welcome-auth root entry coverage]
+	F --> F2[signed-in root smoke + dashboard + wizard journeys + Start Smart + Learn + Jobs]
+	G --> G1[auth config + route guards + auth route constants]
+	H --> H1[Inngest client]
+```
+
+## 0.1 Practical filesystem tree
+
+```text
+.
+├── README.md
+├── docs/
+│   └── CODEBASE_INDEX.md
+├── prisma/
+│   ├── schema.prisma
+│   └── migrations/
+├── src/
+│   ├── app/
+│   ├── components/
+│   ├── lib/
+│   │   └── auth/
+│   ├── modules/
+│   │   ├── dashboard/
+│   │   ├── integrations/
+│   │   ├── jobs/
+│   │   ├── learn/
+│   │   └── start-smart/
+│   ├── inngest/
+│   └── middleware.ts
+├── tests/
+│   └── e2e/
+└── budgetbitch/
+```
+
 ## 1. High-value entry points
 
 | Area             | File / Folder          | Why it matters                                                           |
 | ---------------- | ---------------------- | ------------------------------------------------------------------------ |
 | App shell        | `src/app/layout.tsx`   | Global layout and top-level app wrapper                                  |
 | Root auth gate   | `src/app/page.tsx`     | Auth-first root gate for welcome, launch wizard, or landing board        |
-| Auth bootstrap   | `src/app/(app)/auth/continue/page.tsx` | Post-Clerk local bootstrap and safe redirect boundary     |
-| Route protection | `middleware.ts`        | Protected-surface fallback handling for auth continue, dashboard, settings, and `/api/v1` |
+| Auth bootstrap   | `src/app/(app)/auth/continue/page.tsx` | Post-auth local bootstrap and safe redirect boundary     |
+| Route protection | `src/middleware.ts`    | Protected-surface handling for auth continue, dashboard, settings, and protected `/api/v1` routes |
+| Auth route map   | `src/lib/auth/routes.ts` | Centralized auth route constants and protected-path prefix rules       |
 | Root config      | `next.config.ts`       | Next.js runtime config, including dev origin allowance                   |
 | Prisma config    | `prisma.config.ts`     | Prisma 7 config and env loading                                          |
 | Data model       | `prisma/schema.prisma` | Canonical schema for workspaces, budgets, reminders, audit, integrations |
+| Dashboard data   | `src/modules/dashboard/dashboard-data.ts` | Dashboard composition boundary for auth, demo/live data, and accounting state |
 
 ## 2. Route map
 
@@ -21,9 +106,9 @@ This index is a future-navigation cheat sheet for the active root application.
 | Route                             | File                                                    | Purpose                            |
 | --------------------------------- | ------------------------------------------------------- | ---------------------------------- |
 | `/`                               | `src/app/page.tsx`                                      | Auth-first gate for welcome, wizard, or landing board |
-| `/sign-in`                        | `src/app/sign-in/[[...sign-in]]/page.tsx`               | Clerk sign-in entry with sanitized `redirectTo` handling |
-| `/sign-up`                        | `src/app/sign-up/[[...sign-up]]/page.tsx`               | Clerk sign-up entry with sanitized `redirectTo` handling |
-| `/auth/continue`                  | `src/app/(app)/auth/continue/page.tsx`                  | Post-Clerk bootstrap and safe post-auth redirect |
+| `/sign-in`                        | `src/app/sign-in/[[...sign-in]]/page.tsx`               | Convex Auth sign-in entry with sanitized `redirectTo` handling |
+| `/sign-up`                        | `src/app/sign-up/[[...sign-up]]/page.tsx`               | Convex Auth sign-up entry with sanitized `redirectTo` handling |
+| `/auth/continue`                  | `src/app/(app)/auth/continue/page.tsx`                  | Post-auth bootstrap and safe post-auth redirect |
 | `/start-smart`                    | `src/app/(app)/start-smart/page.tsx`                    | Money Survival Blueprint wizard    |
 | `/learn`                          | `src/app/(app)/learn/page.tsx`                          | Learn! recommendation hub          |
 | `/learn/[slug]`                   | `src/app/(app)/learn/[slug]/page.tsx`                   | Learn! lesson detail               |
@@ -60,6 +145,7 @@ This index is a future-navigation cheat sheet for the active root application.
 ## 3. Domain module index
 
 - **Auth** — `src/modules/auth/*.ts`, `src/lib/auth/*.ts` — redirect sanitizing, Clerk config checks, Clerk-user helpers, and local bootstrap wiring
+- **Dashboard** — `src/modules/dashboard/*.ts` — dashboard auth/data orchestration, demo factories, accounting mappers, briefing fetches, and shared dashboard types
 - **Start Smart** — `src/modules/start-smart/*.ts` — profile normalization, regional data, blueprint generation, and wizard state
 - **Learn!** — `src/modules/learn/*.ts` — lesson schema, module catalog, blueprint signal extraction, and recommendation resolution
 - **Jobs** — `src/modules/jobs/*.ts` — seeded jobs catalog, filter schema, blueprint signal extraction, and fit scoring
@@ -74,6 +160,16 @@ This index is a future-navigation cheat sheet for the active root application.
 - **Jobs** — `src/modules/jobs/reminder-job.ts` — Inngest payload builder
 - **Privacy** — `src/modules/privacy/consent-ledger.ts` — consent receipt payload creation
 - **Inngest client** — `src/inngest/client.ts` — shared event client bootstrap
+
+### Dashboard internals
+
+| File | Purpose |
+| ---- | ------- |
+| `src/modules/dashboard/dashboard-data.ts` | Main dashboard server-side composition boundary |
+| `src/modules/dashboard/dashboard-demo-factory.ts` | Demo workspace, launcher, and seeded accounting builders |
+| `src/modules/dashboard/dashboard-mappers.ts` | Check-in parsing, privacy commitments, personalization normalization, and accounting mapping |
+| `src/modules/dashboard/types.ts` | Shared dashboard data contracts used across page/tests/helpers |
+| `src/modules/dashboard/briefing/**` | Live and fallback briefing source registry and fetch logic |
 
 ## 4. Integration subsystem map
 
@@ -167,8 +263,15 @@ Useful anchors:
 
 1. Start at `src/app/page.tsx`
 2. Check `src/components/welcome/**`, `src/app/sign-in/**`, `src/app/sign-up/**`, and `src/app/(app)/auth/continue/**`
-3. Check `src/modules/auth/post-auth-redirect.ts` and related auth helpers
+3. Check `src/modules/auth/post-auth-redirect.ts`, `src/lib/auth/routes.ts`, and related auth helpers
 4. Re-run the related route tests plus `tests/e2e/welcome-auth.spec.ts` and `tests/e2e/smoke.spec.ts`
+
+### I want to change dashboard auth or data behavior
+
+1. Start at `src/app/(app)/dashboard/page.tsx`
+2. Check `src/modules/dashboard/dashboard-data.ts` for auth and data composition
+3. Follow into `src/modules/dashboard/dashboard-demo-factory.ts`, `src/modules/dashboard/dashboard-mappers.ts`, and `src/modules/dashboard/types.ts`
+4. Re-run `src/modules/dashboard/dashboard-data.test.ts`, `src/app/(app)/dashboard/page.test.tsx`, and `tests/e2e/dashboard.spec.ts`
 
 ### I want to change business logic
 

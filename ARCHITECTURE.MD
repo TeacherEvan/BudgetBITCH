@@ -28,6 +28,7 @@ Treat them as distinct systems. The root app is the one to extend unless a task 
 - `src/components/**` — reusable UI
 - `src/modules/**` — domain and business logic
 - `src/lib/**` — small shared helpers such as auth config
+- `src/lib/auth/routes.ts` — centralized auth route constants and protected-path prefix rules
 - `prisma/**` — canonical schema and migration history
 - `tests/e2e/**` — Playwright journeys
 
@@ -39,6 +40,7 @@ The root app is auth-first:
 2. Signed-in users pass through `/auth/continue` for local bootstrap and safe redirect resolution.
 3. Protected product surfaces live under the app route group, including Start Smart, Learn, Jobs, Dashboard, and Integrations.
 4. API routes in `src/app/api/v1/**` delegate real work into `src/modules/**`.
+5. `src/modules/dashboard/dashboard-data.ts` is the dashboard composition boundary; demo builders, mappers, and shared dashboard types are extracted into sibling dashboard modules to keep the page contract thin.
 
 ### Data ownership
 
@@ -51,7 +53,7 @@ The root app is auth-first:
 
 - Keep route logic thin; move business rules into `src/modules/**`.
 - Keep UI reusable and scan-friendly in `src/components/**`.
-- Keep auth and redirect safety centralized.
+- Keep auth and redirect safety centralized through `src/middleware.ts`, `src/lib/auth/routes.ts`, and the shared auth helpers under `src/lib/auth/**`.
 - Keep API handlers as orchestration layers, not business-rule homes.
 
 ## 2) Nested `budgetbitch/` prototype architecture

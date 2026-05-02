@@ -13,7 +13,7 @@ This repo has two separate app trees. The root BudgetBITCH app is the primary co
 
 | Task | Start here | Avoid |
 |---|---|---|
-| Root app route/UI change | `README.md` → `docs/DEV_TREE.md` → `docs/CODEBASE_INDEX.md` → `src/app/**` | Jumping straight into components or the nested prototype |
+| Root app route/UI change | `README.md` → `docs/CODEBASE_INDEX.md` → `src/app/**` | Jumping straight into components or the nested prototype |
 | Root app business logic | `src/modules/**` after the route/API entry point | Editing UI before finding the domain boundary |
 | Root Convex work | `convex/_generated/ai/guidelines.md` → `convex/README.md` → `convex/**` | Using memory instead of the Convex repo guidance |
 | Nested prototype change | `budgetbitch/README.md` → files inside `budgetbitch/` | Mixing root docs or root app code into the prototype |

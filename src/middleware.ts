@@ -2,29 +2,18 @@ import { convexAuthNextjsMiddleware } from "@convex-dev/auth/nextjs/server";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { hasNonProductionSignedInE2eOverrideFromHeaders } from "@/lib/auth/e2e-auth-override";
+import { 
+  AUTH_ROUTES, 
+  isProtectedPath, 
+  isApiPath 
+} from "@/lib/auth/routes";
 
-const protectedPathPrefixes = ["/dashboard", "/settings", "/auth/continue"];
-const protectedApiPathPrefixes = [
-  "/api/v1/auth/bootstrap",
-  "/api/v1/check-ins",
-  "/api/v1/integrations",
-];
 const missingSessionApiError = {
   error: {
     code: "missing-session",
     message: "Authentication is required.",
   },
 };
-
-function isProtectedPath(pathname: string) {
-  return [...protectedPathPrefixes, ...protectedApiPathPrefixes].some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  );
-}
-
-function isApiPath(pathname: string) {
-  return pathname === "/api/v1" || pathname.startsWith("/api/v1/");
-}
 
 function getRequestPathname(request: NextRequest) {
   const nextUrlPathname = request.nextUrl?.pathname;
@@ -67,12 +56,12 @@ export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
   }
 
   const redirectTarget = getRedirectTarget(request as NextRequest);
-  const signInUrl = new URL("/sign-in", request.url);
+  const signInUrl = new URL(AUTH_ROUTES.signIn, request.url);
 
   signInUrl.searchParams.set("redirectTo", redirectTarget);
 
   return NextResponse.redirect(signInUrl);
-}, { apiRoute: "/api/convex-auth" });
+}, { apiRoute: AUTH_ROUTES.convexAuthApi });
 
 export const config = {
   matcher: ["/((?!_next|.*\\..*).*)", "/"],

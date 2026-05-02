@@ -463,13 +463,14 @@ export const localeMessages = {
       openclaw: {
         eyebrow: "OpenClaw Setup",
         title: "Connect OpenClaw",
-        description: "Review system reach first. Safety details stay below.",
+        description: "Review system reach and prompt-injection exposure first. Safety details stay below.",
         systemAccessMessage:
-          "System reach: Verify local system access, data paths, and model routing before enabling OpenClaw.",
+          "System reach: Verify local system access, data paths, model routing, and prompt-injection boundaries before enabling OpenClaw.",
         riskChecklistTitle: "High-risk connection",
         riskChecklistItems: {
           localReach: "Local reach: Check which local files, tools, or shells OpenClaw can reach.",
-          promptRouting: "Prompt routing: Confirm prompt routing and storage paths before enabling the integration.",
+          promptRouting:
+            "Prompt safety: Confirm prompt routing, storage paths, and injection boundaries before enabling the integration.",
           oneClickRevoke: "One-click revoke: Use one-click revoke if your trust model changes.",
         },
       },
@@ -960,12 +961,13 @@ export const localeMessages = {
       openclaw: {
         eyebrow: "OpenClaw 设置",
         title: "连接 OpenClaw",
-        description: "先检查系统范围。安全细节在下方。",
-        systemAccessMessage: "系统范围：在启用 OpenClaw 前，确认本地系统访问、数据路径和模型路由。",
+        description: "先检查系统范围和提示注入风险。安全细节在下方。",
+        systemAccessMessage:
+          "系统范围：在启用 OpenClaw 前，确认本地系统访问、数据路径、模型路由和提示注入边界。",
         riskChecklistTitle: "高风险连接",
         riskChecklistItems: {
           localReach: "本地范围：检查 OpenClaw 能访问哪些本地文件、工具或 shell。",
-          promptRouting: "提示路由：在启用集成前，确认提示词路由和存储路径。",
+          promptRouting: "提示安全：在启用集成前，确认提示词路由、存储路径和注入边界。",
           oneClickRevoke: "一键撤销：如果你的信任模型发生变化，请使用一键撤销。",
         },
       },
@@ -1461,13 +1463,13 @@ export const localeMessages = {
       openclaw: {
         eyebrow: "การตั้งค่า OpenClaw",
         title: "เชื่อมต่อ OpenClaw",
-        description: "ตรวจสอบขอบเขตระบบก่อน รายละเอียดความปลอดภัยอยู่ด้านล่าง",
+        description: "ตรวจสอบขอบเขตระบบและความเสี่ยงจากพรอมป์ตแทรกก่อน รายละเอียดความปลอดภัยอยู่ด้านล่าง",
         systemAccessMessage:
-          "ขอบเขตระบบ: ตรวจสอบการเข้าถึงระบบภายใน เส้นทางข้อมูล และการกำหนดเส้นทางโมเดลก่อนเปิดใช้ OpenClaw",
+          "ขอบเขตระบบ: ตรวจสอบการเข้าถึงระบบภายใน เส้นทางข้อมูล การกำหนดเส้นทางโมเดล และขอบเขตการแทรกพรอมป์ตก่อนเปิดใช้ OpenClaw",
         riskChecklistTitle: "การเชื่อมต่อความเสี่ยงสูง",
         riskChecklistItems: {
           localReach: "ขอบเขตในเครื่อง: ตรวจสอบว่า OpenClaw เข้าถึงไฟล์ เครื่องมือ หรือเชลล์ในเครื่องใดได้บ้าง",
-          promptRouting: "เส้นทางพรอมป์ต: ยืนยันเส้นทางพรอมป์ตและที่เก็บข้อมูลก่อนเปิดใช้การเชื่อมต่อ",
+          promptRouting: "ความปลอดภัยของพรอมป์ต: ยืนยันเส้นทางพรอมป์ต ที่เก็บข้อมูล และขอบเขตการแทรกก่อนเปิดใช้การเชื่อมต่อ",
           oneClickRevoke: "เพิกถอนในคลิกเดียว: ใช้การเพิกถอนแบบคลิกเดียวหากโมเดลความเชื่อถือของคุณเปลี่ยนไป",
         },
       },

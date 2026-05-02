@@ -17,16 +17,19 @@ vi.mock("next-intl", () => ({
             "integrationProviderPages.openclaw.eyebrow": "OpenClaw Setup",
             "integrationProviderPages.openclaw.title": "Connect OpenClaw",
             "integrationProviderPages.openclaw.description":
-                "OpenClaw can introduce higher trust and system-scope concerns, so review every warning before you enable it.",
+                "Review system reach and prompt-injection exposure first. Safety details stay below.",
             "integrationProviderPages.openclaw.systemAccessMessage":
-                "Verify local system access, data paths, and model routing before enabling OpenClaw.",
+                "System reach: Verify local system access, data paths, model routing, and prompt-injection boundaries before enabling OpenClaw.",
             "integrationProviderPages.openclaw.riskChecklistTitle": "High-risk connection",
             "integrationProviderPages.openclaw.riskChecklistItems.localReach":
                 "Check which local files, tools, or shells OpenClaw can reach.",
             "integrationProviderPages.openclaw.riskChecklistItems.promptRouting":
-                "Confirm prompt routing and storage paths before enabling the integration.",
+                "Prompt safety: Confirm prompt routing, storage paths, and injection boundaries before enabling the integration.",
             "integrationProviderPages.openclaw.riskChecklistItems.oneClickRevoke":
                 "Use one-click revoke if your trust model changes.",
+            "disclosureHeadings.minimumData": "Minimum data",
+            "disclosureHeadings.noSilentSharing": "No silent sharing",
+            "disclosureHeadings.revokeAnyTime": "Revoke any time",
             "disclosures.minimumData": "Only explicitly connected providers receive the minimum required data.",
             "disclosures.noSilentSharing": "No silent sharing or automatic cross-provider routing.",
             "disclosures.revokeAnyTime": "You can revoke and disconnect this provider at any time.",
@@ -42,9 +45,11 @@ describe("OpenClawIntegrationPage", () => {
 
         expect(screen.getByRole("heading", { name: "Connect OpenClaw" })).toBeInTheDocument();
         expect(screen.getByText("High-risk connection")).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "System access warning" })).toBeInTheDocument();
+        expect(screen.getByText("System reach")).toBeInTheDocument();
         expect(
             screen.getByText(
-                "Verify local system access, data paths, and model routing before enabling OpenClaw.",
+                "Verify local system access, data paths, model routing, and prompt-injection boundaries before enabling OpenClaw.",
             ),
         ).toBeInTheDocument();
     });
@@ -55,9 +60,10 @@ describe("OpenClawIntegrationPage", () => {
         expect(
             screen.getByText("Check which local files, tools, or shells OpenClaw can reach."),
         ).toBeInTheDocument();
+        expect(screen.getByText("Prompt safety")).toBeInTheDocument();
         expect(
             screen.getByText(
-                "Confirm prompt routing and storage paths before enabling the integration.",
+                "Confirm prompt routing, storage paths, and injection boundaries before enabling the integration.",
             ),
         ).toBeInTheDocument();
         expect(

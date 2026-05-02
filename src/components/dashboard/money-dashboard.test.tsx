@@ -126,6 +126,7 @@ function createDashboardData() {
 afterEach(() => {
   vi.clearAllMocks();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 describe("MoneyDashboard", () => {
@@ -207,6 +208,47 @@ describe("MoneyDashboard", () => {
           notificationEnabled: true,
         }),
       });
+    });
+
+    expect(
+      screen.getByText(/job preference signals saved\. matches will refresh for your stated interests\./i),
+    ).toBeInTheDocument();
+    expect(refreshMock).not.toHaveBeenCalled();
+
+    await waitFor(() => {
+      expect(refreshMock).toHaveBeenCalled();
+    });
+  });
+
+  it("shows the home-area success message before refreshing the dashboard", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ homeLocation: { id: "home-location-1" } }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<MoneyDashboard data={createDashboardData()} />);
+
+    fireEvent.click(screen.getByRole("tab", { name: /local/i }));
+    fireEvent.change(screen.getByLabelText(/^city$/i), {
+      target: { value: "Oakland" },
+    });
+    fireEvent.change(screen.getByLabelText(/^state$/i), {
+      target: { value: "CA" },
+    });
+    fireEvent.submit(screen.getByRole("button", { name: /save home area/i }).closest("form")!);
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/v1/accounting/home-location",
+        expect.objectContaining({ method: "POST" }),
+      );
+    });
+
+    expect(screen.getByText(/home area saved\. only city and state are kept\./i)).toBeInTheDocument();
+    expect(refreshMock).not.toHaveBeenCalled();
+
+    await waitFor(() => {
       expect(refreshMock).toHaveBeenCalled();
     });
   });

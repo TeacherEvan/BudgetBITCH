@@ -4,8 +4,7 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 
 ## Navigation docs
 
-- `docs/DEV_TREE.md` — project tree graph and quick orientation map
-- `docs/CODEBASE_INDEX.md` — route/module/component index for future navigation
+- `docs/CODEBASE_INDEX.md` — consolidated orientation map, route/module index, and practical filesystem tree
 
 ## Features in Phase 1
 
@@ -44,6 +43,8 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 
 - `src/app/**` contains routes, route groups, layouts, and API handlers
 - `src/app/page.tsx`, `src/app/sign-in/**`, `src/app/sign-up/**`, and `src/app/(app)/auth/continue/**` define the auth-first root entry and post-auth bootstrap path
+- `src/lib/auth/routes.ts` centralizes protected path prefixes and auth route constants used by route protection
+- `src/modules/dashboard/dashboard-data.ts` is the dashboard orchestration boundary, with demo-state builders in `src/modules/dashboard/dashboard-demo-factory.ts`, data mappers in `src/modules/dashboard/dashboard-mappers.ts`, and shared dashboard types in `src/modules/dashboard/types.ts`
 - `src/components/start-smart/**` contains reusable UI for the Money Survival Blueprint flow
 - `src/components/learn/**` contains reusable UI for the Learn! hub and lesson detail flow
 - `src/components/jobs/**` contains reusable UI for the Jobs hub and job detail flow
@@ -58,7 +59,7 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 - `/` is the auth-first gate: signed-out visitors stay on the welcome window, signed-in visitors without a completed launch profile move into the launch wizard, and signed-in visitors with a completed launch profile land on the root board.
 - `/sign-in` and `/sign-up` keep only sanitized in-app `redirectTo` targets. Safe root and dashboard targets are routed through `/auth/continue` before the final landing step.
 - `/auth/continue` is the post-auth bootstrap boundary. It shows the final local-setup panel, then the continue action resolves any missing local user and workspace records before redirecting to the safe post-auth destination.
-- `middleware.ts` recognizes `/auth/continue`, `/dashboard`, `/settings`, and `/api/v1` as the protected surface. Signed-out browser routes redirect to `/sign-in` and protected API routes return JSON authentication errors.
+- `src/middleware.ts` protects the shared product surface by reading the centralized prefixes in `src/lib/auth/routes.ts`. Signed-out browser routes redirect to `/sign-in`, protected API routes return JSON authentication errors, and the non-production signed-in E2E override is still honored for protected coverage.
 
 ## Local setup
 
@@ -97,7 +98,7 @@ Current browser-test note:
 - The Playwright web server strips local auth env on purpose so signed-out welcome coverage and the non-production signed-in fallback stay deterministic even when `.env.local` contains real dev keys.
 - Playwright root coverage is split between `tests/e2e/welcome-auth.spec.ts` for signed-out entry behavior and `tests/e2e/smoke.spec.ts` for the signed-in root gate path.
 
-For deeper orientation, start with `docs/DEV_TREE.md`, then use `docs/CODEBASE_INDEX.md` to jump to the right route, module, or test.
+For deeper orientation, start with `docs/CODEBASE_INDEX.md`.
 
 ## Launch wizard notes
 

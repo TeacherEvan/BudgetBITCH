@@ -36,3 +36,4 @@ pnpm-debug.log*
 .env*.local
 .vscode/launch.json
 .vscode/c_cpp_properties.json
+.idea/
