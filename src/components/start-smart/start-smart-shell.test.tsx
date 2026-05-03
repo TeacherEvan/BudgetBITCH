@@ -1,4 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act } from "react";
+import { hydrateRoot } from "react-dom/client";
+import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   HOME_LOCATION_STORAGE_KEY,
@@ -57,6 +60,34 @@ describe("StartSmartShell", () => {
     expect(screen.getByRole("combobox", { name: /^country$/i })).toHaveValue("TH");
     expect(screen.getByLabelText(/state or region/i)).toHaveValue("10");
     expect(screen.getAllByText("10, Thailand").length).toBeGreaterThan(0);
+  });
+
+  it("hydrates the regional fields after an SSR render", async () => {
+    window.localStorage.setItem(
+      HOME_LOCATION_STORAGE_KEY,
+      JSON.stringify({ countryCode: "TH", stateCode: "10" }),
+    );
+
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(<StartSmartShell />);
+    document.body.appendChild(container);
+
+    let root: ReturnType<typeof hydrateRoot>;
+
+    await act(async () => {
+      root = hydrateRoot(container, <StartSmartShell />);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /set home base/i }));
+
+    expect(screen.getByRole("combobox", { name: /^country$/i })).toHaveValue("TH");
+    expect(screen.getByLabelText(/state or region/i)).toHaveValue("10");
+
+    await act(async () => {
+      root.unmount();
+    });
+
+    container.remove();
   });
 
   it("renders the generated blueprint details after submit", async () => {
@@ -129,7 +160,7 @@ describe("StartSmartShell", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("resets the region code to a supported example when the country changes", () => {
+  it("resets the region code to a supported example when the country changes", async () => {
     render(<StartSmartShell />);
 
     fireEvent.click(screen.getByRole("button", { name: /set home base/i }));
@@ -144,6 +175,8 @@ describe("StartSmartShell", () => {
     fireEvent.change(screen.getByLabelText(/^country$/i), {
       target: { value: "SG" },
     });
+
+    await act(async () => {});
 
     expect(screen.getByLabelText(/state or region/i)).toHaveValue("01");
   });

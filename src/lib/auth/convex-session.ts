@@ -30,7 +30,7 @@ export type AuthBootstrapErrorResponse = {
 
 export type AuthBootstrapErrorReportContext = {
   operation: "identity-verification" | "profile-sync";
-  surface: "auth-bootstrap-api" | "auth-continue-page";
+  surface: "auth-bootstrap-api" | "auth-continue-page" | "dashboard-page";
 };
 
 const knownAuthBootstrapErrorCodes = new Set<string>(

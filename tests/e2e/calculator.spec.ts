@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test";
+import { gotoWithCommit } from "./navigation";
 
 test("calculator page renders and performs basic arithmetic", async ({ page }) => {
   test.slow();
 
-  await page.goto("/calculator");
+  await gotoWithCommit(page, "/calculator");
 
   await expect(page.getByRole("heading", { level: 1, name: "Calculator" })).toBeVisible();
   await expect(page.getByText("Quick arithmetic for budget checks.")).toBeVisible();
@@ -18,7 +19,7 @@ test("calculator page renders and performs basic arithmetic", async ({ page }) =
 });
 
 test("calculator page has a working home nav link", async ({ page }) => {
-  await page.goto("/calculator");
+  await gotoWithCommit(page, "/calculator");
   await expect(page.getByRole("link", { name: /go to dashboard/i })).toHaveAttribute(
     "href",
     "/dashboard",

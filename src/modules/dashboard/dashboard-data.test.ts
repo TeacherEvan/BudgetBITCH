@@ -3,6 +3,30 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const getConvexAuthenticatedIdentityMock = vi.hoisted(() => vi.fn());
 const loadDashboardBriefingMock = vi.hoisted(() => vi.fn());
 const cookiesMock = vi.hoisted(() => vi.fn());
+const reportAuthBootstrapErrorMock = vi.hoisted(() => vi.fn());
+const authBootstrapErrorCodes = vi.hoisted(() => ({
+  authenticationRequired: "authentication-required",
+  missingConvexSyncSecret: "missing-convex-sync-secret",
+  convexIdentityFetchFailed: "convex-identity-fetch-failed",
+  convexProfileSyncFailed: "convex-profile-sync-failed",
+}));
+
+function makeAuthBootstrapError(input: {
+  code: string;
+  message: string;
+  status: number;
+}) {
+  const error = new Error(input.message) as Error & {
+    code: string;
+    status: number;
+  };
+
+  error.name = "AuthBootstrapError";
+  error.code = input.code;
+  error.status = input.status;
+
+  return error;
+}
 
 const prismaMock = {
   userProfile: {
@@ -20,7 +44,16 @@ const prismaMock = {
 };
 
 vi.mock("@/lib/auth/convex-session", () => ({
+  authBootstrapErrorCodes,
   getConvexAuthenticatedIdentity: getConvexAuthenticatedIdentityMock,
+  isAuthBootstrapError: (error: unknown) =>
+    Boolean(
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      "status" in error,
+    ),
+  reportAuthBootstrapError: reportAuthBootstrapErrorMock,
 }));
 
 vi.mock("next/headers", () => ({
@@ -43,6 +76,7 @@ describe("getDashboardPageData", () => {
 
   beforeEach(() => {
     getConvexAuthenticatedIdentityMock.mockReset();
+    reportAuthBootstrapErrorMock.mockReset();
     loadDashboardBriefingMock.mockReset();
     cookiesMock.mockReset();
     cookiesMock.mockResolvedValue({ get: vi.fn().mockReturnValue(undefined) });
@@ -64,6 +98,30 @@ describe("getDashboardPageData", () => {
       kind: "auth-required",
       redirectTo: "/sign-in?redirectTo=%2Fdashboard%3FworkspaceId%3Dworkspace-2",
     });
+  });
+
+  it("returns setup-required when Convex identity verification fails", async () => {
+    getConvexAuthenticatedIdentityMock.mockRejectedValue(
+      makeAuthBootstrapError({
+        code: authBootstrapErrorCodes.convexIdentityFetchFailed,
+        message: "Convex identity query failed",
+        status: 503,
+      }),
+    );
+
+    await expect(getDashboardPageData("workspace-2")).resolves.toEqual({
+      kind: "setup-required",
+      redirectTo:
+        "/auth/continue?redirectTo=%2Fdashboard%3FworkspaceId%3Dworkspace-2&error=convex-identity-fetch-failed",
+    });
+
+    expect(reportAuthBootstrapErrorMock).toHaveBeenCalledWith(
+      expect.objectContaining({ code: authBootstrapErrorCodes.convexIdentityFetchFailed }),
+      {
+        operation: "identity-verification",
+        surface: "dashboard-page",
+      },
+    );
   });
 
   it("returns demo data for the non-production signed-in e2e override when Convex has no session", async () => {

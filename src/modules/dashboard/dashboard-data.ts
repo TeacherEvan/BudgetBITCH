@@ -1,5 +1,10 @@
 import { cookies } from "next/headers";
-import { getConvexAuthenticatedIdentity } from "@/lib/auth/convex-session";
+import {
+  authBootstrapErrorCodes,
+  getConvexAuthenticatedIdentity,
+  isAuthBootstrapError,
+  reportAuthBootstrapError,
+} from "@/lib/auth/convex-session";
 import { hasNonProductionSignedInE2eOverrideFromCookieStore } from "@/lib/auth/e2e-auth-override";
 import { getPrismaClient } from "@/lib/prisma";
 import { loadDashboardBriefing } from "@/modules/dashboard/briefing/fetch-briefing";
@@ -52,6 +57,14 @@ function getDashboardRedirectTarget(requestedWorkspaceId?: string | null) {
   return `/dashboard${search}`;
 }
 
+function getAuthContinueRedirectTarget(redirectTarget: string, errorCode: string) {
+  const authContinueUrl = new URL("/auth/continue", "https://budgetbitch.local");
+  authContinueUrl.searchParams.set("redirectTo", redirectTarget);
+  authContinueUrl.searchParams.set("error", errorCode);
+
+  return `${authContinueUrl.pathname}?${authContinueUrl.searchParams.toString()}`;
+}
+
 function buildLocalSignals(
   localAreaLabel: string,
   jobPreferences: DashboardJobPreferenceSummary,
@@ -93,7 +106,33 @@ export async function getDashboardPageData(
   }
 
   const redirectTarget = getDashboardRedirectTarget(requestedWorkspaceId);
-  const identity = await getConvexAuthenticatedIdentity();
+  let identity: Awaited<ReturnType<typeof getConvexAuthenticatedIdentity>>;
+
+  try {
+    identity = await getConvexAuthenticatedIdentity();
+  } catch (error) {
+    if (isAuthBootstrapError(error)) {
+      reportAuthBootstrapError(error, {
+        operation: "identity-verification",
+        surface: "dashboard-page",
+      });
+
+      if (error.code === authBootstrapErrorCodes.authenticationRequired) {
+        return {
+          kind: "auth-required",
+          redirectTo: `/sign-in?redirectTo=${encodeURIComponent(redirectTarget)}`,
+        };
+      }
+
+      return {
+        kind: "setup-required",
+        redirectTo: getAuthContinueRedirectTarget(redirectTarget, error.code),
+      };
+    }
+
+    throw error;
+  }
+
   const userId = identity?.tokenIdentifier ?? "";
 
   if (!userId) {

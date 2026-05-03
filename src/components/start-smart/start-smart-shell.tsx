@@ -16,7 +16,12 @@ import {
   startSmartWizardSteps,
   type StartSmartWizardStep,
 } from "@/modules/start-smart/wizard-machine";
-import { parseHomeLocation, type HomeLocation } from "@/modules/home-location/home-location";
+import {
+  parseHomeLocation,
+  readStoredHomeLocation,
+  subscribeHomeLocation,
+  type HomeLocation,
+} from "@/modules/home-location/home-location";
 import { useHomeLocation } from "@/modules/home-location/use-home-location";
 import {
   ArrowLeft,
@@ -27,7 +32,7 @@ import {
   Wallet,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BlueprintPanel } from "./blueprint-panel";
 import { ConfidenceBadge } from "./confidence-badge";
 import { ProfileForm, type ProfileFormField } from "./profile-form";
@@ -159,11 +164,12 @@ function pickFieldErrors(
 export function StartSmartShell() {
   const templates = useMemo(() => listStartSmartTemplateCards(), []);
   const { homeLocation, homeLocationLabel, saveHomeLocation } = useHomeLocation();
+  const initialHomeLocationRef = useRef(homeLocation);
   const [selectedTemplateId, setSelectedTemplateId] =
     useState<StartSmartTemplateId>("single_teen");
   const [step, setStep] = useState<StartSmartWizardStep>("lane");
   const [values, setValues] = useState<StartSmartProfileInput>(() =>
-    mergeTemplateIntoProfile("single_teen"),
+    mergeTemplateIntoProfile("single_teen", homeLocation),
   );
   const [result, setResult] = useState<BlueprintResponse | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -174,25 +180,35 @@ export function StartSmartShell() {
   const currentStepIndex = startSmartWizardSteps.indexOf(step);
 
   useEffect(() => {
-    if (!homeLocation) {
-      return;
-    }
+    const syncHomeLocationIntoValues = () => {
+      const nextHomeLocation = readStoredHomeLocation();
 
-    setValues((current) => {
-      if (
-        current.countryCode === homeLocation.countryCode &&
-        current.stateCode === homeLocation.stateCode
-      ) {
-        return current;
+      if (!nextHomeLocation) {
+        return;
       }
 
-      return {
-        ...current,
-        countryCode: homeLocation.countryCode,
-        stateCode: homeLocation.stateCode,
-      };
-    });
-  }, [homeLocation]);
+      setValues((current) => {
+        if (
+          current.countryCode === nextHomeLocation.countryCode &&
+          current.stateCode === nextHomeLocation.stateCode
+        ) {
+          return current;
+        }
+
+        return {
+          ...current,
+          countryCode: nextHomeLocation.countryCode,
+          stateCode: nextHomeLocation.stateCode,
+        };
+      });
+    };
+
+    if (!initialHomeLocationRef.current) {
+      queueMicrotask(syncHomeLocationIntoValues);
+    }
+
+    return subscribeHomeLocation(syncHomeLocationIntoValues);
+  }, []);
 
   useEffect(() => {
     const nextHomeLocation = getProfileHomeLocation(values);
