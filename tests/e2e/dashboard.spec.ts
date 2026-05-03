@@ -1,12 +1,47 @@
 import { expect, test } from "@playwright/test";
 import { expectConvexPasswordAuthEntry } from "./auth-setup";
 import { seedSignedInAuthOverride } from "./auth-state";
+import { gotoWithCommit } from "./navigation";
+
+async function waitForDashboardReady(page: Parameters<typeof test>[0]["page"]) {
+  await expect(page.locator("main > section").first()).toHaveAttribute("aria-busy", "false", {
+    timeout: 15_000,
+  });
+  await expect(page.getByRole("button", { name: /save expense/i })).toBeEnabled();
+}
+
+async function clickAndWaitForPost(
+  page: Parameters<typeof test>[0]["page"],
+  buttonName: RegExp,
+  responsePath: string,
+) {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const responsePromise = page
+      .waitForResponse(
+        (response) =>
+          response.url().includes(responsePath) && response.request().method() === "POST",
+        { timeout: 8_000 },
+      )
+      .catch(() => null);
+
+    await page.getByRole("button", { name: buttonName }).click();
+
+    const response = await responsePromise;
+
+    if (response) {
+      return response;
+    }
+  }
+
+  throw new Error(`No POST response received for ${responsePath}.`);
+}
 
 test("dashboard redirects to sign-in under the local no-auth harness", async ({ page }) => {
   test.slow();
 
   await page.setViewportSize({ width: 1440, height: 980 });
-  await page.goto("/dashboard?workspaceId=workspace-2");
+  await gotoWithCommit(page, "/dashboard?workspaceId=workspace-2");
+  await page.waitForURL(/\/sign-in\?redirectTo=%2Fdashboard%3FworkspaceId%3Dworkspace-2/);
 
   await expect(page.getByRole("heading", { name: /open your budget board/i })).toBeVisible();
   await expect(page.getByRole("link", { name: "Open sign-up" })).toHaveAttribute(
@@ -49,21 +84,28 @@ test("dashboard signed-in local harness submits record, local, privacy, and job 
     });
   });
   await page.setViewportSize({ width: 1440, height: 980 });
-  await page.goto("/dashboard?workspaceId=workspace-household");
+  await gotoWithCommit(page, "/dashboard?workspaceId=workspace-household");
 
   await expect(page.getByRole("heading", { name: /money dashboard/i })).toBeVisible();
   await expect(page.getByText(/household budget/i)).toBeVisible();
+  await waitForDashboardReady(page);
 
-  await page.getByLabel(/merchant/i).fill("Corner Store");
-  await page.getByLabel(/amount/i).fill("18.25");
-  await page.getByLabel(/note/i).fill("Lunch after errands");
+  const merchantInput = page.getByLabel(/merchant/i);
+  const amountInput = page.getByLabel(/amount/i);
+  const noteInput = page.getByLabel(/note/i);
 
-  const expenseResponsePromise = page.waitForResponse(
-    (response) =>
-      response.url().includes("/api/v1/accounting/expenses") && response.request().method() === "POST",
+  await merchantInput.fill("Corner Store");
+  await expect(merchantInput).toHaveValue("Corner Store");
+  await amountInput.fill("18.25");
+  await expect(amountInput).toHaveValue("18.25");
+  await noteInput.fill("Lunch after errands");
+  await expect(noteInput).toHaveValue("Lunch after errands");
+
+  const expenseResponse = await clickAndWaitForPost(
+    page,
+    /save expense/i,
+    "/api/v1/accounting/expenses",
   );
-  await page.getByRole("button", { name: /save expense/i }).click();
-  const expenseResponse = await expenseResponsePromise;
 
   expect(expenseResponse.ok()).toBeTruthy();
   await expect(page.getByText(/expense saved to the money dashboard\./i)).toBeVisible();
@@ -72,13 +114,11 @@ test("dashboard signed-in local harness submits record, local, privacy, and job 
   await page.getByLabel(/^city$/i).fill("Oakland");
   await page.getByLabel(/^state$/i).fill("CA");
 
-  const homeLocationResponsePromise = page.waitForResponse(
-    (response) =>
-      response.url().includes("/api/v1/accounting/home-location") &&
-      response.request().method() === "POST",
+  const homeLocationResponse = await clickAndWaitForPost(
+    page,
+    /save home area/i,
+    "/api/v1/accounting/home-location",
   );
-  await page.getByRole("button", { name: /save home area/i }).click();
-  const homeLocationResponse = await homeLocationResponsePromise;
 
   expect(homeLocationResponse.ok()).toBeTruthy();
   await expect(page.getByText(/home area saved\. only city and state are kept\./i)).toBeVisible();
@@ -87,13 +127,11 @@ test("dashboard signed-in local harness submits record, local, privacy, and job 
   await page.getByLabel(/certifications/i).fill("RN");
   await page.getByRole("checkbox", { name: /teaching/i }).check();
 
-  const jobPreferencesResponsePromise = page.waitForResponse(
-    (response) =>
-      response.url().includes("/api/v1/personalization/job-preferences") &&
-      response.request().method() === "POST",
+  const jobPreferencesResponse = await clickAndWaitForPost(
+    page,
+    /save job signals/i,
+    "/api/v1/personalization/job-preferences",
   );
-  await page.getByRole("button", { name: /save job signals/i }).click();
-  const jobPreferencesResponse = await jobPreferencesResponsePromise;
 
   expect(jobPreferencesResponse.ok()).toBeTruthy();
   await expect(
@@ -104,12 +142,11 @@ test("dashboard signed-in local harness submits record, local, privacy, and job 
   await page.getByLabel(/pronouns/i).selectOption("they_them");
   await page.getByLabel(/communication style/i).selectOption("direct");
 
-  const privacyResponsePromise = page.waitForResponse(
-    (response) =>
-      response.url().includes("/api/v1/personalization/profile") && response.request().method() === "POST",
+  const privacyResponse = await clickAndWaitForPost(
+    page,
+    /save privacy settings/i,
+    "/api/v1/personalization/profile",
   );
-  await page.getByRole("button", { name: /save privacy settings/i }).click();
-  const privacyResponse = await privacyResponsePromise;
 
   expect(privacyResponse.ok()).toBeTruthy();
   await expect(page.getByText(/privacy and personalization settings saved\./i)).toBeVisible();

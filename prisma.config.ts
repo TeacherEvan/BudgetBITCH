@@ -16,6 +16,7 @@ const databaseUrl = process.env.DATABASE_URL;
 const directUrl = process.env.DIRECT_URL;
 const prismaCommand = process.argv.slice(2).join(" ");
 const isGenerateCommand = prismaCommand.includes("generate");
+const isProductionDeployment = process.env.VERCEL_ENV?.trim() === "production";
 const installTimeFallbackDatabaseUrl =
   "postgresql://placeholder:placeholder@localhost:5432/budgetbitch";
 const resolvedDatabaseUrl = resolvePrismaCliDatabaseUrl({
@@ -23,6 +24,7 @@ const resolvedDatabaseUrl = resolvePrismaCliDatabaseUrl({
   directUrl,
   isGenerateCommand,
   installTimeFallbackDatabaseUrl,
+  rejectLocalhostForProduction: isProductionDeployment,
 });
 
 process.env.DATABASE_URL ??= resolvedDatabaseUrl;

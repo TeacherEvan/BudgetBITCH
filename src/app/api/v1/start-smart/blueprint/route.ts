@@ -23,7 +23,7 @@ type JsonInput =
   | (JsonInput | null)[];
 
 const blueprintRequestSchema = z.object({
-  workspaceId: z.string().trim().min(1),
+  workspaceId: z.string().trim().min(1).optional(),
   templateId: z.string().trim().min(1).optional(),
   answers: startSmartProfileSchema,
 });
@@ -31,7 +31,34 @@ const blueprintRequestSchema = z.object({
 export async function POST(request: Request) {
   const body = await request.json();
   const input = blueprintRequestSchema.parse(body);
-  let trustedWorkspaceId: string;
+  let trustedWorkspaceId: string | null = null;
+
+  const profile = normalizeStartSmartProfile(input.answers);
+  const fetched = await fetchRegionalData(profile.regionKey);
+  const regional = buildRegionalSnapshot({
+    regionKey: profile.regionKey,
+    seed: getRegionalSeed(profile.regionKey),
+    fetched,
+  });
+  const blueprint = generateMoneySurvivalBlueprint({ profile, regional });
+
+  let persistence: { persisted: boolean; profileId?: string; reason?: string } =
+    {
+      persisted: false,
+      reason: "not_attempted",
+    };
+
+  if (!input.workspaceId) {
+    return NextResponse.json({
+      profile,
+      regional,
+      blueprint,
+      persistence: {
+        persisted: false,
+        reason: "workspace_not_requested",
+      },
+    });
+  }
 
   try {
     const access = await resolveWorkspaceApiAccess(input.workspaceId);
@@ -46,14 +73,6 @@ export async function POST(request: Request) {
     throw error;
   }
 
-  const profile = normalizeStartSmartProfile(input.answers);
-  const fetched = await fetchRegionalData(profile.regionKey);
-  const regional = buildRegionalSnapshot({
-    regionKey: profile.regionKey,
-    seed: getRegionalSeed(profile.regionKey),
-    fetched,
-  });
-  const blueprint = generateMoneySurvivalBlueprint({ profile, regional });
   const profileRecord = buildProfileRecord({
     workspaceId: trustedWorkspaceId,
     templateId: input.templateId,
@@ -61,12 +80,6 @@ export async function POST(request: Request) {
     householdKind: profile.householdKind,
     profile,
   });
-
-  let persistence: { persisted: boolean; profileId?: string; reason?: string } =
-    {
-      persisted: false,
-      reason: "not_attempted",
-    };
 
   try {
     const prisma = getPrismaClient();

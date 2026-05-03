@@ -91,24 +91,26 @@ describe("StartSmartShell", () => {
   });
 
   it("renders the generated blueprint details after submit", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        blueprint: {
+          priorityStack: ["cover_essentials"],
+          riskWarnings: ["income_volatility_risk"],
+          next7Days: ["List all fixed bills"],
+          next30Days: ["Build starter emergency buffer"],
+          learnModuleKeys: ["budgeting_basics"],
+          recommendedIntegrations: ["openai"],
+        },
+        regional: {
+          housing: { confidence: "verified" },
+        },
+      }),
+    });
+
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          blueprint: {
-            priorityStack: ["cover_essentials"],
-            riskWarnings: ["income_volatility_risk"],
-            next7Days: ["List all fixed bills"],
-            next30Days: ["Build starter emergency buffer"],
-            learnModuleKeys: ["budgeting_basics"],
-            recommendedIntegrations: ["openai"],
-          },
-          regional: {
-            housing: { confidence: "verified" },
-          },
-        }),
-      }),
+      fetchMock,
     );
 
     render(<StartSmartShell />);
@@ -126,6 +128,24 @@ describe("StartSmartShell", () => {
     expect(await screen.findByText("Build starter emergency buffer")).toBeInTheDocument();
     expect(screen.getByText("openai")).toBeInTheDocument();
     expect(screen.getAllByText("Survival Plan").length).toBeGreaterThan(0);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/start-smart/blueprint",
+      expect.objectContaining({
+        headers: {
+          "content-type": "application/json",
+        },
+        method: "POST",
+      }),
+    );
+    expect(
+      JSON.parse((fetchMock.mock.calls[0]?.[1] as RequestInit | undefined)?.body as string),
+    ).toMatchObject({
+      templateId: "young_adult",
+      answers: {
+        countryCode: "US",
+        stateCode: "CA",
+      },
+    });
     expect(
       within(screen.getByRole("button", { name: /back panel/i }).parentElement as HTMLElement).getByText(
         "Panel 4 of 4",

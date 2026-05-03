@@ -2,7 +2,7 @@
 
 import { Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { OfflineBanner } from "@/components/pwa/offline-banner";
 
 type Note = {
@@ -63,10 +63,15 @@ function buildId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function subscribeToClientReady() {
+  return () => undefined;
+}
+
 export function NotesBoard() {
   const t = useTranslations("notesBoard");
   const [notes, setNotes] = useState<Note[]>(() => loadNotes());
   const [input, setInput] = useState("");
+  const isInteractiveReady = useSyncExternalStore(subscribeToClientReady, () => true, () => false);
 
   function handleAdd() {
     const trimmed = input.trim();
@@ -89,9 +94,13 @@ export function NotesBoard() {
   }
 
   return (
-    <section className="bb-panel bb-panel-strong mx-auto max-w-2xl p-5" aria-label={t("regionLabel")}>
+    <section
+      className="bb-panel bb-panel-strong mx-auto max-w-2xl p-5"
+      aria-label={t("regionLabel")}
+      aria-busy={!isInteractiveReady}
+    >
       <OfflineBanner className="mb-4" />
-      <div className="flex gap-2">
+      <fieldset disabled={!isInteractiveReady} className="flex gap-2 border-0 p-0">
         <label htmlFor="new-note-input" className="sr-only">
           {t("inputLabel")}
         </label>
@@ -102,18 +111,18 @@ export function NotesBoard() {
           onChange={(event) => setInput(event.target.value)}
           onKeyDown={(event) => event.key === "Enter" && handleAdd()}
           placeholder={t("inputPlaceholder")}
-          className="flex-1 rounded-lg border border-white/10 bg-black/30 px-4 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+          className="flex-1 rounded-lg border border-white/10 bg-black/30 px-4 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-400 disabled:cursor-wait disabled:opacity-70"
           aria-label={t("inputLabel")}
         />
         <button
           type="button"
           onClick={handleAdd}
-          className="bb-button-primary px-4 py-2 text-sm"
+          className="bb-button-primary px-4 py-2 text-sm disabled:cursor-wait disabled:opacity-70"
           aria-label={t("addNote")}
         >
           {t("addNote")}
         </button>
-      </div>
+      </fieldset>
 
       {notes.length === 0 ? (
         <p className="bb-helper-copy mt-5 text-center">{t("emptyState")}</p>

@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { expectConvexPasswordAuthEntry } from "./auth-setup";
 import { seedCompletedLaunchProfile } from "./launch-profile";
+import { gotoWithCommit } from "./navigation";
 
 test("signed-out visitors see the welcome auth surface at root", async ({ page }) => {
   await page.goto("/");
@@ -29,7 +30,7 @@ test("signed-out visitors still see welcome when a launch profile is already sav
 });
 
 test("dashboard redirects to Convex Auth sign-in when signed out", async ({ page }) => {
-  await page.goto("/dashboard?workspaceId=workspace-2");
+  await gotoWithCommit(page, "/dashboard?workspaceId=workspace-2");
 
   await expect(page).toHaveURL(
     /\/sign-in\?redirectTo=%2Fdashboard%3FworkspaceId%3Dworkspace-2$/,

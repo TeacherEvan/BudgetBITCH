@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { seedSignedInAuthOverride } from "./auth-state";
 import { seedCompletedLaunchProfile } from "./launch-profile";
+import { gotoWithCommit } from "./navigation";
+import { buildBlueprint, openHomeBasePanel, openMoneySnapshotPanel } from "./start-smart-helpers";
 
 test("user can open Start Smart and generate a survival blueprint", async ({
   page,
@@ -26,21 +28,13 @@ test("user can open Start Smart and generate a survival blueprint", async ({
       }),
     });
   });
-  await page.goto("/start-smart");
+  await gotoWithCommit(page, "/start-smart");
 
-  await page.getByRole("button", { name: /set home base/i }).click();
-  await expect(page.getByRole("heading", { name: /set one sticky region/i })).toBeVisible();
+  await openHomeBasePanel(page);
   await page.getByLabel(/country/i).selectOption("SG");
-  await page.getByLabel(/state/i).fill("01");
-  const openMoneySnapshotButton = page.getByRole("button", {
-    name: /open money snapshot/i,
-  });
-  await openMoneySnapshotButton.click({ force: true });
-  await expect(page.getByRole("heading", { name: /only the core survival inputs/i })).toBeVisible();
-  const buildBlueprintButton = page.getByRole("button", {
-    name: /build my survival blueprint/i,
-  });
-  await buildBlueprintButton.click({ force: true });
+  await page.getByLabel(/state or region/i).fill("01");
+  await openMoneySnapshotPanel(page);
+  await buildBlueprint(page);
 
   await expect(page.getByText("Money Survival Blueprint")).toBeVisible();
   await expect(page.getByRole("heading", { name: /first moves/i })).toBeVisible();

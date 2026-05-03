@@ -89,6 +89,32 @@ function createBlueprintRequest(workspaceId: string) {
   );
 }
 
+function createPublicBlueprintRequest() {
+  return new Request(
+    "http://localhost/api/v1/start-smart/blueprint",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        templateId: "young_adult",
+        answers: {
+          countryCode: "US",
+          stateCode: "CA",
+          ageBand: "young_adult",
+          housing: "renting",
+          dependents: 0,
+          pets: 0,
+          incomePattern: "steady",
+          debtLoad: "low",
+          goals: ["emergency_fund"],
+          benefitsSupport: ["none"],
+          preferredIntegrations: [],
+        },
+      }),
+      headers: { "content-type": "application/json" },
+    },
+  );
+}
+
 describe("POST /api/v1/start-smart/blueprint", () => {
   beforeEach(() => {
     createProfileMock.mockReset();
@@ -134,6 +160,22 @@ describe("POST /api/v1/start-smart/blueprint", () => {
     expect(json.persistence).toEqual({
       persisted: true,
       profileId: "profile_123",
+    });
+  });
+
+  it("returns a generated blueprint without persistence when no workspace is requested", async () => {
+    const response = await POST(createPublicBlueprintRequest());
+    const json = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(resolveWorkspaceApiAccessMock).not.toHaveBeenCalled();
+    expect(createProfileMock).not.toHaveBeenCalled();
+    expect(createRegionalSnapshotMock).not.toHaveBeenCalled();
+    expect(createBlueprintSnapshotMock).not.toHaveBeenCalled();
+    expect(json.blueprint.priorityStack.length).toBeGreaterThan(0);
+    expect(json.persistence).toEqual({
+      persisted: false,
+      reason: "workspace_not_requested",
     });
   });
 

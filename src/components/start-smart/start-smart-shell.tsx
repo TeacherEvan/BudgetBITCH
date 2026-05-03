@@ -309,7 +309,6 @@ export function StartSmartShell() {
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          workspaceId: "demo_workspace",
           templateId: selectedTemplateId,
           answers: values,
         }),

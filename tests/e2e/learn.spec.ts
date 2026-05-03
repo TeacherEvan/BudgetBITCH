@@ -1,11 +1,13 @@
 import { expect, test } from "@playwright/test";
 import { seedSignedInAuthOverride } from "./auth-state";
 import { seedCompletedLaunchProfile } from "./launch-profile";
+import { gotoWithCommit } from "./navigation";
+import { buildBlueprint, openHomeBasePanel, openMoneySnapshotPanel } from "./start-smart-helpers";
 
 test("user can open Learn! and review the next lesson card", async ({ page }) => {
   await seedSignedInAuthOverride(page);
   await seedCompletedLaunchProfile(page);
-  await page.goto("/learn");
+  await gotoWithCommit(page, "/learn");
 
   await expect(
     page.getByRole("heading", {
@@ -61,13 +63,13 @@ test("user can open Learn next from Start Smart results", async ({ page }) => {
       }),
     });
   });
-  await page.goto("/start-smart");
+  await gotoWithCommit(page, "/start-smart");
 
-  await page.getByRole("button", { name: /set home base/i }).click();
+  await openHomeBasePanel(page);
   await page.getByLabel(/country/i).selectOption("SG");
-  await page.getByLabel(/state/i).fill("01");
-  await page.getByRole("button", { name: /open money snapshot/i }).click({ force: true });
-  await page.getByRole("button", { name: /build my survival blueprint/i }).click({ force: true });
+  await page.getByLabel(/state or region/i).fill("01");
+  await openMoneySnapshotPanel(page);
+  await buildBlueprint(page);
 
   const learnNextBlock = page.locator("article").filter({
     has: page.getByRole("heading", { name: "Learn next" }),

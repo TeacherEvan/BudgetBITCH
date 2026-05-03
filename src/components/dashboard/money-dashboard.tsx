@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type {
   DashboardPageData,
   DashboardJobPreferenceSummary,
@@ -111,9 +111,14 @@ function splitList(value: string) {
     .filter((item) => item.length > 0);
 }
 
+function subscribeToClientReady() {
+  return () => undefined;
+}
+
 export function MoneyDashboard({ data }: MoneyDashboardProps) {
   const router = useRouter();
   const refreshTimeoutRef = useRef<number | null>(null);
+  const isInteractiveReady = useSyncExternalStore(subscribeToClientReady, () => true, () => false);
   const [activePanel, setActivePanel] = useState<PanelId>("record");
   const [expenseForm, setExpenseForm] = useState({
     merchantName: "",
@@ -293,7 +298,10 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
   }
 
   return (
-    <section className="relative isolate min-h-[calc(100dvh-6rem)] overflow-hidden rounded-[34px] border border-amber-200/15 bg-[radial-gradient(circle_at_top,rgba(156,107,25,0.18),transparent_28%),linear-gradient(180deg,rgba(28,18,9,0.98),rgba(7,7,6,0.96))] p-4 text-stone-100 shadow-[0_28px_100px_rgba(0,0,0,0.42)] md:p-6">
+    <section
+      className="relative isolate min-h-[calc(100dvh-6rem)] overflow-hidden rounded-[34px] border border-amber-200/15 bg-[radial-gradient(circle_at_top,rgba(156,107,25,0.18),transparent_28%),linear-gradient(180deg,rgba(28,18,9,0.98),rgba(7,7,6,0.96))] p-4 text-stone-100 shadow-[0_28px_100px_rgba(0,0,0,0.42)] md:p-6"
+      aria-busy={!isInteractiveReady}
+    >
       <div className="pointer-events-none absolute inset-0 opacity-20" aria-hidden="true">
         <div className="absolute inset-x-6 top-6 h-28 rounded-4xl bg-[repeating-linear-gradient(90deg,rgba(251,191,36,0.16),rgba(251,191,36,0.16)_1px,transparent_1px,transparent_36px)] blur-[1px]" />
         <div className="absolute bottom-6 left-6 right-6 h-24 rounded-4xl bg-[repeating-linear-gradient(0deg,rgba(245,158,11,0.12),rgba(245,158,11,0.12)_2px,transparent_2px,transparent_24px)]" />
@@ -310,32 +318,34 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
               Record expenses, protect the plan, and keep privacy promises visible.
             </p>
 
-            <div className="mt-5 flex flex-wrap gap-2" role="tablist" aria-label="Money dashboard panels">
-              {([
-                ["record", "Record"],
-                ["budget", "Budget"],
-                ["local", "Local"],
-                ["privacy", "Privacy"],
-              ] as const).map(([panelId, label]) => (
-                <button
-                  key={panelId}
-                  type="button"
-                  onClick={() => setActivePanel(panelId)}
-                  role="tab"
-                  id={`panel-tab-${panelId}`}
-                  aria-controls={`panel-${panelId}`}
-                  aria-selected={activePanel === panelId}
-                  className={[
-                    "rounded-full border px-4 py-2 text-sm font-semibold transition",
-                    activePanel === panelId
-                      ? "border-amber-200/80 bg-amber-200/18 text-amber-50"
-                      : "border-amber-100/20 bg-black/20 text-stone-200/80 hover:border-amber-200/40",
-                  ].join(" ")}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            <fieldset disabled={!isInteractiveReady} className="mt-5 min-w-0 border-0 p-0">
+              <div className="flex flex-wrap gap-2" role="tablist" aria-label="Money dashboard panels">
+                {([
+                  ["record", "Record"],
+                  ["budget", "Budget"],
+                  ["local", "Local"],
+                  ["privacy", "Privacy"],
+                ] as const).map(([panelId, label]) => (
+                  <button
+                    key={panelId}
+                    type="button"
+                    onClick={() => setActivePanel(panelId)}
+                    role="tab"
+                    id={`panel-tab-${panelId}`}
+                    aria-controls={`panel-${panelId}`}
+                    aria-selected={activePanel === panelId}
+                    className={[
+                      "rounded-full border px-4 py-2 text-sm font-semibold transition disabled:cursor-wait disabled:opacity-70",
+                      activePanel === panelId
+                        ? "border-amber-200/80 bg-amber-200/18 text-amber-50"
+                        : "border-amber-100/20 bg-black/20 text-stone-200/80 hover:border-amber-200/40",
+                    ].join(" ")}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-1 xl:grid-cols-2">
@@ -382,8 +392,12 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
                 </span>
               </div>
 
-              <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={handleExpenseSubmit}>
-                <label className="grid gap-2 text-sm font-medium text-stone-100">
+              <form className="mt-4" onSubmit={handleExpenseSubmit}>
+                <fieldset
+                  disabled={!isInteractiveReady || isSubmittingExpense}
+                  className="grid gap-3 border-0 p-0 md:grid-cols-2"
+                >
+                  <label className="grid gap-2 text-sm font-medium text-stone-100">
                   Merchant
                   <input
                     value={expenseForm.merchantName}
@@ -393,8 +407,8 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
                     className="rounded-2xl border border-amber-100/15 bg-black/20 px-4 py-3 text-sm text-stone-100 outline-none ring-0 placeholder:text-stone-400"
                     placeholder="Corner Store"
                   />
-                </label>
-                <label className="grid gap-2 text-sm font-medium text-stone-100">
+                  </label>
+                  <label className="grid gap-2 text-sm font-medium text-stone-100">
                   Amount
                   <input
                     value={expenseForm.amount}
@@ -405,8 +419,8 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
                     inputMode="decimal"
                     placeholder="18.25"
                   />
-                </label>
-                <label className="grid gap-2 text-sm font-medium text-stone-100">
+                  </label>
+                  <label className="grid gap-2 text-sm font-medium text-stone-100">
                   Category
                   <select
                     value={expenseForm.budgetCategoryId}
@@ -421,8 +435,8 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
                       </option>
                     ))}
                   </select>
-                </label>
-                <label className="grid gap-2 text-sm font-medium text-stone-100">
+                  </label>
+                  <label className="grid gap-2 text-sm font-medium text-stone-100">
                   Account
                   <select
                     value={expenseForm.accountId}
@@ -437,8 +451,8 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
                       </option>
                     ))}
                   </select>
-                </label>
-                <label className="grid gap-2 text-sm font-medium text-stone-100">
+                  </label>
+                  <label className="grid gap-2 text-sm font-medium text-stone-100">
                   Date
                   <input
                     type="date"
@@ -448,8 +462,8 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
                     }
                     className="rounded-2xl border border-amber-100/15 bg-black/20 px-4 py-3 text-sm text-stone-100 outline-none"
                   />
-                </label>
-                <label className="grid gap-2 text-sm font-medium text-stone-100 md:col-span-2">
+                  </label>
+                  <label className="grid gap-2 text-sm font-medium text-stone-100 md:col-span-2">
                   Note
                   <input
                     value={expenseForm.note}
@@ -459,27 +473,27 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
                     className="rounded-2xl border border-amber-100/15 bg-black/20 px-4 py-3 text-sm text-stone-100 outline-none"
                     placeholder="Lunch after errands"
                   />
-                </label>
+                  </label>
 
-                <div className="md:col-span-2 flex flex-wrap items-center gap-3">
-                  <button
-                    type="submit"
-                    disabled={isSubmittingExpense}
-                    className="rounded-full border border-amber-300/60 bg-amber-200/15 px-5 py-2.5 text-sm font-semibold text-amber-50 transition hover:bg-amber-200/22 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {isSubmittingExpense ? "Saving expense..." : "Save expense"}
-                  </button>
-                  {expenseState.message ? (
-                    <p
-                      className={[
-                        "text-sm",
-                        expenseState.status === "error" ? "text-rose-300" : "text-emerald-300",
-                      ].join(" ")}
+                  <div className="md:col-span-2 flex flex-wrap items-center gap-3">
+                    <button
+                      type="submit"
+                      className="rounded-full border border-amber-300/60 bg-amber-200/15 px-5 py-2.5 text-sm font-semibold text-amber-50 transition hover:bg-amber-200/22 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {expenseState.message}
-                    </p>
-                  ) : null}
-                </div>
+                      {isSubmittingExpense ? "Saving expense..." : "Save expense"}
+                    </button>
+                    {expenseState.message ? (
+                      <p
+                        className={[
+                          "text-sm",
+                          expenseState.status === "error" ? "text-rose-300" : "text-emerald-300",
+                        ].join(" ")}
+                      >
+                        {expenseState.message}
+                      </p>
+                    ) : null}
+                  </div>
+                </fieldset>
               </form>
 
               <div className="mt-5 grid gap-3 rounded-3xl border border-amber-100/10 bg-black/18 p-4">
@@ -615,8 +629,12 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
                 </Link>
               </div>
 
-              <form className="mt-4 grid gap-3" onSubmit={handleLocationSubmit}>
-                <label className="grid gap-2 text-sm font-medium text-stone-100">
+              <form className="mt-4" onSubmit={handleLocationSubmit}>
+                <fieldset
+                  disabled={!isInteractiveReady || isSubmittingLocation}
+                  className="grid gap-3 border-0 p-0"
+                >
+                  <label className="grid gap-2 text-sm font-medium text-stone-100">
                   City
                   <input
                     value={locationForm.city}
@@ -626,9 +644,9 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
                     className="rounded-2xl border border-amber-100/15 bg-black/20 px-4 py-3 text-sm text-stone-100 outline-none"
                     placeholder="Austin"
                   />
-                </label>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="grid gap-2 text-sm font-medium text-stone-100">
+                  </label>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="grid gap-2 text-sm font-medium text-stone-100">
                     State
                     <input
                       value={locationForm.stateCode}
@@ -638,8 +656,8 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
                       className="rounded-2xl border border-amber-100/15 bg-black/20 px-4 py-3 text-sm text-stone-100 outline-none"
                       placeholder="TX"
                     />
-                  </label>
-                  <label className="grid gap-2 text-sm font-medium text-stone-100">
+                    </label>
+                    <label className="grid gap-2 text-sm font-medium text-stone-100">
                     Country
                     <select
                       value={locationForm.countryCode}
@@ -652,38 +670,38 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
                       <option value="CA">Canada</option>
                       <option value="GB">United Kingdom</option>
                     </select>
+                    </label>
+                  </div>
+                  <label className="flex items-start gap-3 rounded-[22px] border border-amber-100/10 bg-black/18 px-4 py-3 text-sm text-stone-100">
+                    <input
+                      type="checkbox"
+                      checked={locationForm.consented}
+                      onChange={(event) =>
+                        setLocationForm((current) => ({ ...current, consented: event.target.checked }))
+                      }
+                      className="mt-1 h-4 w-4 rounded border-amber-300/40 bg-black/20"
+                    />
+                    <span>Store only city and state for local relevance.</span>
                   </label>
-                </div>
-                <label className="flex items-start gap-3 rounded-[22px] border border-amber-100/10 bg-black/18 px-4 py-3 text-sm text-stone-100">
-                  <input
-                    type="checkbox"
-                    checked={locationForm.consented}
-                    onChange={(event) =>
-                      setLocationForm((current) => ({ ...current, consented: event.target.checked }))
-                    }
-                    className="mt-1 h-4 w-4 rounded border-amber-300/40 bg-black/20"
-                  />
-                  <span>Store only city and state for local relevance.</span>
-                </label>
-                <div className="flex flex-wrap items-center gap-3">
-                  <button
-                    type="submit"
-                    disabled={isSubmittingLocation}
-                    className="rounded-full border border-amber-300/60 bg-amber-200/15 px-5 py-2.5 text-sm font-semibold text-amber-50 transition hover:bg-amber-200/22 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {isSubmittingLocation ? "Saving home area..." : "Save home area"}
-                  </button>
-                  {locationState.message ? (
-                    <p
-                      className={[
-                        "text-sm",
-                        locationState.status === "error" ? "text-rose-300" : "text-emerald-300",
-                      ].join(" ")}
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="submit"
+                      className="rounded-full border border-amber-300/60 bg-amber-200/15 px-5 py-2.5 text-sm font-semibold text-amber-50 transition hover:bg-amber-200/22 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {locationState.message}
-                    </p>
-                  ) : null}
-                </div>
+                      {isSubmittingLocation ? "Saving home area..." : "Save home area"}
+                    </button>
+                    {locationState.message ? (
+                      <p
+                        className={[
+                          "text-sm",
+                          locationState.status === "error" ? "text-rose-300" : "text-emerald-300",
+                        ].join(" ")}
+                      >
+                        {locationState.message}
+                      </p>
+                    ) : null}
+                  </div>
+                </fieldset>
               </form>
 
               <div className="mt-5 grid gap-3">
@@ -694,8 +712,12 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
                     Matches only use the roles, licenses, certifications, and care-work interests you explicitly save here.
                   </p>
 
-                  <form className="mt-4 grid gap-3" onSubmit={handleJobPreferenceSubmit}>
-                    <label className="grid gap-2 text-sm font-medium text-stone-100">
+                  <form className="mt-4" onSubmit={handleJobPreferenceSubmit}>
+                    <fieldset
+                      disabled={!isInteractiveReady || isSubmittingJobPreferences}
+                      className="grid gap-3 border-0 p-0"
+                    >
+                      <label className="grid gap-2 text-sm font-medium text-stone-100">
                       Requested roles
                       <input
                         value={jobPreferenceForm.roleInterests}
@@ -705,8 +727,8 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
                         className="rounded-2xl border border-amber-100/15 bg-black/20 px-4 py-3 text-sm text-stone-100 outline-none"
                         placeholder="bookkeeping, nurse, dog walker"
                       />
-                    </label>
-                    <label className="grid gap-2 text-sm font-medium text-stone-100">
+                      </label>
+                      <label className="grid gap-2 text-sm font-medium text-stone-100">
                       Certifications
                       <input
                         value={jobPreferenceForm.certifications}
@@ -716,8 +738,8 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
                         className="rounded-2xl border border-amber-100/15 bg-black/20 px-4 py-3 text-sm text-stone-100 outline-none"
                         placeholder="RN, CPR"
                       />
-                    </label>
-                    <label className="grid gap-2 text-sm font-medium text-stone-100">
+                      </label>
+                      <label className="grid gap-2 text-sm font-medium text-stone-100">
                       License types
                       <input
                         value={jobPreferenceForm.licenseTypes}
@@ -727,51 +749,51 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
                         className="rounded-2xl border border-amber-100/15 bg-black/20 px-4 py-3 text-sm text-stone-100 outline-none"
                         placeholder="registered_nurse, state_teaching_license"
                       />
-                    </label>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      {([
-                        ["careWorkInterest", "General care work"],
-                        ["childCareInterest", "Childcare"],
-                        ["petCareInterest", "Pet care"],
-                        ["nursingInterest", "Nursing"],
-                        ["teachingInterest", "Teaching"],
-                        ["notificationEnabled", "Keep job notifications on"],
-                      ] as const).map(([key, label]) => (
-                        <label
-                          key={key}
-                          className="flex items-start gap-3 rounded-[22px] border border-amber-100/10 bg-black/18 px-4 py-3 text-sm text-stone-100"
+                      </label>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {([
+                          ["careWorkInterest", "General care work"],
+                          ["childCareInterest", "Childcare"],
+                          ["petCareInterest", "Pet care"],
+                          ["nursingInterest", "Nursing"],
+                          ["teachingInterest", "Teaching"],
+                          ["notificationEnabled", "Keep job notifications on"],
+                        ] as const).map(([key, label]) => (
+                          <label
+                            key={key}
+                            className="flex items-start gap-3 rounded-[22px] border border-amber-100/10 bg-black/18 px-4 py-3 text-sm text-stone-100"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={jobPreferenceForm[key]}
+                              onChange={(event) =>
+                                setJobPreferenceForm((current) => ({ ...current, [key]: event.target.checked }))
+                              }
+                              className="mt-1 h-4 w-4 rounded border-amber-300/40 bg-black/20"
+                            />
+                            <span>{label}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <button
+                          type="submit"
+                          className="rounded-full border border-amber-300/60 bg-amber-200/15 px-5 py-2.5 text-sm font-semibold text-amber-50 transition hover:bg-amber-200/22 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          <input
-                            type="checkbox"
-                            checked={jobPreferenceForm[key]}
-                            onChange={(event) =>
-                              setJobPreferenceForm((current) => ({ ...current, [key]: event.target.checked }))
-                            }
-                            className="mt-1 h-4 w-4 rounded border-amber-300/40 bg-black/20"
-                          />
-                          <span>{label}</span>
-                        </label>
-                      ))}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <button
-                        type="submit"
-                        disabled={isSubmittingJobPreferences}
-                        className="rounded-full border border-amber-300/60 bg-amber-200/15 px-5 py-2.5 text-sm font-semibold text-amber-50 transition hover:bg-amber-200/22 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {isSubmittingJobPreferences ? "Saving job signals..." : "Save job signals"}
-                      </button>
-                      {jobPreferenceState.message ? (
-                        <p
-                          className={[
-                            "text-sm",
-                            jobPreferenceState.status === "error" ? "text-rose-300" : "text-emerald-300",
-                          ].join(" ")}
-                        >
-                          {jobPreferenceState.message}
-                        </p>
-                      ) : null}
-                    </div>
+                          {isSubmittingJobPreferences ? "Saving job signals..." : "Save job signals"}
+                        </button>
+                        {jobPreferenceState.message ? (
+                          <p
+                            className={[
+                              "text-sm",
+                              jobPreferenceState.status === "error" ? "text-rose-300" : "text-emerald-300",
+                            ].join(" ")}
+                          >
+                            {jobPreferenceState.message}
+                          </p>
+                        ) : null}
+                      </div>
+                    </fieldset>
                   </form>
                 </article>
 
@@ -846,8 +868,12 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
                   Tone and reminders can adapt to what you explicitly choose. Nothing is sold or shared.
                 </p>
 
-                <form className="mt-4 grid gap-3" onSubmit={handlePrivacySubmit}>
-                  <label className="grid gap-2 text-sm font-medium text-stone-100">
+                <form className="mt-4" onSubmit={handlePrivacySubmit}>
+                  <fieldset
+                    disabled={!isInteractiveReady || isSubmittingPrivacy}
+                    className="grid gap-3 border-0 p-0"
+                  >
+                    <label className="grid gap-2 text-sm font-medium text-stone-100">
                     Gender identity
                     <select
                       value={privacyForm.genderIdentity}
@@ -861,8 +887,8 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
                       <option value="nonbinary">Nonbinary</option>
                       <option value="prefer_not_to_say">Prefer not to say</option>
                     </select>
-                  </label>
-                  <label className="grid gap-2 text-sm font-medium text-stone-100">
+                    </label>
+                    <label className="grid gap-2 text-sm font-medium text-stone-100">
                     Pronouns
                     <select
                       value={privacyForm.pronouns}
@@ -877,9 +903,9 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
                       <option value="name_only">Name only</option>
                       <option value="prefer_not_to_say">Prefer not to say</option>
                     </select>
-                  </label>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <label className="grid gap-2 text-sm font-medium text-stone-100">
+                    </label>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <label className="grid gap-2 text-sm font-medium text-stone-100">
                       Communication style
                       <select
                         value={privacyForm.communicationStyle}
@@ -892,8 +918,8 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
                         <option value="balanced">Balanced</option>
                         <option value="direct">Direct</option>
                       </select>
-                    </label>
-                    <label className="grid gap-2 text-sm font-medium text-stone-100">
+                      </label>
+                      <label className="grid gap-2 text-sm font-medium text-stone-100">
                       Coaching intensity
                       <select
                         value={privacyForm.coachingIntensity}
@@ -906,38 +932,38 @@ export function MoneyDashboard({ data }: MoneyDashboardProps) {
                         <option value="focused">Focused</option>
                         <option value="deep">Deep</option>
                       </select>
+                      </label>
+                    </div>
+                    <label className="flex items-start gap-3 rounded-[22px] border border-amber-100/10 bg-black/18 px-4 py-3 text-sm text-stone-100">
+                      <input
+                        type="checkbox"
+                        checked={privacyForm.consented}
+                        onChange={(event) =>
+                          setPrivacyForm((current) => ({ ...current, consented: event.target.checked }))
+                        }
+                        className="mt-1 h-4 w-4 rounded border-amber-300/40 bg-black/20"
+                      />
+                      <span>Keep personalization user-only and never for marketing.</span>
                     </label>
-                  </div>
-                  <label className="flex items-start gap-3 rounded-[22px] border border-amber-100/10 bg-black/18 px-4 py-3 text-sm text-stone-100">
-                    <input
-                      type="checkbox"
-                      checked={privacyForm.consented}
-                      onChange={(event) =>
-                        setPrivacyForm((current) => ({ ...current, consented: event.target.checked }))
-                      }
-                      className="mt-1 h-4 w-4 rounded border-amber-300/40 bg-black/20"
-                    />
-                    <span>Keep personalization user-only and never for marketing.</span>
-                  </label>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <button
-                      type="submit"
-                      disabled={isSubmittingPrivacy}
-                      className="rounded-full border border-amber-300/60 bg-amber-200/15 px-5 py-2.5 text-sm font-semibold text-amber-50 transition hover:bg-amber-200/22 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {isSubmittingPrivacy ? "Saving privacy settings..." : "Save privacy settings"}
-                    </button>
-                    {privacyState.message ? (
-                      <p
-                        className={[
-                          "text-sm",
-                          privacyState.status === "error" ? "text-rose-300" : "text-emerald-300",
-                        ].join(" ")}
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        type="submit"
+                        className="rounded-full border border-amber-300/60 bg-amber-200/15 px-5 py-2.5 text-sm font-semibold text-amber-50 transition hover:bg-amber-200/22 disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        {privacyState.message}
-                      </p>
-                    ) : null}
-                  </div>
+                        {isSubmittingPrivacy ? "Saving privacy settings..." : "Save privacy settings"}
+                      </button>
+                      {privacyState.message ? (
+                        <p
+                          className={[
+                            "text-sm",
+                            privacyState.status === "error" ? "text-rose-300" : "text-emerald-300",
+                          ].join(" ")}
+                        >
+                          {privacyState.message}
+                        </p>
+                      ) : null}
+                    </div>
+                  </fieldset>
                 </form>
 
                 <div className="mt-4 rounded-[20px] border border-amber-100/10 bg-black/18 px-4 py-3 text-sm text-stone-200/80">
