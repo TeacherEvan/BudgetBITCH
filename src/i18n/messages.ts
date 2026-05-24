@@ -45,6 +45,7 @@ export const localeMessages = {
         "Sign in to unlock your root flow. After that, BudgetBITCH can send you into the one-time startup questionnaire or straight to the landing board based on your saved startup progress.",
       openSignIn: "Open sign in",
       openSignUp: "Open sign-up",
+      privacyPromise: "Private by default. Setup only if needed.",
       quickReasonsAria: "Welcome quick reasons",
       quickReasons: {
         signInFirst: {
@@ -567,6 +568,7 @@ export const localeMessages = {
         "先登录，再解锁你的起始流程。之后，BudgetBITCH 会根据你保存的启动进度，把你带到一次性的启动问卷或直接进入主面板。",
       openSignIn: "打开登录",
       openSignUp: "打开注册",
+      privacyPromise: "默认以隐私为先。只有在需要时才进入设置。",
       quickReasonsAria: "欢迎页重点说明",
       quickReasons: {
         signInFirst: {
@@ -1064,6 +1066,7 @@ export const localeMessages = {
         "ลงชื่อเข้าใช้ก่อนเพื่อปลดล็อกเส้นทางเริ่มต้นของคุณ หลังจากนั้น BudgetBITCH จะพาคุณไปยังแบบสอบถามเริ่มต้นครั้งเดียว หรือเข้าสู่บอร์ดหลักตามความคืบหน้าที่บันทึกไว้",
       openSignIn: "เปิดหน้าลงชื่อเข้าใช้",
       openSignUp: "เปิดหน้าสมัครใช้งาน",
+      privacyPromise: "เป็นส่วนตัวโดยค่าเริ่มต้น ตั้งค่าเพิ่มเมื่อจำเป็นเท่านั้น",
       quickReasonsAria: "เหตุผลสำคัญบนหน้าต้อนรับ",
       quickReasons: {
         signInFirst: {

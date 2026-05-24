@@ -144,7 +144,10 @@ describe("getDashboardPageData", () => {
   });
 
   it("prefers live dashboard data over the e2e override when a real Convex session exists", async () => {
-    getConvexAuthenticatedIdentityMock.mockResolvedValue({ tokenIdentifier: "convex|user-1" });
+    getConvexAuthenticatedIdentityMock.mockResolvedValue({
+      tokenIdentifier: "convex|user-1",
+      email: "avery@example.com",
+    });
     cookiesMock.mockResolvedValue({
       get: vi.fn().mockImplementation((name: string) =>
         name === "budgetbitch:e2e-auth-state" ? { value: "signed-in" } : undefined,
@@ -194,13 +197,30 @@ describe("getDashboardPageData", () => {
   });
 
   it("returns a setup-required result instead of demo data when the account has no local profile", async () => {
-    getConvexAuthenticatedIdentityMock.mockResolvedValue({ tokenIdentifier: "convex|user-1" });
+    getConvexAuthenticatedIdentityMock.mockResolvedValue({
+      tokenIdentifier: "convex|user-1",
+      email: "avery@example.com",
+    });
     prismaMock.userProfile.findUnique.mockResolvedValue(null);
 
     await expect(getDashboardPageData("workspace-2")).resolves.toEqual({
       kind: "setup-required",
       redirectTo: "/auth/continue?redirectTo=%2Fdashboard%3FworkspaceId%3Dworkspace-2",
     });
+  });
+
+  it("returns setup-required when the signed-in Convex session has no email-backed identity", async () => {
+    getConvexAuthenticatedIdentityMock.mockResolvedValue({
+      tokenIdentifier: "convex|user-1",
+      email: null,
+    });
+
+    await expect(getDashboardPageData("workspace-2")).resolves.toEqual({
+      kind: "setup-required",
+      redirectTo: "/auth/continue?redirectTo=%2Fdashboard%3FworkspaceId%3Dworkspace-2",
+    });
+
+    expect(prismaMock.userProfile.findUnique).not.toHaveBeenCalled();
   });
 
   it("still returns demo data when the database is not configured", async () => {
@@ -213,7 +233,10 @@ describe("getDashboardPageData", () => {
   });
 
   it("keeps live no-workspace fallbacks empty instead of seeding demo accounting", async () => {
-    getConvexAuthenticatedIdentityMock.mockResolvedValue({ tokenIdentifier: "convex|user-1" });
+    getConvexAuthenticatedIdentityMock.mockResolvedValue({
+      tokenIdentifier: "convex|user-1",
+      email: "avery@example.com",
+    });
     loadDashboardBriefingMock.mockResolvedValue({
       generatedAt: "2026-05-01T12:00:00.000Z",
       sourceStatus: "live",
@@ -247,7 +270,10 @@ describe("getDashboardPageData", () => {
   });
 
   it("builds the live money dashboard data from workspace accounting and personalization records", async () => {
-    getConvexAuthenticatedIdentityMock.mockResolvedValue({ tokenIdentifier: "convex|user-1" });
+    getConvexAuthenticatedIdentityMock.mockResolvedValue({
+      tokenIdentifier: "convex|user-1",
+      email: "avery@example.com",
+    });
     loadDashboardBriefingMock.mockResolvedValue({
       generatedAt: "2026-05-01T12:00:00.000Z",
       sourceStatus: "live",
@@ -427,7 +453,10 @@ describe("getDashboardPageData", () => {
   });
 
   it("excludes prior-month transactions from the current budget snapshot while keeping recent activity", async () => {
-    getConvexAuthenticatedIdentityMock.mockResolvedValue({ tokenIdentifier: "convex|user-1" });
+    getConvexAuthenticatedIdentityMock.mockResolvedValue({
+      tokenIdentifier: "convex|user-1",
+      email: "avery@example.com",
+    });
     loadDashboardBriefingMock.mockResolvedValue({
       generatedAt: "2026-05-01T12:00:00.000Z",
       sourceStatus: "live",

@@ -56,20 +56,37 @@ export function WelcomeWindow({ signInHref, signUpHref }: WelcomeWindowProps) {
               </Link>
             </div>
 
-            <div className="mt-7 grid gap-3 md:grid-cols-3" aria-label={t("quickReasonsAria")}>
+            <p className="bb-mini-copy mt-3 text-sm text-(--text-muted)">
+              {t("privacyPromise")}
+            </p>
+
+            <ul
+              className="mt-7 grid gap-3"
+              aria-label={t("quickReasonsAria")}
+            >
               {quickReasons.map(({ title, description, icon: Icon }) => (
-                <article key={title} className="bb-compact-card">
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="bb-icon-badge" aria-hidden="true">
-                      <Icon className="h-5 w-5" />
+                <li
+                  key={title}
+                  className="rounded-[1.15rem] border border-(--border-soft) bg-white/6 px-4 py-3"
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="bb-icon-badge mt-0.5 shrink-0" aria-hidden="true">
+                      <Icon className="h-4 w-4" />
                     </span>
-                    <ArrowRight className="h-4 w-4 text-(--accent-strong)" aria-hidden="true" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="text-sm font-semibold text-(--text-1)">{title}</p>
+                        <ArrowRight
+                          className="mt-0.5 h-4 w-4 shrink-0 text-(--accent-strong)"
+                          aria-hidden="true"
+                        />
+                      </div>
+                      <p className="bb-mini-copy mt-1 text-sm">{description}</p>
+                    </div>
                   </div>
-                  <h2 className="mt-4 text-2xl font-semibold">{title}</h2>
-                  <p className="bb-mini-copy mt-2">{description}</p>
-                </article>
+                </li>
               ))}
-            </div>
+            </ul>
           </article>
 
           <aside className="grid gap-4 self-start">

@@ -134,6 +134,7 @@ export async function getDashboardPageData(
   }
 
   const userId = identity?.tokenIdentifier ?? "";
+  const email = identity?.email?.trim().toLowerCase() ?? "";
 
   if (!userId) {
     const cookieStore = await cookies();
@@ -147,6 +148,13 @@ export async function getDashboardPageData(
     return {
       kind: "auth-required",
       redirectTo: `/sign-in?redirectTo=${encodeURIComponent(redirectTarget)}`,
+    };
+  }
+
+  if (!email) {
+    return {
+      kind: "setup-required",
+      redirectTo: `/auth/continue?redirectTo=${encodeURIComponent(redirectTarget)}`,
     };
   }
 

@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 import {
   isNeonConnectionString,
   isPooledNeonConnectionString,
@@ -32,7 +33,8 @@ function createPrismaClient() {
 
   warnAboutDirectNeonRuntimeUrl(databaseUrl);
 
-  const adapter = new PrismaPg(databaseUrl);
+  const pool = new Pool({ connectionString: databaseUrl });
+  const adapter = new PrismaPg(pool);
 
   return new PrismaClient({ adapter });
 }

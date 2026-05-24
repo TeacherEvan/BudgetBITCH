@@ -10,6 +10,7 @@ vi.mock("next-intl", () => ({
         "Sign in to unlock your root flow. After that, BudgetBITCH can send you into the one-time startup questionnaire or straight to the landing board based on your saved startup progress.",
       openSignIn: "Open sign in",
       openSignUp: "Open sign-up",
+      privacyPromise: "Private by default. Setup only if needed.",
       quickReasonsAria: "Welcome quick reasons",
       "quickReasons.signInFirst.title": "Sign in first",
       "quickReasons.signInFirst.description": "Open your account before the app decides whether you need setup or your landing board.",
@@ -62,6 +63,22 @@ describe("WelcomeWindow", () => {
       "href",
       "/sign-up?redirectTo=%2F",
     );
+    expect(screen.getByText(/private by default\. setup only if needed\./i)).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: /language/i })).toBeInTheDocument();
+  });
+
+  it("renders the welcome reasons as a compact list for fast scanning", () => {
+    render(
+      <WelcomeWindow
+        signInHref="/sign-in?redirectTo=%2F"
+        signUpHref="/sign-up?redirectTo=%2F"
+      />,
+    );
+
+    const reasonsList = screen.getByRole("list", { name: /welcome quick reasons/i });
+
+    expect(reasonsList).toBeInTheDocument();
+    expect(screen.getAllByRole("listitem")).toHaveLength(6);
+    expect(screen.queryByRole("heading", { name: /sign in first/i, level: 2 })).not.toBeInTheDocument();
   });
 });

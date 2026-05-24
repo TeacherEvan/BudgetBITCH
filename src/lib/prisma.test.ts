@@ -3,6 +3,7 @@ import { prismaRuntimeDatabaseUrlErrorMessage } from "./prisma-connection";
 
 const prismaClientMock = vi.fn();
 const prismaPgMock = vi.fn();
+const poolMock = vi.fn();
 
 vi.mock("@prisma/client", () => ({
   PrismaClient: prismaClientMock,
@@ -12,6 +13,10 @@ vi.mock("@prisma/adapter-pg", () => ({
   PrismaPg: prismaPgMock,
 }));
 
+vi.mock("pg", () => ({
+  Pool: poolMock,
+}));
+
 describe("getPrismaClient", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -19,12 +24,20 @@ describe("getPrismaClient", () => {
     vi.restoreAllMocks();
     prismaClientMock.mockReset();
     prismaPgMock.mockReset();
+    poolMock.mockReset();
+
+    poolMock.mockImplementation(function Pool(
+      this: { connectionString?: string },
+      options: { connectionString: string },
+    ) {
+      this.connectionString = options.connectionString;
+    });
 
     prismaPgMock.mockImplementation(function PrismaPg(
-      this: { connectionString?: string },
-      connectionString: string,
+      this: { pool?: unknown },
+      pool: unknown,
     ) {
-      this.connectionString = connectionString;
+      this.pool = pool;
     });
     prismaClientMock.mockImplementation(function PrismaClient(
       this: { adapter?: unknown; marker?: string },
@@ -59,9 +72,12 @@ describe("getPrismaClient", () => {
     const first = getPrismaClient();
     const second = getPrismaClient();
 
-    expect(prismaPgMock).toHaveBeenCalledWith(
-      "postgres://budgetbitch:test@localhost:5432/app",
-    );
+    expect(poolMock).toHaveBeenCalledWith({
+      connectionString: "postgres://budgetbitch:test@localhost:5432/app",
+    });
+    expect(prismaPgMock).toHaveBeenCalledWith(expect.objectContaining({
+      connectionString: "postgres://budgetbitch:test@localhost:5432/app",
+    }));
     expect(prismaClientMock).toHaveBeenCalledTimes(1);
     expect(first).toBe(second);
   });

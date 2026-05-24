@@ -37,6 +37,7 @@ vi.mock("next-intl", () => ({
         "Sign in to unlock your root flow. After that, BudgetBITCH can send you into the one-time startup questionnaire or straight to the landing board based on your saved startup progress.",
       openSignIn: "Open sign in",
       openSignUp: "Open sign-up",
+      privacyPromise: "Private by default. Setup only if needed.",
       quickReasonsAria: "Welcome quick reasons",
       "quickReasons.signInFirst.title": "Sign in first",
       "quickReasons.signInFirst.description": "Open your account before the app decides whether you need setup or your landing board.",
