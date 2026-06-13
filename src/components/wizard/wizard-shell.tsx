@@ -1,8 +1,8 @@
 // components/wizard/wizard-shell.tsx
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
-import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { WizardProfile } from '@/lib/types/budget';
 import { saveWizardProfile } from '@/lib/db/local-db';
@@ -18,6 +18,7 @@ import { StepHealthcare } from './steps/step-healthcare';
 import { StepSavingsRate } from './steps/step-savings-rate';
 import { StepRiskTolerance } from './steps/step-risk-tolerance';
 import { StepLocationConsent } from './steps/step-location-consent';
+import { Button } from '@/components/ui/button';
 
 export type WizardStepId = 
   | 'income' 
@@ -49,6 +50,50 @@ const STEP_LABELS: Record<WizardStepId, { th: string; en: string }> = {
   locationConsent: { th: 'ตำแหน่งที่ตั้ง', en: 'Location' },
 };
 
+// Voices for each step
+const STEP_VOICE_PROMPTS: Record<WizardStepId, { th: string; en: string }> = {
+  income: { 
+    th: 'คุณได้รับรายได้เท่าไหร่ต่อเดือน', 
+    en: 'How much do you make per month' 
+  },
+  rent: { 
+    th: 'ค่าเช่าหรือค่าที่อยู่อาศัยเท่าไหร่', 
+    en: 'How much is your rent or mortgage' 
+  },
+  transport: { 
+    th: 'ค่าเดินทาง BTS รถเมล์ หรือน้ำมันเท่าไหร่', 
+    en: 'How much for transport - BTS, bus, or fuel' 
+  },
+  phoneInternet: { 
+    th: 'ค่าโทรศัพท์และอินเตอร์เน็ตเท่าไหร่', 
+    en: 'How much for phone and internet' 
+  },
+  subscriptions: { 
+    th: 'ค่าสมัครสมาชิก Netflix Spotify ฟิตเนส เท่าไหร่', 
+    en: 'Subscriptions like Netflix, Spotify, gym' 
+  },
+  entertainment: { 
+    th: 'เงินความบันเทิง หนัง กาแฟ เล่นเกม เท่าไหร่', 
+    en: 'Entertainment - movies, coffee, games' 
+  },
+  healthcare: { 
+    th: 'ค่ายา ค่าทันตกรรม ค่ารพตาล เท่าไหร่', 
+    en: 'Healthcare - meds, dentist, hospital' 
+  },
+  savingsRate: { 
+    th: 'อยากออมกี่เปอร์เซ็นต์ของรายได้', 
+    en: 'What percentage of income to save' 
+  },
+  riskTolerance: { 
+    th: 'รับความเสี่ยงได้น้อย กลาง หรือมาก', 
+    en: 'Low, medium, or high risk tolerance' 
+  },
+  locationConsent: { 
+    th: 'อนุญาตให้เข้าถึงตำแหน่งเพื่อรับข่าว และราคาน้ำมันในพื้นที่', 
+    en: 'Allow location for local news and fuel prices' 
+  },
+};
+
 interface WizardShellProps {
   locale: 'th' | 'en';
   onComplete: () => void;
@@ -64,53 +109,8 @@ export function WizardShell({ locale, onComplete, voiceEnabled, speak }: WizardS
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const currentStep = STEPS[currentStepIndex];
-  const stepLabel = STEP_LABELS[currentStep][locale];
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === STEPS.length - 1;
-
-  // Voices for each step
-  const stepVoicePrompts: Record<WizardStepId, { th: string; en: string }> = {
-    income: { 
-      th: 'คุณได้รับรายได้เท่าไหร่ต่อเดือน', 
-      en: 'How much do you make per month' 
-    },
-    rent: { 
-      th: 'ค่าเช่าหรือค่าที่อยู่อาศัยเท่าไหร่', 
-      en: 'How much is your rent or mortgage' 
-    },
-    transport: { 
-      th: 'ค่าเดินทาง BTS รถเมล์ หรือน้ำมันเท่าไหร่', 
-      en: 'How much for transport - BTS, bus, or fuel' 
-    },
-    phoneInternet: { 
-      th: 'ค่าโทรศัพท์และอินเตอร์เน็ตเท่าไหร่', 
-      en: 'How much for phone and internet' 
-    },
-    subscriptions: { 
-      th: 'ค่าสมัครสมาชิก Netflix Spotify ฟิตเนส เท่าไหร่', 
-      en: 'Subscriptions like Netflix, Spotify, gym' 
-    },
-    entertainment: { 
-      th: 'เงินความบันเทิง หนัง กาแฟ เล่นเกม เท่าไหร่', 
-      en: 'Entertainment - movies, coffee, games' 
-    },
-    healthcare: { 
-      th: 'ค่ายา ค่าทันตกรรม ค่ารพตาล เท่าไหร่', 
-      en: 'Healthcare - meds, dentist, hospital' 
-    },
-    savingsRate: { 
-      th: 'อยากออมกี่เปอร์เซ็นต์ของรายได้', 
-      en: 'What percentage of income to save' 
-    },
-    riskTolerance: { 
-      th: 'รับความเสี่ยงได้น้อย กลาง หรือมาก', 
-      en: 'Low, medium, or high risk tolerance' 
-    },
-    locationConsent: { 
-      th: 'อนุญาตให้เข้าถึงตำแหน่งเพื่อรับข่าว และราคาน้ำมันในพื้นที่', 
-      en: 'Allow location for local news and fuel prices' 
-    },
-  };
 
   const handleNext = useCallback(async () => {
     const stepKey = STEPS[currentStepIndex] as keyof WizardProfile['answers'];
@@ -150,9 +150,13 @@ export function WizardShell({ locale, onComplete, voiceEnabled, speak }: WizardS
       setCurrentStepIndex(prev => prev + 1);
       // Speak next step prompt
       if (voiceEnabled) {
-        const nextStep = STEPS[currentStepIndex + 1];
-        const prompt = stepVoicePrompts[nextStep][locale];
-        setTimeout(() => speak(prompt), 300);
+        if (isLastStep) {
+          // skip
+        } else {
+          const nextStep = STEPS[currentStepIndex + 1];
+          const prompt = STEP_VOICE_PROMPTS[nextStep][locale];
+          setTimeout(() => speak(prompt), 300);
+        }
       }
     }
   }, [currentStepIndex, stepValues, isLastStep, locale, voiceEnabled, speak, onComplete]);
@@ -172,10 +176,10 @@ export function WizardShell({ locale, onComplete, voiceEnabled, speak }: WizardS
   // Speak current step prompt on mount/step change
   useEffect(() => {
     if (voiceEnabled) {
-      const prompt = stepVoicePrompts[currentStep][locale];
+      const prompt = STEP_VOICE_PROMPTS[currentStep][locale];
       speak(prompt);
     }
-  }, [currentStepIndex, voiceEnabled, locale, speak]);
+  }, [currentStep, voiceEnabled, locale, speak]);
 
   const renderStep = () => {
     switch (currentStep) {
@@ -269,6 +273,3 @@ export function WizardShell({ locale, onComplete, voiceEnabled, speak }: WizardS
     </div>
   );
 }
-
-import { useEffect } from 'react';
-import { Button } from '@/components/ui/button';

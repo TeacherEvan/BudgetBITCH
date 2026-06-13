@@ -2,7 +2,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useWizardProfile, useBudgets } from '@/hooks/use-local-db';
+import { useWizardProfile } from '@/hooks/use-local-db';
 import { formatCurrency } from '@/lib/utils/currency';
 
 interface DailyDisposableHeroProps {
@@ -11,7 +11,6 @@ interface DailyDisposableHeroProps {
 
 export function DailyDisposableHero({ locale }: DailyDisposableHeroProps) {
   const { profile } = useWizardProfile();
-  const { budgets } = useBudgets();
 
   const dailyDisposable = useMemo(() => {
     if (!profile) return 0;

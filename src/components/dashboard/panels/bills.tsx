@@ -11,7 +11,6 @@ import { Card } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils/currency';
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
-import type { ExpenseCategory } from '@/lib/types/budget';
 
 const CATEGORIES = [
   { value: 'housing', label: { th: 'ที่อยู่อาศัย', en: 'Housing' } },
@@ -39,7 +38,7 @@ export function Bills({ locale = 'en' }: BillsProps) {
   const [formData, setFormData] = useState({
     name: '',
     amount: '',
-    category: 'utilities' as ExpenseCategory,
+    category: 'utilities',
     dueDay: 1,
     isActive: true,
     reminderDaysBefore: 3,
@@ -246,8 +245,3 @@ export function Bills({ locale = 'en' }: BillsProps) {
     </div>
   );
 }
-
-const categoryOptions = CATEGORIES.map(c => ({
-  value: c.value,
-  label: c.label,
-}));

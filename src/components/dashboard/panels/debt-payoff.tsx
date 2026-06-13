@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Trash2, Edit, Calculator, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Trash2, Edit } from 'lucide-react';
 import { useDebtPayoff } from '@/hooks/use-local-db';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -40,7 +40,7 @@ interface DebtPayoffProps {
 }
 
 export function DebtPayoff({ locale = 'en' }: DebtPayoffProps) {
-  const { debts, loading, add: addDebt, update: updateDebt, remove: removeDebt } = useDebtPayoff();
+  const { debts, add, update, remove } = useDebtPayoff();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [strategy, setStrategy] = useState<PayoffStrategy>('avalanche');
@@ -71,20 +71,12 @@ export function DebtPayoff({ locale = 'en' }: DebtPayoffProps) {
   });
 
   // Calculate payoff timeline
-  const totalDebt = debts.reduce((sum, d) => sum + d.balance, 0);
-  const totalMonthlyPayment = debts.reduce((sum, d) => sum + d.minimumPayment, 0);
-  const extraPayment = 5000; // Extra payment per month
+  const EXTRA_PAYMENT = 5000; // Extra payment per month
 
   const resetForm = () => {
     setEditingId(null);
     setShowForm(false);
     setFormData({ name: '', balance: '', apr: '', minimumPayment: '', type: 'credit_card' });
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name || !formData.balance || !formData.apr || !formData.minimumPayment) return;
-    resetForm();
   };
 
   const handleEdit = (debt: any) => {
@@ -93,7 +85,9 @@ export function DebtPayoff({ locale = 'en' }: DebtPayoffProps) {
     setShowForm(true);
   };
 
-  const handleDelete = (id: string) => {};
+  const handleDelete = (id: string) => {
+    remove(id);
+  };
 
   return (
     <div className="space-y-4">
@@ -125,7 +119,7 @@ export function DebtPayoff({ locale = 'en' }: DebtPayoffProps) {
           </div>
           <div className="bg-emerald-400/10 border border-emerald-400/30 rounded-xl p-4">
             <p className="text-sm text-emerald-400">Extra Payment</p>
-            <p className="text-2xl font-bold font-mono text-white">{formatCurrency(5000, locale)}</p>
+            <p className="text-2xl font-bold font-mono text-white">{formatCurrency(EXTRA_PAYMENT, locale)}</p>
           </div>
           <div className="bg-rose-400/10 border border-rose-400/30 rounded-xl p-4">
             <p className="text-sm text-rose-400">Total APR (avg)</p>

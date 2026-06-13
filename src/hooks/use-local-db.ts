@@ -308,7 +308,20 @@ export function useDebtPayoff() {
     return () => { mounted = false; };
   }, []);
 
-  return { debts, loading, add: async () => {}, update: async () => {}, remove: async () => {} };
+  const add = useCallback(async (debt: any) => {
+    const newDebt = { ...debt, id: crypto.randomUUID() };
+    setDebts(prev => [...prev, newDebt]);
+  }, []);
+
+  const update = useCallback(async (debt: any) => {
+    setDebts(prev => prev.map(d => d.id === debt.id ? debt : d));
+  }, []);
+
+  const remove = useCallback(async (id: string) => {
+    setDebts(prev => prev.filter(d => d.id !== id));
+  }, []);
+
+  return { debts, loading, add, update, remove };
 }
 
 // Cash Flow Forecast

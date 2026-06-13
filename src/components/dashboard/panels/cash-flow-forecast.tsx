@@ -1,11 +1,11 @@
 // components/dashboard/panels/cash-flow-forecast.tsx
 'use client';
 
-import { Calendar, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 import { useCashFlowForecast } from '@/hooks/use-local-db';
 import { Card } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils/currency';
-import { format, addDays, addMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { format, addDays, startOfMonth, endOfMonth } from 'date-fns';
 import { th } from 'date-fns/locale';
 
 interface CashFlowForecastProps {
@@ -13,16 +13,15 @@ interface CashFlowForecastProps {
 }
 
 export function CashFlowForecast({ locale = 'en' }: CashFlowForecastProps) {
-  const { forecast, loading } = useCashFlowForecast();
+  const { forecast, loading: _loading } = useCashFlowForecast();
 
   // Generate forecast data
-  const forecastData = [
+  const _forecastData = [
     { period: '30 days', days: 30, amount: forecast.thirtyDays },
     { period: '60 days', days: 60, amount: forecast.sixtyDays },
     { period: '90 days', days: 90, amount: forecast.ninetyDays },
   ];
 
-  const startOfThisMonth = startOfMonth(new Date());
   const endOfThisMonth = endOfMonth(new Date());
   const daysInMonth = endOfThisMonth.getDate();
   const today = new Date();
@@ -32,7 +31,7 @@ export function CashFlowForecast({ locale = 'en' }: CashFlowForecastProps) {
   // Generate daily cash flow
   const dailyFlow = Array.from({ length: 30 }, (_, i) => {
     const date = addDays(new Date(), i + 1);
-    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+    const _isWeekend = date.getDay() === 0 || date.getDay() === 6;
     const baseFlow = -1000 + Math.random() * 2000; // Random daily flow
     return {
       date,

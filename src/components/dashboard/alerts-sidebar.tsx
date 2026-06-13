@@ -8,10 +8,6 @@ import { getNewsByLocale } from '@/lib/news/rss-fetcher';
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
 
-interface AlertsSidebarProps {
-  locale: 'th' | 'en';
-}
-
 const CATEGORY_ICONS: Record<NewsItem['category'], React.ReactNode> = {
   finance: <TrendingUp className="w-5 h-5 text-amber-400" />,
   economy: <Zap className="w-5 h-5 text-blue-400" />,
@@ -52,7 +48,7 @@ export function AlertsSidebar({ locale }: { locale: 'th' | 'en' }) {
           setNews(sorted.slice(0, 10));
           setError(null);
         }
-      } catch (err) {
+      } catch {
         if (mounted) {
           setError(locale === 'th' ? 'โหลดข่าวไม่สำเร็จ' : 'Failed to load news');
         }
@@ -97,7 +93,7 @@ export function AlertsSidebar({ locale }: { locale: 'th' | 'en' }) {
         </div>
       ) : (
         <div className="space-y-3">
-          {news.map((item, index) => (
+          {news.map((item) => (
             <article
               key={item.link}
               className="group p-4 rounded-xl bg-black/30 border border-white/10 hover:border-white/20 transition-colors"

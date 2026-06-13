@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Globe, Volume2, VolumeX, Palette, Trash2, AlertCircle, Check, Shield, Save, Download, Upload } from 'lucide-react';
+import { Globe, Volume2, Palette, Trash2, AlertCircle, Check, Shield, Download, Upload } from 'lucide-react';
 import { useConvexAuth } from '@convex-dev/auth/react';
 import { useWizardProfile } from '@/hooks/use-local-db';
 import { useVoice } from '@/hooks/use-voice';
@@ -20,15 +20,13 @@ interface SettingsPageProps {
 
 export function SettingsPage({ locale = 'en' }: SettingsPageProps) {
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
-  const { profile, save: saveProfile, clear: clearProfile } = useWizardProfile();
+  const { clear: clearProfile } = useWizardProfile();
   const { settings: voiceSettings, updateSettings: updateVoiceSettings, toggleVoice, isSupported } = useVoice(
     locale === 'th' ? 'th-TH' : 'en-US'
   );
-  const { commitment, loading: commitmentLoading } = useCriticalExpense();
+  const { commitment } = useCriticalExpense();
   
   const [theme, setTheme] = useState<'amber' | 'dark' | 'gold'>('amber');
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const [showExportModal, setShowExportModal] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
 
@@ -73,12 +71,12 @@ export function SettingsPage({ locale = 'en' }: SettingsPageProps) {
 
   const handleExportData = async () => {
     const db = await import('@/lib/db/local-db').then(m => m.getDB());
-    const allData: Record<string, any> = {};
-    
-    const stores = ['wizardProfile', 'expenses', 'budgets', 'bills', 'savingsGoals', 'netWorthSnapshots', 'debts', 'criticalExpenseCommitments'];
-    
+    const allData: Record<string, unknown> = {};
+
+    const stores = ['wizardProfile', 'expenses', 'budgets', 'bills', 'savingsGoals', 'netWorthSnapshots', 'debts', 'criticalExpenseCommitments'] as const;
+
     for (const store of stores) {
-      allData[store] = await database.getAll(store);
+      allData[store] = await db.getAll(store);
     }
     
     const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
@@ -96,10 +94,14 @@ export function SettingsPage({ locale = 'en' }: SettingsPageProps) {
       try {
         const data = JSON.parse(e.target?.result as string);
         const db = await import('@/lib/db/local-db').then(m => m.getDB());
-        
+
         for (const [store, items] of Object.entries(data)) {
-          for (const item of items as any[]) {
-            await database.put(store, item);
+          const validStores = ['wizardProfile', 'expenses', 'budgets', 'bills', 'savingsGoals', 'netWorthSnapshots', 'debts', 'criticalExpenseCommitments'] as const;
+          if (validStores.includes(store as typeof validStores[number])) {
+            for (const item of items as unknown[]) {
+              // @ts-expect-error - dynamic store/item type from import
+              await db.put(store as typeof validStores[number], item);
+            }
           }
         }
         alert(locale === 'th' ? 'นำเข้าข้อมูลสำเร็จ!' : 'Data imported successfully!');
@@ -406,9 +408,3 @@ export function SettingsPage({ locale = 'en' }: SettingsPageProps) {
     </div>
   );
 }
-
-// Mock database import for export/import
-const database = {
-  getAll: async (store: string) => [],
-  put: async (store: string, item: any) => {},
-};

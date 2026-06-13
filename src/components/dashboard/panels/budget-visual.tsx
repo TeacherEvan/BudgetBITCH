@@ -7,11 +7,6 @@ import { formatCurrency } from '@/lib/utils/currency';
 import { format } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
-type ExpenseCategory = 
-  'housing' | 'transport' | 'food' | 'utilities'
-  | 'phone_internet' | 'subscriptions' | 'entertainment'
-  | 'healthcare' | 'insurance' | 'debt' | 'savings' | 'other';
-
 const CATEGORIES = [
   { value: 'housing', label: { th: 'ที่อยู่อาศัย', en: 'Housing' } },
   { value: 'transport', label: { th: 'การเดินทาง', en: 'Transport' } },

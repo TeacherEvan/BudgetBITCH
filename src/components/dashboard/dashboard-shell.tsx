@@ -1,8 +1,8 @@
 // components/dashboard/dashboard-shell.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Menu, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState } from 'react';
+import { X, ChevronDown, ChevronUp } from 'lucide-react';
 import { HeaderBar } from '@/components/layout/header-bar';
 import { DailyDisposableHero } from '@/components/dashboard/daily-disposable-hero';
 import { CriticalExpensesModal } from '@/components/dashboard/critical-expenses-modal';

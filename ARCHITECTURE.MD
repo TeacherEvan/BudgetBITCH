@@ -9,54 +9,87 @@ This repository contains two separate Next.js + Convex codebases:
 
 Treat them as distinct systems. The root app is the one to extend unless a task explicitly says otherwise.
 
-## 1) Root app architecture
+## 1) Root App Architecture
 
 ### Stack
 
-- Next.js App Router
-- React 19 + TypeScript
-- Prisma 7 + Neon Postgres
-- Convex for derived live state and Convex Auth email/password accounts
-- Inngest for async/event-driven jobs
-- Resend for email
-- Sentry for observability
-- Vercel for deployment and cron
+- Next.js App Router (v16)
+- React 19 + TypeScript (strict)
+- **Convex** for backend (auth, database, realtime, HTTP endpoints)
+- **IndexedDB** (via `idb`) for local-first offline data
+- **Service Worker** (`public/sw.js`) for PWA sync & background updates
+- **next-intl** (v4) for i18n (Thai/English)
+- **Tailwind CSS** (v4) for styling
+- **framer-motion** for animations
+- **recharts** for data visualization
+- **zod** for validation
+- **Vitest** + **React Testing Library** for unit tests
+- **Playwright** for E2E tests
+- **Vercel** for deployment
 
-### Directory boundaries
+### Directory Boundaries
 
-- `src/app/**` — routes, route groups, layouts, API handlers
+- `src/app/**` — routes, route groups, layouts, API handlers (Convex HTTP via `/api/convex-auth`)
 - `src/components/**` — reusable UI
-- `src/modules/**` — domain and business logic
-- `src/lib/**` — small shared helpers such as auth config
-- `src/lib/auth/routes.ts` — centralized auth route constants and protected-path prefix rules
-- `prisma/**` — canonical schema and migration history
-- `tests/e2e/**` — Playwright journeys
+  - `auth/` — Account recovery, entry panel, password form
+  - `dashboard/` — Dashboard shell, panels (8), alerts sidebar, critical expenses modal, daily disposable hero
+  - `i18n/` — Locale switcher
+  - `layout/` — Header bar
+  - `mobile/` — Mobile panel frame
+  - `onboarding/` — Language select modal
+  - `pwa/` — Install prompt
+  - `ui/` — Primitive components (accordion, button, card, input, modal, progress-ring, select, slider, toggle)
+  - `welcome/` — Welcome window
+  - `wizard/` — Onboarding wizard (shell, progress, voice toggle, 10 steps)
+- `src/hooks/` — Custom hooks (`use-critical-expense`, `use-local-db`, `use-voice`)
+- `src/i18n/` — Internationalization (messages, request, server)
+- `src/lib/`
+  - `auth/` — Auth utilities (`e2e-auth-override`, `route-guard`, `routes`)
+  - `convex/` — Convex HTTP client, sync snapshots
+  - `db/` — Local IndexedDB wrapper (`local-db.ts`)
+  - `news/` — RSS fetcher
+  - `types/` — Budget types
+  - `url.ts` — URL utilities
+  - `utils/` — `cn`, `compound-calculator`, `currency`, `thai-category-mapper`
+- `src/middleware.ts` — Convex Auth Next.js middleware (protects `/dashboard`, `/settings`, `/wizard`, `/auth/continue`, `/api/v1/auth/bootstrap`)
+- `src/test/` — Test setup, smoke test
+- `src/types/` — TypeScript declarations (Next PWA, Speech API)
+- `convex/` — Convex backend
+  - `auth.ts` — Convex Auth config (Password provider)
+  - `http.ts` — HTTP router (auth routes)
+  - `schema.ts` — Convex schema (`dailySnapshots` + `authTables`)
+  - `snapshots.ts` — `upsertDailySnapshot` mutation (daily backup from SW)
+  - `lib/auth.ts` — Auth helpers (`requireIdentity`, `getAuthUserId`)
+  - `_generated/` — Convex generated types
 
-### Runtime flow
+### Runtime Flow
 
-The root app is auth-first:
+The root app is auth-first, local-first PWA:
 
 1. `/` decides whether the visitor stays on the welcome window, enters the launch wizard, or lands on the main board.
-2. Signed-in users pass through `/auth/continue` for local bootstrap and safe redirect resolution.
-3. Protected product surfaces live under the app route group, including Start Smart, Learn, Jobs, Dashboard, and Integrations.
-4. API routes in `src/app/api/v1/**` delegate real work into `src/modules/**`.
-5. `src/modules/dashboard/dashboard-data.ts` is the dashboard composition boundary; demo builders, mappers, and shared dashboard types are extracted into sibling dashboard modules to keep the page contract thin.
+2. Language selection → stored in `localStorage` (`budgetbitch:locale`).
+3. PWA install prompt shown after language selection.
+4. Signed-in users → redirect to `/wizard` (if not complete) or `/dashboard` (if complete).
+5. Protected surfaces: `/dashboard`, `/settings`, `/wizard`, `/auth/continue`, `/api/v1/auth/bootstrap`.
+6. Convex handles auth, realtime data, and daily snapshot persistence.
+7. IndexedDB + Service Worker provide offline-first UX; data syncs to Convex daily.
 
-### Data ownership
+### Data Ownership
 
-- **Prisma + Neon** hold the durable product data.
-- **Convex** holds derived live state that benefits from quick replay or projection.
-- **Inngest** carries background/event work.
-- **Server-side secrets** stay in server-only code paths.
+- **Convex** — Authoritative backend: auth, `dailySnapshots` table, realtime subscriptions.
+- **IndexedDB** — Local cache for offline reads/writes; budget wizard profile, transactions, settings.
+- **Service Worker** — Background sync: posts daily snapshots to Convex via `upsertDailySnapshot`.
+- **Server-side secrets** — Convex Auth config, environment variables.
 
-### Root app rules
+### Root App Rules
 
-- Keep route logic thin; move business rules into `src/modules/**`.
+- Keep route logic thin; move business rules into `src/components/` or `src/lib/`.
 - Keep UI reusable and scan-friendly in `src/components/**`.
-- Keep auth and redirect safety centralized through `src/middleware.ts`, `src/lib/auth/routes.ts`, and the shared auth helpers under `src/lib/auth/**`.
-- Keep API handlers as orchestration layers, not business-rule homes.
+- Keep auth and redirect safety centralized through `src/middleware.ts`, `src/lib/auth/routes.ts`, and shared auth helpers under `src/lib/auth/**`.
+- Local-first: write to IndexedDB immediately, sync to Convex asynchronously.
+- Use Convex realtime for live updates where needed (auth state, snapshots).
 
-## 2) Nested `budgetbitch/` prototype architecture
+## 2) Nested `budgetbitch/` Prototype Architecture
 
 ### Stack
 
@@ -79,26 +112,35 @@ The prototype uses a simpler app-router layout:
 
 This subtree is a separate starter/prototype environment. It is useful as a reference, but it is not part of the root app build, test, or import graph.
 
-## 3) Cross-system boundaries
+## 3) Cross-System Boundaries
 
 - Do not import code from `budgetbitch/` into the root app.
 - Do not assume a route or module name in one tree exists in the other.
 - When documenting or changing behavior, always specify which tree you mean.
 
-## 4) Testing and verification
+## 4) Testing and Verification
 
-### Root app
+### Root App
 
-- Unit/component tests live beside source under `src/**`.
-- End-to-end tests live under `tests/e2e/**`.
-- Validation scripts are `npm run lint`, `npm test`, and `npm run build`.
+- Unit/component tests live beside source under `src/**/*.test.tsx`.
+- E2E tests live under `tests/e2e/`.
+- Validation scripts: `npm run lint`, `npm test`, `npm run build`.
 
 ### Prototype
 
 - Verify it with its own app-local commands and Convex workflow.
 - Treat its auth, routes, and backend as isolated from the root app.
 
-## 5) Practical navigation rule
+## 5) Practical Navigation Rule
 
 If a task does not explicitly mention the nested prototype, work in the root app.
 
+## 6) Key Convex Patterns (from guidelines)
+
+- **Auth:** `ctx.auth.getUserIdentity()` in queries/mutations/actions; never accept `userId` as argument.
+- **Schema:** Define in `convex/schema.ts`; use `defineTable`, `v.*` validators; index naming `by_field1_and_field2`.
+- **Queries:** Use `.withIndex()` not `.filter()`; prefer `.take()` or pagination over `.collect()`.
+- **Mutations:** Use `ctx.db.patch` / `ctx.db.replace`; batch large operations with `ctx.scheduler.runAfter`.
+- **Actions:** `"use node";` at top for Node.js built-ins; no `ctx.db` access; `fetch()` available in default runtime.
+- **HTTP:** Defined in `convex/http.ts` with `httpAction`; registered at exact path.
+- **Testing:** Use `convex-test` with `vitest`, `environment: "edge-runtime"`, module map from `import.meta.glob`.

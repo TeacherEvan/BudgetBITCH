@@ -1,12 +1,11 @@
 // app/page.tsx
-'use client';
+'use client'
 
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { LanguageSelectModal } from "@/components/onboarding/language-select-modal";
 import { PWAInstallPrompt } from "@/components/pwa/install-prompt";
 import { WelcomeWindow } from "@/components/welcome/welcome-window";
-import { redirect } from "next/navigation";
 import { normalizeConvexCloudUrl } from "@/lib/url";
 
 const LANGUAGE_STORAGE_KEY = "budgetbitch:locale";
@@ -33,7 +32,6 @@ export default function Home() {
   const storedLocale = useSyncExternalStore(subscribeToLocale, getStoredLocale, () => null);
   const locale = storedLocale || 'en';
   const [showLanguageModal, setShowLanguageModal] = useState(!storedLocale);
-  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const wizardComplete = getWizardComplete();
 
   useEffect(() => {
@@ -61,8 +59,6 @@ export default function Home() {
         onComplete={(selectedLocale) => {
           localStorage.setItem(LANGUAGE_STORAGE_KEY, selectedLocale);
           setShowLanguageModal(false);
-          // Show PWA install prompt after language selection
-          setTimeout(() => setShowInstallPrompt(true), 1000);
         }}
       />
     );
@@ -82,10 +78,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-black flex items-center justify-center">
       <div className="animate-pulse text-amber-400">Loading...</div>
-      <PWAInstallPrompt
-        locale={locale as 'th' | 'en'}
-        onDismiss={() => setShowInstallPrompt(false)}
-      />
+      <PWAInstallPrompt locale={locale as 'th' | 'en'} />
     </div>
   );
 }
