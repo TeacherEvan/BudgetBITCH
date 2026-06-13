@@ -26,20 +26,20 @@ export function SettingsPage({ locale = 'en' }: SettingsPageProps) {
   );
   const { commitment } = useCriticalExpense();
   
-  const [theme, setTheme] = useState<'amber' | 'dark' | 'gold'>('amber');
-  const [lastSync, setLastSync] = useState<string | null>(null);
-  const [syncing, setSyncing] = useState(false);
-
-  // Load saved settings
-  useEffect(() => {
+  const [theme, setTheme] = useState<'amber' | 'dark' | 'gold'>(() => {
     if (typeof window !== 'undefined') {
-      const savedTheme = localStorage.getItem('budgetbitch:theme') as 'amber' | 'dark' | 'gold' | null;
-      if (savedTheme) setTheme(savedTheme);
-      
-      const savedSync = localStorage.getItem('budgetbitch:lastSync');
-      if (savedSync) setLastSync(savedSync);
+      return (localStorage.getItem('budgetbitch:theme') as 'amber' | 'dark' | 'gold') || 'amber';
     }
-  }, []);
+    return 'amber';
+  });
+
+  const [lastSync, setLastSync] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('budgetbitch:lastSync');
+    }
+    return null;
+  });
+  const [syncing, setSyncing] = useState(false);
 
   // Apply theme
   useEffect(() => {
