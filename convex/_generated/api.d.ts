@@ -9,12 +9,9 @@
  */
 
 import type * as auth from "../auth.js";
-import type * as authSession from "../authSession.js";
 import type * as http from "../http.js";
 import type * as lib_auth from "../lib/auth.js";
-import type * as live from "../live.js";
-import type * as projections from "../projections.js";
-import type * as viewer from "../viewer.js";
+import type * as snapshots from "../snapshots.js";
 
 import type {
   ApiFromModules,
@@ -24,12 +21,9 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
-  authSession: typeof authSession;
   http: typeof http;
   "lib/auth": typeof lib_auth;
-  live: typeof live;
-  projections: typeof projections;
-  viewer: typeof viewer;
+  snapshots: typeof snapshots;
 }>;
 
 /**

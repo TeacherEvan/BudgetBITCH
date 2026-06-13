@@ -8,13 +8,12 @@ export const AUTH_ROUTES = {
 export const PROTECTED_PAGE_PREFIXES = [
   "/dashboard",
   "/settings",
+  "/wizard",
   AUTH_ROUTES.continue,
 ] as const;
 
 export const PROTECTED_API_PREFIXES = [
   "/api/v1/auth/bootstrap",
-  "/api/v1/check-ins",
-  "/api/v1/integrations",
 ] as const;
 
 export const PUBLIC_API_PREFIXES = [

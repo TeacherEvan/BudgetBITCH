@@ -28,6 +28,48 @@
   --radius-pill: 999px;
 }
 
+/* Theme: Amber (Default) */
+.theme-amber {
+  --accent: #9dcab7;
+  --accent-strong: #ccb37a;
+  --accent-ink: #13211b;
+}
+
+/* Theme: Dark */
+.theme-dark {
+  --accent: #6b7280;
+  --accent-strong: #4b5563;
+  --accent-ink: #000000;
+  --page-bg-top: oklch(0.15 0 0);
+  --page-bg-middle: oklch(0.1 0 0);
+  --page-bg-bottom: oklch(0.05 0 0);
+  --surface-1: color-mix(in srgb, #0a0a0a 95%, #ffffff 5%);
+  --surface-2: color-mix(in srgb, #0a0a0a 98%, #ffffff 2%);
+  --surface-3: color-mix(in srgb, #0a0a0a 99%, #ffffff 1%);
+  --surface-accent: color-mix(in srgb, #1a1a1a 80%, #4b5563 20%);
+  --border-soft: color-mix(in srgb, #ffffff 8%, transparent 92%);
+  --border-strong: color-mix(in srgb, #6b7280 25%, transparent 75%);
+}
+
+/* Theme: Thai Temple Gold */
+.theme-gold {
+  --accent: #f5d742;
+  --accent-strong: #d4a843;
+  --accent-ink: #1a0f00;
+  --page-bg-top: oklch(0.35 0.08 85);
+  --page-bg-middle: oklch(0.18 0.05 85);
+  --page-bg-bottom: oklch(0.1 0.03 85);
+  --surface-1: color-mix(in srgb, #1a1308 85%, #f5d742 15%);
+  --surface-2: color-mix(in srgb, #1a1308 90%, #f5d742 10%);
+  --surface-3: color-mix(in srgb, #1a1308 95%, #f5d742 5%);
+  --surface-accent: color-mix(in srgb, #2a200a 70%, #d4a843 30%);
+  --border-soft: color-mix(in srgb, #f5d742 15%, transparent 85%);
+  --border-strong: color-mix(in srgb, #d4a843 40%, transparent 60%);
+  --text-1: #fffef8;
+  --text-2: color-mix(in srgb, #fffef8 85%, #d4a843 15%);
+  --text-muted: color-mix(in srgb, #fffef8 60%, #d4a843 40%);
+}
+
 @layer base {
   * {
     box-sizing: border-box;

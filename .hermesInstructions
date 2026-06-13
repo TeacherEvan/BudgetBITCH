@@ -1,0 +1,316 @@
+# BudgetBITCH — Agent Instructions
+
+This file documents the conventions, patterns, and workflows for AI agents working in the BudgetBITCH repository. Follow these rules strictly.
+
+---
+
+## 1. Repository Structure & Orientation
+
+### Two App Trees
+- **Root (`/`)** — Primary Next.js 16 + Prisma + Convex application. All new work targets here unless explicitly stated.
+- **`budgetbitch/`** — Separate Convex prototype/reference app. **Excluded** from root TypeScript config. Do not mix code between trees.
+
+### Key Directories
+```
+src/
+├── app/              # Next.js App Router routes (pages, layouts, API routes)
+├── components/       # React components (shared + feature-specific)
+├── modules/          # Domain business logic (pure TS, no React)
+├── lib/              # Cross-cutting utilities (auth, config, constants)
+├── hooks/            # Custom React hooks
+├── inngest/          # Inngest client + functions
+├── middleware.ts     # Auth route protection
+├── types/            # Shared TypeScript types
+tests/
+├── e2e/              # Playwright E2E tests
+prisma/
+├── schema.prisma     # Canonical database schema
+├── migrations/       # Prisma migrations
+convex/               # Convex backend (read guidelines first!)
+```
+
+---
+
+## 2. Development Workflow
+
+### Before Making Changes
+1. **Read the relevant docs first** — `docs/CODEBASE_INDEX.md` for root app, `convex/_generated/ai/guidelines.md` for Convex
+2. **Find the domain module** — Business logic lives in `src/modules/<domain>/`, not in components
+3. **Check for existing tests** — Unit tests colocated (`*.test.ts`), E2E in `tests/e2e/`
+
+### Change Process
+1. Edit domain logic in `src/modules/**` first
+2. Update colocated unit test
+3. Update API route in `src/app/api/v1/**` if needed
+4. Update UI in `src/app/**` and `src/components/**`
+5. Run tests: `npm run test` (unit) and `npm run test:e2e` (E2E)
+6. Run lint: `npm run lint`
+7. Run build: `npm run build`
+
+### Testing Requirements
+- **Unit tests**: Required for all domain logic changes. Pattern: `*.test.ts` or `*.test.tsx` beside the code.
+- **E2E tests**: Required for user-facing flows. Located in `tests/e2e/`.
+- **Test before commit**: All tests must pass.
+
+---
+
+## 3. Technology Stack Conventions
+
+### Frontend
+- **Framework**: Next.js 16 (App Router), React 19
+- **Styling**: Tailwind CSS v4
+- **State**: React Server Components + Client Components (minimize client components)
+- **Forms**: React Hook Form + Zod validation
+- **i18n**: next-intl v4
+- **Animation**: Framer Motion
+
+### Backend
+- **Database**: Prisma (PostgreSQL) — primary ORM
+- **Real-time/Backend**: Convex — for auth, real-time, scheduled jobs
+- **Authentication**: Convex Auth (JWT-based) via `@convex-dev/auth`
+- **Background Jobs**: Inngest
+- **Email**: React Email templates
+
+### TypeScript
+- **Strict mode**: Enabled (`"strict": true`)
+- **Path aliases**: `@/*` → `./src/*`
+- **No `any`**: Use proper types from `_generated` (Convex) or Prisma client
+- **Module resolution**: Bundler
+
+---
+
+## 4. Code Patterns & Best Practices
+
+### Domain Modules (`src/modules/`)
+- Pure TypeScript — **no React imports**
+- Single responsibility per file
+- Export types alongside functions
+- Colocated tests: `module-name.test.ts`
+
+```typescript
+// src/modules/budgets/budget-health.ts
+export interface BudgetHealthInput { ... }
+export interface BudgetHealthResult { ... }
+
+export function calculateBudgetHealth(input: BudgetHealthInput): BudgetHealthResult {
+  // pure logic
+}
+```
+
+### API Routes (`src/app/api/v1/`)
+- Thin wrappers — delegate to domain modules
+- Validate input with Zod
+- Return typed responses
+- Handle errors consistently
+
+```typescript
+// src/app/api/v1/budgets/health/route.ts
+import { calculateBudgetHealth } from '@/modules/budgets/budget-health';
+
+export async function POST(req: Request) {
+  const body = await req.json();
+  const parsed = budgetHealthSchema.safeParse(body);
+  if (!parsed.success) return NextResponse.json({ error: parsed.error }, { status: 400 });
+  const result = calculateBudgetHealth(parsed.data);
+  return NextResponse.json(result);
+}
+```
+
+### React Components
+- **Server Components by default** — only add `'use client'` when needed (interactivity, hooks, browser APIs)
+- **Colocate shared UI** in `src/components/<feature>/`
+- **Use Radix UI primitives** for accessible components
+- **Tailwind for styling** — avoid inline styles
+
+### Convex Functions
+**ALWAYS read `convex/_generated/ai/guidelines.md` first.** Key rules:
+
+- Use `query`/`mutation`/`action` for public API; `internalQuery`/`internalMutation`/`internalAction` for private
+- **Always include argument validators** (`v.*` from `convex/values`)
+- Use `ctx.runQuery`/`runMutation`/`runAction` with function references from `api`/`internal`
+- **Never use `filter`** — define indexes and use `withIndex`
+- **Never use `.collect()`** unbounded — use `.take()` or pagination
+- Actions needing Node.js: add `"use node";` at top, separate file from queries/mutations
+
+```typescript
+// convex/budgets.ts
+import { mutation, query } from './_generated/server';
+import { v } from 'convex/values';
+
+export const createBudget = mutation({
+  args: { name: v.string(), amount: v.number() },
+  handler: async (ctx, args) => {
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error('Unauthorized');
+    return ctx.db.insert('budgets', { ...args, userId: user.tokenIdentifier });
+  },
+});
+```
+
+### Prisma Schema
+- Define all models in `prisma/schema.prisma`
+- Use `@@index` for query patterns
+- Run `npm run db:generate` after changes
+- Migrations checked into `prisma/migrations/`
+
+---
+
+## 5. Authentication & Authorization
+
+### Route Protection
+- `src/middleware.ts` protects `/dashboard`, `/settings`, `/api/v1/**`
+- `src/lib/auth/routes.ts` — centralized route constants
+- **Never trust client-provided user IDs** — always derive from auth context
+
+### Convex Auth
+- `convex/auth.config.ts` required for JWT validation
+- Use `ctx.auth.getUserIdentity()` in Convex functions
+- Use `ConvexProviderWithAuth` on client
+
+### Server-Side Auth (Next.js)
+- API routes: validate session via Convex or Clerk
+- Never accept `userId` as argument for authorization
+
+---
+
+## 6. Integration Subsystem
+
+### Provider Wizards
+1. Page: `src/app/(app)/settings/integrations/<provider>/page.tsx`
+2. Shared UI: `src/components/integrations/**`
+3. Registry: `src/modules/integrations/provider-registry.ts`
+4. Logic: `src/modules/integrations/wizard-machine.ts`, `connection-vault.ts`
+5. API: `src/app/api/v1/integrations/connect/route.ts`
+
+### Adding a New Provider
+1. Add metadata to `provider-registry.ts`
+2. Create wizard page following existing pattern
+3. Add to integration hub
+4. Add E2E test: `tests/e2e/integrations-<provider>.spec.ts`
+
+---
+
+## 7. Testing Conventions
+
+### Unit Tests (Vitest)
+```typescript
+// src/modules/budgets/budget-health.test.ts
+import { calculateBudgetHealth } from './budget-health';
+import { expect, test } from 'vitest';
+
+test('returns healthy for balanced budget', () => {
+  const result = calculateBudgetHealth({ income: 5000, expenses: 4000 });
+  expect(result.status).toBe('healthy');
+});
+```
+
+### E2E Tests (Playwright)
+- One spec per major flow
+- Use `test.describe` for grouping
+- Test auth flows in `welcome-auth.spec.ts` and `smoke.spec.ts`
+
+### Test Commands
+```bash
+npm run test          # Unit tests (vitest)
+npm run test:watch    # Watch mode
+npm run test:e2e      # E2E tests (playwright)
+npm run lint          # ESLint
+npm run build         # Next.js build (type-checks)
+```
+
+---
+
+## 8. Common Pitfalls to Avoid
+
+| Pitfall | Correct Approach |
+|---------|------------------|
+| Editing UI before finding domain module | Start in `src/modules/<domain>/` |
+| Mixing root app and `budgetbitch/` prototype | Treat as separate systems |
+| Skipping Convex guidelines | Read `convex/_generated/ai/guidelines.md` first |
+| Using `.collect()` or `filter` in Convex | Use indexes + `withIndex` + `.take()` |
+| Passing `userId` from client for auth | Derive server-side via `ctx.auth.getUserIdentity()` |
+| Adding `'use client'` unnecessarily | Default to Server Components |
+| Forgetting argument validators in Convex | Always include `args` with `v.*` validators |
+| Not running tests before commit | `npm run test && npm run test:e2e && npm run lint` |
+
+---
+
+## 9. Navigation Recipes
+
+### Change a Provider Wizard
+1. `src/app/(app)/settings/integrations/<provider>/page.tsx`
+2. `src/components/integrations/**`
+3. `src/modules/integrations/provider-registry.ts`
+4. Run provider page test + matching E2E spec
+
+### Change Auth Entry / Root Gate
+1. `src/app/page.tsx`
+2. `src/components/welcome/**`, `src/app/sign-in/**`, `src/app/sign-up/**`
+3. `src/modules/auth/**`, `src/lib/auth/routes.ts`
+4. Run `welcome-auth.spec.ts` + `smoke.spec.ts`
+
+### Change Dashboard Data
+1. `src/app/(app)/dashboard/page.tsx`
+2. `src/modules/dashboard/dashboard-data.ts`
+3. `dashboard-demo-factory.ts`, `dashboard-mappers.ts`, `types.ts`
+4. Run dashboard unit tests + `dashboard.spec.ts`
+
+### Change Business Logic
+1. `src/modules/<domain>/**`
+2. Update colocated test
+3. Follow dependent API route in `src/app/api/**`
+
+### Change Database Schema
+1. Edit `prisma/schema.prisma`
+2. Generate migration: `npm run db:generate`
+3. Check affected routes/modules/tests
+
+---
+
+## 10. Environment & Scripts
+
+### Required Environment Variables
+- `DATABASE_URL` — PostgreSQL connection
+- `CONVEX_DEPLOYMENT` — Convex deployment name
+- `NEXT_PUBLIC_CONVEX_URL` — Convex client URL
+- `CLERK_SECRET_KEY` / `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` — Auth
+- `INNGEST_EVENT_KEY` — Background jobs
+- `RESEND_API_KEY` — Email (optional)
+
+### Key Scripts
+```bash
+npm run dev           # Dev server (with sanitized env)
+npm run build         # Production build
+npm run start         # Production server
+npm run lint          # ESLint
+npm run test          # Vitest unit tests
+npm run test:e2e      # Playwright E2E tests
+npm run db:generate   # Prisma generate
+npm run db:push       # Prisma db push (dev)
+npm run db:migrate    # Prisma migrate deploy
+```
+
+---
+
+## 11. Code Quality Standards
+
+- **TypeScript strict**: No `any`, no implicit any
+- **ESLint**: Next.js + Convex plugin rules
+- **Prettier**: Auto-format on save (configured in root)
+- **Conventional Commits**: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`
+- **PR Requirements**: Tests pass, lint passes, build passes, no console.log in production code
+
+---
+
+## 12. Memory & Context
+
+- **User prefers**: Brief, direct, action-first responses
+- **Timezone**: Bangkok, Thailand
+- **Business name**: "Evan Botha" or "Teacher Evan" for Thai defense training business
+- **Cross-channel context**: Must maintain preferences across WhatsApp, Telegram, etc.
+- **Voice preference**: Default to voice notes (ElevenLabs) for longer responses
+
+---
+
+*Last updated: 2026-06-13*
+*Refer to `docs/CODEBASE_INDEX.md` for detailed file map and `convex/_generated/ai/guidelines.md` for Convex-specific rules.*

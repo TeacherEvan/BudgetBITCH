@@ -37,3 +37,10 @@ pnpm-debug.log*
 .vscode/launch.json
 .vscode/c_cpp_properties.json
 .idea/
+
+# agent cache
+.cache/
+
+# local DB (dev only)
+*.idb
+local-db-*

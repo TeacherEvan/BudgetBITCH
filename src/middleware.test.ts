@@ -46,9 +46,6 @@ const publicApiRoutes = [
 
 const protectedApiRoutes = [
   "/api/v1/auth/bootstrap",
-  "/api/v1/check-ins",
-  "/api/v1/integrations",
-  "/api/v1/integrations/plaid/callback",
 ] as const;
 
 describe("middleware", () => {

@@ -1,0 +1,138 @@
+// components/dashboard/panels/budget-visual.tsx
+'use client';
+
+import { useExpenses, useBudgets } from '@/hooks/use-local-db';
+import { Card } from '@/components/ui/card';
+import { formatCurrency } from '@/lib/utils/currency';
+import { format } from 'date-fns';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+
+type ExpenseCategory = 
+  'housing' | 'transport' | 'food' | 'utilities'
+  | 'phone_internet' | 'subscriptions' | 'entertainment'
+  | 'healthcare' | 'insurance' | 'debt' | 'savings' | 'other';
+
+const CATEGORIES = [
+  { value: 'housing', label: { th: 'ที่อยู่อาศัย', en: 'Housing' } },
+  { value: 'transport', label: { th: 'การเดินทาง', en: 'Transport' } },
+  { value: 'food', label: { th: 'อาหาร', en: 'Food' } },
+  { value: 'utilities', label: { th: 'ค่าสาธารณูปโภค', en: 'Utilities' } },
+  { value: 'phone_internet', label: { th: 'โทรศัพท์/อินเตอร์เน็ต', en: 'Phone/Internet' } },
+  { value: 'subscriptions', label: { th: 'สมัครสมาชิก', en: 'Subscriptions' } },
+  { value: 'entertainment', label: { th: 'บันเทิง', en: 'Entertainment' } },
+  { value: 'healthcare', label: { th: 'สุขภาพ', en: 'Healthcare' } },
+  { value: 'insurance', label: { th: 'ประกันภัย', en: 'Insurance' } },
+  { value: 'debt', label: { th: 'หนี้สิน', en: 'Debt' } },
+  { value: 'savings', label: { th: 'เงินออม', en: 'Savings' } },
+  { value: 'other', label: { th: 'อื่นๆ', en: 'Other' } },
+];
+
+interface BudgetVisualProps {
+  locale?: 'th' | 'en';
+}
+
+export function BudgetVisual({ locale = 'en' }: BudgetVisualProps) {
+  const { expenses: rawExpenses } = useExpenses();
+  const { budgets: rawBudgets } = useBudgets();
+
+  const expenses = rawExpenses as any[];
+  const budgets = rawBudgets as any[];
+
+  const monthlyIncome = 50000;
+  const currentMonth = format(new Date(), 'yyyy-MM');
+  
+  const monthlyExpenses = expenses
+    .filter((e: any) => format(new Date(e.date), 'yyyy-MM') === currentMonth)
+    .reduce((acc: Record<string, number>, e: any) => {
+      acc[e.category] = (acc[e.category] || 0) + e.amount;
+      return acc;
+    }, {});
+
+  const budgetData = CATEGORIES.map((cat) => {
+    const spent = monthlyExpenses[cat.value] || 0;
+    const budget = budgets.find((b: any) => b.category === cat.value)?.monthlyLimit || 0;
+    return {
+      category: cat.label[locale === 'th' ? 'th' : 'en'],
+      spent,
+      budget,
+      pct: budget > 0 ? Math.min(100, (spent / budget) * 100) : 0,
+    };
+  }).filter((d) => d.budget > 0 || d.spent > 0);
+
+  const totalIncome = monthlyIncome;
+  const totalExpenses = Object.values(monthlyExpenses).reduce((a: number, b: number) => a + b, 0);
+  const totalSavings = totalIncome - totalExpenses;
+  const savingsRate = totalIncome > 0 ? ((totalSavings / totalIncome) * 100).toFixed(1) : '0';
+
+  const COLORS = ['#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-white">📊 Budget Overview</h3>
+        <div className="text-right">
+          <p className="text-sm text-white/60">This Month</p>
+          <p className="font-mono text-xl text-white">{formatCurrency(totalIncome - totalExpenses, 'en')}</p>
+        </div>
+      </div>
+
+      <Card className="p-4">
+        <div className="grid gap-4 sm:grid-cols-3 mb-6">
+          <div className="bg-amber-400/10 border border-amber-400/30 rounded-xl p-4">
+            <p className="text-sm text-amber-400">Income</p>
+            <p className="text-2xl font-bold font-mono text-white">{formatCurrency(totalIncome, 'en')}</p>
+          </div>
+          <div className="bg-rose-400/10 border border-rose-400/30 rounded-xl p-4">
+            <p className="text-sm text-rose-400">Expenses</p>
+            <p className="text-2xl font-bold font-mono text-white">{formatCurrency(totalExpenses, 'en')}</p>
+          </div>
+          <div className="bg-emerald-400/10 border border-emerald-400/30 rounded-xl p-4">
+            <p className="text-sm text-emerald-400">Savings Rate</p>
+            <p className="text-2xl font-bold font-mono text-white">{savingsRate}%</p>
+          </div>
+        </div>
+
+        {budgetData.length > 0 && (
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={budgetData} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                <XAxis type="number" tick={{ fill: '#ffffff80', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis dataKey="category" type="category" width={100} tick={{ fill: '#ffffff80', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #ffffff20', borderRadius: '8px' }} />
+                <Bar dataKey="spent" radius={[0, 4, 4, 0]}>
+                  {budgetData.map((_, index: number) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        <div className="space-y-2 mt-4">
+          {budgetData.map((item: any, index: number) => (
+            <div key={item.category} className="flex items-center gap-3">
+              <div className="w-5 h-5 rounded" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate">{item.category}</p>
+                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full rounded-full transition-all duration-500" 
+                    style={{ 
+                      width: `${Math.min(100, item.pct)}%`,
+                      backgroundColor: item.pct > 100 ? '#ef4444' : COLORS[index % COLORS.length]
+                    }} 
+                  />
+                </div>
+              </div>
+              <span className="text-sm font-mono text-white/80 w-28 text-right">
+                {item.budget > 0 ? `${formatCurrency(item.spent, 'en')} / ${formatCurrency(item.budget, 'en')}` : formatCurrency(item.spent, 'en')}
+              </span>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}// End of file
