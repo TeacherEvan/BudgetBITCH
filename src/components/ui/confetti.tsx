@@ -23,6 +23,8 @@ export function Confetti({
     color: string; size: number; rotation: number; rotationSpeed: number;
   }>>([]);
 
+  const animateRef = useRef<(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => void>();
+
   const initParticles = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -38,30 +40,32 @@ export function Confetti({
     }));
   }, [colorPalette]);
 
-  const animate = useCallback((ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    let allDead = true;
-    particles.current.forEach(p => {
-      if (p.y < canvas.height + 20) {
-        allDead = false;
-        p.vy += 0.3; // gravity
-        p.x += p.vx;
-        p.y += p.vy;
-        p.rotation += p.rotationSpeed;
-        
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.rotation);
-        ctx.fillStyle = p.color;
-        ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
-        ctx.restore();
-      }
-    });
+  useEffect(() => {
+    animateRef.current = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      let allDead = true;
+      particles.current.forEach(p => {
+        if (p.y < canvas.height + 20) {
+          allDead = false;
+          p.vy += 0.3; // gravity
+          p.x += p.vx;
+          p.y += p.vy;
+          p.rotation += p.rotationSpeed;
+          
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rotation);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+          ctx.restore();
+        }
+      });
 
-    if (!allDead) {
-      animationRef.current = requestAnimationFrame(() => animate(ctx, canvas));
-    }
+      if (!allDead) {
+        animationRef.current = requestAnimationFrame(() => animateRef.current!(ctx, canvas));
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -80,20 +84,18 @@ export function Confetti({
     window.addEventListener('resize', resize);
     initParticles();
 
-    let completed = false;
     const timeout = setTimeout(() => {
-      completed = true;
       onComplete?.();
     }, duration);
 
-    animationRef.current = requestAnimationFrame(() => animate(ctx, canvas));
+    animationRef.current = requestAnimationFrame(() => animateRef.current!(ctx, canvas));
 
     return () => {
       window.removeEventListener('resize', resize);
       clearTimeout(timeout);
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  }, [isActive, duration, onComplete, animate, initParticles]);
+  }, [isActive, duration, onComplete, animateRef, initParticles]);
 
   if (!isActive) return null;
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, HTMLMotionProps } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { PanelKey } from './dashboard-shell';
 import { cn } from '@/lib/utils/cn';
 

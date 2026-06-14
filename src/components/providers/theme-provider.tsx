@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
 
 type Theme = 'amber' | 'dark' | 'gold';
 
@@ -23,30 +23,23 @@ function getInitialTheme(defaultTheme: Theme): Theme {
 export function ThemeProvider({ children, defaultTheme = 'amber' }: { children: ReactNode; defaultTheme?: Theme }) {
   const [theme, setTheme] = useState<Theme>(() => getInitialTheme(defaultTheme));
   const [resolvedTheme, setResolvedTheme] = useState<Theme>(() => getInitialTheme(defaultTheme));
-  const [mounted, setMounted] = useState(false);
+  const mountedRef = useRef(false);
 
   useEffect(() => {
-    setMounted(true);
-    const stored = localStorage.getItem('budgetbitch:theme') as Theme | null;
-    if (stored) {
-      setTheme(stored);
-      setResolvedTheme(stored);
-    } else if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) {
-      setResolvedTheme('dark');
-    }
+    mountedRef.current = true;
   }, []);
 
   useEffect(() => {
-    if (!mounted) return;
+    if (!mountedRef.current) return;
     const root = document.documentElement;
     root.classList.remove('theme-amber', 'theme-dark', 'theme-gold');
     root.classList.add(`theme-${theme}`);
     localStorage.setItem('budgetbitch:theme', theme);
     setResolvedTheme(theme);
-  }, [theme, mounted]);
+  }, [theme]);
 
   useEffect(() => {
-    if (!mounted) return;
+    if (!mountedRef.current) return;
     const mediaQuery = window.matchMedia?.('(prefers-color-scheme: dark)');
     if (!mediaQuery) return;
     const handler = (e: MediaQueryListEvent) => {
@@ -57,7 +50,7 @@ export function ThemeProvider({ children, defaultTheme = 'amber' }: { children: 
     };
     mediaQuery.addEventListener('change', handler);
     return () => mediaQuery.removeEventListener('change', handler);
-  }, [mounted]);
+  }, []);
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme }}>
