@@ -19,14 +19,72 @@ interface SettingsPageProps {
   locale: 'th' | 'en';
 }
 
-export function SettingsPage({ locale = 'en' }: SettingsPageProps) {
-  const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
+const labels = {
+  th: {
+    title: 'ตั้งค่า',
+    sections: {
+      general: 'ทั่วไป',
+      preferences: 'การตั้งค่าส่วนตัว',
+      data: 'ข้อมูล',
+      privacy: 'ความเป็นส่วนตัว',
+    },
+    locale: 'ภาษา',
+    voice: 'เสียงช่วยแนะนำ',
+    voiceRate: 'ความเร็วพูด',
+    voicePitch: 'ระดับเสียง',
+    theme: 'ธีมสี',
+    themeAmber: 'อำพรises (ค่าเริ่มต้น)',
+    themeDark: 'ดำเข้ม',
+    themeGold: 'ทองวัดไทย',
+    resetData: 'ล้างข้อมูลทั้งหมด',
+    exportData: 'ส่งออกข้อมูล (JSON)',
+    importData: 'นำเข้าข้อมูล (JSON)',
+    lastSync: 'ซิงค์ล่าสุด',
+    syncNow: 'ซิงค์ตอนนี้',
+    privacyDisclaimer: 'ข้อความยอมรับความเป็นส่วนตัว',
+    criticalExpense: 'ค่าใช้จ่ายที่ต้องลด',
+    commitStatus: 'สถานะการยอมรับ',
+    committed: 'ยอมรับแล้ว',
+    notCommitted: 'ยังไม่ได้เลือก',
+  },
+  en: {
+    title: 'Settings',
+    sections: {
+      general: 'General',
+      preferences: 'Preferences',
+      data: 'Data',
+      privacy: 'Privacy',
+    },
+    locale: 'Language',
+    voice: 'Voice Guidance',
+    voiceRate: 'Speech Rate',
+    voicePitch: 'Pitch',
+    theme: 'Theme',
+    themeAmber: 'Amber (Default)',
+    themeDark: 'Dark',
+    themeGold: 'Thai Temple Gold',
+    resetData: 'Reset All Data',
+    exportData: 'Export Data (JSON)',
+    importData: 'Import Data (JSON)',
+    lastSync: 'Last Sync',
+    syncNow: 'Sync Now',
+    privacyDisclaimer: 'Privacy Disclaimer',
+    criticalExpense: 'Cut One Expense',
+    commitStatus: 'Commitment Status',
+    committed: 'Committed',
+    notCommitted: 'Not Selected',
+  },
+};
+
+export default function SettingsPage({ locale = 'en' }: SettingsPageProps) {
+  const auth = useConvexAuth();
+  const { isAuthenticated, isLoading: authLoading } = auth ?? { isAuthenticated: false, isLoading: true };
   const { clear: clearProfile } = useWizardProfile();
   const { settings: voiceSettings, updateSettings: updateVoiceSettings, toggleVoice, isSupported } = useVoice(
     locale === 'th' ? 'th-TH' : 'en-US'
   );
   const { commitment } = useCriticalExpense();
-  
+
   const [lastSync, setLastSync] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('budgetbitch:lastSync');
@@ -43,7 +101,7 @@ export function SettingsPage({ locale = 'en' }: SettingsPageProps) {
   const handleVoiceToggle = () => {
     toggleVoice();
   };
-  
+
   const handleResetData = () => {
     if (confirm(locale === 'th' ? 'ลบข้อมูลทั้งหมด? จะไม่สามารถกู้คืนได้' : 'Delete all data? This cannot be undone')) {
       clearProfile();
@@ -61,7 +119,7 @@ export function SettingsPage({ locale = 'en' }: SettingsPageProps) {
     for (const store of stores) {
       allData[store] = await db.getAll(store);
     }
-    
+
     const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -119,63 +177,6 @@ export function SettingsPage({ locale = 'en' }: SettingsPageProps) {
     return <div className="min-h-screen flex items-center justify-center text-white/50">Please sign in to access settings</div>;
   }
 
-  const labels = {
-    th: {
-      title: 'ตั้งค่า',
-      sections: {
-        general: 'ทั่วไป',
-        preferences: 'การตั้งค่าส่วนตัว', 
-        data: 'ข้อมูล',
-        privacy: 'ความเป็นส่วนตัว',
-      },
-      locale: 'ภาษา',
-      voice: 'เสียงช่วยแนะนำ',
-      voiceRate: 'ความเร็วพูด',
-      voicePitch: 'ระดับเสียง',
-      theme: 'ธีมสี',
-      themeAmber: 'อำพรises (ค่าเริ่มต้น)',
-      themeDark: 'ดำเข้ม',
-      themeGold: 'ทองวัดไทย',
-      resetData: 'ล้างข้อมูลทั้งหมด',
-      exportData: 'ส่งออกข้อมูล (JSON)',
-      importData: 'นำเข้าข้อมูล (JSON)',
-      lastSync: 'ซิงค์ล่าสุด',
-      syncNow: 'ซิงค์ตอนนี้',
-      privacyDisclaimer: 'ข้อความยอมรับความเป็นส่วนตัว',
-      criticalExpense: 'ค่าใช้จ่ายที่ต้องลด',
-      commitStatus: 'สถานะการยอมรับ',
-      committed: 'ยอมรับแล้ว',
-      notCommitted: 'ยังไม่ได้เลือก',
-    },
-    en: {
-      title: 'Settings',
-      sections: {
-        general: 'General',
-        preferences: 'Preferences',
-        data: 'Data',
-        privacy: 'Privacy',
-      },
-      locale: 'Language',
-      voice: 'Voice Guidance',
-      voiceRate: 'Speech Rate',
-      voicePitch: 'Pitch',
-      theme: 'Theme',
-      themeAmber: 'Amber (Default)',
-      themeDark: 'Dark',
-      themeGold: 'Thai Temple Gold',
-      resetData: 'Reset All Data',
-      exportData: 'Export Data (JSON)',
-      importData: 'Import Data (JSON)',
-      lastSync: 'Last Sync',
-      syncNow: 'Sync Now',
-      privacyDisclaimer: 'Privacy Disclaimer',
-      criticalExpense: 'Cut One Expense',
-      commitStatus: 'Commitment Status',
-      committed: 'Committed',
-      notCommitted: 'Not Selected',
-    },
-  };
-
   const l = labels[locale];
 
   return (
@@ -220,7 +221,7 @@ export function SettingsPage({ locale = 'en' }: SettingsPageProps) {
               </div>
               <Toggle checked={voiceSettings.enabled} onChange={handleVoiceToggle} disabled={!isSupported} />
             </div>
-            
+
             {voiceSettings.enabled && (
               <div className="space-y-4 pt-2 border-t border-white/10">
                 <div>
@@ -290,7 +291,7 @@ export function SettingsPage({ locale = 'en' }: SettingsPageProps) {
                   <h3 className="font-semibold text-white">{l.syncNow}</h3>
                 </div>
                 <span className="text-xs text-white/50">
-                  {lastSync 
+                  {lastSync
                     ? format(new Date(lastSync), locale === 'th' ? 'd MMM yyyy HH:mm' : 'MMM d, yyyy HH:mm')
                     : (locale === 'th' ? 'ยังไม่เคยซิงค์' : 'Never synced')}
                 </span>
@@ -323,8 +324,8 @@ export function SettingsPage({ locale = 'en' }: SettingsPageProps) {
               <div className="flex-1">
                 <h3 className="font-semibold text-white mb-2">{l.privacyDisclaimer}</h3>
                 <p className="text-sm text-white/70 leading-relaxed">
-                  {locale === 'th' 
-                    ? 'เราใช้ข้อมูลตำแหน่งของคุณ เพื่อแสดงราคาน้ำมัน บิลล์ และโปรโมชั่นใกล้คุณเท่านั้น ไม่ได้เก็บหรือขายข้อมูลให้บุคคลที่สาม ไม่มีการติดตาม และไม่ใช้เพื่อการตลาดใดๆ' 
+                  {locale === 'th'
+                    ? 'เราใช้ข้อมูลตำแหน่งของคุณ เพื่อแสดงราคาน้ำมัน บิลล์ และโปรโมชั่นใกล้คุณเท่านั้น ไม่ได้เก็บหรือขายข้อมูลให้บุคคลที่สาม ไม่มีการติดตาม และไม่ใช้เพื่อการตลาดใดๆ'
                     : 'We use your location ONLY to show local fuel prices, bills, and deals near you. We never store, sell, or share your data with third parties. No tracking. No marketing. Ever.'}
                 </p>
               </div>
@@ -344,7 +345,7 @@ export function SettingsPage({ locale = 'en' }: SettingsPageProps) {
               {commitment && (
                 <div className="bg-black/30 rounded-xl p-3 text-sm">
                   <p className="text-white/70">
-                    {locale === 'th' 
+                    {locale === 'th'
                       ? `คุณเลือกลด: ${commitment.expenseKey} | ประหยัดต่อเดือน: ${commitment.estimatedMonthlyCost.toLocaleString()} บาท`
                       : `You chose: ${commitment.expenseKey} | Monthly savings: ${commitment.estimatedMonthlyCost.toLocaleString()} THB`}
                   </p>

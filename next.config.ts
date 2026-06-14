@@ -46,6 +46,7 @@ const withPWAConfig = withPWA({
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1"],
+  turbopack: {},
 };
 
 export default withPWAConfig(nextConfig);

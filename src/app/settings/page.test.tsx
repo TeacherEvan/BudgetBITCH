@@ -32,7 +32,7 @@ vi.mock('@/hooks/use-critical-expense', () => ({
   }),
 }));
 
-import { SettingsPage } from './page';
+import SettingsPage from './page';
 
 const renderWithProviders = (component: React.ReactNode) => render(<ThemeProvider>{component}</ThemeProvider>);
 

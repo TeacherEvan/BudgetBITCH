@@ -8,6 +8,8 @@ import { PWAInstallPrompt } from "@/components/pwa/install-prompt";
 import { WelcomeWindow } from "@/components/welcome/welcome-window";
 import { normalizeConvexCloudUrl } from "@/lib/url";
 
+export const dynamic = 'force-dynamic';
+
 const LANGUAGE_STORAGE_KEY = "budgetbitch:locale";
 const WIZARD_COMPLETE_KEY = "budgetbitch:wizard-complete";
 
@@ -28,7 +30,8 @@ function subscribeToLocale() {
 }
 
 export default function Home() {
-  const { isLoading, isAuthenticated } = useConvexAuth();
+  const auth = useConvexAuth();
+  const { isLoading, isAuthenticated } = auth ?? { isLoading: true, isAuthenticated: false };
   const storedLocale = useSyncExternalStore(subscribeToLocale, getStoredLocale, () => null);
   const locale = storedLocale || 'en';
   const [showLanguageModal, setShowLanguageModal] = useState(!storedLocale);
