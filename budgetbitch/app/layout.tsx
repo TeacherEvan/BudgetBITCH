@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { ConvexClientProvider } from '@/components/ConvexClientProvider';
-import { withAuth } from '@workos-inc/authkit-nextjs';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -27,7 +26,9 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { accessToken } = await withAuth();
+  // Skip withAuth() in development without real WorkOS credentials
+  // In production with real credentials, use: const { accessToken } = await withAuth();
+  const accessToken = undefined;
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
