@@ -14,7 +14,8 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "types": [
-      "node"
+      "node",
+      "vitest/globals"
     ],
     "resolveJsonModule": true,
     "isolatedModules": true,

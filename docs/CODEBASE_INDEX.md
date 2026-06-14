@@ -6,55 +6,36 @@ This index is a future-navigation cheat sheet for the active root application.
 
 ```mermaid
 flowchart TD
-	A[README.md] --> B[src/app]
-	A --> C[src/modules]
-	A --> D[src/components]
-	A --> E[prisma]
-	A --> F[tests/e2e]
-	A --> G[src/lib]
-	A --> H[src/inngest]
+    A[README.md] --> B[src/app]
+    A --> C[src/components]
+    A --> D[src/lib]
+    A --> E[src/hooks]
+    A --> F[src/i18n]
+    A --> G[tests/e2e]
+    A --> H[convex]
 
-	B --> B1[page.tsx\nauth-first root gate]
-	B --> B1d[sign-in\nConvex Auth sign-in entry]
-	B --> B1e[sign-up\nConvex Auth sign-up entry]
-	B --> B1f[(app)/auth/continue\npost-auth local bootstrap boundary]
-	B --> B1a[(app)/start-smart\nMoney Survival Blueprint wizard]
-	B --> B1b[(app)/learn\nLearn hub + lessons]
-	B --> B1c[(app)/jobs\nJobs hub + detail]
-	B --> B2[(app)/dashboard]
-	B --> B3[(app)/settings/integrations]
-	B --> B4[api/v1]
+    B --> B1[page.tsx\nauth-first root gate]
+    B --> B2[(app)/auth/continue\npost-auth local bootstrap boundary]
+    B --> B3[settings/page.tsx\nSettings page]
 
-	B4 --> B40[auth/bootstrap/route.ts]
-	B4 --> B41[budgets/health/route.ts]
-	B4 --> B42[integrations/connect/route.ts]
-	B4 --> B43[integrations/revoke/route.ts]
-	B4 --> B44[start-smart/regional-data/route.ts]
-	B4 --> B45[start-smart/blueprint/route.ts]
-	B4 --> B46[learn/recommendations/route.ts]
-	B4 --> B47[learn/modules/[slug]/route.ts]
-	B4 --> B48[jobs/search/route.ts]
-	B4 --> B49[jobs/recommendations/route.ts]
+    C --> C1[auth/]
+    C --> C2[dashboard/]
+    C --> C3[i18n/]
+    C --> C4[layout/]
+    C --> C5[mobile/]
+    C --> C6[onboarding/]
+    C --> C7[pwa/]
+    C --> C8[ui/]
+    C --> C9[welcome/]
+    C --> C10[wizard/]
 
-	C --> C1[audit]
-	C --> C3[budgets]
-	C --> C6[integrations]
-	C --> C7[jobs]
-	C --> C11[start-smart]
-	C --> C12[learn]
-	C --> C13[dashboard]
-
-	D --> D1[integrations UI primitives]
-	D --> D2[start-smart UI primitives]
-	D --> D3[learn UI primitives]
-	D --> D4[jobs UI primitives]
-	D --> D5[dashboard UI primitives]
-	E --> E1[schema.prisma]
-	E --> E2[migrations]
-	F --> F1[welcome-auth root entry coverage]
-	F --> F2[signed-in root smoke + dashboard + wizard journeys + Start Smart + Learn + Jobs]
-	G --> G1[auth config + route guards + auth route constants]
-	H --> H1[Inngest client]
+    D --> D1[auth/]
+    D --> D2[convex/]
+    D --> D3[db/]
+    D --> D4[location/]
+    D --> D5[news/]
+    D --> D6[types/]
+    D --> D7[utils/]
 ```
 
 ## 0.1 Practical filesystem tree
@@ -64,141 +45,175 @@ flowchart TD
 ├── README.md
 ├── docs/
 │   └── CODEBASE_INDEX.md
-├── prisma/
-│   ├── schema.prisma
-│   └── migrations/
 ├── src/
 │   ├── app/
+│   │   ├── page.tsx
+│   │   ├── (app)/
+│   │   │   └── auth/continue/page.tsx
+│   │   └── settings/page.tsx
 │   ├── components/
-│   ├── lib/
-│   │   └── auth/
-│   ├── modules/
+│   │   ├── auth/
 │   │   ├── dashboard/
-│   │   ├── integrations/
-│   │   ├── jobs/
-│   │   ├── learn/
-│   │   └── start-smart/
-│   ├── inngest/
-│   └── middleware.ts
+│   │   ├── i18n/
+│   │   ├── layout/
+│   │   ├── mobile/
+│   │   ├── onboarding/
+│   │   ├── pwa/
+│   │   ├── ui/
+│   │   ├── welcome/
+│   │   └── wizard/
+│   ├── hooks/
+│   ├── lib/
+│   │   ├── auth/
+│   │   ├── convex/
+│   │   ├── db/
+│   │   ├── location/
+│   │   ├── news/
+│   │   ├── types/
+│   │   └── utils/
+│   ├── i18n/
+│   ├── middleware.ts
+│   ├── test/
+│   └── types/
+├── convex/
+│   ├── auth.config.ts
+│   ├── auth.ts
+│   ├── http.ts
+│   ├── schema.ts
+│   ├── snapshots.ts
+│   └── lib/auth.ts
 ├── tests/
 │   └── e2e/
+├── public/
+│   └── sw.js
 └── budgetbitch/
 ```
 
 ## 1. High-value entry points
 
-| Area             | File / Folder          | Why it matters                                                           |
-| ---------------- | ---------------------- | ------------------------------------------------------------------------ |
-| App shell        | `src/app/layout.tsx`   | Global layout and top-level app wrapper                                  |
-| Root auth gate   | `src/app/page.tsx`     | Auth-first root gate for welcome, launch wizard, or landing board        |
-| Auth bootstrap   | `src/app/(app)/auth/continue/page.tsx` | Post-auth local bootstrap and safe redirect boundary     |
-| Route protection | `src/middleware.ts`    | Protected-surface handling for auth continue, dashboard, settings, and protected `/api/v1` routes |
-| Auth route map   | `src/lib/auth/routes.ts` | Centralized auth route constants and protected-path prefix rules       |
-| Root config      | `next.config.ts`       | Next.js runtime config, including dev origin allowance                   |
-| Prisma config    | `prisma.config.ts`     | Prisma 7 config and env loading                                          |
-| Data model       | `prisma/schema.prisma` | Canonical schema for workspaces, budgets, reminders, audit, integrations |
-| Dashboard data   | `src/modules/dashboard/dashboard-data.ts` | Dashboard composition boundary for auth, demo/live data, and accounting state |
+| Area             | File / Folder                      | Why it matters                                                                   |
+| ---------------- | ---------------------------------- | -------------------------------------------------------------------------------- |
+| App shell        | `src/app/layout.tsx`               | Global layout and top-level app wrapper                                          |
+| Root auth gate   | `src/app/page.tsx`                 | Auth-first root gate for welcome, launch wizard, or landing board                |
+| Auth bootstrap   | `src/app/(app)/auth/continue/page.tsx` | Post-auth local bootstrap and safe redirect boundary                       |
+| Route protection | `src/middleware.ts`                | Protected-surface handling for auth continue, dashboard, settings, and protected `/api/v1` routes |
+| Auth route map   | `src/lib/auth/routes.ts`           | Centralized auth route constants and protected-path prefix rules                 |
+| Root config      | `next.config.ts`                   | Next.js runtime config, including dev origin allowance                           |
+| Data model       | `convex/schema.ts`                 | Canonical schema for `dailySnapshots` + `authTables`                             |
+| Dashboard data   | `src/components/dashboard/dashboard-shell.tsx` | Dashboard shell with panels, alerts sidebar, critical expenses modal           |
 
 ## 2. Route map
 
 ### App routes
 
-| Route                             | File                                                    | Purpose                            |
-| --------------------------------- | ------------------------------------------------------- | ---------------------------------- |
-| `/`                               | `src/app/page.tsx`                                      | Auth-first gate for welcome, wizard, or landing board |
-| `/sign-in`                        | `src/app/sign-in/[[...sign-in]]/page.tsx`               | Convex Auth sign-in entry with sanitized `redirectTo` handling |
-| `/sign-up`                        | `src/app/sign-up/[[...sign-up]]/page.tsx`               | Convex Auth sign-up entry with sanitized `redirectTo` handling |
-| `/auth/continue`                  | `src/app/(app)/auth/continue/page.tsx`                  | Post-auth bootstrap and safe post-auth redirect |
-| `/start-smart`                    | `src/app/(app)/start-smart/page.tsx`                    | Money Survival Blueprint wizard    |
-| `/learn`                          | `src/app/(app)/learn/page.tsx`                          | Learn! recommendation hub          |
-| `/learn/[slug]`                   | `src/app/(app)/learn/[slug]/page.tsx`                   | Learn! lesson detail               |
-| `/jobs`                           | `src/app/(app)/jobs/page.tsx`                           | Jobs hub with recommended listings |
-| `/jobs/[slug]`                    | `src/app/(app)/jobs/[slug]/page.tsx`                    | Job detail + fit impact summary    |
-| `/dashboard`                      | `src/app/(app)/dashboard/page.tsx`                      | Protected dashboard shell          |
-| `/settings/integrations`          | `src/app/(app)/settings/integrations/page.tsx`          | Provider connection hub            |
-| `/settings/integrations/claude`   | `src/app/(app)/settings/integrations/claude/page.tsx`   | Claude setup wizard                |
-| `/settings/integrations/openai`   | `src/app/(app)/settings/integrations/openai/page.tsx`   | OpenAI setup wizard                |
-| `/settings/integrations/copilot`  | `src/app/(app)/settings/integrations/copilot/page.tsx`  | GitHub Copilot setup wizard        |
-| `/settings/integrations/openclaw` | `src/app/(app)/settings/integrations/openclaw/page.tsx` | OpenClaw setup wizard              |
-| `/settings/integrations/gemini`   | `src/app/(app)/settings/integrations/gemini/page.tsx`   | Gemini setup wizard                |
-| `/settings/integrations/perplexity` | `src/app/(app)/settings/integrations/perplexity/page.tsx` | Perplexity setup wizard         |
-| `/settings/integrations/mistral`  | `src/app/(app)/settings/integrations/mistral/page.tsx`  | Mistral setup wizard               |
-| `/settings/integrations/wise`     | `src/app/(app)/settings/integrations/wise/page.tsx`     | Wise setup wizard                  |
-| `/settings/integrations/revolut`  | `src/app/(app)/settings/integrations/revolut/page.tsx`  | Revolut setup wizard               |
-| `/settings/integrations/paypal`   | `src/app/(app)/settings/integrations/paypal/page.tsx`   | PayPal setup wizard                |
-| `/settings/integrations/xero`     | `src/app/(app)/settings/integrations/xero/page.tsx`     | Xero setup wizard                  |
-| `/settings/integrations/deel`     | `src/app/(app)/settings/integrations/deel/page.tsx`     | Deel setup wizard                  |
+| Route                        | File                                                      | Purpose                                                     |
+| ---------------------------- | --------------------------------------------------------- | ----------------------------------------------------------- |
+| `/`                          | `src/app/page.tsx`                                        | Auth-first gate for welcome, wizard, or landing board       |
+| `/sign-in`                   | Handled by Convex Auth via `/api/convex-auth`             | Convex Auth sign-in entry                                   |
+| `/sign-up`                   | Handled by Convex Auth via `/api/convex-auth`             | Convex Auth sign-up entry                                   |
+| `/auth/continue`             | `src/app/(app)/auth/continue/page.tsx`                    | Post-auth bootstrap and safe post-auth redirect             |
+| `/settings`                  | `src/app/settings/page.tsx`                               | Settings page (theme, sync status)                          |
+| `/settings/integrations`     | Not yet implemented                                       | Provider connection hub (planned)                           |
 
-### API routes
+## 3. Component index
 
-- `POST /api/v1/budgets/health` → `src/app/api/v1/budgets/health/route.ts` — validates budget payloads and returns health scoring
-- `POST /api/v1/auth/bootstrap` → `src/app/api/v1/auth/bootstrap/route.ts` — boots or reuses the local user/workspace records for an authenticated Clerk session
-- `POST /api/v1/start-smart/regional-data` → `src/app/api/v1/start-smart/regional-data/route.ts` — returns a normalized region snapshot with trust metadata
-- `POST /api/v1/start-smart/blueprint` → `src/app/api/v1/start-smart/blueprint/route.ts` — builds a Money Survival Blueprint and attempts persistence
-- `POST /api/v1/learn/recommendations` → `src/app/api/v1/learn/recommendations/route.ts` — resolves lesson recommendations from the latest stored blueprint
-- `GET /api/v1/learn/modules/[slug]` → `src/app/api/v1/learn/modules/[slug]/route.ts` — returns canonical Learn! lesson detail by slug
-- `POST /api/v1/jobs/search` → `src/app/api/v1/jobs/search/route.ts` — filters the seeded jobs catalog by practical constraints
-- `POST /api/v1/jobs/recommendations` → `src/app/api/v1/jobs/recommendations/route.ts` — ranks jobs using the latest stored blueprint signals
-- `POST /api/v1/integrations/connect` → `src/app/api/v1/integrations/connect/route.ts` — validates connect requests, seals secrets, emits audit payload
-- `POST /api/v1/integrations/revoke` → `src/app/api/v1/integrations/revoke/route.ts` — marks vault entries revoked and emits audit payload
+### Dashboard components
 
-## 3. Domain module index
+| File                                                     | Purpose                                              |
+| -------------------------------------------------------- | ---------------------------------------------------- |
+| `src/components/dashboard/dashboard-shell.tsx`           | Main dashboard layout with panels, sidebar, modal    |
+| `src/components/dashboard/daily-disposable-hero.tsx`     | Daily disposable income hero panel                   |
+| `src/components/dashboard/budget-visual.tsx`             | Budget visualization panel                           |
+| `src/components/dashboard/bills.tsx`                     | Bills tracking panel                                 |
+| `src/components/dashboard/cash-flow-forecast.tsx`        | Cash flow forecast panel                             |
+| `src/components/dashboard/debt-payoff.tsx`               | Debt payoff visualization panel                      |
+| `src/components/dashboard/alerts-sidebar.tsx`            | Alerts sidebar                                       |
+| `src/components/dashboard/critical-expenses-modal.tsx`   | Critical expenses modal                              |
 
-- **Auth** — `src/modules/auth/*.ts`, `src/lib/auth/*.ts` — redirect sanitizing, Clerk config checks, Clerk-user helpers, and local bootstrap wiring
-- **Dashboard** — `src/modules/dashboard/*.ts` — dashboard auth/data orchestration, demo factories, accounting mappers, briefing fetches, and shared dashboard types
-- **Start Smart** — `src/modules/start-smart/*.ts` — profile normalization, regional data, blueprint generation, and wizard state
-- **Learn!** — `src/modules/learn/*.ts` — lesson schema, module catalog, blueprint signal extraction, and recommendation resolution
-- **Jobs** — `src/modules/jobs/*.ts` — seeded jobs catalog, filter schema, blueprint signal extraction, and fit scoring
-- **Workspaces** — `src/modules/workspaces/permissions.ts` — role permission helpers
-- **Audit** — `src/modules/audit/audit-log.ts`, `src/modules/audit/integration-audit.ts` — normalized audit event payload builders
-- **Budgets** — `src/modules/budgets/budget-health.ts` — budget health scoring
-- **Automation** — `src/modules/automation/rules/bill-due-soon.ts` — due-soon trigger rule
-- **Notifications** — `src/modules/notifications/fanout.ts` — channel fanout selection
-- **Email** — `src/modules/email/templates/bill-due-soon.tsx` — React Email template for reminders
-- **Calendar** — `src/modules/calendar/project-reminder.ts` — reminder-to-calendar projection
-- **Integrations** — `src/modules/integrations/*.ts` — provider registry, webhook signing, wizard machine, and vault helpers
-- **Jobs** — `src/modules/jobs/reminder-job.ts` — Inngest payload builder
-- **Privacy** — `src/modules/privacy/consent-ledger.ts` — consent receipt payload creation
-- **Inngest client** — `src/inngest/client.ts` — shared event client bootstrap
+### Wizard components
 
-### Dashboard internals
+| File                                                     | Purpose                                              |
+| -------------------------------------------------------- | ---------------------------------------------------- |
+| `src/components/wizard/wizard-shell.tsx`                 | Wizard shell with progress, voice toggle, steps      |
+| `src/components/wizard/*`                                | Individual wizard step components                    |
 
-| File | Purpose |
-| ---- | ------- |
-| `src/modules/dashboard/dashboard-data.ts` | Main dashboard server-side composition boundary |
-| `src/modules/dashboard/dashboard-demo-factory.ts` | Demo workspace, launcher, and seeded accounting builders |
-| `src/modules/dashboard/dashboard-mappers.ts` | Check-in parsing, privacy commitments, personalization normalization, and accounting mapping |
-| `src/modules/dashboard/types.ts` | Shared dashboard data contracts used across page/tests/helpers |
-| `src/modules/dashboard/briefing/**` | Live and fallback briefing source registry and fetch logic |
+### Welcome components
 
-## 4. Integration subsystem map
+| File                                                     | Purpose                                              |
+| -------------------------------------------------------- | ---------------------------------------------------- |
+| `src/components/welcome/welcome-window.tsx`              | Welcome window for signed-out visitors               |
 
-### Shared UI primitives
+### UI primitives
 
-| File                                                       | Purpose                           |
-| ---------------------------------------------------------- | --------------------------------- |
-| `src/components/integrations/provider-card.tsx`            | Hub card per provider             |
-| `src/components/integrations/tool-rail.tsx`                | Shared explicit action rail       |
-| `src/components/integrations/privacy-badge.tsx`            | Small privacy promise badge       |
-| `src/components/integrations/provider-wizard-shell.tsx`    | Shared wizard frame and back-link |
-| `src/components/integrations/official-link-list.tsx`       | Official login/docs links         |
-| `src/components/integrations/privacy-disclosure-panel.tsx` | Privacy disclosure copy           |
-| `src/components/integrations/risk-checklist.tsx`           | Checklist-style warnings          |
-| `src/components/integrations/system-access-warning.tsx`    | System access warning panel       |
+| File                                                     | Purpose                                              |
+| -------------------------------------------------------- | ---------------------------------------------------- |
+| `src/components/ui/button.tsx`                           | Button primitive                                     |
+| `src/components/ui/card.tsx`                             | Card primitive                                       |
+| `src/components/ui/input.tsx`                            | Input primitive                                      |
+| `src/components/ui/modal.tsx`                            | Modal primitive                                      |
+| `src/components/ui/accordion.tsx`                        | Accordion primitive                                  |
+| `src/components/ui/progress-ring.tsx`                    | Progress ring primitive                              |
+| `src/components/ui/select.tsx`                           | Select primitive                                     |
+| `src/components/ui/slider.tsx`                           | Slider primitive                                     |
+| `src/components/ui/toggle.tsx`                           | Toggle primitive                                     |
 
-### Integration logic
+## 4. Hooks index
 
-- `src/modules/integrations/provider-types.ts` — Shared provider type definitions + categories
-- `src/modules/integrations/provider-registry.ts` — Canonical provider metadata across AI, banking, finance ops, tax, and payroll providers
-- `src/modules/integrations/integration-actions.ts` — Shared explicit CTA deck builder for hub and wizard screens
-- `src/modules/integrations/integration-gateway.ts` — Thin server-side connect/revoke orchestration wrapper
-- `src/modules/integrations/wizard-machine.ts` — Simple wizard step state transitions
-- `src/modules/integrations/sign-webhook.ts` — HMAC-SHA256 signing helper
-- `src/modules/integrations/connection-vault.ts` — Secret sealing + revoke metadata helpers
+| File                      | Purpose                              |
+| ------------------------- | ------------------------------------ |
+| `src/hooks/use-local-db.ts` | IndexedDB wrapper for local-first data |
+| `src/hooks/use-critical-expense.ts` | Critical expense tracking hook       |
+| `src/hooks/use-voice.ts` | Voice input/output hook              |
 
-Wizard routes currently cover Claude, OpenAI, GitHub Copilot, OpenClaw, Gemini, Perplexity, Mistral, Wise, Revolut, PayPal, Xero, and Deel.
+## 5. Library index
 
-## 5. Testing map
+### Auth
+
+| File                              | Purpose                                    |
+| --------------------------------- | ------------------------------------------ |
+| `src/lib/auth/routes.ts`          | Centralized auth route constants and protected-path prefix rules |
+| `src/lib/auth/route-guard.ts`     | Route guard utilities                      |
+| `src/lib/auth/e2e-auth-override.ts` | Non-production E2E auth override           |
+
+### Convex
+
+| File                              | Purpose                                    |
+| --------------------------------- | ------------------------------------------ |
+| `src/lib/convex/http-client.ts`   | Convex HTTP client for server-side calls   |
+| `src/lib/convex/sync-snapshots.ts` | Snapshot sync utilities                    |
+
+### Database (IndexedDB)
+
+| File                      | Purpose                              |
+| ------------------------- | ------------------------------------ |
+| `src/lib/db/local-db.ts`  | IndexedDB wrapper for local-first data |
+
+### Utils
+
+| File                              | Purpose                                    |
+| --------------------------------- | ------------------------------------------ |
+| `src/lib/utils/cn.ts`             | Classnames utility                         |
+| `src/lib/utils/compound-calculator.ts` | Compound interest calculator             |
+| `src/lib/utils/currency.ts`       | Currency formatting utilities              |
+| `src/lib/utils/thai-category-mapper.ts` | Thai category mapping                   |
+
+## 6. Convex backend
+
+| File                 | Purpose                                              |
+| -------------------- | ---------------------------------------------------- |
+| `convex/auth.config.ts` | Convex Auth configuration (Password provider)      |
+| `convex/auth.ts`     | Convex Auth server config                            |
+| `convex/http.ts`     | HTTP router (auth routes)                            |
+| `convex/schema.ts`   | Convex schema (`dailySnapshots` + `authTables`)      |
+| `convex/snapshots.ts` | `upsertDailySnapshot` mutation (daily backup from SW) |
+| `convex/lib/auth.ts` | Auth helpers (`requireIdentity`, `getAuthUserId`)    |
+
+### Database schema
+
+- **authTables** — Provided by `@convex-dev/auth` (users, sessions, etc.)
+- **dailySnapshots** — User daily financial snapshots with wizard profile, totals, critical expense commitment
+
+## 7. Testing map
 
 ### Unit / component tests
 
@@ -207,11 +222,14 @@ Wizard routes currently cover Claude, OpenAI, GitHub Copilot, OpenClaw, Gemini, 
 
 Useful anchors:
 
-- `src/app/(app)/dashboard/page.test.tsx`
-- `src/app/(app)/jobs/**/*.test.tsx`
-- `src/app/(app)/learn/**/*.test.tsx`
-- `src/app/(app)/settings/integrations/**/*.test.tsx`
-- `src/modules/**/*.test.ts`
+- `src/app/page.test.tsx`
+- `src/app/(app)/auth/continue/page.test.tsx`
+- `src/components/dashboard/*.test.tsx`
+- `src/components/welcome/*.test.tsx`
+- `src/components/wizard/*.test.tsx`
+- `src/lib/convex/*.test.ts`
+- `src/lib/auth/*.test.ts`
+- `src/middleware.test.ts`
 
 ### E2E tests
 
@@ -219,99 +237,45 @@ Useful anchors:
 | ----------------------------------------- | -------------------------------------- |
 | `tests/e2e/welcome-auth.spec.ts`          | Signed-out root entry, welcome auth links, and preserved `redirectTo` |
 | `tests/e2e/smoke.spec.ts`                 | Signed-in root gate smoke for wizard-first and landing-first paths |
-| `tests/e2e/dashboard.spec.ts`             | Dashboard visual slice                 |
-| `tests/e2e/start-smart.spec.ts`           | Start Smart wizard to blueprint result |
-| `tests/e2e/learn.spec.ts`                 | Start Smart to Learn lesson journey    |
-| `tests/e2e/jobs.spec.ts`                  | Landing to Jobs detail journey         |
-| `tests/e2e/integrations-claude.spec.ts`   | Claude wizard navigation               |
-| `tests/e2e/integrations-gemini.spec.ts`   | Gemini wizard navigation               |
-| `tests/e2e/integrations-openai.spec.ts`   | OpenAI wizard navigation               |
-| `tests/e2e/integrations-copilot.spec.ts`  | Copilot wizard navigation              |
-| `tests/e2e/integrations-openclaw.spec.ts` | OpenClaw wizard navigation             |
-| `tests/e2e/integrations-tool-rail.spec.ts` | Explicit tool rail labels on setup page|
 
-## 6. Data + infrastructure files
-
-| File                                                              | Purpose                             |
-| ----------------------------------------------------------------- | ----------------------------------- |
-| `prisma/schema.prisma`                                            | Root schema                         |
-| `prisma/migrations/20260406112000_init_core_schema/migration.sql` | Initial checked-in migration        |
-| `prisma.config.ts`                                                | Prisma 7 runtime config             |
-| `playwright.config.ts`                                            | E2E runtime + local webpack-backed web server |
-| `vitest.config.ts`                                                | Unit/component test config          |
-| `eslint.config.mjs`                                               | Root lint rules and ignore patterns |
-| `sentry.client.config.ts`                                         | Client-side Sentry bootstrap        |
-| `sentry.server.config.ts`                                         | Server-side Sentry bootstrap        |
-
-## 7. Non-primary subtree note
+## 8. Non-primary subtree note
 
 | Path                     | Status                                                                                |
 | ------------------------ | ------------------------------------------------------------------------------------- |
 | `budgetbitch/`           | Separate nested Convex prototype/reference app; excluded from root TypeScript project |
 | `WelcomeWindow-startup/` | Legacy visual reference folder; not part of the active root auth-first flow          |
 
-## 8. Suggested navigation recipes
-
-### I want to change a provider wizard
-
-1. Start at `src/app/(app)/settings/integrations/<provider>/page.tsx`
-2. Check shared UI in `src/components/integrations/**`
-3. Check provider metadata in `src/modules/integrations/provider-registry.ts`
-4. Re-run the provider page test + matching e2e spec
+## 9. Suggested navigation recipes
 
 ### I want to change auth entry or the root gate
 
 1. Start at `src/app/page.tsx`
-2. Check `src/components/welcome/**`, `src/app/sign-in/**`, `src/app/sign-up/**`, and `src/app/(app)/auth/continue/**`
-3. Check `src/modules/auth/post-auth-redirect.ts`, `src/lib/auth/routes.ts`, and related auth helpers
+2. Check `src/components/welcome/**`, `src/app/(app)/auth/continue/**`
+3. Check `src/lib/auth/routes.ts`, `src/lib/auth/route-guard.ts`, and related auth helpers
 4. Re-run the related route tests plus `tests/e2e/welcome-auth.spec.ts` and `tests/e2e/smoke.spec.ts`
 
-### I want to change dashboard auth or data behavior
+### I want to change dashboard UI or data behavior
 
-1. Start at `src/app/(app)/dashboard/page.tsx`
-2. Check `src/modules/dashboard/dashboard-data.ts` for auth and data composition
-3. Follow into `src/modules/dashboard/dashboard-demo-factory.ts`, `src/modules/dashboard/dashboard-mappers.ts`, and `src/modules/dashboard/types.ts`
-4. Re-run `src/modules/dashboard/dashboard-data.test.ts`, `src/app/(app)/dashboard/page.test.tsx`, and `tests/e2e/dashboard.spec.ts`
+1. Start at `src/components/dashboard/dashboard-shell.tsx`
+2. Check individual panel components in `src/components/dashboard/`
+3. Check `src/hooks/use-local-db.ts` for local data access
+4. Re-run dashboard component tests and `tests/e2e/smoke.spec.ts`
 
-### I want to change business logic
+### I want to change the onboarding wizard
 
-1. Start in `src/modules/<domain>/**`
-2. Update colocated unit test first
-3. Follow any dependent API route in `src/app/api/**`
+1. Start at `src/components/wizard/wizard-shell.tsx`
+2. Check individual step components in `src/components/wizard/`
+2. Re-run wizard component tests
 
-### I want to change Start Smart onboarding
+### I want to change Convex backend
 
-1. Start at `src/app/(app)/start-smart/page.tsx`
-2. Check shared wizard UI in `src/components/start-smart/**`
-3. Check domain logic in `src/modules/start-smart/**`
-4. Re-run the route tests plus `tests/e2e/start-smart.spec.ts`
+1. Edit `convex/schema.ts` for schema changes
+2. Edit `convex/snapshots.ts` for snapshot mutations
+3. Edit `convex/http.ts` for HTTP endpoints
+4. Run `npx convex dev` to push changes
 
-### I want to change Learn recommendations or lessons
+### I want to change database shape (IndexedDB)
 
-1. Start at `src/app/(app)/learn/**`
-2. Check shared lesson UI in `src/components/learn/**`
-3. Check recommendation logic in `src/modules/learn/**`
-4. Re-run the Learn route tests plus `tests/e2e/learn.spec.ts`
-
-### I want to change Jobs recommendations or listings
-
-1. Start at `src/app/(app)/jobs/**`
-2. Check shared jobs UI in `src/components/jobs/**`
-3. Check fit and filter logic in `src/modules/jobs/**`
-4. Re-run the Jobs route tests plus `tests/e2e/jobs.spec.ts`
-
-### I want to change database shape
-
-1. Edit `prisma/schema.prisma`
-2. Generate/update migration under `prisma/migrations/**`
-3. Run `npm run db:generate`
-4. Re-check any affected routes/modules/tests
-
-### I want to trace an integration connect request
-
-1. `src/app/(app)/settings/integrations/**`
-2. `src/components/integrations/**`
-3. `src/app/api/v1/integrations/connect/route.ts`
-4. `src/modules/integrations/connection-vault.ts`
-5. `src/modules/audit/integration-audit.ts`
-
+1. Edit `src/lib/db/local-db.ts`
+2. Update related hooks in `src/hooks/use-local-db.ts`
+3. Re-run related tests

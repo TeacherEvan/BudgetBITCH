@@ -1,6 +1,6 @@
 # BudgetBITCH
 
-BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.js App Router, Prisma, Neon, Convex Auth, Inngest, Resend, Vercel, and Playwright.
+BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.js App Router, Convex (auth, database, realtime), IndexedDB for local-first offline data, Service Worker for PWA sync, next-intl for i18n (Thai/English), Tailwind CSS v4, framer-motion, recharts, and zod.
 
 ## Navigation docs
 
@@ -16,7 +16,7 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 - workspace roles and audit-log foundations
 - budget health scoring and due-soon automation
 - notification fanout and email template scaffolding
-- provider connection hub for Claude, OpenAI, GitHub Copilot, and OpenClaw
+- provider connection hub for Claude, OpenAI, GitHub Copilot, OpenClaw, Gemini, Perplexity, Mistral, Wise, Revolut, PayPal, Xero, and Deel
 - auth-first root entry that sends signed-out visitors to the welcome window, signed-in users without a saved launch profile to the launch wizard, and signed-in users with a saved launch profile to the landing board
 - privacy shield disclosures and consent receipt helpers
 - encrypted provider-secret vault primitives and revoke flow
@@ -27,17 +27,18 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 
 - Next.js 16
 - React 19
-- TypeScript
-- Prisma 7
-- Neon Postgres
-- Convex
-- Convex Auth
-- Inngest
-- Resend
-- Sentry
-- Vercel
-- Vitest
-- Playwright
+- TypeScript (strict)
+- Convex 1.34+ (auth, database, realtime, HTTP endpoints)
+- IndexedDB (via `idb`) for local-first offline data
+- Service Worker (`public/sw.js`) for PWA sync & background updates
+- next-intl v4 for i18n (Thai/English)
+- Tailwind CSS v4 for styling
+- framer-motion for animations
+- recharts for data visualization
+- zod for validation
+- Vitest + React Testing Library for unit tests
+- Playwright for E2E tests
+- Vercel for deployment
 
 ## Codebase shape
 
@@ -50,7 +51,6 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 - `src/components/jobs/**` contains reusable UI for the Jobs hub and job detail flow
 - `src/modules/**` contains business/domain logic grouped by capability
 - `src/components/integrations/**` contains reusable UI for the connection hub and provider wizards
-- `prisma/**` contains the schema and checked-in migration history
 - `tests/e2e/**` contains Playwright journeys for the auth-first root flow, dashboard, Start Smart, Learn!, Jobs, and provider wizards
 - `budgetbitch/` is a separate nested Convex prototype/reference subtree and is **not** the primary app being built from the repo root
 
@@ -67,15 +67,11 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 2. Install dependencies with `npm install`.
 3. Create or link a Convex deployment with Convex Auth enabled, then set `CONVEX_DEPLOYMENT`, `NEXT_PUBLIC_CONVEX_URL`, `CONVEX_SITE_URL`, and `SITE_URL`.
 4. Set `PROVIDER_SECRET_ENCRYPTION_KEY` to a long random server-side secret before using integration connect/revoke routes under `/settings/integrations`.
-5. When using Neon, set `DATABASE_URL` to the pooled connection string from the Neon **Connect** dialog and `DIRECT_URL` to the direct connection string.
-6. If you plan to run `prisma migrate dev`, optionally set `SHADOW_DATABASE_URL` to a dedicated direct-connection shadow database.
-7. Set `CONVEX_SYNC_SECRET` in both the Next.js/Vercel environment and the Convex deployment so auth bootstrap profile sync and projection replay use the same trusted secret.
-8. Set `CRON_SECRET` in Vercel so the scheduled replay route can authenticate Vercel Cron requests.
-9. Mirror the same Neon, Convex, projection, and provider-secret variables in Vercel before shipping preview or production deployments.
-10. In Vercel, keep `DIRECT_URL` pointed at the direct Neon connection string for production deploys because production builds now run `prisma migrate deploy` before `next build`.
-11. Generate the Prisma client with `npm run db:generate`.
-12. Start development with `npm run dev`.
-13. For browser tests, keep the Playwright web server on its dedicated webpack path. `playwright.config.ts` now starts `npm run dev -- --webpack --port 3100` through `scripts/run-with-sanitized-env.mjs`, with server reuse disabled, so local auth values do not change the auth-root test behavior and Turbopack does not hang on the first `/` request.
+5. Set `CONVEX_SYNC_SECRET` in both the Next.js/Vercel environment and the Convex deployment so auth bootstrap profile sync and projection replay use the same trusted secret.
+6. Set `CRON_SECRET` in Vercel so the scheduled replay route can authenticate Vercel Cron requests.
+7. Mirror the same Convex, projection, and provider-secret variables in Vercel before shipping preview or production deployments.
+8. Start development with `npm run dev`.
+9. For browser tests, keep the Playwright web server on its dedicated webpack path. `playwright.config.ts` now starts `npm run dev -- --webpack --port 3100` through `scripts/run-with-sanitized-env.mjs`, with server reuse disabled, so local auth values do not change the auth-root test behavior and Turbopack does not hang on the first `/` request.
 
 ## Verification
 
@@ -84,12 +80,10 @@ Current workspace verification status:
 - `npm run lint`
 - `npm run test`
 - `npm run test:e2e`
-- `npm run db:generate`
 - `npm run build`
 
 Deploy-time verification note:
 
-- `npm run db:deploy` is part of the Vercel production deploy path and still needs a real deployment database with `DIRECT_URL` configured.
 - Preview deployments should use isolated database credentials before you opt them into running migrations.
 
 Current browser-test note:
@@ -107,30 +101,15 @@ For deeper orientation, start with `docs/CODEBASE_INDEX.md`.
 - Searchable city suggestions are loaded on demand from a small curated catalog instead of shipping every option up front.
 - The launch loading window appears only when deferred transition work runs long enough to cross the threshold, and the money-themed art is prepared only when that loading state is needed.
 
-## Database notes
+## Convex runtime
 
-The initial Prisma SQL migration is checked in under `prisma/migrations/20260406112000_init_core_schema/migration.sql`.
+- Convex is the authoritative backend: auth, `dailySnapshots` table, realtime subscriptions.
+- IndexedDB is the local cache for offline reads/writes; budget wizard profile, transactions, settings.
+- Service Worker provides background sync: posts daily snapshots to Convex via `upsertDailySnapshot`.
+- Server-side secrets: Convex Auth config, environment variables.
 
-Client generation, tests, and builds can run without a live database, but Prisma migration status and `migrate dev` require a reachable PostgreSQL instance.
+### Daily snapshot flow
 
-For Neon + Prisma 7 in this repo:
-
-- use `DATABASE_URL` for your pooled application/runtime connection
-- use `DIRECT_URL` for Prisma CLI operations
-- use `SHADOW_DATABASE_URL` only if you want a dedicated shadow database for `prisma migrate dev`
-- `prisma.config.ts` now requires `DIRECT_URL` for non-generate Prisma CLI work when `DATABASE_URL` points at a pooled Neon host, which avoids PgBouncer transaction-mode issues during schema operations
-- the runtime Prisma client warns if `DATABASE_URL` points at a direct Neon host so you can move request traffic onto the pooled Neon endpoint before you hit connection-pressure issues
-
-If you have a real PostgreSQL instance available, run:
-
-- `npm run db:migrate -- --name init_core_schema`
-
-For Vercel deploys, `npm run vercel-build` now runs `npm run db:deploy` only when `VERCEL_ENV=production`, then continues to `npm run build`. That keeps the production Prisma schema in sync with checked-in migrations before the app starts serving server-rendered routes like `/dashboard`, while avoiding preview-branch schema changes unless you intentionally provision isolated preview database credentials.
-
-## Neon + Convex runtime split
-
-- Neon is the canonical store for durable financial and workspace records.
-- Convex holds derived live state for daily check-ins, alert inbox rows, and workspace activity.
 - `POST /api/v1/check-ins` writes the durable check-in first, then queues a `ProjectionOutbox` job.
 - `/api/internal/projections/check-ins/replay` replays queued jobs into Convex using `CONVEX_SYNC_SECRET`.
 - Vercel Cron calls `/api/cron/projections/check-ins/replay` once per day by default using `CRON_SECRET`, which keeps the default `vercel.json` compatible with the lowest-cost Hobby plan.
@@ -139,7 +118,7 @@ For Vercel deploys, `npm run vercel-build` now runs `npm run db:deploy` only whe
 
 ## Environment variables
 
-See `.env.example` for the full list of required variables, including authentication, Convex projection sync, Sentry, and provider-secret encryption settings.
+See `.env.example` for the full list of required variables, including authentication, Convex projection sync, and provider-secret encryption settings.
 
 Environment notes:
 
