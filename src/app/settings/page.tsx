@@ -12,6 +12,7 @@ import { Card } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Toggle } from '@/components/ui/toggle';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { format } from 'date-fns';
 
 interface SettingsPageProps {
@@ -26,13 +27,6 @@ export function SettingsPage({ locale = 'en' }: SettingsPageProps) {
   );
   const { commitment } = useCriticalExpense();
   
-  const [theme, setTheme] = useState<'amber' | 'dark' | 'gold'>(() => {
-    if (typeof window !== 'undefined') {
-      return (localStorage.getItem('budgetbitch:theme') as 'amber' | 'dark' | 'gold') || 'amber';
-    }
-    return 'amber';
-  });
-
   const [lastSync, setLastSync] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('budgetbitch:lastSync');
@@ -40,13 +34,6 @@ export function SettingsPage({ locale = 'en' }: SettingsPageProps) {
     return null;
   });
   const [syncing, setSyncing] = useState(false);
-
-  // Apply theme
-  useEffect(() => {
-    document.documentElement.classList.remove('theme-amber', 'theme-dark', 'theme-gold');
-    document.documentElement.classList.add(`theme-${theme}`);
-    localStorage.setItem('budgetbitch:theme', theme);
-  }, [theme]);
 
   const handleLocaleChange = (newLocale: 'th' | 'en') => {
     localStorage.setItem('budgetbitch:locale', newLocale);
@@ -56,11 +43,7 @@ export function SettingsPage({ locale = 'en' }: SettingsPageProps) {
   const handleVoiceToggle = () => {
     toggleVoice();
   };
-
-  const handleThemeChange = (newTheme: 'amber' | 'dark' | 'gold') => {
-    setTheme(newTheme);
-  };
-
+  
   const handleResetData = () => {
     if (confirm(locale === 'th' ? 'ลบข้อมูลทั้งหมด? จะไม่สามารถกู้คืนได้' : 'Delete all data? This cannot be undone')) {
       clearProfile();
@@ -266,41 +249,7 @@ export function SettingsPage({ locale = 'en' }: SettingsPageProps) {
             {/* Theme */}
             <div>
               <label className="block text-sm font-medium text-white/70 mb-2">{l.theme} <Palette className="inline w-4 h-4 ml-1" /></label>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <Button
-                  variant={theme === 'amber' ? 'primary' : 'secondary'}
-                  onClick={() => handleThemeChange('amber')}
-                  className="text-left"
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-amber-400" />
-                    <span className="font-medium">{l.themeAmber}</span>
-                    {theme === 'amber' && <Check className="w-4 h-4 ml-auto text-amber-400" />}
-                  </div>
-                </Button>
-                <Button
-                  variant={theme === 'dark' ? 'primary' : 'secondary'}
-                  onClick={() => handleThemeChange('dark')}
-                  className="text-left"
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-gray-900 border border-white/20" />
-                    <span className="font-medium">{l.themeDark}</span>
-                    {theme === 'dark' && <Check className="w-4 h-4 ml-auto text-amber-400" />}
-                  </div>
-                </Button>
-                <Button
-                  variant={theme === 'gold' ? 'primary' : 'secondary'}
-                  onClick={() => handleThemeChange('gold')}
-                  className="text-left"
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-gradient-to-r from-amber-400 to-yellow-600" />
-                    <span className="font-medium">{l.themeGold}</span>
-                    {theme === 'gold' && <Check className="w-4 h-4 ml-auto text-amber-400" />}
-                  </div>
-                </Button>
-              </div>
+              <ThemeToggle />
             </div>
           </Card>
         </section>
