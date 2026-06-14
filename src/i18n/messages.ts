@@ -1035,6 +1035,70 @@ export const localeMessages = {
       privacyBadge: "绝不静默共享",
       systemAccessWarning: "系统访问警告",
     },
+    wizard: {
+      title: "Setup Your Budget",
+      description: "Answer 10 quick questions to build your budget baseline",
+      income: {
+        title: "Monthly Income",
+        subtitle: "Salary, side income, investments - all combined",
+        placeholder: "e.g. 35000",
+        helper: "Enter total monthly income (THB)",
+      },
+      rent: {
+        title: "Rent / Housing Cost",
+        subtitle: "Condo, apartment, house rent or mortgage",
+        placeholder: "e.g. 12000",
+        helper: "Monthly rent or mortgage payment (THB)",
+      },
+      transport: {
+        title: "Transport Cost",
+        subtitle: "BTS/MRT, bus, motorbike, fuel, Grab/Bolt",
+        placeholder: "e.g. 3000",
+        helper: "Monthly transport total (THB)",
+      },
+      phoneInternet: {
+        title: "Phone / Internet",
+        subtitle: "Mobile plan, home internet, streaming bundles",
+        placeholder: "e.g. 800",
+        helper: "Monthly phone & internet cost (THB)",
+      },
+      subscriptions: {
+        title: "Subscriptions",
+        subtitle: "Netflix, Spotify, gym, app subscriptions",
+        placeholder: "e.g. 500",
+        helper: "Monthly subscription total (THB)",
+      },
+      entertainment: {
+        title: "Entertainment",
+        subtitle: "Movies, coffee, games, hobbies, dining out",
+        placeholder: "e.g. 3000",
+        helper: "Monthly entertainment budget (THB)",
+      },
+      healthcare: {
+        title: "Healthcare",
+        subtitle: "Meds, dentist, hospital, insurance copay",
+        placeholder: "e.g. 1000",
+        helper: "Monthly healthcare cost (THB)",
+      },
+      savingsRate: {
+        title: "Savings Rate",
+        subtitle: "What % of income do you want to save?",
+        placeholder: "e.g. 20",
+        helper: "Target savings percentage (0-50%)",
+      },
+      riskTolerance: {
+        title: "Risk Tolerance",
+        subtitle: "How much market fluctuation can you handle?",
+        low: "Low - protect principal",
+        medium: "Medium - balanced",
+        high: "High - growth focused",
+      },
+      locationConsent: {
+        title: "Location Access",
+        subtitle: "Allow location for local news and fuel prices",
+        prompt: "Enable location to get nearby fuel prices and local financial news",
+      },
+    },
   },
   th: {
     appNav: {
@@ -1538,6 +1602,71 @@ export const localeMessages = {
       privacyBadge: "ไม่มีการแชร์แบบเงียบ ๆ",
       systemAccessWarning: "คำเตือนการเข้าถึงระบบ",
     },
+    wizard: {
+      title: "ตั้งค่างบประมาณของคุณ",
+      description: "ตอบ 10 คำถามเร็ว ๆ นี้ เพื่อสร้างฐานงบประมาณ",
+      income: {
+        title: "รายได้ต่อเดือน",
+        subtitle: "เงินเดือน รายได้เสริม เงินทุน รวมทั้งหมด",
+        placeholder: "เช่น 35000",
+        helper: "กรอกรายได้รวมต่อเดือน (บาท)",
+      },
+      rent: {
+        title: "ค่าเช่า / ค่าที่อยู่อาศัย",
+        subtitle: "คอนโด แป้ท์เมนท์ บ้าน หรือผ่อนบ้าน",
+        placeholder: "เช่น 12000",
+        helper: "ค่าเช่าหรือผ่อนบ้านต่อเดือน (บาท)",
+      },
+      transport: {
+        title: "ค่าเดินทาง",
+        subtitle: "BTS/MRT รถเมล์ มอไซค์ น้ำมัน Grab/Bolt",
+        placeholder: "เช่น 3000",
+        helper: "ค่าเดินทางต่อเดือนรวมทุกอย่าง (บาท)",
+      },
+      phoneInternet: {
+        title: "โทรศัพท์ / อินเตอร์เน็ต",
+        subtitle: "แผนมือถือ อินเตอร์เน็ตบ้าน แพ็กเกจสตรีมมิ่ง",
+        placeholder: "เช่น 800",
+        helper: "ค่าโทรศัพท์และอินเตอร์เน็ตต่อเดือน (บาท)",
+      },
+      subscriptions: {
+        title: "สมัครสมาชิก",
+        subtitle: "Netflix, Spotify, ฟิตเนส, สมาชิกแอปต่าง ๆ",
+        placeholder: "เช่น 500",
+        helper: "ค่าสมัครสมาชิกรวมต่อเดือน (บาท)",
+      },
+      entertainment: {
+        title: "บันเทิง / ความบันเทิง",
+        subtitle: "ดูหนัง กาแฟ เล่นเกม งานอดิเรก กินนอกบ้าน",
+        placeholder: "เช่น 3000",
+        helper: "งบบันเทิงต่อเดือน (บาท)",
+      },
+      healthcare: {
+        title: "สุขภาพ / ค่ายา",
+        subtitle: "ยา ทันตกรรม โรงพยาบาล ค่ารพ. ค่าประกัน",
+        placeholder: "เช่น 1000",
+        helper: "ค่าสุขภาพต่อเดือน (บาท)",
+      },
+      savingsRate: {
+        title: "อัตราการออม",
+        subtitle: "อยากออมกี่เปอร์เซ็นต์ของรายได้?",
+        placeholder: "เช่น 20",
+        helper: "เปอร์เซ็นต์เป้าหมายการออม (0-50%)",
+      },
+      riskTolerance: {
+        title: "จุดรับความเสี่ยง",
+        subtitle: "คุณรับความผันผวนของตลาดได้มากแค่ไหน?",
+        low: "ต่ำ - ปกป้องเงินต้น",
+        medium: "ปานกลาง - สมดุล",
+        high: "สูง - เน้นเติบโต",
+      },
+      locationConsent: {
+        title: "อนุญาตตำแหน่งที่ตั้ง",
+        subtitle: "อนุญาตตำแหน่งเพื่อรับข่าวท้องถิ่นและราคาน้ำมัน",
+        prompt: "เปิดตำแหน่งเพื่อดูราคาน้ำมัน和ข่าวการเงินใกล้บ้าน",
+      },
+    },
+
   },
 } as const;
 
