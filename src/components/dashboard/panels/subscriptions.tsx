@@ -3,19 +3,20 @@
 
 import { useState } from 'react';
 import { Plus, Trash2, Edit, CreditCard, Music, Tv, Gamepad2, ShoppingBag } from 'lucide-react';
-import { useSubscriptions } from '@/hooks/use-local-db';
+import { useSubscriptions, useExpenses } from '@/hooks/use-local-db';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils/currency';
+import { generateId } from '@/lib/db/local-db';
 
 interface SubscriptionsProps {
   locale?: 'th' | 'en';
 }
 
 export function Subscriptions({ locale = 'en' }: SubscriptionsProps) {
-  const { subscriptions, loading } = useSubscriptions();
+  const { subscriptions, add, update, remove, loading } = useSubscriptions();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -53,9 +54,23 @@ export function Subscriptions({ locale = 'en' }: SubscriptionsProps) {
     setFormData({ name: '', amount: '', cycle: 'monthly', category: 'streaming', paymentMethod: 'credit_card' });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.amount) return;
+    
+    const sub = {
+      ...formData,
+      amount: parseFloat(formData.amount),
+      id: editingId || generateId(),
+      date: new Date().toISOString().split('T')[0],
+      isRecurring: true,
+    };
+
+    if (editingId) {
+      await update(sub as any);
+    } else {
+      await add(sub as any);
+    }
     resetForm();
   };
 
@@ -65,7 +80,9 @@ export function Subscriptions({ locale = 'en' }: SubscriptionsProps) {
     setShowForm(true);
   };
 
-  const handleDelete = (id: string) => {};
+  const handleDelete = async (id: string) => {
+    await remove(id);
+  };
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
@@ -77,13 +94,27 @@ export function Subscriptions({ locale = 'en' }: SubscriptionsProps) {
     }
   };
 
+  // Calculate total monthly cost
+  const totalMonthly = subscriptions
+    .filter(s => s.cycle === 'monthly')
+    .reduce((sum, s) => sum + s.amount, 0);
+  const totalYearly = subscriptions
+    .filter(s => s.cycle === 'yearly')
+    .reduce((sum, s) => sum + s.amount / 12, 0);
+  const total = totalMonthly + totalYearly;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-white">📺 Subscriptions</h3>
-        <Button variant="primary" size="sm" onClick={() => { setShowForm(true); setEditingId(null); }}>
-          <Plus className="w-4 h-4 mr-1" /> Add
-        </Button>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-mono text-amber-400">
+            {formatCurrency(total, locale)}/mo
+          </span>
+          <Button variant="primary" size="sm" onClick={() => { setShowForm(true); setEditingId(null); }}>
+            <Plus className="w-4 h-4 mr-1" /> Add
+          </Button>
+        </div>
       </div>
 
       {showForm && (
@@ -99,34 +130,40 @@ export function Subscriptions({ locale = 'en' }: SubscriptionsProps) {
               <Select label="Payment Method" value={formData.paymentMethod} onChange={e => setFormData({...formData, paymentMethod: e.target.value})} options={paymentOptions.map(p => ({value: p.value, label: p.label}))} />
             </div>
             <div className="flex gap-2">
-              <Button type="submit" className="flex-1">{editingId ? 'Update' : 'Add'}</Button>
-              <Button type="button" variant="secondary" onClick={resetForm}>Cancel</Button>
+              <Button type="submit" className="flex-1">{editingId ? (locale === 'th' ? 'อัปเดต' : 'Update') : (locale === 'th' ? 'เพิ่ม' : 'Add')}</Button>
+              <Button type="button" variant="secondary" onClick={resetForm}>{locale === 'th' ? 'ยกเลิก' : 'Cancel'}</Button>
             </div>
           </form>
         </Card>
       )}
 
       <div className="space-y-2">
-        {[{ name: 'Netflix', amount: 419, cycle: 'monthly', category: 'streaming' },
-          { name: 'Spotify', amount: 129, cycle: 'monthly', category: 'music' },
-          { name: 'YouTube Premium', amount: 159, cycle: 'monthly', category: 'streaming' },
-          { name: 'iCloud 2TB', amount: 99, cycle: 'monthly', category: 'cloud' },
-        ].map((sub, i) => (
-          <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-black/30 border border-white/10">
-            <div className="flex items-center gap-3">
-              {getCategoryIcon(sub.category)}
-              <div>
-                <p className="font-medium text-white">{sub.name}</p>
-                <p className="text-xs text-white/60 capitalize">{sub.cycle} · {sub.category}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-white">{formatCurrency(sub.amount, locale)}</span>
-              <Button variant="ghost" size="sm" aria-label="Edit"><Edit className="w-4 h-4" /></Button>
-              <Button variant="ghost" size="sm" aria-label="Delete"><Trash2 className="w-4 h-4 text-rose-400" /></Button>
-            </div>
+        {loading ? (
+          <div className="text-center py-8 text-white/50">{locale === 'th' ? 'กำลังโหลด...' : 'Loading...'}</div>
+        ) : subscriptions.length === 0 ? (
+          <div className="text-center py-8 text-white/50">
+            {locale === 'th' ? 'ยังไม่มีการสมัครสมาชิก' : 'No subscriptions yet. Add your first!'}
           </div>
-        ))}
+        ) : (
+          <div className="space-y-2">
+            {subscriptions.map((sub) => (
+              <div key={sub.id} className="flex items-center justify-between p-3 rounded-xl bg-black/30 border border-white/10">
+                <div className="flex items-center gap-3">
+                  {getCategoryIcon(sub.category)}
+                  <div>
+                    <p className="font-medium text-white">{sub.name}</p>
+                    <p className="text-xs text-white/60 capitalize">{sub.cycle} · {sub.category}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-white">{formatCurrency(sub.amount, locale)}</span>
+                  <Button variant="ghost" size="sm" onClick={() => handleEdit(sub)} aria-label="Edit"><Edit className="w-4 h-4" /></Button>
+                  <Button variant="ghost" size="sm" onClick={() => handleDelete(sub.id)} aria-label="Delete"><Trash2 className="w-4 h-4 text-rose-400" /></Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

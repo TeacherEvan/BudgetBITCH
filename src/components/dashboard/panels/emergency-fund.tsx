@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Trash2, Edit, Shield, AlertCircle, CheckCircle } from 'lucide-react';
+import { Plus, Shield, AlertCircle, CheckCircle } from 'lucide-react';
 import { useEmergencyFund } from '@/hooks/use-local-db';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,6 @@ interface EmergencyFundProps {
 export function EmergencyFund({ locale = 'en' }: EmergencyFundProps) {
   const { fund, loading, update: updateFund } = useEmergencyFund();
   const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     targetAmount: '50000',
     currentAmount: '0',
@@ -29,15 +28,22 @@ export function EmergencyFund({ locale = 'en' }: EmergencyFundProps) {
   const isComplete = fund.currentAmount >= fund.targetAmount;
 
   const resetForm = () => {
-    setEditingId(null);
     setShowForm(false);
     setFormData({ targetAmount: '50000', currentAmount: '0', name: 'Emergency Fund' });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.targetAmount) return;
+    await updateFund({ 
+      targetAmount: parseFloat(formData.targetAmount), 
+      currentAmount: parseFloat(formData.currentAmount) || 0 
+    });
     resetForm();
+  };
+
+  const handleAddToFund = async (amount: number) => {
+    await updateFund({ currentAmount: fund.currentAmount + amount });
   };
 
   return (
@@ -68,16 +74,13 @@ export function EmergencyFund({ locale = 'en' }: EmergencyFundProps) {
       <Card className="p-4">
         <h4 className="font-semibold text-white mb-3">{locale === 'th' ? 'เพิ่มเงินเข้ากองทุน' : 'Add to Fund'}</h4>
         <div className="grid gap-3 sm:grid-cols-3">
-          <Button variant="secondary" size="sm" onClick={() => {
-            const newAmount = fund.currentAmount + 1000;
-            const newProgress = progress + (1000 / fund.targetAmount) * 100;
-          }}>
+          <Button variant="secondary" size="sm" onClick={() => handleAddToFund(1000)}>
             +{formatCurrency(1000, locale)}
           </Button>
-          <Button variant="secondary" size="sm" onClick={() => {}}>
+          <Button variant="secondary" size="sm" onClick={() => handleAddToFund(5000)}>
             +{formatCurrency(5000, locale)}
           </Button>
-          <Button variant="primary" size="sm" onClick={() => {}}>
+          <Button variant="primary" size="sm" onClick={() => handleAddToFund(10000)}>
             +{formatCurrency(10000, locale)}
           </Button>
         </div>
@@ -87,7 +90,7 @@ export function EmergencyFund({ locale = 'en' }: EmergencyFundProps) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
           <div className="bg-black/95 border border-white/10 rounded-2xl p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold text-white mb-4">{locale === 'th' ? 'ตั้งเป้ากองทุนสำรอง' : 'Set Emergency Fund Target'}</h3>
-            <form onSubmit={(e) => { e.preventDefault(); }} className="space-y-3">
+            <form onSubmit={handleSubmit} className="space-y-3">
               <Input label={locale === 'th' ? 'ชื่อกองทุน' : 'Fund Name'} value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
               <Input label={locale === 'th' ? 'เป้าหมายจำนวนเงิน' : 'Target Amount'} type="number" step="0.01" min="0" value={formData.targetAmount} onChange={e => setFormData({...formData, targetAmount: e.target.value})} required />
               <Input label={locale === 'th' ? 'จำนวนปัจจุบัน' : 'Current Amount'} type="number" step="0.01" min="0" value={formData.currentAmount} onChange={e => setFormData({...formData, currentAmount: e.target.value})} />

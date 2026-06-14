@@ -44,3 +44,7 @@ pnpm-debug.log*
 # local DB (dev only)
 *.idb
 local-db-*
+
+# backup files
+*.bak
+*.test.ts
