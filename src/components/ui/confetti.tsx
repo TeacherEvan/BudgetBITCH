@@ -16,14 +16,14 @@ export function Confetti({
   colorPalette = ['#9dcab7', '#ccb37a', '#f5d742', '#6b7280', '#ffffff']
 }: ConfettiProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number | undefined>(undefined);
 
   const particles = useRef<Array<{
     x: number; y: number; vx: number; vy: number; 
     color: string; size: number; rotation: number; rotationSpeed: number;
   }>>([]);
 
-  const animateRef = useRef<(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => void>();
+  const animateRef = useRef<((ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => void) | null>(null);
 
   const initParticles = useCallback(() => {
     const canvas = canvasRef.current;

@@ -1,11 +1,10 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { PanelKey } from './dashboard-shell';
 import { cn } from '@/lib/utils/cn';
 
-interface PanelConfig {
-  id: PanelKey;
+export interface PanelConfig {
+  id: string;
   title: string;
   children: React.ReactNode;
   className?: string;
@@ -32,7 +31,7 @@ const itemVariants = {
     transition: {
       delay: custom * 0.1,
       duration: 0.4,
-      ease: [0.25, 0.46, 0.45, 0.94],
+      ease: [0.25, 0.46, 0.45, 0.94] as const,
     },
   }),
 };

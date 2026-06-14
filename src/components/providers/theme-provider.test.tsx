@@ -35,7 +35,7 @@ describe('ThemeProvider', () => {
   });
 
   it('exposes setTheme function to children', () => {
-    let setThemeFn: ((theme: string) => void) | null = null;
+    let setThemeFn: ((theme: 'amber' | 'dark' | 'gold') => void) | null = null;
     const TestChild = () => {
       const { setTheme } = useTheme();
       setThemeFn = setTheme;

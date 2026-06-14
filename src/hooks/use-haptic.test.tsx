@@ -29,7 +29,7 @@ describe('useHaptic', () => {
   });
 
   it('returns trigger function', () => {
-    let triggerFn: () => void;
+    let triggerFn: (() => void) | undefined;
     renderWithProvider(<TestComponent onTrigger={fn => { triggerFn = fn; }} type="light" />);
     expect(typeof triggerFn).toBe('function');
   });

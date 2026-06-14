@@ -20,7 +20,7 @@ import { useWizardProfile } from '@/hooks/use-local-db';
 import { useCriticalExpense } from '@/hooks/use-critical-expense';
 import { BentoGrid, PanelConfig } from '@/components/dashboard/bento-grid';
 
-type PanelKey = 'expenses' | 'budget' | 'bills' | 'goals' | 'netWorth' | 'subscriptions' | 'emergency' | 'debt' | 'forecast';
+export type PanelKey = 'expenses' | 'budget' | 'bills' | 'goals' | 'netWorth' | 'subscriptions' | 'emergency' | 'debt' | 'forecast';
 
 const PANEL_CONFIG: Record<PanelKey, { label: { th: string; en: string }; icon: string }> = {
   expenses: { label: { th: 'ค่าใช้จ่าย', en: 'Expenses' }, icon: '💸' },
