@@ -11,6 +11,7 @@ import { Card } from '@/components/ui/card';
 import { THAI_CATEGORY_ALIASES } from '@/lib/utils/thai-category-mapper';
 import { formatCurrency } from '@/lib/utils/currency';
 import type { ExpenseCategory } from '@/lib/types/budget';
+import { VoiceExpenseInput } from './voice-expense-input';
 
 const CATEGORIES: { value: ExpenseCategory; label: { th: string; en: string } }[] = [
   { value: 'housing', label: { th: 'ที่อยู่อาศัย', en: 'Housing' } },
@@ -36,6 +37,7 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
   const { budgets } = useBudgets();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [showVoiceInput, setShowVoiceInput] = useState(false);
   
   const [formData, setFormData] = useState({
     merchant: '',
@@ -52,6 +54,15 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
       categorySpending.set(e.category, (categorySpending.get(e.category) || 0) + e.amount);
     }
   });
+
+  const handleVoiceAdd = (expense: { merchant: string; amount: number; category: ExpenseCategory; note?: string }) => {
+    add({
+      ...expense,
+      id: crypto.randomUUID(),
+      date: new Date().toISOString().split('T')[0],
+      source: 'voice',
+    } as any);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,14 +117,34 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white">
-          💸 Expense Tracker
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+          <span className="text-xl">💸</span>
+          {locale === 'th' ? 'บันทึกค่าใช้จ่าย' : 'Expense Tracker'}
         </h3>
-        <Button variant="primary" size="sm" onClick={() => { setShowForm(true); setEditingId(null); resetForm(); }}>
-          <Plus className="w-4 h-4 mr-1" /> Add
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            onClick={() => setShowVoiceInput(true)}
+            className="flex items-center gap-1"
+          >
+            <Mic className="w-4 h-4" />
+            {locale === 'th' ? 'เสียง' : 'Voice'}
+          </Button>
+          <Button variant="primary" size="sm" onClick={() => { setShowForm(true); setEditingId(null); resetForm(); }}>
+            <Plus className="w-4 h-4 mr-1" /> {locale === 'th' ? 'เพิ่ม' : 'Add'}
+          </Button>
+        </div>
       </div>
+
+      {/* Voice Input Modal */}
+      <VoiceExpenseInput
+        locale={locale}
+        onAddExpense={handleVoiceAdd}
+        isOpen={showVoiceInput}
+        onClose={() => setShowVoiceInput(false)}
+      />
 
       {showForm && (
         <Card className="p-4">
@@ -156,10 +187,10 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
             />
             <div className="flex gap-2">
               <Button type="submit" className="flex-1">
-                {editingId ? 'Update' : 'Add'}
+                {editingId ? (locale === 'th' ? 'อัปเดต' : 'Update') : (locale === 'th' ? 'เพิ่ม' : 'Add')}
               </Button>
               <Button type="button" variant="secondary" onClick={resetForm}>
-                Cancel
+                {locale === 'th' ? 'ยกเลิก' : 'Cancel'}
               </Button>
             </div>
           </form>
@@ -168,10 +199,12 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
 
       <div className="space-y-2">
         {loading ? (
-          <div className="text-center py-8 text-white/50">Loading...</div>
+          <div className="text-center py-8 text-white/50">
+            {locale === 'th' ? 'กำลังโหลด...' : 'Loading...'}
+          </div>
         ) : expenses.length === 0 ? (
           <div className="text-center py-8 text-white/50">
-            No expenses yet. Add your first expense!
+            {locale === 'th' ? 'ยังไม่มีค่าใช้จ่าย เพิ่มรายการแรกได้เลย!' : 'No expenses yet. Add your first expense!'}
           </div>
         ) : (
           <div className="space-y-2">
@@ -184,6 +217,9 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
                 const cat = CATEGORIES.find(c => c.value === expense.category);
                 const catLabel = locale === 'th' ? cat?.label.th : cat?.label.en;
                 const overBudget = budget && spent > budget;
+                
+                const sourceIcon = expense.source === 'voice' ? '🎤' : 
+                                  expense.source === 'import' ? '📥' : '✏️';
 
                 return (
                   <div
@@ -191,15 +227,20 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
                     className="flex items-center gap-3 p-3 rounded-xl bg-black/30 border border-white/10"
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-white">{expense.merchant}</span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-white truncate">{expense.merchant}</span>
                         <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/70">
                           {catLabel || expense.category}
                         </span>
-                        {overBudget && <span className="text-xs px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400">Over Budget</span>}
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-400">
+                          {sourceIcon}
+                        </span>
+                        {overBudget && <span className="text-xs px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400">
+                          {locale === 'th' ? 'เกินงบ' : 'Over Budget'}
+                        </span>}
                       </div>
-                      <p className="text-xs text-white/50 mt-0.5">
-                        {format(new Date(expense.date), 'MMM d, yyyy')} • {formatCurrency(expense.amount, locale)}
+                      <p className="text-xs text-white/50 mt-0.5 truncate">
+                        {new Date(expense.date).toLocaleDateString(locale === 'th' ? 'th-TH' : 'en-US')} • {formatCurrency(expense.amount, locale)}
                         {expense.note && ` • ${expense.note}`}
                       </p>
                     </div>
