@@ -18,7 +18,7 @@ import { DebtPayoff } from '@/components/dashboard/panels/debt-payoff';
 import { CashFlowForecast } from '@/components/dashboard/panels/cash-flow-forecast';
 import { useWizardProfile } from '@/hooks/use-local-db';
 import { useCriticalExpense } from '@/hooks/use-critical-expense';
-import { formatCurrency } from '@/lib/utils/currency';
+import { BentoGrid, PanelConfig } from '@/components/dashboard/bento-grid';
 
 type PanelKey = 'expenses' | 'budget' | 'bills' | 'goals' | 'netWorth' | 'subscriptions' | 'emergency' | 'debt' | 'forecast';
 
@@ -35,6 +35,18 @@ const PANEL_CONFIG: Record<PanelKey, { label: { th: string; en: string }; icon: 
 };
 
 const PANEL_ORDER: PanelKey[] = ['expenses', 'budget', 'bills', 'goals', 'netWorth', 'subscriptions', 'emergency', 'debt', 'forecast'];
+
+const PANELS: PanelConfig[] = [
+  { id: 'expenses', title: 'Expenses', children: <ExpenseTracker /> },
+  { id: 'budget', title: 'Budget', children: <BudgetVisual /> },
+  { id: 'bills', title: 'Bills', children: <Bills /> },
+  { id: 'goals', title: 'Goals', children: <SavingsGoals /> },
+  { id: 'netWorth', title: 'Net Worth', children: <NetWorth /> },
+  { id: 'subscriptions', title: 'Subscriptions', children: <Subscriptions /> },
+  { id: 'emergency', title: 'Emergency', children: <EmergencyFund /> },
+  { id: 'debt', title: 'Debt', children: <DebtPayoff /> },
+  { id: 'forecast', title: 'Forecast', children: <CashFlowForecast /> },
+];
 
 export function DashboardShell({ locale }: { locale: 'th' | 'en' }) {
   const { profile } = useWizardProfile();
@@ -166,24 +178,9 @@ export function DashboardShell({ locale }: { locale: 'th' | 'en' }) {
           {/* Daily Disposable Hero */}
           <DailyDisposableHero locale={locale} />
 
-          {/* Accordion Panels */}
+          {/* Bento Grid Panels */}
           <div className="space-y-4 mt-6">
-            {PANEL_ORDER.map(panel => {
-              const config = PANEL_CONFIG[panel];
-              const isOpen = isPanelOpen(panel);
-              return (
-                <details key={panel} className="group" open={isOpen} onToggle={() => togglePanel(panel)}>
-                  <summary className="flex items-center gap-3 p-4 rounded-xl bg-black/30 border border-white/10 cursor-pointer list-none">
-                    <span className="text-2xl">{config.icon}</span>
-                    <span className="font-medium text-white flex-1">{config.label[locale]}</span>
-                    <ChevronDown className="text-white/50 transition-transform duration-200 group-open:rotate-180" />
-                  </summary>
-                  <div className="pt-4 pb-2 px-2 animate-in slide-down">
-                    {renderPanelContent(panel)}
-                  </div>
-                </details>
-              );
-            })}
+            <BentoGrid panels={PANELS} />
           </div>
         </div>
 
@@ -206,29 +203,4 @@ export function DashboardShell({ locale }: { locale: 'th' | 'en' }) {
       </main>
     </div>
   );
-}
-
-function renderPanelContent(panel: PanelKey) {
-  switch (panel) {
-    case 'expenses':
-      return <ExpenseTracker />;
-    case 'budget':
-      return <BudgetVisual />;
-    case 'bills':
-      return <Bills />;
-    case 'goals':
-      return <SavingsGoals />;
-    case 'netWorth':
-      return <NetWorth />;
-    case 'subscriptions':
-      return <Subscriptions />;
-    case 'emergency':
-      return <EmergencyFund />;
-    case 'debt':
-      return <DebtPayoff />;
-    case 'forecast':
-      return <CashFlowForecast />;
-    default:
-      return null;
-  }
 }
