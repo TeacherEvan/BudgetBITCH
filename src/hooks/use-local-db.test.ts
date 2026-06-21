@@ -1,6 +1,6 @@
 // src/hooks/use-local-db.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import { useBudgets, useBills, useSavingsGoals, useNetWorth, useSubscriptions, useEmergencyFund, useDebtPayoff, useCashFlowForecast, useWizardProfile, useCriticalExpenseCommitment } from './use-local-db';
 
 // Mock the local-db functions
@@ -34,17 +34,23 @@ vi.mock('@/lib/db/local-db', () => ({
   getExpensesByCategory: vi.fn().mockResolvedValue([]),
   saveBudgetCategory: vi.fn(),
   getBudgetCategory: vi.fn().mockResolvedValue(undefined),
-  getAllBudgets: vi.fn().mockResolvedValue([]),
+  getAllBudgets: vi.fn().mockResolvedValue([{ category: 'rent', monthlyLimit: 1000 }]),
   addBill: vi.fn(),
   updateBill: vi.fn(),
   deleteBill: vi.fn(),
-  getAllBills: vi.fn().mockResolvedValue([]),
+  getAllBills: vi.fn().mockResolvedValue([{ id: '1', name: 'Water', amount: 50, dueDate: '2026-06-30', paid: false, category: 'utilities' }]),
   addSavingsGoal: vi.fn(),
   updateSavingsGoal: vi.fn(),
   deleteSavingsGoal: vi.fn(),
-  getAllSavingsGoals: vi.fn().mockResolvedValue([]),
+  getAllSavingsGoals: vi.fn().mockResolvedValue([{ id: '1', name: 'Emergency', targetAmount: 10000, currentAmount: 1000, category: 'emergency' }]),
   saveCriticalExpenseCommitment: vi.fn(),
   getCriticalExpenseCommitment: vi.fn().mockResolvedValue(undefined),
+  saveNetWorthSnapshot: vi.fn(),
+  getLatestNetWorthSnapshot: vi.fn().mockResolvedValue(undefined),
+  addDebt: vi.fn(),
+  updateDebt: vi.fn(),
+  deleteDebt: vi.fn(),
+  getAllDebts: vi.fn().mockResolvedValue([]),
   generateId: vi.fn(() => 'test-id')
 }));
 
