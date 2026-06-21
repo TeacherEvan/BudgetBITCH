@@ -54,7 +54,7 @@ export function useVoice(initialLang: 'th-TH' | 'en-US' = 'en-US') {
   const synthesisRef = useRef<SpeechSynthesisUtterance | null>(null);
   const isSupported = typeof window !== 'undefined' && 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+    !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
 
   // Initialize Speech Recognition
   useEffect(() => {

@@ -55,6 +55,7 @@ function createMockSynthesis() {
 describe('useVoice Hook', () => {
   let mockSynthesis: ReturnType<typeof createMockSynthesis>;
   let originalWindow: Window & typeof globalThis;
+  let originalLocalStorage: any;
   let originalSpeechRecognition: any;
   let originalWebkitSpeechRecognition: any;
   let originalSpeechSynthesis: any;
@@ -83,6 +84,7 @@ describe('useVoice Hook', () => {
     
     // Store originals
     originalWindow = global.window;
+    originalLocalStorage = global.localStorage;
     originalSpeechRecognition = global.SpeechRecognition;
     originalWebkitSpeechRecognition = global.webkitSpeechRecognition;
     originalSpeechSynthesis = global.speechSynthesis;
@@ -112,14 +114,18 @@ describe('useVoice Hook', () => {
     // Ensure mocks are on global AND window
     global.SpeechRecognition = MockSpeechRecognition;
     global.webkitSpeechRecognition = MockSpeechRecognition;
+    global.window.SpeechRecognition = MockSpeechRecognition;
+    global.window.webkitSpeechRecognition = MockSpeechRecognition;
     global.window.speechSynthesis = mockSynthesis;
     global.speechSynthesis = mockSynthesis;
     global.window.SpeechSynthesisUtterance = MockSpeechSynthesisUtterance;
     global.SpeechSynthesisUtterance = MockSpeechSynthesisUtterance;
+    global.localStorage = global.window.localStorage;
   });
 
   afterEach(() => {
     global.window = originalWindow;
+    global.localStorage = originalLocalStorage;
     global.SpeechRecognition = originalSpeechRecognition;
     global.webkitSpeechRecognition = originalWebkitSpeechRecognition;
     global.speechSynthesis = originalSpeechSynthesis;
