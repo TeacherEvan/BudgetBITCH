@@ -1,7 +1,7 @@
 // components/dashboard/panels/savings-goals.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Plus, Trash2, Edit, Target } from 'lucide-react';
 import { useSavingsGoals } from '@/hooks/use-local-db';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,7 @@ import { Card } from '@/components/ui/card';
 import { ProgressRing } from '@/components/ui/progress-ring';
 import { formatCurrency } from '@/lib/utils/currency';
 import { format } from 'date-fns';
+import { SavingsGoal } from '@/lib/types/budget';
 
 interface SavingsGoalsProps {
   locale?: 'th' | 'en';
@@ -18,6 +19,8 @@ interface SavingsGoalsProps {
 
 export function SavingsGoals({ locale = 'en' }: SavingsGoalsProps) {
   const { goals, add, update, remove, loading } = useSavingsGoals();
+  // eslint-disable-next-line react-hooks/purity
+  const now = useMemo(() => Date.now(), []);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -54,23 +57,25 @@ export function SavingsGoals({ locale = 'en' }: SavingsGoalsProps) {
     e.preventDefault();
     if (!formData.name || !formData.targetAmount) return;
     
-    const goal = {
-      ...formData,
+    const goal: SavingsGoal = {
+      id: editingId || crypto.randomUUID(),
+      name: formData.name,
       targetAmount: parseFloat(formData.targetAmount),
       currentAmount: parseFloat(formData.currentAmount) || 0,
+      category: formData.category,
+      targetDate: formData.targetDate || undefined,
       autoAllocate: formData.autoAllocate ? parseFloat(formData.autoAllocate) : undefined,
-      id: editingId || crypto.randomUUID(),
     };
     
     if (editingId) {
-      update(goal as any);
+      update(goal);
     } else {
-      add(goal as any);
+      add(goal);
     }
     resetForm();
   };
 
-  const handleEdit = (goal: any) => {
+  const handleEdit = (goal: SavingsGoal) => {
     setEditingId(goal.id);
     setFormData({
       name: goal.name,
@@ -135,7 +140,7 @@ export function SavingsGoals({ locale = 'en' }: SavingsGoalsProps) {
             <Select
               label={locale === 'th' ? 'ประเภท' : 'Category'}
               value={formData.category}
-              onChange={e => setFormData({ ...formData, category: e.target.value as any })}
+              onChange={e => setFormData({ ...formData, category: e.target.value as SavingsGoal['category'] })}
               options={categoryOptions.map(c => ({ value: c.value, label: locale === 'th' ? c.label.th : c.label.en }))}
             />
             <div className="grid gap-3 sm:grid-cols-2">
@@ -179,7 +184,7 @@ export function SavingsGoals({ locale = 'en' }: SavingsGoalsProps) {
             {goals.map(goal => {
               const progress = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
               const remaining = goal.targetAmount - goal.currentAmount;
-              const daysLeft = goal.targetDate ? Math.ceil((new Date(goal.targetDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+              const daysLeft = goal.targetDate ? Math.ceil((new Date(goal.targetDate).getTime() - now) / (1000 * 60 * 60 * 24)) : null;
 
               return (
                 <Card key={goal.id} className="p-4">
