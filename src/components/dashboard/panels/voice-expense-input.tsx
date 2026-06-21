@@ -2,12 +2,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Mic, MicOff, X, Check, Sparkles } from 'lucide-react';
+import { Mic, X, Check, Sparkles } from 'lucide-react';
 import { useVoice } from '@/hooks/use-voice';
 import { mapThaiToCategory } from '@/lib/utils/thai-category-mapper';
 import { formatCurrency } from '@/lib/utils/currency';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import type { ExpenseCategory } from '@/lib/types/budget';
 
 interface ParsedExpense {
@@ -63,7 +62,7 @@ function parseThaiNumber(text: string): number | null {
   return result > 0 ? result : null;
 }
 
-function parseExpenseFromText(text: string, locale: 'th' | 'en'): ParsedExpense | null {
+function parseExpenseFromText(text: string): ParsedExpense | null {
   const lowerText = text.toLowerCase().trim();
   
   // Extract amount - look for number patterns
@@ -147,17 +146,29 @@ export function VoiceExpenseInput({ locale, onAddExpense, isOpen, onClose }: Voi
     isListening, 
     transcript, 
     isSupported,
-    error 
+    error,
+    clearTranscript 
   } = useVoice(locale === 'th' ? 'th-TH' : 'en-US');
   
   const [parsedExpense, setParsedExpense] = useState<ParsedExpense | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Clear transcript and reset state when modal is closed
+  useEffect(() => {
+    if (!isOpen) {
+      clearTranscript();
+      setTimeout(() => {
+        setParsedExpense(null);
+        setShowConfirmation(false);
+      }, 0);
+    }
+  }, [isOpen, clearTranscript]);
+
   // Handle transcript changes
   useEffect(() => {
     if (transcript && isOpen && !isListening) {
-      const parsed = parseExpenseFromText(transcript, locale);
+      const parsed = parseExpenseFromText(transcript);
       if (parsed) {
         setTimeout(() => {
           setParsedExpense(parsed);
@@ -173,13 +184,18 @@ export function VoiceExpenseInput({ locale, onAddExpense, isOpen, onClose }: Voi
     }
   }, [transcript, isOpen, isListening, speak, locale]);
 
-  const handleConfirm = useCallback(() => {
+  const handleConfirm = useCallback(async () => {
     if (parsedExpense) {
-      onAddExpense(parsedExpense);
-      setShowConfirmation(false);
-      setParsedExpense(null);
-      onClose();
-      speak(locale === 'th' ? 'บันทึกแล้ว' : 'Saved');
+      setIsProcessing(true);
+      try {
+        await onAddExpense(parsedExpense);
+        setShowConfirmation(false);
+        setParsedExpense(null);
+        onClose();
+        speak(locale === 'th' ? 'บันทึกแล้ว' : 'Saved');
+      } finally {
+        setIsProcessing(false);
+      }
     }
   }, [parsedExpense, onAddExpense, onClose, speak, locale]);
 
@@ -265,7 +281,7 @@ export function VoiceExpenseInput({ locale, onAddExpense, isOpen, onClose }: Voi
         )}
 
         {/* Confirmation */}
-        {showConfirmation && parsedExpense && (
+        {showConfirmation && parsedExpense && !isProcessing && (
           <div className="space-y-4">
             <div className="text-center">
               <Check className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
