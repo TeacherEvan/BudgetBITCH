@@ -159,8 +159,10 @@ export function VoiceExpenseInput({ locale, onAddExpense, isOpen, onClose }: Voi
     if (transcript && isOpen && !isListening) {
       const parsed = parseExpenseFromText(transcript, locale);
       if (parsed) {
-        setParsedExpense(parsed);
-        setShowConfirmation(true);
+        setTimeout(() => {
+          setParsedExpense(parsed);
+          setShowConfirmation(true);
+        }, 0);
         
         // Speak confirmation
         const confirmText = locale === 'th' 
