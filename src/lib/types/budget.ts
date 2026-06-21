@@ -88,7 +88,7 @@ export const CRITICAL_EXPENSES: Record<CriticalExpenseKey, {
     thaiContext: 'Netflix, Disney+, HBO GO, TrueID, Viu'
   },
   ride_hailing: { 
-    labelTh: 'กรับ/โบลท์', 
+    labelTh: 'แกร็บ/โบลท์', 
     labelEn: 'Ride-hailing (Grab/Bolt)', 
     icon: '🚗',
     thaiContext: 'GrabCar, GrabBike, Bolt, รถเมล์/BTS ที่นั่งสบาย'
@@ -122,7 +122,7 @@ export type ExpenseCategory =
 /** Thai-specific category aliases for voice/input */
 export const THAI_CATEGORY_ALIASES: Record<string, ExpenseCategory> = {
   'ค่าเช่า': 'housing', 'ค่าคอนโด': 'housing', 'บ้าน': 'housing',
-  'ค่าเดินทาง': 'transport', 'บีทีเอส': 'transport', 'รถไฟฟ้า': 'transport', 'กรับ': 'transport', 'น้ำมัน': 'transport',
+  'ค่าเดินทาง': 'transport', 'บีทีเอส': 'transport', 'รถไฟฟ้า': 'transport', 'แกร็บ': 'transport', 'แกรบ': 'transport', 'กรับ': 'transport', 'น้ำมัน': 'transport',
   'ค่าอาหาร': 'food', 'กินข้าว': 'food', 'เซปอะ': 'food', '7-11': 'food',
   'ค่าน้ำค่าไฟ': 'utilities', 'อินเตอร์เน็ต': 'phone_internet', 'โทรศัพท์': 'phone_internet',
   'สมัครสมาชิก': 'subscriptions', 'เน็ตฟลิกซ์': 'subscriptions', 'สปอตตี้': 'subscriptions',

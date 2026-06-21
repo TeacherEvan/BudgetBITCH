@@ -102,7 +102,7 @@ function parseExpenseFromText(text: string): ParsedExpense | null {
   
   // Extract merchant - try to find known merchants or use first noun phrase
   let merchant = '';
-  const merchants = ['7-eleven', '7-11', 'เซเว่น', 'เซเว่นอีเล븐', 'ลอตัส', 'lotus', 'บิ๊กซี', 'bigc', 'แมคโคร', 'makro', 'กรับ', 'grab', 'โบลท์', 'bolt', 'เน็ตฟลิกซ์', 'netflix', 'สปอตตี้', 'spotify', 'ยูทูบ', 'youtube', 'ดิสนีย์', 'disney', 'ทรูไอดี', 'trueid', 'สตาร์บัคส์', 'starbucks', 'อเมซอน', 'amazon', 'ลาซาด้า', 'lazada', 'ช็อปปี้', 'shopee'];
+  const merchants = ['7-eleven', '7-11', 'เซเว่น', 'เซเว่นอีเลฟเว่น', 'โลตัส', 'ลอตัส', 'lotus', 'บิ๊กซี', 'bigc', 'แมคโคร', 'makro', 'แกร็บ', 'แกรบ', 'กรับ', 'grab', 'โบลท์', 'bolt', 'เน็ตฟลิกซ์', 'netflix', 'สปอติฟาย', 'สปอตติฟาย', 'สปอตตี้', 'spotify', 'ยูทูบ', 'youtube', 'ดิสนีย์', 'disney', 'ทรูไอดี', 'trueid', 'สตาร์บัคส์', 'starbucks', 'อเมซอน', 'amazon', 'ลาซาด้า', 'lazada', 'ช็อปปี้', 'shopee'];
   
   for (const m of merchants) {
     if (lowerText.includes(m)) {
@@ -158,10 +158,10 @@ export function VoiceExpenseInput({ locale, onAddExpense, isOpen, onClose }: Voi
   useEffect(() => {
     if (!isOpen) {
       clearTranscript();
-      setTimeout(() => {
-        setParsedExpense(null);
-        setShowConfirmation(false);
-      }, 0);
+      /* eslint-disable react-hooks/set-state-in-effect */
+      setParsedExpense(null);
+      setShowConfirmation(false);
+      /* eslint-enable react-hooks/set-state-in-effect */
     }
   }, [isOpen, clearTranscript]);
 
@@ -260,7 +260,7 @@ export function VoiceExpenseInput({ locale, onAddExpense, isOpen, onClose }: Voi
                   <p className="mt-4 text-white/70 text-center">
                     {isListening 
                       ? (locale === 'th' ? 'กำลังฟัง... พูดเลย' : 'Listening... Speak now')
-                      : (locale === 'th' ? 'กดไอคอนไมค์ แล้วพูด เช่น "จ่าย 7-11 50 บาท"' : 'Tap mic, then speak e.g. "Paid 7-Eleven 50 baht"')}
+                      : (locale === 'th' ? 'กดไอคอนไมค์ แล้วพูด เช่น "จ่ายแกร็บ 150"' : 'Tap mic, then speak e.g. "Paid Grab 150"')}
                     </p>
                   {error && (
                     <p className="mt-2 text-center text-rose-400 text-sm">
@@ -271,7 +271,7 @@ export function VoiceExpenseInput({ locale, onAddExpense, isOpen, onClose }: Voi
                 <div className="text-center py-4 border-t border-white/10">
                   <p className="text-xs text-white/40">
                     {locale === 'th' 
-                      ? 'ตัวอย่าง: "ซื้อข้าว 80 บาท", "จ่ายกรับ 150", "น้ำมัน 500 บาท"'
+                      ? 'ตัวอย่าง: "ซื้อข้าว 80 บาท", "จ่ายแกร็บ 150", "น้ำมัน 500 บาท"'
                       : 'Examples: "Lunch 80 baht", "Grab 150", "Fuel 500 baht"'}
                   </p>
                 </div>

@@ -22,6 +22,8 @@ export const THAI_CATEGORY_ALIASES: Record<string, ExpenseCategory> = {
   'รถไฟฟ้า': 'transport',
   'รถไฟ': 'transport',
   'ขนส่ง': 'transport',
+  'แกร็บ': 'transport',
+  'แกรบ': 'transport',
   'กรับ': 'transport',
   'grab': 'transport',
   'โบลท์': 'transport',
