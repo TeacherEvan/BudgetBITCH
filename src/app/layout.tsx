@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/components/providers/theme-provider';
+import { PWARegister } from '@/components/pwa/pwa-register';
 
 const inter = Inter({
   variable: '--font-inter',
@@ -29,12 +30,16 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning className={`${inter.variable} ${spaceGrotesk.variable} antialiased`}>
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="manifest" href="/manifest.json" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#0a0a0f" media="(prefers-color-scheme: dark)" />
         <meta name="theme-color" content="#f5d742" media="(prefers-color-scheme: light)" />
       </head>
       <body className="min-h-screen bg-black text-white">
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <PWARegister />
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
