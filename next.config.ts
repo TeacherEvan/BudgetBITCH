@@ -1,6 +1,9 @@
 // next.config.ts
 import type { NextConfig } from "next";
 import withPWA from "next-pwa";
+import createNextIntlPlugin from "next-intl/plugin";
+
+const withNextIntl = createNextIntlPlugin();
 
 const withPWAConfig = withPWA({
   dest: "public",
@@ -49,4 +52,4 @@ const nextConfig: NextConfig = {
   turbopack: {},
 };
 
-export default withPWAConfig(nextConfig);
+export default withNextIntl(withPWAConfig(nextConfig));

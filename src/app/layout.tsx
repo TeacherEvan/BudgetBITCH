@@ -3,6 +3,9 @@ import { Inter, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { PWARegister } from '@/components/pwa/pwa-register';
+import { NextIntlClientProvider } from 'next-intl';
+import { cookies } from 'next/headers';
+import { resolveLocale, localeMessages, localeCookieName } from '@/i18n/messages';
 
 const inter = Inter({
   variable: '--font-inter',
@@ -21,13 +24,17 @@ export const metadata: Metadata = {
   description: 'Budgeting app for Gen Z',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const locale = resolveLocale(cookieStore.get(localeCookieName)?.value);
+  const messages = localeMessages[locale];
+
   return (
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${spaceGrotesk.variable} antialiased`}>
+    <html lang={locale} suppressHydrationWarning className={`${inter.variable} ${spaceGrotesk.variable} antialiased`}>
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="manifest" href="/manifest.json" />
@@ -36,10 +43,12 @@ export default function RootLayout({
         <meta name="theme-color" content="#f5d742" media="(prefers-color-scheme: light)" />
       </head>
       <body className="min-h-screen bg-black text-white">
-        <ThemeProvider>
-          <PWARegister />
-          {children}
-        </ThemeProvider>
+        <NextIntlClientProvider messages={messages} locale={locale}>
+          <ThemeProvider>
+            <PWARegister />
+            {children}
+          </ThemeProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

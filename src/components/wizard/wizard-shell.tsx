@@ -28,13 +28,13 @@ export type WizardStepId =
   | 'subscriptions' 
   | 'entertainment' 
   | 'healthcare' 
-  | 'savingsRate' 
+  | 'savingsRatePct' 
   | 'riskTolerance' 
   | 'locationConsent';
 
 const STEPS: WizardStepId[] = [
   'income', 'rent', 'transport', 'phoneInternet', 'subscriptions',
-  'entertainment', 'healthcare', 'savingsRate', 'riskTolerance', 'locationConsent'
+  'entertainment', 'healthcare', 'savingsRatePct', 'riskTolerance', 'locationConsent'
 ];
 
 const STEP_LABELS: Record<WizardStepId, { th: string; en: string }> = {
@@ -45,7 +45,7 @@ const STEP_LABELS: Record<WizardStepId, { th: string; en: string }> = {
   subscriptions: { th: 'สมัครสมาชิก', en: 'Subscriptions' },
   entertainment: { th: 'บันเทิง/ความบันเทิง', en: 'Entertainment' },
   healthcare: { th: 'สุขภาพ/ค่ายา', en: 'Healthcare' },
-  savingsRate: { th: 'อัตราการออม', en: 'Savings Rate' },
+  savingsRatePct: { th: 'อัตราการออม', en: 'Savings Rate' },
   riskTolerance: { th: 'จุดรับความเสี่ยง', en: 'Risk Tolerance' },
   locationConsent: { th: 'ตำแหน่งที่ตั้ง', en: 'Location' },
 };
@@ -80,7 +80,7 @@ const STEP_VOICE_PROMPTS: Record<WizardStepId, { th: string; en: string }> = {
     th: 'ค่ายา ค่าทันตกรรม ค่ารพตาล เท่าไหร่', 
     en: 'Healthcare - meds, dentist, hospital' 
   },
-  savingsRate: { 
+  savingsRatePct: { 
     th: 'อยากออมกี่เปอร์เซ็นต์ของรายได้', 
     en: 'What percentage of income to save' 
   },
@@ -197,7 +197,7 @@ export function WizardShell({ locale, onComplete, voiceEnabled, speak }: WizardS
         return <StepEntertainment locale={locale} value={stepValues.entertainment as number} onChange={handleValueChange} error={errorMessage} disabled={isSubmitting} />;
       case 'healthcare':
         return <StepHealthcare locale={locale} value={stepValues.healthcare as number} onChange={handleValueChange} error={errorMessage} disabled={isSubmitting} />;
-      case 'savingsRate':
+      case 'savingsRatePct':
         return <StepSavingsRate locale={locale} value={stepValues.savingsRatePct as number} onChange={handleValueChange} error={errorMessage} disabled={isSubmitting} />;
       case 'riskTolerance':
         return <StepRiskTolerance locale={locale} value={stepValues.riskTolerance as 'low' | 'medium' | 'high'} onChange={handleValueChange} error={errorMessage} disabled={isSubmitting} />;

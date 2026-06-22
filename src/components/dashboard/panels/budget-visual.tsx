@@ -72,18 +72,18 @@ export function BudgetVisual({ locale = 'en' }: BudgetVisualProps) {
       </div>
 
       <Card className="p-4">
-        <div className="grid gap-4 sm:grid-cols-3 mb-6">
-          <div className="bg-amber-400/10 border border-amber-400/30 rounded-xl p-4">
-            <p className="text-sm text-amber-400">Income</p>
-            <p className="text-2xl font-bold font-mono text-white">{formatCurrency(totalIncome, 'en')}</p>
+        <div className="flex flex-wrap gap-3 mb-6">
+          <div className="flex-1 min-w-[120px] bg-amber-400/10 border border-amber-400/30 rounded-xl p-3">
+            <p className="text-xs text-amber-400 font-medium">Income</p>
+            <p className="text-lg font-bold font-mono text-white mt-0.5">{formatCurrency(totalIncome, 'en')}</p>
           </div>
-          <div className="bg-rose-400/10 border border-rose-400/30 rounded-xl p-4">
-            <p className="text-sm text-rose-400">Expenses</p>
-            <p className="text-2xl font-bold font-mono text-white">{formatCurrency(totalExpenses, 'en')}</p>
+          <div className="flex-1 min-w-[120px] bg-rose-400/10 border border-rose-400/30 rounded-xl p-3">
+            <p className="text-xs text-rose-400 font-medium">Expenses</p>
+            <p className="text-lg font-bold font-mono text-white mt-0.5">{formatCurrency(totalExpenses, 'en')}</p>
           </div>
-          <div className="bg-emerald-400/10 border border-emerald-400/30 rounded-xl p-4">
-            <p className="text-sm text-emerald-400">Savings Rate</p>
-            <p className="text-2xl font-bold font-mono text-white">{savingsRate}%</p>
+          <div className="flex-1 min-w-[120px] bg-emerald-400/10 border border-emerald-400/30 rounded-xl p-3">
+            <p className="text-xs text-emerald-400 font-medium">Savings Rate</p>
+            <p className="text-lg font-bold font-mono text-white mt-0.5">{savingsRate}%</p>
           </div>
         </div>
 

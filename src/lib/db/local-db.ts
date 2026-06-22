@@ -69,10 +69,47 @@ interface BudgetBITCHDB extends DBSchema {
 
 const DB_NAME = 'budgetbitch';
 const DB_VERSION = 1;
-
 let dbInstance: IDBPDatabase<BudgetBITCHDB> | null = null;
 
 export async function getDB(): Promise<IDBPDatabase<BudgetBITCHDB>> {
+  if (typeof window === 'undefined') {
+    // Return a dummy DB proxy to prevent SSR crashes.
+    return new Proxy({} as any, {
+      get(target, prop) {
+        if (prop === 'then') {
+          return undefined;
+        }
+        if (prop === 'transaction') {
+          return () => ({
+            store: new Proxy({}, {
+              get(t, p) {
+                if (p === 'index') {
+                  return () => new Proxy({}, {
+                    get(ti, pi) {
+                      if (pi === 'iterate') {
+                        return async function* () {};
+                      }
+                      return () => Promise.resolve();
+                    }
+                  });
+                }
+                return () => Promise.resolve();
+              }
+            }),
+            done: Promise.resolve(),
+            objectStore: () => ({
+              clear: () => Promise.resolve()
+            })
+          });
+        }
+        if (typeof prop === 'string' && (prop.startsWith('getAll') || prop.includes('Index'))) {
+          return () => Promise.resolve([]);
+        }
+        return () => Promise.resolve(undefined);
+      }
+    });
+  }
+
   if (dbInstance) return dbInstance;
 
   dbInstance = await openDB<BudgetBITCHDB>(DB_NAME, DB_VERSION, {

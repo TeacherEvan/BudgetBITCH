@@ -537,6 +537,70 @@ export const localeMessages = {
       privacyBadge: "No silent sharing",
       systemAccessWarning: "System access warning",
     },
+    wizard: {
+      title: "Setup Your Budget",
+      description: "Answer 10 quick questions to build your budget baseline",
+      income: {
+        title: "Monthly Income",
+        subtitle: "Salary, side income, investments - all combined",
+        placeholder: "e.g. 35000",
+        helper: "Enter total monthly income (THB)",
+      },
+      rent: {
+        title: "Rent / Housing Cost",
+        subtitle: "Condo, apartment, house rent or mortgage",
+        placeholder: "e.g. 12000",
+        helper: "Monthly rent or mortgage payment (THB)",
+      },
+      transport: {
+        title: "Transport Cost",
+        subtitle: "BTS/MRT, bus, motorbike, fuel, Grab/Bolt",
+        placeholder: "e.g. 3000",
+        helper: "Monthly transport total (THB)",
+      },
+      phoneInternet: {
+        title: "Phone / Internet",
+        subtitle: "Mobile plan, home internet, streaming bundles",
+        placeholder: "e.g. 800",
+        helper: "Monthly phone & internet cost (THB)",
+      },
+      subscriptions: {
+        title: "Subscriptions",
+        subtitle: "Netflix, Spotify, gym, app subscriptions",
+        placeholder: "e.g. 500",
+        helper: "Monthly subscription total (THB)",
+      },
+      entertainment: {
+        title: "Entertainment",
+        subtitle: "Movies, coffee, games, hobbies, dining out",
+        placeholder: "e.g. 3000",
+        helper: "Monthly entertainment budget (THB)",
+      },
+      healthcare: {
+        title: "Healthcare",
+        subtitle: "Meds, dentist, hospital, insurance copay",
+        placeholder: "e.g. 1000",
+        helper: "Monthly healthcare cost (THB)",
+      },
+      savingsRate: {
+        title: "Savings Rate",
+        subtitle: "What % of income do you want to save?",
+        placeholder: "e.g. 20",
+        helper: "Target savings percentage (0-50%)",
+      },
+      riskTolerance: {
+        title: "Risk Tolerance",
+        subtitle: "How much market fluctuation can you handle?",
+        low: "Low - protect principal",
+        medium: "Medium - balanced",
+        high: "High - growth focused",
+      },
+      locationConsent: {
+        title: "Location Access",
+        subtitle: "Allow location for local news and fuel prices",
+        prompt: "Enable location to get nearby fuel prices and local financial news",
+      },
+    },
   },
   zh: {
     appNav: {
