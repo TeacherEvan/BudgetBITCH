@@ -3,10 +3,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations, useLocale } from 'next-intl';
+import { useLocale } from 'next-intl';
 import { WizardShell } from '@/components/wizard/wizard-shell';
 import { useVoice } from '@/hooks/use-voice';
-import { getWizardProfile, clearWizardProfile } from '@/lib/db/local-db';
+import { getWizardProfile } from '@/lib/db/local-db';
 import { Loader2 } from 'lucide-react';
 
 interface WizardClientProps {
@@ -16,20 +16,12 @@ interface WizardClientProps {
 export function WizardClient({ wizardCompleted: initialWizardCompleted }: WizardClientProps) {
   const router = useRouter();
   const locale = useLocale() as 'th' | 'en';
-  const t = useTranslations('wizard');
   
   const [wizardCompleted, setWizardCompleted] = useState(initialWizardCompleted);
   const [isLoading, setIsLoading] = useState(false);
-  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [voiceEnabled] = useState(false);
   
   const { speak } = useVoice(locale === 'th' ? 'th-TH' : 'en-US');
-
-  // Check if wizard is already completed (client-side fallback)
-  useEffect(() => {
-    if (!initialWizardCompleted) {
-      checkWizardStatus();
-    }
-  }, []);
 
   const checkWizardStatus = useCallback(async () => {
     try {
@@ -44,6 +36,13 @@ export function WizardClient({ wizardCompleted: initialWizardCompleted }: Wizard
       setIsLoading(false);
     }
   }, [router]);
+
+  // Check if wizard is already completed (client-side fallback)
+  useEffect(() => {
+    if (!initialWizardCompleted) {
+      checkWizardStatus();
+    }
+  }, [initialWizardCompleted, checkWizardStatus]);
 
   const handleWizardComplete = useCallback(async () => {
     setWizardCompleted(true);

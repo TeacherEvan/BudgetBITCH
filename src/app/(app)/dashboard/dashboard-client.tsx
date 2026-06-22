@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations, useLocale } from 'next-intl';
+import { useLocale } from 'next-intl';
 import { DashboardShell } from '@/components/dashboard/dashboard-shell';
 import { useWizardProfile } from '@/hooks/use-local-db';
 import { initializeBudgetsFromWizard } from '@/lib/utils/budget-calculator';
@@ -17,21 +17,13 @@ interface DashboardClientProps {
 export function DashboardClient({ wizardCompleted: initialWizardCompleted }: DashboardClientProps) {
   const router = useRouter();
   const locale = useLocale() as 'th' | 'en';
-  const t = useTranslations('dashboard');
   
-  const { profile, loading: profileLoading, save: saveProfile } = useWizardProfile();
+  const { profile, loading: profileLoading } = useWizardProfile();
   const [wizardCompleted, setWizardCompleted] = useState(initialWizardCompleted);
   const [isLoading, setIsLoading] = useState(false);
   const [budgetsInitialized, setBudgetsInitialized] = useState(false);
 
-  // Initialize budgets from wizard on first load
-  useEffect(() => {
-    if (profile?.completed && !budgetsInitialized) {
-      initializeBudgets().then(() => setBudgetsInitialized(true));
-    }
-  }, [profile, budgetsInitialized]);
-
-  const initializeBudgets = async () => {
+  const initializeBudgets = useCallback(async () => {
     if (profile) {
       try {
         await initializeBudgetsFromWizard(profile);
@@ -40,14 +32,14 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
         console.error('Failed to initialize budgets:', error);
       }
     }
-  };
+  }, [profile]);
 
-  // Check if wizard is already completed (client-side fallback)
+  // Initialize budgets from wizard on first load
   useEffect(() => {
-    if (!initialWizardCompleted) {
-      checkWizardStatus();
+    if (profile?.completed && !budgetsInitialized) {
+      initializeBudgets().then(() => setBudgetsInitialized(true));
     }
-  }, []);
+  }, [profile, budgetsInitialized, initializeBudgets]);
 
   const checkWizardStatus = useCallback(async () => {
     try {
@@ -62,6 +54,13 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
       setIsLoading(false);
     }
   }, [router]);
+
+  // Check if wizard is already completed (client-side fallback)
+  useEffect(() => {
+    if (!initialWizardCompleted) {
+      checkWizardStatus();
+    }
+  }, [initialWizardCompleted, checkWizardStatus]);
 
   if (isLoading || profileLoading) {
     return (
