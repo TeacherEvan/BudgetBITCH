@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // hooks/use-voice.test.ts
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
@@ -65,22 +66,7 @@ describe('useVoice Hook', () => {
     vi.clearAllMocks();
     
     // Create fresh synthesis mock for each test
-    mockSynthesis = {
-      speak: vi.fn(),
-      cancel: vi.fn(),
-      pending: false,
-      speaking: false,
-      paused: false,
-      getVoices: vi.fn(() => [
-        { lang: 'en-US', name: 'English Voice', default: true },
-        { lang: 'th-TH', name: 'Thai Voice', default: false },
-      ]),
-      pause: vi.fn(),
-      resume: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    };
+    mockSynthesis = createMockSynthesis();
     
     // Store originals
     originalWindow = global.window;

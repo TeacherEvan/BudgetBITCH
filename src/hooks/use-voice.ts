@@ -26,7 +26,6 @@ const DEFAULT_SETTINGS: VoiceSettings = {
   lang: 'en-US',
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SpeechRecognitionType = any; // Web Speech API types are not in DOM lib
 
 export function useVoice(initialLang: 'th-TH' | 'en-US' = 'en-US') {
@@ -53,16 +52,13 @@ export function useVoice(initialLang: 'th-TH' | 'en-US' = 'en-US') {
   const recognitionRef = useRef<SpeechRecognitionType | null>(null);
   const synthesisRef = useRef<SpeechSynthesisUtterance | null>(null);
   const isSupported = typeof window !== 'undefined' && 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
 
   // Initialize Speech Recognition
   useEffect(() => {
     if (!isSupported) return;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const recognition = new SpeechRecognition();
     
     recognition.continuous = false;
