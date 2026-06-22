@@ -1,6 +1,6 @@
 const APP_SHELL_CACHE = "bb-app-shell-v1";
 const STATIC_ASSET_CACHE = "bb-static-assets-v1";
-const SAFE_ROUTE_SHELLS = ["/", "/calculator", "/notes"];
+const SAFE_ROUTE_SHELLS = ["/", "/dashboard", "/wizard", "/settings"];
 const STATIC_ASSET_PATH_PREFIXES = ["/_next/static/", "/icons/"];
 
 // Cache app shell, launch city data, notes shell, calculator shell, and static assets.
