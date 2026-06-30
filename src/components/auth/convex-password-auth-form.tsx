@@ -22,7 +22,7 @@ export function ConvexPasswordAuthForm({
   passwordLabel,
   helperText,
 }: ConvexPasswordAuthFormProps) {
-  const { signIn } = useAuthActions();
+  const { signIn, signUp } = useAuthActions();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -35,7 +35,8 @@ export function ConvexPasswordAuthForm({
     try {
       const formData = new FormData(event.currentTarget);
       formData.set("flow", flow);
-      const result = await signIn("password", formData);
+      const authFn = flow === "signUp" ? signUp : signIn;
+      const result = await authFn("password", formData);
 
       if (result.redirect) {
         window.location.href = result.redirect.toString();
@@ -50,7 +51,16 @@ export function ConvexPasswordAuthForm({
 
       setError("Check your email and password, then try again.");
     } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : "Sign-in failed.");
+      if (caughtError instanceof Error) {
+        const msg = caughtError.message.toLowerCase();
+        if (msg.includes("already exists") || msg.includes("duplicate")) {
+          setError("An account with this email already exists.");
+        } else {
+          setError(caughtError.message);
+        }
+      } else {
+        setError("Sign-in failed.");
+      }
     } finally {
       setIsSubmitting(false);
     }

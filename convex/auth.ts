@@ -19,10 +19,10 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [
     Password({
       profile(params) {
-        return {
-          email: normalizePasswordEmail(params.email),
-        };
+        return { email: normalizePasswordEmail(params.email) };
       },
     }),
   ],
 });
+// Alias signUp to signIn for convenience; signUp will use flow="signUp" internally
+export const signUp = signIn;
