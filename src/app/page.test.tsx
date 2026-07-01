@@ -36,11 +36,10 @@ vi.mock('@/components/onboarding/language-select-modal', () => ({
     ) : null,
 }));
 
-vi.mock('@/components/welcome/welcome-window', () => ({
-  WelcomeWindow: ({ signInHref, signUpHref }: any) => (
-    <div data-testid="welcome-window">
-      <a href={signInHref}>Sign In</a>
-      <a href={signUpHref}>Sign Up</a>
+vi.mock('@/components/auth/clean-auth-card', () => ({
+  CleanAuthCard: ({ initialFlow }: any) => (
+    <div data-testid="clean-auth-card">
+      <span>{initialFlow === 'signIn' ? 'Sign In' : 'Sign Up'}</span>
     </div>
   ),
 }));
@@ -110,10 +109,9 @@ describe('Landing Page Redirect Logic', () => {
       
       renderWithProviders(<Home />);
       
-      expect(screen.getByTestId('welcome-window')).toBeInTheDocument();
+      expect(screen.getByTestId('clean-auth-card')).toBeInTheDocument();
       expect(screen.queryByTestId('language-modal')).not.toBeInTheDocument();
       expect(screen.getByText('Sign In')).toBeInTheDocument();
-      expect(screen.getByText('Sign Up')).toBeInTheDocument();
     });
 
     it('shows welcome window in Thai when locale is th', () => {
@@ -125,7 +123,7 @@ describe('Landing Page Redirect Logic', () => {
       
       renderWithProviders(<Home />);
       
-      expect(screen.getByTestId('welcome-window')).toBeInTheDocument();
+      expect(screen.getByTestId('clean-auth-card')).toBeInTheDocument();
     });
   });
 });

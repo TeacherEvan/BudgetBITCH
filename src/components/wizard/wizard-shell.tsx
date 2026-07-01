@@ -99,9 +99,10 @@ interface WizardShellProps {
   onComplete: () => void;
   voiceEnabled: boolean;
   speak: (text: string) => void;
+  isModal?: boolean;
 }
 
-export function WizardShell({ locale, onComplete, voiceEnabled, speak }: WizardShellProps) {
+export function WizardShell({ locale, onComplete, voiceEnabled, speak, isModal = false }: WizardShellProps) {
   const t = useTranslations('wizard');
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [stepValues, setStepValues] = useState<Partial<WizardProfile['answers']>>({});
@@ -209,25 +210,25 @@ export function WizardShell({ locale, onComplete, voiceEnabled, speak }: WizardS
   };
 
   return (
-    <div className="min-h-screen bg-black flex flex-col">
+    <div className={isModal ? "w-full max-w-lg mx-auto bg-neutral-900 border border-white/10 rounded-3xl p-6 shadow-2xl flex flex-col relative overflow-hidden" : "min-h-screen bg-black flex flex-col"}>
       <WizardProgress 
         currentStep={currentStepIndex} 
         totalSteps={STEPS.length} 
         locale={locale} 
       />
       
-      <main className="flex-1 flex flex-col p-4 md:p-6">
+      <main className="flex-1 flex flex-col p-2 md:p-4">
         <div className="max-w-md mx-auto w-full flex-1 flex flex-col">
-          <div className="text-center mb-6">
-            <h1 className="text-2xl md:text-3xl font-semibold text-white">
+          <div className="text-center mb-6 mt-2">
+            <h1 className="text-xl md:text-2xl font-semibold text-white">
               {t('title') || 'Setup Your Budget'}
             </h1>
-            <p className="mt-2 text-white/70">
+            <p className="mt-1 text-sm text-white/70">
               {t('description') || 'Answer 10 quick questions to build your budget baseline'}
             </p>
           </div>
 
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col min-h-[220px]">
             {renderStep()}
           </div>
 
@@ -265,11 +266,13 @@ export function WizardShell({ locale, onComplete, voiceEnabled, speak }: WizardS
         </div>
       </main>
 
-      <VoiceToggle 
-        enabled={voiceEnabled} 
-        onToggle={() => {}} // Handled by parent
-        locale={locale}
-      />
+      <div className="mt-4 flex justify-center">
+        <VoiceToggle 
+          enabled={voiceEnabled} 
+          onToggle={() => {}} // Handled by parent
+          locale={locale}
+        />
+      </div>
     </div>
   );
 }

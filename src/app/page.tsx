@@ -5,7 +5,7 @@ import { useConvexAuth } from "@convex-dev/auth/react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { LanguageSelectModal } from "@/components/onboarding/language-select-modal";
 import { PWAInstallPrompt } from "@/components/pwa/install-prompt";
-import { WelcomeWindow } from "@/components/welcome/welcome-window";
+import { CleanAuthCard } from "@/components/auth/clean-auth-card";
 import { normalizeConvexCloudUrl } from "@/lib/url";
 
 export const dynamic = 'force-dynamic';
@@ -39,19 +39,14 @@ export default function Home() {
 
   useEffect(() => {
     if (!isLoading && isAuthenticated && !showLanguageModal) {
-      const targetPath = wizardComplete ? '/dashboard' : '/wizard';
-      window.location.href = targetPath;
+      // Always redirect to dashboard, the dashboard will pop up the wizard if not complete
+      window.location.href = '/dashboard';
     }
   }, [isLoading, isAuthenticated, showLanguageModal, wizardComplete]);
 
   // Handle case where there's no Convex URL configured
   if (!normalizeConvexCloudUrl(process.env.NEXT_PUBLIC_CONVEX_URL)) {
-    return (
-      <WelcomeWindow
-        signInHref="/sign-in?redirectTo=%2F"
-        signUpHref="/sign-up?redirectTo=%2F"
-      />
-    );
+    return <CleanAuthCard initialFlow="signIn" redirectTo="/dashboard" />;
   }
 
   // Show language select modal first
@@ -69,12 +64,7 @@ export default function Home() {
 
   // Not authenticated - show welcome window
   if (!isAuthenticated) {
-    return (
-      <WelcomeWindow
-        signInHref="/sign-in?redirectTo=%2F"
-        signUpHref="/sign-up?redirectTo=%2F"
-      />
-    );
+    return <CleanAuthCard initialFlow="signIn" redirectTo="/dashboard" />;
   }
 
   // Authenticated - redirect will happen via useEffect

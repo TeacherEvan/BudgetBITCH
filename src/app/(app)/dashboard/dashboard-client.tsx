@@ -5,6 +5,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { DashboardShell } from '@/components/dashboard/dashboard-shell';
+import { WizardShell } from '@/components/wizard/wizard-shell';
+import { useVoice } from '@/hooks/use-voice';
 import { useWizardProfile } from '@/hooks/use-local-db';
 import { initializeBudgetsFromWizard } from '@/lib/utils/budget-calculator';
 import { getWizardProfile } from '@/lib/db/local-db';
@@ -22,6 +24,9 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
   const [wizardCompleted, setWizardCompleted] = useState(initialWizardCompleted);
   const [isLoading, setIsLoading] = useState(false);
   const [budgetsInitialized, setBudgetsInitialized] = useState(false);
+  const [voiceEnabled] = useState(false);
+
+  const { speak } = useVoice(locale === 'th' ? 'th-TH' : 'en-US');
 
   const initializeBudgets = useCallback(async () => {
     if (profile) {
@@ -46,14 +51,13 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
       const wizardProfile = await getWizardProfile();
       if (wizardProfile?.completed) {
         setWizardCompleted(true);
-        router.replace('/dashboard');
       }
     } catch (error) {
       console.error('Failed to check wizard status:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [router]);
+  }, []);
 
   // Check if wizard is already completed (client-side fallback)
   useEffect(() => {
@@ -61,6 +65,12 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
       checkWizardStatus();
     }
   }, [initialWizardCompleted, checkWizardStatus]);
+
+  const handleWizardComplete = useCallback(async () => {
+    setWizardCompleted(true);
+    await new Promise(resolve => setTimeout(resolve, 500));
+    router.refresh();
+  }, [router]);
 
   if (isLoading || profileLoading) {
     return (
@@ -70,9 +80,21 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
     );
   }
 
-  if (!wizardCompleted) {
-    return null; // Will redirect
-  }
-
-  return <DashboardShell locale={locale} />;
+  return (
+    <>
+      <DashboardShell locale={locale} />
+      
+      {!wizardCompleted && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+          <WizardShell
+            locale={locale}
+            onComplete={handleWizardComplete}
+            voiceEnabled={voiceEnabled}
+            speak={speak}
+            isModal={true}
+          />
+        </div>
+      )}
+    </>
+  );
 }
