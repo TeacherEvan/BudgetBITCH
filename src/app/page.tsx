@@ -11,18 +11,11 @@ import { normalizeConvexCloudUrl } from "@/lib/url";
 export const dynamic = 'force-dynamic';
 
 const LANGUAGE_STORAGE_KEY = "budgetbitch:locale";
-const WIZARD_COMPLETE_KEY = "budgetbitch:wizard-complete";
 
 function getStoredLocale(): 'th' | 'en' | null {
   if (typeof window === 'undefined') return null;
   const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
   return (stored === 'th' || stored === 'en') ? stored : null;
-}
-
-function getWizardComplete(): boolean {
-  if (typeof window === 'undefined') return false;
-  const stored = localStorage.getItem(WIZARD_COMPLETE_KEY);
-  return stored === 'true';
 }
 
 function subscribeToLocale() {
@@ -35,42 +28,37 @@ export default function Home() {
   const storedLocale = useSyncExternalStore(subscribeToLocale, getStoredLocale, () => null);
   const locale = storedLocale || 'en';
   const [showLanguageModal, setShowLanguageModal] = useState(!storedLocale);
-  const wizardComplete = getWizardComplete();
 
+  // Once authenticated, go straight to dashboard (wizard popup happens there if not done)
   useEffect(() => {
-    if (!isLoading && isAuthenticated && !showLanguageModal) {
-      // Always redirect to dashboard, the dashboard will pop up the wizard if not complete
+    if (!isLoading && isAuthenticated) {
       window.location.href = '/dashboard';
     }
-  }, [isLoading, isAuthenticated, showLanguageModal, wizardComplete]);
+  }, [isLoading, isAuthenticated]);
 
-  // Handle case where there's no Convex URL configured
-  if (!normalizeConvexCloudUrl(process.env.NEXT_PUBLIC_CONVEX_URL)) {
-    return <CleanAuthCard initialFlow="signIn" redirectTo="/dashboard" />;
+  // Loading or authenticated — show minimal loading state
+  if (!isLoading && isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-pulse text-amber-400">Loading...</div>
+        <PWAInstallPrompt locale={locale as 'th' | 'en'} />
+      </div>
+    );
   }
 
-  // Show language select modal first
-  if (showLanguageModal) {
-    return (
+  // DEFAULT: The login screen is ALWAYS shown as the startup screen.
+  // If no language is selected yet, the language select modal overlays on top.
+  // After dismissing the language modal, the login card remains fully visible.
+  return (
+    <div className="relative">
+      <CleanAuthCard initialFlow="signIn" redirectTo="/dashboard" />
       <LanguageSelectModal
-        isOpen={true}
+        isOpen={showLanguageModal}
         onComplete={(selectedLocale) => {
           localStorage.setItem(LANGUAGE_STORAGE_KEY, selectedLocale);
           setShowLanguageModal(false);
         }}
       />
-    );
-  }
-
-  // Not authenticated - show welcome window
-  if (!isAuthenticated) {
-    return <CleanAuthCard initialFlow="signIn" redirectTo="/dashboard" />;
-  }
-
-  // Authenticated - redirect will happen via useEffect
-  return (
-    <div className="min-h-screen bg-black flex items-center justify-center">
-      <div className="animate-pulse text-amber-400">Loading...</div>
       <PWAInstallPrompt locale={locale as 'th' | 'en'} />
     </div>
   );

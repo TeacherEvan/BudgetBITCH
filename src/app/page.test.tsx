@@ -27,7 +27,7 @@ Object.defineProperty(window, 'localStorage', {
 
 // Mock components
 vi.mock('@/components/onboarding/language-select-modal', () => ({
-  LanguageSelectModal: ({ isOpen, onComplete }: any) => 
+  LanguageSelectModal: ({ isOpen, onComplete }: any) =>
     isOpen ? (
       <div data-testid="language-modal" role="dialog">
         <button onClick={() => onComplete('th')}>ไทย</button>
@@ -52,7 +52,7 @@ vi.mock('@/lib/url', () => ({
   normalizeConvexCloudUrl: () => 'https://convex.cloud',
 }));
 
-const renderWithProviders = (component: React.ReactNode) => 
+const renderWithProviders = (component: React.ReactNode) =>
   render(<ThemeProvider>{component}</ThemeProvider>);
 
 describe('Landing Page Redirect Logic', () => {
@@ -62,68 +62,59 @@ describe('Landing Page Redirect Logic', () => {
     mockLocalStorage.setItem.mockClear();
   });
 
-  describe('Language Select Modal', () => {
-    it('shows language select modal when no locale stored', () => {
-      renderWithProviders(<Home />);
-      
-      expect(screen.getByTestId('language-modal')).toBeInTheDocument();
-      expect(screen.queryByTestId('welcome-window')).not.toBeInTheDocument();
-    });
-
-    it('saves locale to localStorage when Thai selected', () => {
-      renderWithProviders(<Home />);
-      
-      const modal = screen.getByTestId('language-modal');
-      const thaiButton = modal.querySelector('button');
-      if (thaiButton) {
-        act(() => {
-          thaiButton.click();
-        });
-      }
-      
-      expect(mockLocalStorage.setItem).toHaveBeenCalledWith('budgetbitch:locale', 'th');
-    });
-
-    it('saves locale to localStorage when English selected', () => {
-      renderWithProviders(<Home />);
-      
-      const modal = screen.getByTestId('language-modal');
-      const buttons = modal.querySelectorAll('button');
-      if (buttons[1]) {
-        act(() => {
-          buttons[1].click();
-        });
-      }
-      
-      expect(mockLocalStorage.setItem).toHaveBeenCalledWith('budgetbitch:locale', 'en');
-    });
+  it('always shows the auth login card on startup', () => {
+    mockLocalStorage.getItem.mockReturnValue(null);
+    renderWithProviders(<Home />);
+    expect(screen.getByTestId('clean-auth-card')).toBeInTheDocument();
+    expect(screen.getByText('Sign In')).toBeInTheDocument();
   });
 
-  describe('Welcome Window (after locale selected)', () => {
-    it('shows welcome window when locale is set but not authenticated', () => {
-      mockLocalStorage.getItem.mockImplementation((key: string) => {
-        if (key === 'budgetbitch:locale') return 'en';
-        if (key === 'budgetbitch:wizard-complete') return 'false';
-        return null;
+  it('shows language modal on top of login card when no locale stored', () => {
+    mockLocalStorage.getItem.mockReturnValue(null);
+    renderWithProviders(<Home />);
+    expect(screen.getByTestId('clean-auth-card')).toBeInTheDocument();
+    expect(screen.getByTestId('language-modal')).toBeInTheDocument();
+  });
+
+  it('saves locale to localStorage when Thai selected and hides language modal', () => {
+    mockLocalStorage.getItem.mockReturnValue(null);
+    renderWithProviders(<Home />);
+
+    const modal = screen.getByTestId('language-modal');
+    const thaiButton = modal.querySelector('button');
+    if (thaiButton) {
+      act(() => {
+        thaiButton.click();
       });
-      
-      renderWithProviders(<Home />);
-      
-      expect(screen.getByTestId('clean-auth-card')).toBeInTheDocument();
-      expect(screen.queryByTestId('language-modal')).not.toBeInTheDocument();
-      expect(screen.getByText('Sign In')).toBeInTheDocument();
+    }
+
+    expect(mockLocalStorage.setItem).toHaveBeenCalledWith('budgetbitch:locale', 'th');
+  });
+
+  it('saves locale to localStorage when English selected', () => {
+    mockLocalStorage.getItem.mockReturnValue(null);
+    renderWithProviders(<Home />);
+
+    const modal = screen.getByTestId('language-modal');
+    const buttons = modal.querySelectorAll('button');
+    if (buttons[1]) {
+      act(() => {
+        buttons[1].click();
+      });
+    }
+
+    expect(mockLocalStorage.setItem).toHaveBeenCalledWith('budgetbitch:locale', 'en');
+  });
+
+  it('shows only auth card (no language modal) when locale is already set', () => {
+    mockLocalStorage.getItem.mockImplementation((key: string) => {
+      if (key === 'budgetbitch:locale') return 'en';
+      return null;
     });
 
-    it('shows welcome window in Thai when locale is th', () => {
-      mockLocalStorage.getItem.mockImplementation((key: string) => {
-        if (key === 'budgetbitch:locale') return 'th';
-        if (key === 'budgetbitch:wizard-complete') return 'false';
-        return null;
-      });
-      
-      renderWithProviders(<Home />);
-      
-      expect(screen.getByTestId('clean-auth-card')).toBeInTheDocument();
-    });
+    renderWithProviders(<Home />);
+
+    expect(screen.getByTestId('clean-auth-card')).toBeInTheDocument();
+    expect(screen.queryByTestId('language-modal')).not.toBeInTheDocument();
   });
 });
