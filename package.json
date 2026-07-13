@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "node ./scripts/run-with-sanitized-env.mjs next dev",
     "build": "node ./scripts/run-with-sanitized-env.mjs next build",
+    "vercel-build": "if [ -z \"$CONVEX_DEPLOY_KEY\" ]; then npm run build; else npx convex deploy --cmd 'npm run build' --check-build-environment disable; fi",
     "start": "node ./scripts/run-with-sanitized-env.mjs next start",
     "lint": "eslint .",
     "test": "vitest run",
