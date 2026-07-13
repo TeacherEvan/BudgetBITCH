@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/components/providers/theme-provider';
+import { ConvexClientProvider } from '@/components/providers/convex-client-provider';
 import { PWARegister } from '@/components/pwa/pwa-register';
 import { NextIntlClientProvider } from 'next-intl';
 import { cookies } from 'next/headers';
@@ -45,8 +46,10 @@ export default async function RootLayout({
       <body className="min-h-screen bg-black text-white">
         <NextIntlClientProvider messages={messages} locale={locale}>
           <ThemeProvider>
-            <PWARegister />
-            {children}
+            <ConvexClientProvider>
+              <PWARegister />
+              {children}
+            </ConvexClientProvider>
           </ThemeProvider>
         </NextIntlClientProvider>
       </body>
