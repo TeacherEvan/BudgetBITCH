@@ -22,7 +22,7 @@ export function ConvexPasswordAuthForm({
   passwordLabel,
   helperText,
 }: ConvexPasswordAuthFormProps) {
-  const { signIn, signUp } = useAuthActions();
+  const { signIn } = useAuthActions();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -35,8 +35,7 @@ export function ConvexPasswordAuthForm({
     try {
       const formData = new FormData(event.currentTarget);
       formData.set("flow", flow);
-      const authFn = flow === "signUp" ? signUp : signIn;
-      const result = await authFn("password", formData);
+      const result = await signIn("password", formData);
 
       if (result.redirect) {
         window.location.href = result.redirect.toString();
