@@ -40,9 +40,6 @@ export const THAI_CATEGORY_ALIASES: Record<string, ExpenseCategory> = {
   'กินข้าว': 'food',
   'อาหาร': 'food',
   'ข้าว': 'food',
-  'เซปอะ': 'food',
-  '7-11': 'food',
-  'เซเว่น': 'food',
   'กินนอก': 'food',
   'สั่งอาหาร': 'food',
   
@@ -156,7 +153,6 @@ export function mapThaiToCategory(text: string): ExpenseCategory {
     'lunch': 'food',
     'dinner': 'food',
     'breakfast': 'food',
-    '7-eleven': 'food',
     'convenience': 'food',
     'utilities': 'utilities',
     'electricity': 'utilities',

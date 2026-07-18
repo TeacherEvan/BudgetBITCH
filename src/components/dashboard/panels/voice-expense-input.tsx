@@ -102,7 +102,7 @@ function parseExpenseFromText(text: string): ParsedExpense | null {
   
   // Extract merchant - try to find known merchants or use first noun phrase
   let merchant = '';
-  const merchants = ['7-eleven', '7-11', 'เซเว่น', 'เซเว่นอีเลฟเว่น', 'โลตัส', 'ลอตัส', 'lotus', 'บิ๊กซี', 'bigc', 'แมคโคร', 'makro', 'แกร็บ', 'แกรบ', 'กรับ', 'grab', 'โบลท์', 'bolt', 'เน็ตฟลิกซ์', 'netflix', 'สปอติฟาย', 'สปอตติฟาย', 'สปอตตี้', 'spotify', 'ยูทูบ', 'youtube', 'ดิสนีย์', 'disney', 'ทรูไอดี', 'trueid', 'สตาร์บัคส์', 'starbucks', 'อเมซอน', 'amazon', 'ลาซาด้า', 'lazada', 'ช็อปปี้', 'shopee'];
+  const merchants = ['โลตัส', 'ลอตัส', 'lotus', 'บิ๊กซี', 'bigc', 'แมคโคร', 'makro', 'แกร็บ', 'แกรบ', 'กรับ', 'grab', 'โบลท์', 'bolt', 'เน็ตฟลิกซ์', 'netflix', 'สปอติฟาย', 'สปอตติฟาย', 'สปอตตี้', 'spotify', 'ยูทูบ', 'youtube', 'ดิสนีย์', 'disney', 'ทรูไอดี', 'trueid', 'สตาร์บัคส์', 'starbucks', 'อเมซอน', 'amazon', 'ลาซาด้า', 'lazada', 'ช็อปปี้', 'shopee'];
   
   for (const m of merchants) {
     if (lowerText.includes(m)) {

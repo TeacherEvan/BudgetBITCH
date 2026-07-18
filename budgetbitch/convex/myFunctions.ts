@@ -1,78 +1,211 @@
 import { v } from 'convex/values';
-import { query, mutation, action } from './_generated/server';
-import { api } from './_generated/api';
+import { mutation, query } from './_generated/server';
 
-// Write your Convex functions in any file inside this directory (`convex`).
-// See https://docs.convex.dev/functions for more.
+const ACCOUNT_TYPES = v.union(
+  v.literal('bank'),
+  v.literal('cash'),
+  v.literal('card'),
+  v.literal('wallet'),
+);
 
-// You can read data from the database via a query:
-export const listNumbers = query({
-  // Validators for arguments.
+// ---------------------------------------------------------------------------
+// Accounts
+// ---------------------------------------------------------------------------
+
+export const createAccount = mutation({
   args: {
-    count: v.number(),
+    name: v.string(),
+    type: ACCOUNT_TYPES,
+    currency: v.string(),
   },
-
-  // Query implementation.
   handler: async (ctx, args) => {
-    //// Read the database as many times as you need here.
-    //// See https://docs.convex.dev/database/reading-data.
-    const numbers = await ctx.db
-      .query('numbers')
-      // Ordered by _creationTime, return most recent
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error('Unauthenticated');
+    const userId = identity.tokenIdentifier;
+    return await ctx.db.insert('accounts', {
+      userId,
+      name: args.name,
+      type: args.type,
+      currency: args.currency,
+      isActive: true,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+export const listAccounts = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+    return await ctx.db
+      .query('accounts')
+      .withIndex('by_userId', (q) => q.eq('userId', identity.tokenIdentifier))
+      .collect();
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Categories
+// ---------------------------------------------------------------------------
+
+export const createCategory = mutation({
+  args: {
+    name: v.string(),
+    kind: v.union(v.literal('income'), v.literal('expense')),
+    color: v.string(),
+    icon: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error('Unauthenticated');
+    const userId = identity.tokenIdentifier;
+    return await ctx.db.insert('categories', {
+      userId,
+      name: args.name,
+      kind: args.kind,
+      color: args.color,
+      icon: args.icon,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+export const listCategories = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+    return await ctx.db
+      .query('categories')
+      .withIndex('by_userId', (q) => q.eq('userId', identity.tokenIdentifier))
+      .collect();
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Transactions
+// ---------------------------------------------------------------------------
+
+export const addTransaction = mutation({
+  args: {
+    accountId: v.id('accounts'),
+    categoryId: v.optional(v.id('categories')),
+    amount: v.number(),
+    description: v.string(),
+    date: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error('Unauthenticated');
+    const userId = identity.tokenIdentifier;
+    return await ctx.db.insert('transactions', {
+      userId,
+      accountId: args.accountId,
+      categoryId: args.categoryId,
+      amount: args.amount,
+      description: args.description,
+      date: args.date,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+export const listTransactions = query({
+  args: { count: v.number() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    const userId = identity?.tokenIdentifier ?? null;
+    const transactions = await ctx.db
+      .query('transactions')
+      .withIndex('by_userId', (q) => q.eq('userId', userId ?? '__anon__'))
       .order('desc')
       .take(args.count);
     return {
-      viewer: (await ctx.auth.getUserIdentity())?.subject ?? null,
-      numbers: numbers.reverse().map((number) => number.value),
+      viewer: userId,
+      transactions: transactions.reverse(),
     };
   },
 });
 
-// You can write data to the database via a mutation:
-export const addNumber = mutation({
-  // Validators for arguments.
+// ---------------------------------------------------------------------------
+// Budgets
+// ---------------------------------------------------------------------------
+
+export const setBudget = mutation({
   args: {
-    value: v.number(),
+    month: v.string(),
+    amount: v.number(),
+    currency: v.string(),
+    categoryId: v.optional(v.id('categories')),
   },
-
-  // Mutation implementation.
   handler: async (ctx, args) => {
-    //// Insert or modify documents in the database here.
-    //// Mutations can also read from the database like queries.
-    //// See https://docs.convex.dev/database/writing-data.
-
-    const id = await ctx.db.insert('numbers', { value: args.value });
-
-    console.log('Added new document with id:', id);
-    // Optionally, return a value from your mutation.
-    // return id;
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error('Unauthenticated');
+    const userId = identity.tokenIdentifier;
+    const existing = await ctx.db
+      .query('budgets')
+      .withIndex('by_userId_and_month_and_categoryId', (q) =>
+        q
+          .eq('userId', userId)
+          .eq('month', args.month)
+          .eq('categoryId', args.categoryId ?? undefined),
+      )
+      .unique();
+    if (existing) {
+      await ctx.db.patch(existing._id, { amount: args.amount });
+      return existing._id;
+    }
+    return await ctx.db.insert('budgets', {
+      userId,
+      month: args.month,
+      amount: args.amount,
+      currency: args.currency,
+      categoryId: args.categoryId,
+      createdAt: Date.now(),
+    });
   },
 });
 
-// You can fetch data from and send data to third-party APIs via an action:
-export const myAction = action({
-  // Validators for arguments.
-  args: {
-    first: v.number(),
-    second: v.string(),
-  },
-
-  // Action implementation.
+export const listBudgets = query({
+  args: { month: v.string() },
   handler: async (ctx, args) => {
-    //// Use the browser-like `fetch` API to send HTTP requests.
-    //// See https://docs.convex.dev/functions/actions#calling-third-party-apis-and-using-npm-packages.
-    // const response = await fetch("https://api.thirdpartyservice.com");
-    // const data = await response.json();
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+    return await ctx.db
+      .query('budgets')
+      .withIndex('by_userId_and_month', (q) =>
+        q.eq('userId', identity.tokenIdentifier).eq('month', args.month),
+      )
+      .collect();
+  },
+});
 
-    //// Query data by running Convex queries.
-    const data = await ctx.runQuery(api.myFunctions.listNumbers, {
-      count: 10,
+// ---------------------------------------------------------------------------
+// Demo helper: seeds one account + one transaction for the signed-in user.
+// ---------------------------------------------------------------------------
+
+export const seedSampleData = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error('Unauthenticated');
+    const userId = identity.tokenIdentifier;
+    const accountId = await ctx.db.insert('accounts', {
+      userId,
+      name: 'Cash',
+      type: 'cash',
+      currency: 'USD',
+      isActive: true,
+      createdAt: Date.now(),
     });
-    console.log(data);
-
-    //// Write data by running Convex mutations.
-    await ctx.runMutation(api.myFunctions.addNumber, {
-      value: args.first,
+    await ctx.db.insert('transactions', {
+      userId,
+      accountId,
+      amount: -Math.floor(Math.random() * 100) - 1,
+      description: 'Sample expense',
+      date: Date.now(),
+      createdAt: Date.now(),
     });
   },
 });

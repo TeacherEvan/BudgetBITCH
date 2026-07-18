@@ -48,3 +48,5 @@ local-db-*
 # backup files
 *.bak
 *.test.ts
+# except the Convex function test suite (must be committed)
+!budgetbitch/convex/**/*.test.ts

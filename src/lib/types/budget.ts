@@ -124,7 +124,7 @@ export type ExpenseCategory =
 export const THAI_CATEGORY_ALIASES: Record<string, ExpenseCategory> = {
   'ค่าเช่า': 'housing', 'ค่าคอนโด': 'housing', 'บ้าน': 'housing',
   'ค่าเดินทาง': 'transport', 'บีทีเอส': 'transport', 'รถไฟฟ้า': 'transport', 'แกร็บ': 'transport', 'แกรบ': 'transport', 'กรับ': 'transport', 'น้ำมัน': 'transport',
-  'ค่าอาหาร': 'food', 'กินข้าว': 'food', 'เซปอะ': 'food', '7-11': 'food',
+  'ค่าอาหาร': 'food', 'กินข้าว': 'food',
   'ค่าน้ำค่าไฟ': 'utilities', 'อินเตอร์เน็ต': 'phone_internet', 'โทรศัพท์': 'phone_internet',
   'สมัครสมาชิก': 'subscriptions', 'เน็ตฟลิกซ์': 'subscriptions', 'สปอตตี้': 'subscriptions',
   'บันเทิง': 'entertainment', 'ดูหนัง': 'entertainment', 'เล่นเกม': 'entertainment',
