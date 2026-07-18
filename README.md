@@ -16,11 +16,11 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 - workspace roles and audit-log foundations
 - budget health scoring and due-soon automation
 - notification fanout and email template scaffolding
-- provider connection hub for Claude, OpenAI, GitHub Copilot, OpenClaw, Gemini, Perplexity, Mistral, Wise, Revolut, PayPal, Xero, and Deel
 - auth-first root entry that sends signed-out visitors to the welcome window, signed-in users without a saved launch profile to the launch wizard, and signed-in users with a saved launch profile to the landing board
 - privacy shield disclosures and consent receipt helpers
-- encrypted provider-secret vault primitives and revoke flow
-- API endpoints for auth bootstrap, budget health, Start Smart blueprint generation, Learn recommendations/module detail, Jobs search/recommendations, and integration connect/revoke
+- API endpoints for auth bootstrap, budget health, Start Smart blueprint generation, Learn recommendations/module detail, Jobs search/recommendations
+
+> Planned (not yet implemented in the current root app slice): the provider connection hub (Claude, OpenAI, GitHub Copilot, OpenClaw, Gemini, Perplexity, Mistral, Wise, Revolut, PayPal, Xero, Deel), the encrypted provider-secret vault primitives and revoke flow, and the integration connect/revoke API under `/settings/integrations`. These are tracked in `docs/CODEBASE_INDEX.md` (route map) and the revamp design plan, but no route or components exist yet.
 - compact launch wizard preferences with searchable city selection and threshold-based loading feedback
 
 ## Tech stack
@@ -127,8 +127,8 @@ Environment notes:
 - `CONVEX_SITE_URL` must be the Convex site URL used as the Convex Auth issuer, for example `https://steady-ox-280.convex.site`.
 - `SITE_URL` must be the app origin accepted by Convex Auth redirects, for example `http://localhost:3000` locally and `https://budget-bitch-green.vercel.app` in production.
 - `CONVEX_SYNC_SECRET` must be set to the same long random value in the Next.js/Vercel environment and in the Convex deployment; `/auth/continue` and projection replay both depend on it for trusted server-side Convex sync.
-- `PROVIDER_SECRET_ENCRYPTION_KEY` is only required when you want to exercise the encrypted integration connect/revoke routes.
-- `RESEND_API_KEY`, `INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY`, and `WEBHOOK_SIGNING_SECRET` remain scaffolded placeholders for email and webhook surfaces that are not active in the current root app slice.
+- `PROVIDER_SECRET_ENCRYPTION_KEY` is only required when you want to exercise the encrypted integration connect/revoke routes. No `/settings/integrations` route or components exist yet, so this is currently unused; it is reserved for the planned provider-vault work tracked in `docs/CODEBASE_INDEX.md`.
+- Email (`RESEND_API_KEY`) and webhook/queue (`INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY`, `WEBHOOK_SIGNING_SECRET`) surfaces are not active in the current root app slice and are not present in `.env.example`. They are listed here only so a future integration slice can add them without colliding with the existing Convex sync secrets.
 
 ## Start Smart regional data
 
