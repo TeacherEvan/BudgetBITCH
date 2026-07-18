@@ -13,6 +13,16 @@ import { formatCurrency } from '@/lib/utils/currency';
 import type { ExpenseCategory } from '@/lib/types/budget';
 import { VoiceExpenseInput } from './voice-expense-input';
 
+interface Expense {
+  id: string;
+  merchant: string;
+  amount: number;
+  category: ExpenseCategory;
+  date: string;
+  note?: string;
+  source: 'manual' | 'voice' | 'import';
+}
+
 const CATEGORIES: { value: ExpenseCategory; label: { th: string; en: string } }[] = [
   { value: 'housing', label: { th: 'ที่อยู่อาศัย', en: 'Housing' } },
   { value: 'transport', label: { th: 'การเดินทาง', en: 'Transport' } },
@@ -32,6 +42,15 @@ interface ExpenseTrackerProps {
   locale?: 'th' | 'en';
 }
 
+interface FormData {
+  merchant: string;
+  amount: string;
+  category: ExpenseCategory;
+  date: string;
+  note: string;
+  source: 'manual' | 'voice' | 'import';
+}
+
 export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
   const { expenses, add, update, remove, loading } = useExpenses();
   const { budgets } = useBudgets();
@@ -39,12 +58,13 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showVoiceInput, setShowVoiceInput] = useState(false);
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     merchant: '',
     amount: '',
     category: 'food' as ExpenseCategory,
     date: new Date().toISOString().split('T')[0],
     note: '',
+    source: 'manual' as const,
   });
 
   const categoryBudgets = new Map(budgets.map(b => [b.category, b.monthlyLimit]));
@@ -58,31 +78,32 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
   const handleVoiceAdd = (expense: { merchant: string; amount: number; category: ExpenseCategory; note?: string }) => {
     add({
       ...expense,
-      id: crypto.randomUUID(),
       date: new Date().toISOString().split('T')[0],
       source: 'voice',
-    } as any);
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.merchant || !formData.amount) return;
     
-    const expense = {
-      ...formData,
-      amount: parseFloat(formData.amount),
-      id: editingId || crypto.randomUUID(),
-    };
-    
     if (editingId) {
-      update(expense as any);
+      update({
+        ...formData,
+        amount: parseFloat(formData.amount),
+        id: editingId,
+      });
     } else {
-      add(expense as any);
+      add({
+        ...formData,
+        amount: parseFloat(formData.amount),
+        source: formData.source,
+      });
     }
     resetForm();
   };
 
-  const handleEdit = (expense: any) => {
+  const handleEdit = (expense: Expense) => {
     setEditingId(expense.id);
     setFormData({
       merchant: expense.merchant,
@@ -90,6 +111,7 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
       category: expense.category,
       date: expense.date,
       note: expense.note || '',
+      source: expense.source,
     });
     setShowForm(true);
   };
@@ -104,9 +126,10 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
     setFormData({
       merchant: '',
       amount: '',
-      category: 'food',
+      category: 'food' as ExpenseCategory,
       date: new Date().toISOString().split('T')[0],
       note: '',
+      source: 'manual' as const,
     });
   };
 
@@ -170,7 +193,7 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
             <Select
               label={locale === 'th' ? 'หมวดหมู่' : 'Category'}
               value={formData.category}
-              onChange={e => setFormData({ ...formData, category: e.target.value as any })}
+              onChange={e => setFormData({ ...formData, category: e.target.value as ExpenseCategory })}
               options={categoryOptions}
             />
             <Input

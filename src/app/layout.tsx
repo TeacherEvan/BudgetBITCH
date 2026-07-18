@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/components/providers/theme-provider';
+import { ConvexAuthNextjsServerProvider } from '@convex-dev/auth/nextjs/server';
 import { ConvexClientProvider } from '@/components/providers/convex-client-provider';
 import { PWARegister } from '@/components/pwa/pwa-register';
 import { NextIntlClientProvider } from 'next-intl';
@@ -44,14 +45,16 @@ export default async function RootLayout({
         <meta name="theme-color" content="#f5d742" media="(prefers-color-scheme: light)" />
       </head>
       <body className="min-h-screen bg-black text-white">
-        <NextIntlClientProvider messages={messages} locale={locale}>
-          <ThemeProvider>
-            <ConvexClientProvider>
-              <PWARegister />
-              {children}
-            </ConvexClientProvider>
-          </ThemeProvider>
-        </NextIntlClientProvider>
+        <ConvexAuthNextjsServerProvider apiRoute="/api/convex-auth">
+          <NextIntlClientProvider messages={messages} locale={locale}>
+            <ThemeProvider>
+              <ConvexClientProvider>
+                <PWARegister />
+                {children}
+              </ConvexClientProvider>
+            </ThemeProvider>
+          </NextIntlClientProvider>
+        </ConvexAuthNextjsServerProvider>
       </body>
     </html>
   );

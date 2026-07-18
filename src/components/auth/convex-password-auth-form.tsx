@@ -43,7 +43,7 @@ export function ConvexPasswordAuthForm({
       }
 
       if (result.signingIn) {
-        router.push(`/auth/continue?redirectTo=${encodeURIComponent(redirectTo)}`);
+        router.push(redirectTo);
         router.refresh();
         return;
       }

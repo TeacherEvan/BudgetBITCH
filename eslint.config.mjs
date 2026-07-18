@@ -7,6 +7,7 @@ const eslintConfig = [
   {
     ignores: [
      ".next/**",
+      "budgetbitch/.next/**",
       ".worktrees/**",
       ".vercel/**",
       "out/**",

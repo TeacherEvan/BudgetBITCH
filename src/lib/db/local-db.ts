@@ -74,6 +74,7 @@ let dbInstance: IDBPDatabase<BudgetBITCHDB> | null = null;
 export async function getDB(): Promise<IDBPDatabase<BudgetBITCHDB>> {
   if (typeof window === 'undefined') {
     // Return a dummy DB proxy to prevent SSR crashes.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return new Proxy({} as any, {
       get(target, prop) {
         if (prop === 'then') {

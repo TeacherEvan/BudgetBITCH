@@ -37,19 +37,6 @@ const STEPS: WizardStepId[] = [
   'entertainment', 'healthcare', 'savingsRatePct', 'riskTolerance', 'locationConsent'
 ];
 
-const STEP_LABELS: Record<WizardStepId, { th: string; en: string }> = {
-  income: { th: 'รายได้', en: 'Income' },
-  rent: { th: 'ค่าเช่า/ที่อยู่อาศัย', en: 'Rent / Housing' },
-  transport: { th: 'ค่าเดินทาง', en: 'Transport' },
-  phoneInternet: { th: 'โทรศัพท์/อินเตอร์เน็ต', en: 'Phone / Internet' },
-  subscriptions: { th: 'สมัครสมาชิก', en: 'Subscriptions' },
-  entertainment: { th: 'บันเทิง/ความบันเทิง', en: 'Entertainment' },
-  healthcare: { th: 'สุขภาพ/ค่ายา', en: 'Healthcare' },
-  savingsRatePct: { th: 'อัตราการออม', en: 'Savings Rate' },
-  riskTolerance: { th: 'จุดรับความเสี่ยง', en: 'Risk Tolerance' },
-  locationConsent: { th: 'ตำแหน่งที่ตั้ง', en: 'Location' },
-};
-
 // Voices for each step
 const STEP_VOICE_PROMPTS: Record<WizardStepId, { th: string; en: string }> = {
   income: { 

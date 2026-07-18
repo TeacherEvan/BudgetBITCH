@@ -1,8 +1,8 @@
 // app/settings/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Globe, Volume2, Palette, Trash2, AlertCircle, Check, Shield, Download, Upload } from 'lucide-react';
+import { useState } from 'react';
+import { Globe, Volume2, Palette, Trash2, AlertCircle, Shield, Download, Upload } from 'lucide-react';
 import { useConvexAuth } from '@convex-dev/auth/react';
 import { useWizardProfile } from '@/hooks/use-local-db';
 import { useVoice } from '@/hooks/use-voice';

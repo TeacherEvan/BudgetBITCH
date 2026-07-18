@@ -339,7 +339,7 @@ export function useNetWorth() {
 
 // Subscriptions
 export function useSubscriptions() {
-  const [subscriptions, setSubscriptions] = useState<any[]>([]);
+  const [subscriptions, setSubscriptions] = useState<ExpenseEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -356,13 +356,13 @@ export function useSubscriptions() {
     return () => { mounted = false; };
   }, []);
 
-  const add = useCallback(async (sub: any) => {
-    const newSub = { ...sub, id: generateId(), category: 'subscriptions', isRecurring: true };
+  const add = useCallback(async (sub: Omit<ExpenseEntry, 'id'>) => {
+    const newSub = { ...sub, id: generateId(), category: 'subscriptions' as const, isRecurring: true };
     await addExpense(newSub);
     setSubscriptions(prev => [newSub, ...prev]);
   }, []);
 
-  const update = useCallback(async (sub: any) => {
+  const update = useCallback(async (sub: ExpenseEntry) => {
     await updateExpense(sub);
     setSubscriptions(prev => prev.map(s => s.id === sub.id ? sub : s));
   }, []);
@@ -400,11 +400,11 @@ export function useEmergencyFund() {
 
   const update = useCallback(async (updates: { targetAmount?: number; currentAmount?: number }) => {
     const goals = await getAllSavingsGoals();
-    let emergencyGoal = goals.find(g => g.category === 'emergency');
+    const emergencyGoal = goals.find(g => g.category === 'emergency');
     
     if (!emergencyGoal) {
       // Create new emergency fund goal
-      const newGoal: any = {
+      const newGoal: SavingsGoal = {
         id: generateId(),
         name: 'Emergency Fund',
         targetAmount: updates.targetAmount || 50000,
@@ -469,7 +469,7 @@ export function useCashFlowForecast() {
   useEffect(() => {
     let mounted = true;
     const loadForecast = async () => {
-      const [budgets, expenses] = await Promise.all([getAllBudgets(), getExpenses()]);
+      const [budgets] = await Promise.all([getAllBudgets()]);
       
       const monthlyIncome = budgets.find(b => b.category === 'savings')?.monthlyLimit || 50000;
       const monthlyExpenses = budgets.reduce((sum, b) => sum + b.monthlyLimit, 0) - (budgets.find(b => b.category === 'savings')?.monthlyLimit || 0);

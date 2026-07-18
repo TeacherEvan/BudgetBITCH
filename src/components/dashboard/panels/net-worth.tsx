@@ -108,26 +108,14 @@ export function NetWorth({ locale = 'en' }: { locale?: 'th' | 'en' }) {
           Net Worth
         </h3>
         <div className="flex gap-2">
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => openAssetForm()}
-          >
-            <Button variant="primary" size="sm">
-              <Plus className="w-4 h-4 mr-1" />
-              {locale === 'th' ? '+ ทรัพย์สิน' : '+ Asset'}
-            </Button>
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => openLiabilityForm()}
-          >
-            <Button variant="secondary" size="sm">
-              <Plus className="w-4 h-4 mr-1" />
-              {locale === 'th' ? '+ หนี้สิน' : '+ Liability'}
-            </Button>
-          </motion.button>
+          <Button variant="primary" size="sm" onClick={() => openAssetForm()}>
+            <Plus className="w-4 h-4 mr-1" />
+            {locale === 'th' ? '+ ทรัพย์สิน' : '+ Asset'}
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => openLiabilityForm()}>
+            <Plus className="w-4 h-4 mr-1" />
+            {locale === 'th' ? '+ หนี้สิน' : '+ Liability'}
+          </Button>
         </div>
       </motion.div>
 

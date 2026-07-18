@@ -33,7 +33,7 @@ export function CriticalExpensesModal({ isOpen, onClose, locale }: CriticalExpen
       suggestions[key] = getSuggestedCriticalExpenseCost(key, profile.answers);
     }
     return suggestions;
-  }, [profile]);
+  }, [profile, expenseList]);
 
   const handleSelect = (key: CriticalExpenseKey) => {
     setSelectedExpense(key);

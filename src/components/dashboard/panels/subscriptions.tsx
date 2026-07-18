@@ -10,15 +10,15 @@ import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { formatCurrency } from '@/lib/utils/currency';
-import { generateId } from '@/lib/db/local-db';
 import { SubscriptionsSkeleton } from './subscriptions-skeleton';
 import { EmptyState } from './empty-state';
+import type { ExpenseEntry } from '@/lib/types/budget';
 
 interface SubscriptionsProps {
   locale?: 'th' | 'en';
 }
 
-interface FormData {
+interface SubscriptionFormData {
   name: string;
   amount: string;
   cycle: 'monthly' | 'yearly';
@@ -26,7 +26,7 @@ interface FormData {
   paymentMethod: 'credit_card' | 'debit_card' | 'bank_transfer' | 'wallet';
 }
 
-const initialFormData: FormData = {
+const initialFormData: SubscriptionFormData = {
   name: '',
   amount: '',
   cycle: 'monthly',
@@ -59,13 +59,13 @@ export function Subscriptions({ locale = 'en' }: SubscriptionsProps) {
   const { subscriptions, add, update, remove, loading } = useSubscriptions();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState<FormData>(initialFormData);
+  const [formData, setFormData] = useState<SubscriptionFormData>(initialFormData);
 
   const totalMonthly = subscriptions
-    .filter(s => s.cycle === 'monthly')
+    .filter((s): s is ExpenseEntry & { cycle: 'monthly' } => s.cycle === 'monthly')
     .reduce((sum, s) => sum + s.amount, 0);
   const totalYearly = subscriptions
-    .filter(s => s.cycle === 'yearly')
+    .filter((s): s is ExpenseEntry & { cycle: 'yearly' } => s.cycle === 'yearly')
     .reduce((sum, s) => sum + s.amount / 12, 0);
   const total = totalMonthly + totalYearly;
 
@@ -79,30 +79,37 @@ export function Subscriptions({ locale = 'en' }: SubscriptionsProps) {
     e.preventDefault();
     if (!formData.name || !formData.amount) return;
 
-    const sub = {
-      ...formData,
-      amount: parseFloat(formData.amount),
-      id: editingId || generateId(),
+    const sub: Omit<ExpenseEntry, 'id'> = {
       date: new Date().toISOString().split('T')[0],
+      category: 'subscriptions',
+      merchant: formData.name,
+      amount: parseFloat(formData.amount),
       isRecurring: true,
+      cycle: formData.cycle,
+      source: 'manual',
+      note: `category: ${formData.category}, payment: ${formData.paymentMethod}`,
     };
 
     if (editingId) {
-      await update(sub as any);
+      await update({ ...sub, id: editingId });
     } else {
-      await add(sub as any);
+      await add(sub);
     }
     resetForm();
   };
 
-  const handleEdit = (sub: any) => {
+  const handleEdit = (sub: ExpenseEntry) => {
+    const note = sub.note || '';
+    const categoryMatch = note.match(/category: ([^,]+)/);
+    const paymentMatch = note.match(/payment: ([^,]+)/);
+    
     setEditingId(sub.id);
     setFormData({
-      name: sub.name,
+      name: sub.merchant,
       amount: sub.amount.toString(),
-      cycle: sub.cycle,
-      category: sub.category,
-      paymentMethod: sub.paymentMethod,
+      cycle: sub.cycle || 'monthly',
+      category: (categoryMatch ? categoryMatch[1] : 'streaming') as SubscriptionFormData['category'],
+      paymentMethod: (paymentMatch ? paymentMatch[1] : 'credit_card') as SubscriptionFormData['paymentMethod'],
     });
     setIsFormOpen(true);
   };
@@ -179,7 +186,12 @@ export function Subscriptions({ locale = 'en' }: SubscriptionsProps) {
           className="space-y-2"
           role="list"
         >
-          {subscriptions.map((sub, index) => (
+          {subscriptions.map((sub, index) => {
+            const note = sub.note || '';
+            const categoryMatch = note.match(/category: ([^,]+)/);
+            const category = categoryMatch ? categoryMatch[1] : 'streaming';
+            
+            return (
             <motion.div
               key={sub.id}
               initial={{ opacity: 0, x: -20 }}
@@ -195,11 +207,11 @@ export function Subscriptions({ locale = 'en' }: SubscriptionsProps) {
                   animate={{ scale: 1 }}
                   className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/80"
                 >
-                  {getCategoryIcon(sub.category)}
+                  {getCategoryIcon(category)}
                 </motion.div>
                 <div>
-                  <p className="font-medium text-white">{sub.name}</p>
-                  <p className="text-xs text-white/60 capitalize">{sub.cycle} · {sub.category}</p>
+                  <p className="font-medium text-white">{sub.merchant}</p>
+                  <p className="text-xs text-white/60 capitalize">{sub.cycle || 'monthly'} · {category}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -224,7 +236,8 @@ export function Subscriptions({ locale = 'en' }: SubscriptionsProps) {
                 </motion.button>
               </div>
             </motion.div>
-          ))}
+            );
+          })}
         </motion.div>
       )}
 
@@ -266,13 +279,13 @@ export function Subscriptions({ locale = 'en' }: SubscriptionsProps) {
             <Select
               label="Category"
               value={formData.category}
-              onChange={e => setFormData({ ...formData, category: e.target.value as FormData['category'] })}
+              onChange={e => setFormData({ ...formData, category: e.target.value as 'streaming' | 'music' | 'software' | 'gaming' | 'cloud' | 'other' })}
               options={categoryOptions(locale).map(c => ({ value: c.value, label: c.label }))}
             />
             <Select
               label="Payment Method"
               value={formData.paymentMethod}
-              onChange={e => setFormData({ ...formData, paymentMethod: e.target.value as FormData['paymentMethod'] })}
+              onChange={e => setFormData({ ...formData, paymentMethod: e.target.value as 'credit_card' | 'debit_card' | 'bank_transfer' | 'wallet' })}
               options={paymentOptions.map(p => ({ value: p.value, label: p.label }))}
             />
           </div>

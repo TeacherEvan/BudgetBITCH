@@ -11,6 +11,17 @@ import { Card } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils/currency';
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
+import type { ExpenseCategory } from '@/lib/types/budget';
+
+interface Bill {
+  id: string;
+  name: string;
+  amount: number;
+  category: ExpenseCategory;
+  dueDay: number;
+  isActive: boolean;
+  reminderDaysBefore: number;
+}
 
 const CATEGORIES = [
   { value: 'housing', label: { th: 'ที่อยู่อาศัย', en: 'Housing' } },
@@ -38,7 +49,7 @@ export function Bills({ locale = 'en' }: BillsProps) {
   const [formData, setFormData] = useState({
     name: '',
     amount: '',
-    category: 'utilities',
+    category: 'utilities' as ExpenseCategory,
     dueDay: 1,
     isActive: true,
     reminderDaysBefore: 3,
@@ -48,28 +59,28 @@ export function Bills({ locale = 'en' }: BillsProps) {
     e.preventDefault();
     if (!formData.name || !formData.amount) return;
     
-    const bill = {
+    const bill: Bill = {
       ...formData,
       amount: parseFloat(formData.amount),
-      dueDay: parseInt(formData.dueDay as any),
+      dueDay: typeof formData.dueDay === 'string' ? parseInt(formData.dueDay) : formData.dueDay,
       id: editingId || crypto.randomUUID(),
     };
     
     if (editingId) {
-      update(bill as any);
+      update(bill);
     } else {
-      add(bill as any);
+      add(bill);
     }
     resetForm();
   };
 
-  const handleEdit = (bill: any) => {
+  const handleEdit = (bill: Bill) => {
     setEditingId(bill.id);
     setFormData({
       name: bill.name,
       amount: bill.amount.toString(),
       category: bill.category,
-      dueDay: bill.dueDay.toString(),
+      dueDay: bill.dueDay,
       isActive: bill.isActive,
       reminderDaysBefore: bill.reminderDaysBefore,
     });
@@ -86,7 +97,7 @@ export function Bills({ locale = 'en' }: BillsProps) {
     setFormData({
       name: '',
       amount: '',
-      category: 'utilities',
+      category: 'utilities' as ExpenseCategory,
       dueDay: 1,
       isActive: true,
       reminderDaysBefore: 3,
@@ -106,7 +117,7 @@ export function Bills({ locale = 'en' }: BillsProps) {
   };
 
   const categoryOptions = CATEGORIES.map(c => ({
-    value: c.value,
+    value: c.value as ExpenseCategory,
     label: locale === 'th' ? c.label.th : c.label.en,
   }));
 
@@ -145,7 +156,7 @@ export function Bills({ locale = 'en' }: BillsProps) {
             <Select
               label={locale === 'th' ? 'หมวดหมู่' : 'Category'}
               value={formData.category}
-              onChange={e => setFormData({ ...formData, category: e.target.value as any })}
+              onChange={e => setFormData({ ...formData, category: e.target.value as ExpenseCategory })}
               options={categoryOptions}
             />
             <div className="grid gap-3 sm:grid-cols-3">

@@ -5,7 +5,6 @@ import { PWAInstallPrompt } from './install-prompt';
 
 describe('PWAInstallPrompt', () => {
   const mockOnDismiss = vi.fn();
-  let originalWindow: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -25,9 +24,6 @@ describe('PWAInstallPrompt', () => {
         dispatchEvent: vi.fn(),
       })),
     });
-
-    // Store original
-    originalWindow = global.window;
   });
 
   afterEach(() => {

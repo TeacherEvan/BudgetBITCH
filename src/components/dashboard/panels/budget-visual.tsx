@@ -26,26 +26,39 @@ interface BudgetVisualProps {
   locale?: 'th' | 'en';
 }
 
+interface Expense {
+  id: string;
+  category: string;
+  amount: number;
+  date: string;
+}
+
+interface Budget {
+  category: string;
+  monthlyLimit: number;
+  alertAtPct: number;
+}
+
 export function BudgetVisual({ locale = 'en' }: BudgetVisualProps) {
   const { expenses: rawExpenses } = useExpenses();
   const { budgets: rawBudgets } = useBudgets();
 
-  const expenses = rawExpenses as any[];
-  const budgets = rawBudgets as any[];
+  const expenses = rawExpenses as Expense[];
+  const budgets = rawBudgets as Budget[];
 
   const monthlyIncome = 50000;
   const currentMonth = format(new Date(), 'yyyy-MM');
   
   const monthlyExpenses = expenses
-    .filter((e: any) => format(new Date(e.date), 'yyyy-MM') === currentMonth)
-    .reduce((acc: Record<string, number>, e: any) => {
+    .filter((e: Expense) => format(new Date(e.date), 'yyyy-MM') === currentMonth)
+    .reduce((acc: Record<string, number>, e: Expense) => {
       acc[e.category] = (acc[e.category] || 0) + e.amount;
       return acc;
     }, {});
 
   const budgetData = CATEGORIES.map((cat) => {
     const spent = monthlyExpenses[cat.value] || 0;
-    const budget = budgets.find((b: any) => b.category === cat.value)?.monthlyLimit || 0;
+    const budget = budgets.find((b: Budget) => b.category === cat.value)?.monthlyLimit || 0;
     return {
       category: cat.label[locale === 'th' ? 'th' : 'en'],
       spent,
@@ -106,7 +119,7 @@ export function BudgetVisual({ locale = 'en' }: BudgetVisualProps) {
         )}
 
         <div className="space-y-2 mt-4">
-          {budgetData.map((item: any, index: number) => (
+          {budgetData.map((item: { category: string; spent: number; budget: number; pct: number }, index: number) => (
             <div key={item.category} className="flex items-center gap-3">
               <div className="w-5 h-5 rounded" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
               <div className="flex-1 min-w-0">

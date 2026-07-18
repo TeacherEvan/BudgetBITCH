@@ -27,7 +27,7 @@ Object.defineProperty(window, 'localStorage', {
 
 // Mock components
 vi.mock('@/components/onboarding/language-select-modal', () => ({
-  LanguageSelectModal: ({ isOpen, onComplete }: any) =>
+  LanguageSelectModal: ({ isOpen, onComplete }: { isOpen: boolean; onComplete: (locale: string) => void }) =>
     isOpen ? (
       <div data-testid="language-modal" role="dialog">
         <button onClick={() => onComplete('th')}>ไทย</button>
@@ -37,7 +37,7 @@ vi.mock('@/components/onboarding/language-select-modal', () => ({
 }));
 
 vi.mock('@/components/auth/clean-auth-card', () => ({
-  CleanAuthCard: ({ initialFlow }: any) => (
+  CleanAuthCard: ({ initialFlow }: { initialFlow: string }) => (
     <div data-testid="clean-auth-card">
       <span>{initialFlow === 'signIn' ? 'Sign In' : 'Sign Up'}</span>
     </div>

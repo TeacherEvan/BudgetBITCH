@@ -79,7 +79,7 @@ export function DebtPayoff({ locale = 'en' }: DebtPayoffProps) {
     setFormData({ name: '', balance: '', apr: '', minimumPayment: '', type: 'credit_card' });
   };
 
-  const handleEdit = (debt: any) => {
+  const handleEdit = (debt: Debt) => {
     setEditingId(debt.id);
     setFormData({ name: debt.name, balance: debt.balance.toString(), apr: debt.apr.toString(), minimumPayment: debt.minimumPayment.toString(), type: debt.type });
     setShowForm(true);
@@ -179,7 +179,7 @@ export function DebtPayoff({ locale = 'en' }: DebtPayoffProps) {
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <Input label={locale === 'th' ? 'ชำระขั้นต่ำ/เดือน' : 'Min Payment/Month'} type="number" step="0.01" min="0" value={formData.minimumPayment} onChange={e => setFormData({...formData, minimumPayment: e.target.value})} required />
-                <Select label={locale === 'th' ? 'ประเภทหนี้' : 'Debt Type'} value={formData.type} onChange={e => setFormData({...formData, type: e.target.value as any})} options={DEBT_TYPES_OPTIONS} />
+                <Select label={locale === 'th' ? 'ประเภทหนี้' : 'Debt Type'} value={formData.type} onChange={e => setFormData({...formData, type: e.target.value as DebtType})} options={DEBT_TYPES_OPTIONS} />
               </div>
               <div className="flex gap-2">
                 <Button type="button" onClick={resetForm} variant="secondary">{locale === 'th' ? 'ยกเลิก' : 'Cancel'}</Button>

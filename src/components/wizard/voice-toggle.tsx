@@ -1,7 +1,6 @@
 // components/wizard/voice-toggle.tsx
 'use client';
 
-import { Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { Toggle } from '@/components/ui/toggle';
 
 interface VoiceToggleProps {

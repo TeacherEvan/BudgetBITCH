@@ -6,7 +6,6 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { LanguageSelectModal } from "@/components/onboarding/language-select-modal";
 import { PWAInstallPrompt } from "@/components/pwa/install-prompt";
 import { CleanAuthCard } from "@/components/auth/clean-auth-card";
-import { normalizeConvexCloudUrl } from "@/lib/url";
 
 export const dynamic = 'force-dynamic';
 

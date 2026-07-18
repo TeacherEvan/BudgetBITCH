@@ -9,7 +9,6 @@ export const PROTECTED_PAGE_PREFIXES = [
   "/dashboard",
   "/settings",
   "/wizard",
-  AUTH_ROUTES.continue,
 ] as const;
 
 export const PROTECTED_API_PREFIXES = [

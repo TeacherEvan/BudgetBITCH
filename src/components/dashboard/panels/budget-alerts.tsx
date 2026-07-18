@@ -9,6 +9,7 @@ import { generateBudgetAlerts, getBudgetSummary } from '@/lib/utils/budget-alert
 import { formatCurrency } from '@/lib/utils/currency';
 import { Card } from '@/components/ui/card';
 import type { BudgetAlert } from '@/lib/utils/budget-alerts';
+import type { BudgetCategory, ExpenseEntry } from '@/lib/types/budget';
 
 interface BudgetAlertsProps {
   locale?: 'th' | 'en';
@@ -33,16 +34,16 @@ export function BudgetAlerts({ locale = 'en' }: BudgetAlertsProps) {
   const { budgets: rawBudgets } = useBudgets();
   const { profile } = useWizardProfile();
 
-  const expenses = rawExpenses as { category: string; amount: number }[];
-  const budgets = rawBudgets as { category: string; monthlyLimit: number; alertAtPct: number }[];
+  const expenses = rawExpenses as { category: ExpenseEntry['category']; amount: number }[];
+  const budgets = rawBudgets as BudgetCategory[];
 
-  const alerts = useMemo(() => 
-    generateBudgetAlerts(budgets as any, expenses as any, locale), 
+  const alerts = useMemo(() =>
+    generateBudgetAlerts(budgets, expenses, locale),
     [budgets, expenses, locale]
   );
 
-  const summary = useMemo(() => 
-    getBudgetSummary(budgets as any, expenses as any), 
+  const summary = useMemo(() =>
+    getBudgetSummary(budgets, expenses),
     [budgets, expenses]
   );
 

@@ -112,6 +112,7 @@ export interface ExpenseEntry {
   isRecurring?: boolean;
   recurringId?: string; // for subscription detection
   source: 'manual' | 'voice' | 'import';
+  cycle?: 'monthly' | 'yearly'; // for subscriptions
 }
 
 export type ExpenseCategory =

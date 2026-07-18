@@ -40,7 +40,11 @@ export function WizardClient({ wizardCompleted: initialWizardCompleted }: Wizard
   // Check if wizard is already completed (client-side fallback)
   useEffect(() => {
     if (!initialWizardCompleted) {
-      checkWizardStatus();
+      // Defer to avoid setState in effect warning
+      const timer = setTimeout(() => {
+        checkWizardStatus();
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [initialWizardCompleted, checkWizardStatus]);
 
