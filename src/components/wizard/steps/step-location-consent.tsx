@@ -1,7 +1,7 @@
 // components/wizard/steps/step-location-consent.tsx
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MapPin, Shield, AlertCircle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -17,6 +17,17 @@ interface StepLocationConsentProps {
 export function StepLocationConsent({ locale, value, onChange, error, disabled, speak }: StepLocationConsentProps) {
   const [disclaimerRead, setDisclaimerRead] = useState(false);
   const [locationGranted, setLocationGranted] = useState(false);
+  const [requesting, setRequesting] = useState(false);
+  const [unsupported, setUnsupported] = useState(false);
+
+  // Feature-detect Geolocation on mount. Safari & Firefox expose it ONLY via
+  // navigator.geolocation — they do NOT support the Permissions API query with
+  // name: 'geolocation' (Chromium-only), so we must never gate the request on it.
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
+      setUnsupported(true);
+    }
+  }, []);
 
   const labels = {
     th: {
@@ -26,7 +37,7 @@ export function StepLocationConsent({ locale, value, onChange, error, disabled, 
         icon: '🛡️',
         title: 'ข้อความเกี่ยวกับความเป็นส่วนตัว',
         points: [
-          'เราใช้ตำแหน่งของคุณ เพื่อแสดงราคาน้ำมัน ข่าวเศรษฐกิจท้องถิ่น และโปรโมชั่น 7-Eleven ใกล้บ้านเท่านั้น',
+          'เราใช้ตำแหน่งของคุณ เพื่อแสดงราคาน้ำมัน ข่าวเศรษฐกิจท้องถิ่น และโปรโมชั่นร้านค้าใกล้เคียงเท่านั้น',
           'ไม่เก็บข้อมูลตำแหน่งเพื่อการตลาด ไม่ขายข้อมูล ไม่ติดตามการเคลื่อนไหว',
           'ข้อมูลตำแหน่งเก็บอยู่เครื่องเท่านั้น ส่งขึ้น Convex เฉพาะ snapshot รายวัน (ไม่มีพิกัด)',
           'คุณสามารถปิดการเข้าถึงตำแหน่งได้ทุกเมื่อใน Settings (ไอคอนโลกด้านบน)',
@@ -43,7 +54,7 @@ export function StepLocationConsent({ locale, value, onChange, error, disabled, 
         icon: '🛡️',
         title: 'Privacy Disclaimer',
         points: [
-          'We use your location ONLY for local fuel prices, economic news, and nearby 7-Eleven deals',
+          'We use your location ONLY for local fuel prices, economic news, and nearby store deals',
           'No marketing use. No data selling. No tracking.',
           'Location data stays on device. Only daily snapshots (no coordinates) sent to Convex.',
           'You can revoke location access anytime in Settings (globe icon in header).',
@@ -57,37 +68,44 @@ export function StepLocationConsent({ locale, value, onChange, error, disabled, 
 
   const l = labels[locale];
 
-  const handleGrantLocation = async () => {
-    try {
-      const permission = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
-      if (permission.state === 'granted') {
+  const handleGrantLocation = () => {
+    if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
+      setUnsupported(true);
+      speak(locale === 'th' ? 'เบราว์เซอร์นี้ไม่รองรับตำแหน่ง' : 'This browser does not support location');
+      return;
+    }
+    setRequesting(true);
+    // Call getCurrentPosition directly. This is the only Geolocation API
+    // supported across Chrome, Firefox, Safari (macOS + iOS) and all mobile
+    // browsers. It triggers the native permission prompt on its own.
+    navigator.geolocation.getCurrentPosition(
+      () => {
+        setRequesting(false);
         setLocationGranted(true);
         onChange('locationConsent', true);
-        if (value !== true) {
-          const msg = locale === 'th' ? 'อนุญาตตำแหน่งแล้ว' : 'Location permission granted';
-          speak(msg);
-        }
-      } else if (permission.state === 'prompt') {
-        navigator.geolocation.getCurrentPosition(
-          () => {
-            setLocationGranted(true);
-            onChange('locationConsent', true);
-            const msg = locale === 'th' ? 'อนุญาตตำแหน่งแล้ว' : 'Location permission granted';
-            speak(msg);
-          },
-          (err) => {
-            const msg = locale === 'th' ? 'ไม่สามารถเข้าถึงตำแหน่งได้' : 'Unable to access location';
-            speak(msg);
-          }
-        );
-      } else {
-        const msg = locale === 'th' ? 'การเข้าถึงตำแหน่งถูกปฏิเสธ' : 'Location access denied';
+        const msg = locale === 'th' ? 'อนุญาตตำแหน่งแล้ว' : 'Location permission granted';
         speak(msg);
-      }
-    } catch (err) {
-      const msg = locale === 'th' ? 'เกิดข้อผิดพลาด' : 'Error occurred';
-      speak(msg);
-    }
+      },
+      (err) => {
+        setRequesting(false);
+        let msg: string;
+        switch (err.code) {
+          case err.PERMISSION_DENIED:
+            msg = locale === 'th' ? 'การเข้าถึงตำแหน่งถูกปฏิเสธ' : 'Location access denied';
+            break;
+          case err.POSITION_UNAVAILABLE:
+            msg = locale === 'th' ? 'ไม่พบตำแหน่งปัจจุบัน' : 'Location unavailable';
+            break;
+          case err.TIMEOUT:
+            msg = locale === 'th' ? 'หมดเวลาการเข้าถึงตำแหน่ง' : 'Location request timed out';
+            break;
+          default:
+            msg = locale === 'th' ? 'ไม่สามารถเข้าถึงตำแหน่งได้' : 'Unable to access location';
+        }
+        speak(msg);
+      },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+    );
   };
 
   return (
@@ -127,9 +145,9 @@ export function StepLocationConsent({ locale, value, onChange, error, disabled, 
         <Button
           variant={value ? 'primary' : (disclaimerRead ? 'primary' : 'secondary')}
           onClick={handleGrantLocation}
-          disabled={disabled || (!disclaimerRead && !value)}
+          disabled={disabled || unsupported || (!disclaimerRead && !value) || requesting}
           className="w-full"
-          isLoading={!value && !locationGranted}
+          isLoading={requesting}
         >
           <MapPin className="h-5 w-5 mr-2" />
           {value ? l.grantedText : l.grantButton}
@@ -163,6 +181,14 @@ export function StepLocationConsent({ locale, value, onChange, error, disabled, 
       {error && (
         <p className="text-center text-rose-400 text-sm" role="alert">
           {error}
+        </p>
+      )}
+
+      {unsupported && (
+        <p className="text-center text-amber-400 text-sm" role="alert">
+          {locale === 'th'
+            ? 'เบราว์เซอร์นี้ไม่รองรับตำแหน่ง คุณสามารถข้ามได้'
+            : 'This browser does not support location. You can skip.'}
         </p>
       )}
     </div>
