@@ -54,12 +54,22 @@ export const ensureProfile = mutation({
   },
 });
 
-/** Returns the caller's sharing profile, or null if not yet created. Read-only. */
+/**
+ * Returns the caller's sharing profile, or null if not authenticated or not yet
+ * created. Read-only.
+ *
+ * Returning null (rather than throwing) on missing auth is intentional: this
+ * query is subscribed to app-wide (SharedBoardSync) on every authenticated page,
+ * so during the brief auth-token hydration window getAuthUserId can be null.
+ * Throwing there surfaced as an uncaught Convex Server Error in the console.
+ * The client hook already treats `myProfile === null` as a valid "needs profile"
+ * state and creates one via ensureProfile.
+ */
 export const getMyProfile = query({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Authentication required");
+    if (!userId) return null;
     const profile = await ctx.db
       .query("userProfiles")
       .withIndex("by_user", (q) => q.eq("userId", userId))

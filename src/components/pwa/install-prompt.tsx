@@ -18,17 +18,15 @@ export function PWAInstallPrompt({
   locale?: 'th' | 'en';
 }) {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [showPrompt, setShowPrompt] = useState(() => {
-    // Check if already installed on initial render
-    if (typeof window !== 'undefined') {
-      return !window.matchMedia('(display-mode: standalone)').matches;
-    }
-    return false;
-  });
+  const [showPrompt, setShowPrompt] = useState(false);
   const mountedRef = useRef(false);
 
   useEffect(() => {
     mountedRef.current = true;
+    // Defer the prompt to the beforeinstallprompt event. We do NOT read
+    // matchMedia during render or synchronously in this effect, so SSR and
+    // hydration HTML stay identical (avoids React #418). Standalone (installed)
+    // PWAs never fire beforeinstallprompt, so the banner correctly stays hidden.
 
     const handler = (e: Event) => {
       const promptEvent = e as BeforeInstallPromptEvent;
