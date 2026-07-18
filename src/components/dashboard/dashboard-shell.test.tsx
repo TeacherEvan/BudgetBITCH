@@ -27,36 +27,37 @@ vi.mock('@/hooks/use-voice', () => ({
 // not the panels' internal data hooks. Factories must be self-contained (vi.mock is hoisted).
 vi.mock('@/components/dashboard/panels/expense-tracker', () => ({
   ExpenseTracker: () => {
-    const React = require('react');
+    
     return React.createElement('div', null, 'Expenses');
   },
 }));
 vi.mock('@/components/dashboard/panels/budget-visual', () => ({
   BudgetVisual: () => {
-    const React = require('react');
+    
     return React.createElement('div', null, 'Budget');
   },
 }));
 vi.mock('@/components/dashboard/panels/savings-goals', () => ({
   SavingsGoals: () => {
-    const React = require('react');
+    
     return React.createElement('div', null, 'Goals');
   },
 }));
 vi.mock('@/components/dashboard/panels/net-worth', () => ({
   NetWorth: () => {
-    const React = require('react');
+    
     return React.createElement('div', null, 'Net Worth');
   },
 }));
 vi.mock('@/components/dashboard/panels/budget-alerts', () => ({
   BudgetAlerts: () => {
-    const React = require('react');
+    
     return React.createElement('div', null, 'Budget Alerts');
   },
 }));
 
 import { DashboardShell } from './dashboard-shell';
+import React from 'react';
 
 const mockMatchMedia = vi.fn().mockReturnValue({
   matches: false,
