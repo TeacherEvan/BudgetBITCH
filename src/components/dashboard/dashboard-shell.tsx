@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Menu, ChevronDown, ChevronUp } from 'lucide-react';
 import { HeaderBar } from '@/components/layout/header-bar';
 import { DailyDisposableHero } from '@/components/dashboard/daily-disposable-hero';
 import { CriticalExpensesModal } from '@/components/dashboard/critical-expenses-modal';
@@ -72,6 +72,9 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
 
   const isPanelOpen = (panel: PanelKey) => openPanels.includes(panel);
 
+  // Only render the panels the user has toggled on in the sidebar.
+  const visiblePanels = PANELS.filter((panel) => openPanels.includes(panel.id as PanelKey));
+
   return (
     <div className="min-h-screen bg-black flex flex-col">
       {/* Header Bar */}
@@ -82,21 +85,6 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
         voiceEnabled={voiceEnabled}
         onVoiceToggle={() => onVoiceToggle?.()}
       />
-
-      {/* Mobile Menu Overlay */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 bg-black/90 lg:hidden">
-          <div className="p-6">
-            <button onClick={() => setMobileMenuOpen(false)} className="absolute top-4 right-4 text-white/50">
-              <X className="w-6 h-6" />
-            </button>
-            <nav className="space-y-4 mt-12">
-              <a href="/dashboard" className="block text-xl font-medium text-white" onClick={() => setMobileMenuOpen(false)}>Dashboard</a>
-              <a href="/settings" className="block text-xl font-medium text-white/70" onClick={() => setMobileMenuOpen(false)}>Settings</a>
-            </nav>
-          </div>
-        </div>
-      )}
 
       <main className="flex-1 flex lg:flex-row overflow-hidden">
         {/* Desktop Sidebar - only on lg+ */}
@@ -150,7 +138,7 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
         </aside>
 
         {/* Mobile Bottom Sheet Sidebar */}
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-xl border-t border-white/10 rounded-t-2xl p-4 max-h-[70vh] overflow-y-auto transform transition-transform duration-300">
+        <div className={`lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-xl border-t border-white/10 rounded-t-2xl p-4 max-h-[70vh] overflow-y-auto transform transition-transform duration-300 ${mobileMenuOpen ? 'translate-y-0' : 'translate-y-full'}`}>
           <button onClick={() => setMobileMenuOpen(false)} className="absolute -top-3 right-4 w-10 h-10 rounded-full bg-black/80 border border-white/10 flex items-center justify-center">
             <X className="w-5 h-5 text-white/50" />
           </button>
@@ -183,6 +171,15 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
           </div>
         </div>
 
+        {/* Mobile Menu FAB - collapsed sheet falls back to this button */}
+        <button
+          onClick={() => setMobileMenuOpen(o => !o)}
+          aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+          className="lg:hidden fixed bottom-4 left-4 z-50 flex items-center justify-center w-14 h-14 rounded-full bg-amber-400 text-slate-950 shadow-lg shadow-amber-400/30 active:scale-95 transition-transform"
+        >
+          {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </button>
+
         {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-y-auto p-4 lg:p-6">
           {/* Daily Disposable Hero */}
@@ -190,7 +187,7 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
 
           {/* Bento Grid Panels */}
           <div className="space-y-4 mt-6">
-            <BentoGrid panels={PANELS} />
+            <BentoGrid panels={visiblePanels} />
           </div>
         </div>
 

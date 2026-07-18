@@ -1,7 +1,7 @@
 // components/dashboard/panels/budget-visual.tsx
 'use client';
 
-import { useExpenses, useBudgets } from '@/hooks/use-local-db';
+import { useExpenses, useBudgets, useWizardProfile } from '@/hooks/use-local-db';
 import { Card } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils/currency';
 import { format } from 'date-fns';
@@ -42,11 +42,14 @@ interface Budget {
 export function BudgetVisual({ locale = 'en' }: BudgetVisualProps) {
   const { expenses: rawExpenses } = useExpenses();
   const { budgets: rawBudgets } = useBudgets();
+  const { profile } = useWizardProfile();
 
   const expenses = rawExpenses as Expense[];
   const budgets = rawBudgets as Budget[];
 
-  const monthlyIncome = 50000;
+  // Bind to the user's actual wizard profile income; fall back to 50000 only
+  // when no profile exists (e.g. before the setup wizard is completed).
+  const monthlyIncome = profile?.answers?.income || 50000;
   const currentMonth = format(new Date(), 'yyyy-MM');
   
   const monthlyExpenses = expenses
