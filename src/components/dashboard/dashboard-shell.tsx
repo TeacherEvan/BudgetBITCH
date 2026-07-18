@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Menu, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, ChevronDown, ChevronUp } from 'lucide-react';
 import { HeaderBar } from '@/components/layout/header-bar';
 import { DailyDisposableHero } from '@/components/dashboard/daily-disposable-hero';
 import { CriticalExpensesModal } from '@/components/dashboard/critical-expenses-modal';
@@ -21,6 +21,7 @@ import { Modal } from '@/components/ui/modal';
 import { useWizardProfile } from '@/hooks/use-local-db';
 import { useCriticalExpense } from '@/hooks/use-critical-expense';
 import { BentoGrid, PanelConfig } from '@/components/dashboard/bento-grid';
+import { MobilePanelTabs } from '@/components/dashboard/mobile-panel-tabs';
 
 export type PanelKey = 'expenses' | 'budget' | 'budgetAlerts' | 'bills' | 'goals' | 'netWorth' | 'subscriptions' | 'emergency' | 'debt' | 'forecast';
 
@@ -67,6 +68,7 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
   const [openPanels, setOpenPanels] = useState<PanelKey[]>(['expenses', 'budget']);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [marketWatchOpen, setMarketWatchOpen] = useState(false);
+  const [mobileActivePanel, setMobileActivePanel] = useState<PanelKey>('expenses');
 
   const togglePanel = (panel: PanelKey) => {
     setOpenPanels(prev => prev.includes(panel) ? prev.filter(p => p !== panel) : [...prev, panel]);
@@ -74,8 +76,11 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
 
   const isPanelOpen = (panel: PanelKey) => openPanels.includes(panel);
 
-  // Only render the panels the user has toggled on in the sidebar.
+  // Only render the panels the user has toggled on in the sidebar (desktop).
   const visiblePanels = PANELS.filter((panel) => openPanels.includes(panel.id as PanelKey));
+
+  // Mobile: exactly one active panel rendered at a time.
+  const mobilePanel = PANELS.find((panel) => panel.id === mobileActivePanel) ?? PANELS[0];
 
   return (
     <div className="min-h-screen bg-black flex flex-col">
@@ -157,7 +162,7 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
         </aside>
 
         {/* Mobile Bottom Sheet Sidebar */}
-        <div className={`lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-xl border-t border-white/10 rounded-t-2xl p-4 max-h-[70vh] overflow-y-auto transform transition-transform duration-300 ${mobileMenuOpen ? 'translate-y-0' : 'translate-y-full'}`}>
+        <div data-testid="mobile-sheet" className={`lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-xl border-t border-white/10 rounded-t-2xl p-4 max-h-[70vh] overflow-y-auto transform transition-transform duration-300 ${mobileMenuOpen ? 'translate-y-0' : 'translate-y-full'}`}>
           <button onClick={() => setMobileMenuOpen(false)} className="absolute -top-3 right-4 w-10 h-10 rounded-full bg-black/80 border border-white/10 flex items-center justify-center">
             <X className="w-5 h-5 text-white/50" />
           </button>
@@ -179,11 +184,11 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
             </button>
             {PANEL_ORDER.map(panel => {
               const config = PANEL_CONFIG[panel];
-              const isOpen = isPanelOpen(panel);
+              const isOpen = mobileActivePanel === panel;
               return (
                 <button
                   key={panel}
-                  onClick={() => { togglePanel(panel); setMobileMenuOpen(false); }}
+                  onClick={() => { setMobileActivePanel(panel); setMobileMenuOpen(false); }}
                   className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left ${
                     isOpen ? 'bg-white/5 border border-white/10' : 'bg-black/30 hover:bg-white/5'
                   }`}
@@ -196,23 +201,29 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
           </div>
         </div>
 
-        {/* Mobile Menu FAB - collapsed sheet falls back to this button */}
-        <button
-          onClick={() => setMobileMenuOpen(o => !o)}
-          aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
-          className="lg:hidden fixed bottom-4 left-4 z-50 flex items-center justify-center w-14 h-14 rounded-full bg-amber-400 text-slate-950 shadow-lg shadow-amber-400/30 active:scale-95 transition-transform"
-        >
-          {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
+        {/* Mobile bottom tab bar - swaps the single active panel */}
+        <MobilePanelTabs
+          activePanel={mobileActivePanel}
+          onSelect={setMobileActivePanel}
+          onMore={() => setMobileMenuOpen(true)}
+          locale={locale}
+        />
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col overflow-y-auto p-4 lg:p-6">
+        <div className="flex-1 flex flex-col overflow-y-auto p-4 lg:p-6 pb-24 lg:pb-6">
           {/* Daily Disposable Hero */}
           <DailyDisposableHero locale={locale} />
 
-          {/* Bento Grid Panels */}
-          <div className="space-y-4 mt-6">
-            <BentoGrid panels={visiblePanels} />
+          {/* Panels */}
+          <div className="mt-6">
+            {/* Mobile: one active panel at a time (no scroll stack) */}
+            <div className="lg:hidden" data-testid="mobile-panels">
+              <BentoGrid panels={[mobilePanel]} />
+            </div>
+            {/* Desktop: toggled grid */}
+            <div className="hidden lg:block" data-testid="desktop-panels">
+              <BentoGrid panels={visiblePanels} />
+            </div>
           </div>
         </div>
 
