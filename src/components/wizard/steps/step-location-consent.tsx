@@ -1,7 +1,7 @@
 // components/wizard/steps/step-location-consent.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { MapPin, Shield, AlertCircle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -18,16 +18,9 @@ export function StepLocationConsent({ locale, value, onChange, error, disabled, 
   const [disclaimerRead, setDisclaimerRead] = useState(false);
   const [locationGranted, setLocationGranted] = useState(false);
   const [requesting, setRequesting] = useState(false);
-  const [unsupported, setUnsupported] = useState(false);
-
-  // Feature-detect Geolocation on mount. Safari & Firefox expose it ONLY via
-  // navigator.geolocation — they do NOT support the Permissions API query with
-  // name: 'geolocation' (Chromium-only), so we must never gate the request on it.
-  useEffect(() => {
-    if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
-      setUnsupported(true);
-    }
-  }, []);
+  const [unsupported, setUnsupported] = useState(
+    () => typeof navigator === 'undefined' || !('geolocation' in navigator)
+  );
 
   const labels = {
     th: {
