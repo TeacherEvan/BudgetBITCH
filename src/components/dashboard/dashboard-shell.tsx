@@ -24,7 +24,7 @@ import { BentoGrid, PanelConfig } from '@/components/dashboard/bento-grid';
 
 export type PanelKey = 'expenses' | 'budget' | 'budgetAlerts' | 'bills' | 'goals' | 'netWorth' | 'subscriptions' | 'emergency' | 'debt' | 'forecast';
 
-const PANEL_CONFIG: Record<PanelKey, { label: { th: string; en: string }; icon: string }> = {
+export const PANEL_CONFIG: Record<PanelKey, { label: { th: string; en: string }; icon: string }> = {
   expenses: { label: { th: 'ค่าใช้จ่าย', en: 'Expenses' }, icon: '💸' },
   budget: { label: { th: 'งบประมาณ', en: 'Budget' }, icon: '📊' },
   budgetAlerts: { label: { th: 'การแจ้งเตือน', en: 'Budget Alerts' }, icon: '🔔' },
