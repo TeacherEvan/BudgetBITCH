@@ -1,5 +1,7 @@
 name: CI
 
+# Shift-left quality gates. Every push to main and every PR runs the same
+# checks in parallel so a failure is fast to localize.
 on:
   push:
     branches: [main]
@@ -12,8 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  quality:
-    name: Lint · Typecheck · Test · Build
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -31,16 +33,76 @@ jobs:
       - name: Lint
         run: npm run lint
 
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Test
         run: npm test -- --run
 
-      # next build runs its own TypeScript pass; a clean build == clean types.
+  build:
+    name: Build (type-check + next build)
+    runs-on: ubuntu-latest
+    env:
+      # Placeholder public URLs so `next build` has concrete values.
+      # These are NON-SECRET and safe to expose; real values come from Vercel.
+      NEXT_PUBLIC_CONVEX_URL: https://ci-build.convex.cloud
+      NEXT_PUBLIC_CONVEX_SITE_URL: https://ci-build.convex.site
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      SITE_URL: http://localhost:3000
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # `next build` runs its own TypeScript pass over the app source;
+      # a clean build == clean types for everything that ships. A separate
+      # `tsc --noEmit` is intentionally omitted because it also type-checks
+      # test files (e.g. use-voice.test.ts) that have pre-existing type
+      # errors outside the shipped graph and would block every push.
       - name: Build
-        env:
-          # Placeholder public URLs so `next build` has concrete values.
-          # These are NON-SECRET and safe to expose; real values come from Vercel.
-          NEXT_PUBLIC_CONVEX_URL: https://ci-build.convex.cloud
-          NEXT_PUBLIC_CONVEX_SITE_URL: https://ci-build.convex.site
-          NEXT_PUBLIC_APP_URL: http://localhost:3000
-          SITE_URL: http://localhost:3000
         run: npm run build
+
+  # Surfaced but non-blocking: there is a known transitive high-severity
+  # vuln (next-pwa -> workbox-build -> serialize-javascript, RCE) with no
+  # in-scope fix other than a breaking next-pwa downgrade. Tracked for the
+  # next PWA-toolchain upgrade rather than gating every merge on it.
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit (high)
+        run: npm audit --audit-level=high
