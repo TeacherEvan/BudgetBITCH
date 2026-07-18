@@ -24,9 +24,17 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
   const [wizardCompleted, setWizardCompleted] = useState(initialWizardCompleted);
   const [isLoading, setIsLoading] = useState(false);
   const [budgetsInitialized, setBudgetsInitialized] = useState(false);
-  const [voiceEnabled] = useState(false);
 
-  const { speak } = useVoice(locale === 'th' ? 'th-TH' : 'en-US');
+  const voice = useVoice(locale === 'th' ? 'th-TH' : 'en-US');
+  const voiceEnabled = voice.settings.enabled;
+
+  const handleLocaleChange = useCallback(
+    (nextLocale: 'th' | 'en') => {
+      document.cookie = `bb-locale=${nextLocale}; path=/; max-age=31536000; samesite=lax`;
+      router.refresh();
+    },
+    [router],
+  );
 
   const initializeBudgets = useCallback(async () => {
     if (profile) {
@@ -86,7 +94,12 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
 
   return (
     <>
-      <DashboardShell locale={locale} />
+      <DashboardShell
+        locale={locale}
+        onLocaleChange={handleLocaleChange}
+        onVoiceToggle={voice.toggleVoice}
+        voiceEnabled={voiceEnabled}
+      />
       
       {!wizardCompleted && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
@@ -94,7 +107,7 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
             locale={locale}
             onComplete={handleWizardComplete}
             voiceEnabled={voiceEnabled}
-            speak={speak}
+            speak={voice.speak}
             isModal={true}
           />
         </div>

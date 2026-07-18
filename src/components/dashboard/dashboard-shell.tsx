@@ -51,7 +51,14 @@ const PANELS: PanelConfig[] = [
   { id: 'forecast', title: 'Forecast', children: <CashFlowForecast /> },
 ];
 
-export function DashboardShell({ locale }: { locale: 'th' | 'en' }) {
+interface DashboardShellProps {
+  locale: 'th' | 'en';
+  onLocaleChange?: (locale: 'th' | 'en') => void;
+  voiceEnabled?: boolean;
+  onVoiceToggle?: () => void;
+}
+
+export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, onVoiceToggle }: DashboardShellProps) {
   const { profile } = useWizardProfile();
   const { commitment, loading: commitmentLoading } = useCriticalExpense();
   const [criticalExpenseOpen, setCriticalExpenseOpen] = useState(false);
@@ -70,10 +77,10 @@ export function DashboardShell({ locale }: { locale: 'th' | 'en' }) {
       {/* Header Bar */}
       <HeaderBar
         locale={locale}
-        onLocaleChange={() => {}}
+        onLocaleChange={(next) => onLocaleChange?.(next)}
         onSettingsOpen={() => setMobileMenuOpen(true)}
-        voiceEnabled={false}
-        onVoiceToggle={() => {}}
+        voiceEnabled={voiceEnabled}
+        onVoiceToggle={() => onVoiceToggle?.()}
       />
 
       {/* Mobile Menu Overlay */}
@@ -144,7 +151,7 @@ export function DashboardShell({ locale }: { locale: 'th' | 'en' }) {
 
         {/* Mobile Bottom Sheet Sidebar */}
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-xl border-t border-white/10 rounded-t-2xl p-4 max-h-[70vh] overflow-y-auto transform transition-transform duration-300">
-          <button onClick={() => setMobileMenuOpen(true)} className="absolute -top-3 right-4 w-10 h-10 rounded-full bg-black/80 border border-white/10 flex items-center justify-center">
+          <button onClick={() => setMobileMenuOpen(false)} className="absolute -top-3 right-4 w-10 h-10 rounded-full bg-black/80 border border-white/10 flex items-center justify-center">
             <X className="w-5 h-5 text-white/50" />
           </button>
           <div className="space-y-4 pt-2">
