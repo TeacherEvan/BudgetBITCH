@@ -35,7 +35,7 @@ test("ensureProfile creates a profile with a shareCode", async () => {
 test("getMyProfile returns null shareCode before ensureProfile", async () => {
   const aliceId = await seedUser(t, ALICE);
   const profile = await asUser(aliceId).query(api.sharedBoards.getMyProfile, {});
-  expect(profile.shareCode).toBeNull();
+  expect(profile!.shareCode).toBeNull();
 });
 
 test("linkByCode links two users and returns a shared boardId", async () => {
@@ -52,8 +52,8 @@ test("linkByCode links two users and returns a shared boardId", async () => {
 
   const aliceAfter = await asUser(aliceId).query(api.sharedBoards.getMyProfile, {});
   const bobAfter = await asUser(bobId).query(api.sharedBoards.getMyProfile, {});
-  expect(aliceAfter.linkedBoardId).toBe(boardId);
-  expect(bobAfter.linkedBoardId).toBe(boardId);
+  expect(aliceAfter!.linkedBoardId).toBe(boardId);
+  expect(bobAfter!.linkedBoardId).toBe(boardId);
 
   const board = await asUser(aliceId).query(api.sharedBoards.getBoard, { boardId });
   expect([board.memberA, board.memberB].sort()).toEqual([aliceId, bobId].sort());
@@ -151,7 +151,7 @@ test("unlink clears linkage and deletes the board when orphaned", async () => {
   // Alice unlinks; Bob still linked → board kept.
   await asUser(aliceId).mutation(api.sharedBoards.unlink, {});
   const bobAfter = await asUser(bobId).query(api.sharedBoards.getMyProfile, {});
-  expect(bobAfter.linkedBoardId).toBe(boardId);
+  expect(bobAfter!.linkedBoardId).toBe(boardId);
   await expect(
     asUser(bobId).query(api.sharedBoards.getBoard, { boardId }),
   ).resolves.toBeTruthy();
@@ -159,7 +159,7 @@ test("unlink clears linkage and deletes the board when orphaned", async () => {
   // Bob unlinks → board orphaned → deleted.
   await asUser(bobId).mutation(api.sharedBoards.unlink, {});
   const aliceAfter = await asUser(aliceId).query(api.sharedBoards.getMyProfile, {});
-  expect(aliceAfter.linkedBoardId).toBeNull();
+  expect(aliceAfter!.linkedBoardId).toBeNull();
   await expect(
     asUser(aliceId).query(api.sharedBoards.getBoard, { boardId }),
   ).rejects.toThrow(/not found|member/);
