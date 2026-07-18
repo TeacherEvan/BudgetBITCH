@@ -102,9 +102,9 @@ export function SavingsGoals({ locale = 'en' }: SavingsGoalsProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white">🎯 Savings Goals</h3>
+        <h3 className="text-lg font-semibold text-white">{locale === 'th' ? '🎯 เป้าหมายออมเงิน' : '🎯 Savings Goals'}</h3>
         <Button variant="primary" size="sm" onClick={() => { setShowForm(true); setEditingId(null); resetForm(); }}>
-          <Plus className="w-4 h-4 mr-1" /> Add Goal
+          <Plus className="w-4 h-4 mr-1" /> {locale === 'th' ? 'เพิ่มเป้าหมาย' : 'Add Goal'}
         </Button>
       </div>
 

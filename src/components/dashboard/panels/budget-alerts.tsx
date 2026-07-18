@@ -8,6 +8,7 @@ import { useWizardProfile } from '@/hooks/use-local-db';
 import { generateBudgetAlerts, getBudgetSummary } from '@/lib/utils/budget-alerts';
 import { formatCurrency } from '@/lib/utils/currency';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import type { BudgetAlert } from '@/lib/utils/budget-alerts';
 import type { BudgetCategory, ExpenseEntry } from '@/lib/types/budget';
 
@@ -52,9 +53,17 @@ export function BudgetAlerts({ locale = 'en' }: BudgetAlertsProps) {
       <Card className="p-4 text-center">
         <p className="text-white/50">
           {locale === 'th' 
-            ? 'โปรดทำแบบสอบถามตั้งค่าให้เสร็จสิ้นเพื่อดูการแจ้งเตือนงบประมาณ'
-            : 'Complete setup wizard to see budget alerts'}
+            ? '👋 สวัสดี! เพื่อดูสุขภาพงบประมาณ ให้ทำแบบสอบถามตั้งค่า 2 นาทีให้เสร็จก่อน → ไปที่ตั้งค่า'
+            : '👋 Hey! To see your budget health, finish the quick 2-minute setup first → Go to Setup'}
         </p>
+        <Button
+          variant="secondary"
+          size="sm"
+          className="mt-3"
+          onClick={() => { window.location.href = '/wizard'; }}
+        >
+          {locale === 'th' ? 'ไปตั้งค่า' : 'Go to Setup'}
+        </Button>
       </Card>
     );
   }

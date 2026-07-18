@@ -331,6 +331,11 @@ export async function getCriticalExpenseCommitment(month: string): Promise<Criti
   return db.get('criticalExpenseCommitments', month);
 }
 
+export async function deleteCriticalExpenseCommitment(month: string): Promise<void> {
+  const db = await getDB();
+  await db.delete('criticalExpenseCommitments', month);
+}
+
 // News Cache
 export async function addNewsItem(item: NewsItem): Promise<void> {
   const db = await getDB();

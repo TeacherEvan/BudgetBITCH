@@ -121,7 +121,7 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
               </div>
               <ChevronDown className="text-amber-400" />
             </button>
-            {commitmentLoading && <p className="text-xs text-white/50 text-center">Loading...</p>}
+            {commitmentLoading && <p className="text-xs text-white/50 text-center">{locale === 'th' ? 'กำลังโหลด...' : 'Loading...'}</p>}
           </div>
 
           <div className="space-y-2">
@@ -161,7 +161,7 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
             <button className="w-full flex items-center gap-3 p-3 rounded-xl bg-amber-400/10 border border-amber-400/30 text-left" onClick={() => { setCriticalExpenseOpen(true); setMobileMenuOpen(false); }}>
               <span className="text-2xl">🎯</span>
               <div>
-                <p className="font-medium text-white">{locale === 'th' ? 'ลงทะเบียนค่าใช้จ่ายลด' : 'Register Cut Expense'}</p>
+                <p className="font-medium text-white">{locale === 'th' ? 'เลือก 1 อย่างลดในเดือนนี้' : 'Pick 1 to cut this month'}</p>
               </div>
             </button>
             {PANEL_ORDER.map(panel => {

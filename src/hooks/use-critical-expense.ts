@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { CriticalExpenseCommitment } from '@/lib/types/budget';
-import { getCriticalExpenseCommitment, saveCriticalExpenseCommitment } from '@/lib/db/local-db';
+import { getCriticalExpenseCommitment, saveCriticalExpenseCommitment, deleteCriticalExpenseCommitment } from '@/lib/db/local-db';
 
 export function useCriticalExpense() {
   const [commitment, setCommitment] = useState<CriticalExpenseCommitment | null>(null);
@@ -27,5 +27,10 @@ export function useCriticalExpense() {
     setCommitment(newCommitment);
   }, []);
 
-  return { commitment, loading, save };
+  const clear = useCallback(async () => {
+    await deleteCriticalExpenseCommitment(targetMonth);
+    setCommitment(null);
+  }, [targetMonth]);
+
+  return { commitment, loading, save, clear };
 }

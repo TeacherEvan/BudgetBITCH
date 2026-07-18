@@ -2,132 +2,149 @@
 'use client';
 
 import { useMemo } from 'react';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, Info } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils/currency';
 import { format, addDays, endOfMonth } from 'date-fns';
 import { th } from 'date-fns/locale';
+import { useBills, useDebtPayoff } from '@/hooks/use-local-db';
 
 interface CashFlowForecastProps {
   locale?: 'th' | 'en';
 }
 
-export function CashFlowForecast({ locale = 'en' }: CashFlowForecastProps) {
-  const endOfThisMonth = endOfMonth(new Date());
-  const daysInMonth = endOfThisMonth.getDate();
+// Next `count` due dates for a monthly bill (dueDay is day-of-month, 1-31).
+function nextDueDates(dueDay: number, count: number): Date[] {
   const today = new Date();
-  const dayOfMonth = today.getDate();
-  const daysRemaining = daysInMonth - dayOfMonth;
+  const dates: Date[] = [];
+  let month = today.getMonth();
+  let year = today.getFullYear();
+  // Find the first occurrence on/after today.
+  let candidate = new Date(year, month, dueDay);
+  if (candidate < today) {
+    month += 1;
+    if (month > 11) { month = 0; year += 1; }
+    candidate = new Date(year, month, dueDay);
+  }
+  for (let i = 0; i < count; i++) {
+    dates.push(new Date(candidate));
+    month = candidate.getMonth() + 1;
+    year = candidate.getFullYear() + Math.floor(month / 12);
+    month = month % 12;
+    candidate = new Date(year, month, dueDay);
+  }
+  return dates;
+}
 
-  // Generate daily cash flow
-  const dailyFlow = useMemo(() => {
-    return Array.from({ length: 30 }, (_, i) => {
-      const date = addDays(new Date(), i + 1);
-      // Pure, deterministic pseudo-random daily flow calculation based on index
-      const baseFlow = -1000 + ((i * 224.56) % 1) * 2000;
-      return {
-        date,
-        flow: baseFlow,
-        cumulative: baseFlow * (i + 1),
-      };
+export function CashFlowForecast({ locale = 'en' }: CashFlowForecastProps) {
+  const { bills, loading: billsLoading } = useBills();
+  const { debts, loading: debtsLoading } = useDebtPayoff();
+
+  const loading = billsLoading || debtsLoading;
+
+  // Combine real bills + debt minimum payments into upcoming payments.
+  const upcoming = useMemo(() => {
+    const items: { name: string; amount: number; date: Date; type: 'bill' | 'debt' }[] = [];
+
+    bills
+      .filter(b => b.isActive)
+      .forEach(b => {
+        const [next] = nextDueDates(b.dueDay, 1);
+        if (next) items.push({ name: b.name, amount: b.amount, date: next, type: 'bill' });
+      });
+
+    debts.forEach(d => {
+      // Spread debt payments across the next 30 days using a simple cadence.
+      const [next] = nextDueDates(new Date().getDate() + 1, 1);
+      if (next) items.push({
+        name: d.name,
+        amount: d.minimumPayment || 0,
+        date: next,
+        type: 'debt',
+      });
     });
-  }, []);
+
+    return items
+      .filter(i => i.amount > 0)
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .slice(0, 6);
+  }, [bills, debts]);
+
+  const totalUpcoming = upcoming.reduce((sum, i) => sum + i.amount, 0);
+
+  // Monthly fixed outflow (bills + debt minimums).
+  const monthlyOutflow =
+    bills.filter(b => b.isActive).reduce((sum, b) => sum + b.amount, 0) +
+    debts.reduce((sum, d) => sum + (d.minimumPayment || 0), 0);
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-white">🔮 {locale === 'th' ? 'พยากรณ์กระแสเงินสด' : 'Cash Flow Forecast'}</h3>
+        <div className="h-24 bg-white/5 rounded-xl animate-pulse" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white">🔮 Cash Flow Forecast</h3>
-        <div className="flex items-center gap-2 text-sm text-white/60">
-          <span className="px-2 py-1 rounded-full bg-emerald-400/20 text-emerald-400">
-            📈 {locale === 'th' ? 'รับเข้า' : 'Inflow'}
-          </span>
-          <span className="px-2 py-1 rounded-full bg-rose-400/20 text-rose-400">
-            📉 {locale === 'th' ? 'จ่ายออก' : 'Outflow'}
-          </span>
-        </div>
+        <h3 className="text-lg font-semibold text-white">🔮 {locale === 'th' ? 'พยากรณ์กระแสเงินสด' : 'Cash Flow Forecast'}</h3>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3 mb-6">
-        {[
-          { label: '30 Days', value: 10000, icon: TrendingUp, color: 'emerald' },
-          { label: '60 Days', value: 18000, icon: TrendingUp, color: 'emerald' },
-          { label: '90 Days', value: 25000, icon: TrendingUp, color: 'emerald' },
-        ].map((item) => (
-          <div key={item.label} className={`bg-${item.color}-400/10 border border-${item.color}-400/30 rounded-xl p-4`}>
-            <p className="text-sm text-${item.color}-400">{item.label}</p>
-            <p className="text-2xl font-bold font-mono text-white">{formatCurrency(item.value, 'en')}</p>
+      {upcoming.length === 0 ? (
+        <Card className="p-6 text-center">
+          <Info className="w-10 h-10 text-amber-400 mx-auto mb-3" />
+          <p className="text-white/70 font-medium">
+            {locale === 'th' ? 'ยังไม่มีบิลหรือหนี้ในระบบ' : 'No bills or debts yet'}
+          </p>
+          <p className="text-sm text-white/50 mt-1">
+            {locale === 'th'
+              ? 'เพิ่มบิลหรือหนี้สินในแผง Bills / Debt ด้านล่าง แล้วกราฟนี้จะแสดงวันครบกำหนดจ่ายจริง'
+              : 'Add your bills or debts in the Bills / Debt panels below — this view will then show your real upcoming due dates.'}
+          </p>
+        </Card>
+      ) : (
+        <>
+          <div className="grid gap-4 sm:grid-cols-3 mb-6">
+            {[
+              { label: locale === 'th' ? 'จ่ายใน 30 วัน' : 'Due (30 Days)', value: totalUpcoming, color: 'rose' },
+              { label: locale === 'th' ? 'จ่ายคงที่/เดือน' : 'Fixed / Month', value: monthlyOutflow, color: 'amber' },
+              { label: locale === 'th' ? 'รายการที่ต้องจ่าย' : 'Items Due', value: upcoming.length, color: 'emerald', raw: true },
+            ].map((item) => (
+              <div key={item.label} className={`bg-${item.color}-400/10 border border-${item.color}-400/30 rounded-xl p-4`}>
+                <p className={`text-sm text-${item.color}-400`}>{item.label}</p>
+                <p className="text-2xl font-bold font-mono text-white">
+                  {item.raw ? item.value : formatCurrency(item.value, locale)}
+                </p>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      <Card className="p-4 mb-4">
-        <h4 className="font-semibold text-white mb-4">{locale === 'th' ? 'กระแสเงินสดรายวัน (30 วัน)' : 'Daily Cash Flow (30 Days)'}</h4>
-        <div className="h-48 flex items-end gap-1">
-          {dailyFlow.map((day, i) => {
-            const height = Math.max(4, Math.min(100, (day.flow + 3000) / 6000 * 100));
-            const isNegative = day.flow < 0;
-            return (
-              <div key={i} className="flex-1 flex flex-col items-center justify-end gap-1">
-                <div 
-                  className={`w-full rounded-t transition-all duration-200 ${isNegative ? 'bg-rose-400' : 'bg-emerald-400'}`}
-                  style={{ height: `${height}%` }}
-                />
-                <span className="text-[10px] text-white/50">{format(day.date, 'd')}</span>
-              </div>
-            );
-          })}
-        </div>
-      </Card>
-
-      <Card className="p-4 mb-4">
-        <h4 className="font-semibold text-white mb-4">{locale === 'th' ? 'การชำระหนี้สิน/บิลใน 30 วันข้างหน้า' : 'Upcoming Payments (30 Days)'}</h4>
-        <div className="space-y-2">
-          {[
-            { name: 'Electric Bill', amount: 1800, date: addDays(new Date(), 5), type: 'bill' },
-            { name: 'Credit Card', amount: 12000, date: addDays(new Date(), 12), type: 'debt' },
-            { name: 'Internet', amount: 799, date: addDays(new Date(), 20), type: 'bill' },
-            { name: 'Car Loan', amount: 8500, date: addDays(new Date(), 28), type: 'debt' },
-          ].map((item, i) => (
-            <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-black/30 border border-white/10">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-amber-400/20 flex items-center justify-center">
-                  <span className="text-amber-400">{item.type === 'bill' ? '📄' : '💳'}</span>
+          <Card className="p-4">
+            <h4 className="font-semibold text-white mb-4">{locale === 'th' ? 'การชำระหนี้สิน/บิลในเร็วๆ นี้' : 'Upcoming Payments'}</h4>
+            <div className="space-y-2">
+              {upcoming.map((item, i) => (
+                <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-black/30 border border-white/10">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-amber-400/20 flex items-center justify-center">
+                      <span className="text-amber-400">{item.type === 'bill' ? '📄' : '💳'}</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-white">{item.name}</p>
+                      <p className="text-xs text-white/60">{format(item.date, locale === 'th' ? 'd MMM yyyy' : 'MMM d, yyyy', { locale: locale === 'th' ? th : undefined })}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-mono text-rose-400">-{formatCurrency(item.amount, locale)}</p>
+                    <p className="text-xs text-white/50">{locale === 'th' ? 'ครบกำหนด' : 'Due'}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium text-white">{item.name}</p>
-                  <p className="text-xs text-white/60">{format(item.date, locale === 'th' ? 'd MMM yyyy' : 'MMM d, yyyy', { locale: locale === 'th' ? th : undefined })}</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="font-mono text-rose-400">-{formatCurrency(item.amount, 'en')}</p>
-                <p className="text-xs text-white/50">{locale === 'th' ? 'ครบกำหนด' : 'Due'}</p>
-              </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </Card>
-
-      <Card className="p-4">
-        <h4 className="font-semibold text-white mb-4">{locale === 'th' ? 'สรุปกระแสเงินสด' : 'Cash Flow Summary'}</h4>
-        <div className="grid gap-3 sm:grid-cols-4">
-          <div className="bg-emerald-400/10 border border-emerald-400/30 rounded-xl p-4">
-            <p className="text-sm text-emerald-400">{locale === 'th' ? 'รับเข้า (30 วัน)' : 'Inflow (30d)'}</p>
-            <p className="text-2xl font-bold font-mono text-white">{formatCurrency(45000, 'en')}</p>
-          </div>
-          <div className="bg-rose-400/10 border border-rose-400/30 rounded-xl p-4">
-            <p className="text-sm text-rose-400">{locale === 'th' ? 'จ่ายออก (30 วัน)' : 'Outflow (30d)'}</p>
-            <p className="text-2xl font-bold font-mono text-white">{formatCurrency(-38000, 'en')}</p>
-          </div>
-          <div className="bg-amber-400/10 border border-amber-400/30 rounded-xl p-4">
-            <p className="text-sm text-amber-400">{locale === 'th' ? 'สุทธิ (30 วัน)' : 'Net (30d)'}</p>
-            <p className="text-2xl font-bold font-mono text-emerald-400">{formatCurrency(7000, 'en')}</p>
-          </div>
-          <div className="bg-blue-400/10 border border-blue-400/30 rounded-xl p-4">
-            <p className="text-sm text-blue-400">{locale === 'th' ? 'วันเหลือในเดือนนี้' : 'Days Left in Month'}</p>
-            <p className="text-2xl font-bold font-mono text-white">{daysRemaining}</p>
-          </div>
-        </div>
-      </Card>
+          </Card>
+        </>
+      )}
     </div>
   );
 }

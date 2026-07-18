@@ -20,7 +20,7 @@ interface CriticalExpensesModalProps {
 
 export function CriticalExpensesModal({ isOpen, onClose, locale }: CriticalExpensesModalProps) {
   const { profile } = useWizardProfile();
-  const { commitment, loading: commitmentLoading, save: saveCommitment } = useCriticalExpense();
+  const { commitment, loading: commitmentLoading, save: saveCommitment, clear: clearCommitment } = useCriticalExpense();
   const [selectedExpense, setSelectedExpense] = useState<CriticalExpenseKey | null>(null);
   const [customAmount, setCustomAmount] = useState<string>('');
 
@@ -62,6 +62,14 @@ export function CriticalExpensesModal({ isOpen, onClose, locale }: CriticalExpen
   const currentCommitment = commitment;
   const committedExpense = currentCommitment?.expenseKey;
 
+  // Real progress: how far we are through the current month (1 → 100%).
+  const progressValue = (() => {
+    const now = new Date();
+    const day = now.getDate();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    return Math.round((day / daysInMonth) * 100);
+  })();
+
   return (
     <Modal
       isOpen={isOpen}
@@ -91,7 +99,7 @@ export function CriticalExpensesModal({ isOpen, onClose, locale }: CriticalExpen
             
             <div className="flex items-center justify-center gap-6 mb-4">
               <ProgressRing 
-                value={85} 
+                value={progressValue} 
                 size={100} 
                 strokeWidth={8}
                 color="amber"
@@ -132,7 +140,7 @@ export function CriticalExpensesModal({ isOpen, onClose, locale }: CriticalExpen
               </div>
             </div>
 
-            <Button variant="secondary" className="w-full mt-4" onClick={() => {}}>
+            <Button variant="secondary" className="w-full mt-4" onClick={() => { clearCommitment(); }}>
               {locale === 'th' ? 'เปลี่ยนรายการ' : 'Change Selection'}
             </Button>
           </Card>

@@ -35,10 +35,6 @@ const DEBT_TYPES = [
   { value: 'other', label: { th: 'อื่นๆ', en: 'Other' } },
 ];
 
-interface DebtPayoffProps {
-  locale?: 'th' | 'en';
-}
-
 export function DebtPayoff({ locale = 'en' }: DebtPayoffProps) {
   const { debts, add, update, remove } = useDebtPayoff();
   const [showForm, setShowForm] = useState(false);
@@ -89,22 +85,47 @@ export function DebtPayoff({ locale = 'en' }: DebtPayoffProps) {
     remove(id);
   };
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name || !formData.balance) return;
+    const debt: Debt = {
+      id: editingId || crypto.randomUUID(),
+      name: formData.name,
+      balance: parseFloat(formData.balance),
+      apr: parseFloat(formData.apr) || 0,
+      minimumPayment: parseFloat(formData.minimumPayment) || 0,
+      type: formData.type,
+    };
+    if (editingId) {
+      update(debt);
+    } else {
+      add(debt);
+    }
+    resetForm();
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white">📉 Debt Payoff</h3>
+        <h3 className="text-lg font-semibold text-white">{locale === 'th' ? '📉 ไถ่หนี้' : '📉 Debt Payoff'}</h3>
         <div className="flex gap-2">
-          <Button variant="secondary" size="sm" onClick={() => setStrategy('avalanche')} className={strategy === 'avalanche' ? 'bg-amber-400/20 border-amber-400/30' : ''}>
+          <Button variant="secondary" size="sm" onClick={() => setStrategy('avalanche')} className={strategy === 'avalanche' ? 'bg-amber-400/20 border-amber-400/30' : ''} title={locale === 'th' ? 'เน้นหนี้ดอกเบี้ยสูงสุดก่อน ประหยัดดอกเบี้ยรวมมากที่สุด' : 'Pay highest-interest debt first. Saves the most interest overall.'}>
             🏔️ {locale === 'th' ? 'เน้นดอกเบี้ยสูง' : 'Avalanche'}
           </Button>
-          <Button variant="secondary" size="sm" onClick={() => setStrategy('snowball')} className={strategy === 'snowball' ? 'bg-emerald-400/20 border-emerald-400/30' : ''}>
+          <Button variant="secondary" size="sm" onClick={() => setStrategy('snowball')} className={strategy === 'snowball' ? 'bg-emerald-400/20 border-emerald-400/30' : ''} title={locale === 'th' ? 'เน้นหนี้ยอดน้อยสุดก่อน ได้กำลังใจเร็ว' : 'Pay smallest debt first. Builds momentum and feels rewarding.'}>
             ⛄ {locale === 'th' ? 'เน้นยอดน้อย' : 'Snowball'}
           </Button>
           <Button variant="primary" size="sm" onClick={() => { setShowForm(true); setEditingId(null); }}>
-            <Plus className="w-4 h-4 mr-1" /> Add
+            <Plus className="w-4 h-4 mr-1" /> {locale === 'th' ? 'เพิ่ม' : 'Add'}
           </Button>
         </div>
       </div>
+
+      <p className="text-xs text-white/50 mb-4">
+        {locale === 'th'
+          ? '🏔️ เน้นดอกเบี้ยสูง: ไล่หนี้แพงสุดก่อน ประหยัดดอกเบี้ยสุด · ⛄ เน้นยอดน้อย: ไล่หนี้น้อยสุดก่อน ได้กำลังใจเร็ว 👉 ไม่แน่ใจ? เริ่มจากเน้นยอดน้อย'
+          : '🏔️ Avalanche: pay the most expensive debt first — saves the most money. ⛄ Snowball: pay the smallest debt first — builds momentum. 👉 Not sure? Start with Snowball.'}
+      </p>
 
       <Card className="p-4 mb-4">
         <h4 className="font-semibold text-white mb-3">{locale === 'th' ? 'สรุปหนี้สิน' : 'Debt Summary'}</h4>
@@ -171,11 +192,14 @@ export function DebtPayoff({ locale = 'en' }: DebtPayoffProps) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
           <div className="bg-black/95 border border-white/10 rounded-2xl p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold text-white mb-4">{locale === 'th' ? 'เพิ่มหนี้สิน' : 'Add Debt'}</h3>
-            <form onSubmit={(e) => { e.preventDefault(); setShowForm(false); }} className="space-y-3">
+            <form onSubmit={handleSubmit} className="space-y-3">
               <Input label={locale === 'th' ? 'ชื่อหนี้' : 'Debt Name'} value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder={locale === 'th' ? 'เช่น บัตรเครดิตธนาคาร, กู้รถ' : 'e.g. Bank Credit Card, Car Loan'} required />
               <div className="grid gap-3 sm:grid-cols-2">
                 <Input label={locale === 'th' ? 'ยอดคงเหลือ' : 'Balance'} type="number" step="0.01" min="0" value={formData.balance} onChange={e => setFormData({...formData, balance: e.target.value})} required />
-                <Input label="APR %" type="number" step="0.01" min="0" max="100" value={formData.apr} onChange={e => setFormData({...formData, apr: e.target.value})} required />
+                <div>
+                  <Input label={locale === 'th' ? 'อัตราดอกเบี้ย (APR %)' : 'Interest Rate (APR %)'} type="number" step="0.01" min="0" max="100" value={formData.apr} onChange={e => setFormData({...formData, apr: e.target.value})} required />
+                  <p className="text-xs text-white/50 mt-1">{locale === 'th' ? 'ดอกเบี้ยรายปีของหนี้ ดูได้จากใบแจ้งยอดธนาคาร' : 'The yearly interest % on this debt. Check your bank statement.'}</p>
+                </div>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <Input label={locale === 'th' ? 'ชำระขั้นต่ำ/เดือน' : 'Min Payment/Month'} type="number" step="0.01" min="0" value={formData.minimumPayment} onChange={e => setFormData({...formData, minimumPayment: e.target.value})} required />
@@ -183,7 +207,7 @@ export function DebtPayoff({ locale = 'en' }: DebtPayoffProps) {
               </div>
               <div className="flex gap-2">
                 <Button type="button" onClick={resetForm} variant="secondary">{locale === 'th' ? 'ยกเลิก' : 'Cancel'}</Button>
-                <Button type="submit" className="flex-1">{editingId ? 'Update' : 'Add'}</Button>
+                <Button type="submit" className="flex-1">{editingId ? (locale === 'th' ? 'อัปเดต' : 'Update') : (locale === 'th' ? 'เพิ่ม' : 'Add')}</Button>
               </div>
             </form>
           </div>

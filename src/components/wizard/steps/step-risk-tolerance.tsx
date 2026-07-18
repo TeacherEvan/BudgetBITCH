@@ -15,18 +15,18 @@ export function StepRiskTolerance({ locale, value, onChange, error, disabled }: 
       title: 'จุดรับความเสี่ยง',
       subtitle: 'คุณสบายใจกับความเสี่ยงของเงินได้แค่ไหน',
       options: {
-        low: { label: 'ต่ำ', desc: 'อยากปลอดภัย ออมคงที่ ไม่อยากเสี่ยง', icon: '🛡️' },
-        medium: { label: 'กลาง', desc: 'รับความเสี่ยงบ้าง เพื่อผลตอบแทนที่ดีกว่า', icon: '⚖️' },
-        high: { label: 'สูง', desc: 'รับความเสี่ยงสูง เพื่อโอกาสผลตอบแทนสูง', icon: '🚀' },
+        low: { label: 'ต่ำ', desc: '🛡️ ฉันแค่อยากให้เงินอยู่ในบัญชีปลอดภัย ไม่เครียด', icon: '🛡️' },
+        medium: { label: 'กลาง', desc: '⚖️ ยอมรับความขึ้นลงนิดหน่อย ให้มันโตได้', icon: '⚖️' },
+        high: { label: 'สูง', desc: '🚀 อยากลองหุ้นหรือคริปโต รู้ว่าอาจเสียบ้าง แต่หวังกำไรใหญ่', icon: '🚀' },
       },
     },
     en: {
       title: 'Risk Tolerance',
       subtitle: 'How comfortable are you with financial risk?',
       options: {
-        low: { label: 'Low', desc: 'Prefer safety, stable savings, avoid risk', icon: '🛡️' },
-        medium: { label: 'Medium', desc: 'Accept some risk for better returns', icon: '⚖️' },
-        high: { label: 'High', desc: 'Comfortable with high risk for high reward', icon: '🚀' },
+        low: { label: 'Low', desc: '🛡️ I just want my money safe in the bank. No stress.', icon: '🛡️' },
+        medium: { label: 'Medium', desc: '⚖️ I am okay if my investment goes up and down a bit, as long as it grows.', icon: '⚖️' },
+        high: { label: 'High', desc: '🚀 I want to try stocks or crypto. I know I might lose some, but I want big gains.', icon: '🚀' },
       },
     },
   };

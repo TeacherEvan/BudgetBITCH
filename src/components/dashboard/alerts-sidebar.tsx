@@ -98,7 +98,7 @@ export function AlertsSidebar({ locale }: { locale: 'th' | 'en' }) {
 
       {news.length === 0 ? (
         <div className="text-center py-8 text-white/50">
-          <p>{locale === 'th' ? 'ไม่มีข่าวในขณะนี้' : 'No news at the moment'}</p>
+        <p>{locale === 'th' ? '📡 ยังไม่มีข่าวล่าสุดในพื้นที่ — ไว้กลับมาดูใหม่ทีหลัง เราค้นหาราคาน้ำมัน โปรโมชั่น และข่าวที่กระทบงบคุณ' : '📡 No local updates right now — check back later. We scan for fuel prices, deals, and news that affect your budget.'}</p>
         </div>
       ) : (
         <div className="space-y-3">

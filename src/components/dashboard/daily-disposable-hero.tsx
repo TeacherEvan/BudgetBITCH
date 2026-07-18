@@ -30,7 +30,7 @@ export function DailyDisposableHero({ locale }: DailyDisposableHeroProps) {
           <div className="flex items-center justify-center gap-2 mb-4">
             <span className="text-2xl">💵</span>
             <span className="text-sm font-medium text-amber-400 uppercase tracking-wider">
-              {locale === 'th' ? 'เงินใช้จ่ายต่อวัน' : 'Daily Disposable'}
+              {locale === 'th' ? 'เงินใช้จ่ายได้วันละ' : 'Daily Spending Money 💵'}
             </span>
           </div>
           <div className="text-5xl md:text-7xl xl:text-8xl font-bold font-mono text-amber-400 leading-none">
@@ -52,7 +52,7 @@ export function DailyDisposableHero({ locale }: DailyDisposableHeroProps) {
         <div className="flex items-center justify-center gap-2 mb-4">
           <span className="text-2xl">💵</span>
           <span className="text-sm font-medium text-amber-400 uppercase tracking-wider">
-            {locale === 'th' ? 'เงินใช้จ่ายต่อวัน' : 'Daily Disposable'}
+            {locale === 'th' ? 'เงินใช้จ่ายได้วันละ' : 'Daily Spending Money 💵'}
           </span>
         </div>
         

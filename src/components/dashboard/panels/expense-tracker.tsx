@@ -177,7 +177,7 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
                 label={locale === 'th' ? 'รายการ' : 'Merchant'}
                 value={formData.merchant}
                 onChange={e => setFormData({ ...formData, merchant: e.target.value })}
-                placeholder={locale === 'th' ? 'เช่น 7-Eleven, Grab, Lotus' : 'e.g. 7-Eleven, Grab, Walmart'}
+                placeholder={locale === 'th' ? 'เช่น Grab, Lotus' : 'e.g. Grab, Walmart'}
                 required
               />
               <Input
@@ -287,5 +287,3 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
     </div>
   );
 }
-
-import { format } from 'date-fns';
