@@ -4,7 +4,6 @@
 import { useState, useEffect } from 'react';
 import { AlertCircle, TrendingUp, Fuel, Zap, ShoppingBag, ExternalLink } from 'lucide-react';
 import { NewsItem } from '@/lib/types/budget';
-import { getNewsByLocale } from '@/lib/news/rss-fetcher';
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
 
@@ -26,6 +25,16 @@ const CATEGORY_LABELS: Record<NewsItem['category'], { th: string; en: string }> 
   deals: { th: 'โปรโมชั่น', en: 'Deals' },
 };
 
+async function fetchNewsAPI(locale: 'th' | 'en'): Promise<NewsItem[]> {
+  const res = await fetch(`/api/news?locale=${locale}`, { 
+    cache: 'no-store',
+    headers: { 'Accept': 'application/json' }
+  });
+  if (!res.ok) throw new Error('Failed to fetch news');
+  const data = await res.json();
+  return data.items || [];
+}
+
 export function AlertsSidebar({ locale }: { locale: 'th' | 'en' }) {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +46,7 @@ export function AlertsSidebar({ locale }: { locale: 'th' | 'en' }) {
     const loadNews = async () => {
       try {
         setLoading(true);
-        const items = await getNewsByLocale(locale);
+        const items = await fetchNewsAPI(locale);
         if (mounted) {
           // Sort by actionable first, then by date
           const sorted = items.sort((a, b) => {
