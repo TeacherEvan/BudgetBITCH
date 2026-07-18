@@ -9,9 +9,16 @@ import {
   getWizardProfile,
   getExpenses,
   clearAllData,
+  clearAllUserData,
+  USER_DATA_STORES,
+  saveSettings,
+  addNewsItem,
+  saveLocationCache,
+  getNewsByLocale,
+  getLocationCache,
 } from './local-db';
 import { BOARD_CHANGED_EVENT } from '@/lib/types/budget';
-import type { WizardProfile, ExpenseEntry } from '@/lib/types/budget';
+import type { WizardProfile, ExpenseEntry, NewsItem } from '@/lib/types/budget';
 
 function makeProfile(): WizardProfile {
   return {
@@ -118,5 +125,54 @@ describe('shared board serialize/replace', () => {
 
     expect(handler).toHaveBeenCalledTimes(2);
     window.removeEventListener(BOARD_CHANGED_EVENT, handler);
+  });
+});
+
+describe('clearAllUserData (focused reset)', () => {
+  beforeEach(async () => {
+    await clearAllData();
+    localStorage.clear();
+  });
+
+  it('USER_DATA_STORES lists exactly the 8 user-data stores', () => {
+    expect([...USER_DATA_STORES].sort()).toEqual([
+      'bills',
+      'budgets',
+      'criticalExpenseCommitments',
+      'debts',
+      'expenses',
+      'netWorthSnapshots',
+      'savingsGoals',
+      'wizardProfile',
+    ]);
+  });
+
+  it('clears user data but preserves settings, newsCache, and locationCache', async () => {
+    await saveWizardProfile(makeProfile());
+    await addExpense(makeExpense());
+    await saveSettings({
+      preferredLocale: 'en',
+      voiceSettings: { enabled: false, rate: 1, pitch: 1 },
+      privacyDisclaimerAccepted: true,
+    });
+    const news: NewsItem = {
+      link: 'https://example.com/n',
+      title: 'Hobby',
+      source: 'test',
+      locale: 'en',
+      category: 'hobby',
+      pubDate: new Date().toISOString(),
+      description: 'd',
+    };
+    await addNewsItem(news);
+    await saveLocationCache({ lat: 13.7, lng: 100.5, updatedAt: Date.now() });
+
+    await clearAllUserData();
+
+    expect(await getWizardProfile()).toBeUndefined();
+    expect(await getExpenses()).toHaveLength(0);
+    // preserved
+    expect(await getNewsByLocale('en')).toHaveLength(1);
+    expect(await getLocationCache()).toBeDefined();
   });
 });

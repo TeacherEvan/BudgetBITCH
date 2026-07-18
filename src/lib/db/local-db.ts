@@ -16,6 +16,8 @@ import type {
 } from '@/lib/types/budget';
 import { notifyBoardChanged } from '@/lib/types/budget';
 
+export type { BoardSnapshot } from '@/lib/types/budget';
+
 interface BudgetBITCHDB extends DBSchema {
   wizardProfile: {
     key: string;
