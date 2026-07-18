@@ -201,3 +201,26 @@ export interface LocationCache {
   timestamp: number;
   timezone: string;
 }
+
+/**
+ * The subset of the local board that is shared between two linked users.
+ * Voice/locale settings, news cache, and location cache stay user-local.
+ */
+export interface BoardSnapshot {
+  wizardProfile: WizardProfile | null;
+  expenses: ExpenseEntry[];
+  budgets: BudgetCategory[];
+  bills: Bill[];
+  savingsGoals: SavingsGoal[];
+  netWorthSnapshots: NetWorthSnapshot[];
+  debts: Debt[];
+  criticalExpenseCommitments: CriticalExpenseCommitment[];
+}
+
+/** Fired on window whenever a shared-store mutation changes the local board. */
+export const BOARD_CHANGED_EVENT = 'budgetbitch:localBoardChanged';
+
+export function notifyBoardChanged(): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT));
+}

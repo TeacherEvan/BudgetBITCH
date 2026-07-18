@@ -6,13 +6,15 @@ import type {
   BudgetCategory, 
   Bill, 
   SavingsGoal, 
-  NetWorthSnapshot, 
-  Debt, 
   CriticalExpenseCommitment,
   NewsItem,
   LocationCache,
-  ExpenseCategory
+  ExpenseCategory,
+  NetWorthSnapshot,
+  Debt,
+  BoardSnapshot,
 } from '@/lib/types/budget';
+import { notifyBoardChanged } from '@/lib/types/budget';
 
 interface BudgetBITCHDB extends DBSchema {
   wizardProfile: {
@@ -185,6 +187,7 @@ export async function getDB(): Promise<IDBPDatabase<BudgetBITCHDB>> {
 export async function saveWizardProfile(profile: WizardProfile): Promise<void> {
   const db = await getDB();
   await db.put('wizardProfile', profile, 'current');
+  notifyBoardChanged();
 }
 
 export async function getWizardProfile(): Promise<WizardProfile | undefined> {
@@ -201,16 +204,19 @@ export async function clearWizardProfile(): Promise<void> {
 export async function addExpense(expense: ExpenseEntry): Promise<void> {
   const db = await getDB();
   await db.add('expenses', expense);
+  notifyBoardChanged();
 }
 
 export async function updateExpense(expense: ExpenseEntry): Promise<void> {
   const db = await getDB();
   await db.put('expenses', expense);
+  notifyBoardChanged();
 }
 
 export async function deleteExpense(id: string): Promise<void> {
   const db = await getDB();
   await db.delete('expenses', id);
+  notifyBoardChanged();
 }
 
 export async function getExpenses(): Promise<ExpenseEntry[]> {
@@ -233,6 +239,7 @@ export async function getExpensesByCategory(category: ExpenseCategory): Promise<
 export async function saveBudgetCategory(budget: BudgetCategory): Promise<void> {
   const db = await getDB();
   await db.put('budgets', budget);
+  notifyBoardChanged();
 }
 
 export async function getBudgetCategory(category: ExpenseCategory): Promise<BudgetCategory | undefined> {
@@ -249,16 +256,19 @@ export async function getAllBudgets(): Promise<BudgetCategory[]> {
 export async function addBill(bill: Bill): Promise<void> {
   const db = await getDB();
   await db.add('bills', bill);
+  notifyBoardChanged();
 }
 
 export async function updateBill(bill: Bill): Promise<void> {
   const db = await getDB();
   await db.put('bills', bill);
+  notifyBoardChanged();
 }
 
 export async function deleteBill(id: string): Promise<void> {
   const db = await getDB();
   await db.delete('bills', id);
+  notifyBoardChanged();
 }
 
 export async function getAllBills(): Promise<Bill[]> {
@@ -270,16 +280,19 @@ export async function getAllBills(): Promise<Bill[]> {
 export async function addSavingsGoal(goal: SavingsGoal): Promise<void> {
   const db = await getDB();
   await db.add('savingsGoals', goal);
+  notifyBoardChanged();
 }
 
 export async function updateSavingsGoal(goal: SavingsGoal): Promise<void> {
   const db = await getDB();
   await db.put('savingsGoals', goal);
+  notifyBoardChanged();
 }
 
 export async function deleteSavingsGoal(id: string): Promise<void> {
   const db = await getDB();
   await db.delete('savingsGoals', id);
+  notifyBoardChanged();
 }
 
 export async function getAllSavingsGoals(): Promise<SavingsGoal[]> {
@@ -291,6 +304,7 @@ export async function getAllSavingsGoals(): Promise<SavingsGoal[]> {
 export async function saveNetWorthSnapshot(snapshot: NetWorthSnapshot): Promise<void> {
   const db = await getDB();
   await db.put('netWorthSnapshots', snapshot);
+  notifyBoardChanged();
 }
 
 export async function getLatestNetWorthSnapshot(): Promise<NetWorthSnapshot | undefined> {
@@ -303,16 +317,19 @@ export async function getLatestNetWorthSnapshot(): Promise<NetWorthSnapshot | un
 export async function addDebt(debt: Debt): Promise<void> {
   const db = await getDB();
   await db.add('debts', debt);
+  notifyBoardChanged();
 }
 
 export async function updateDebt(debt: Debt): Promise<void> {
   const db = await getDB();
   await db.put('debts', debt);
+  notifyBoardChanged();
 }
 
 export async function deleteDebt(id: string): Promise<void> {
   const db = await getDB();
   await db.delete('debts', id);
+  notifyBoardChanged();
 }
 
 export async function getAllDebts(): Promise<Debt[]> {
@@ -324,6 +341,7 @@ export async function getAllDebts(): Promise<Debt[]> {
 export async function saveCriticalExpenseCommitment(commitment: CriticalExpenseCommitment): Promise<void> {
   const db = await getDB();
   await db.put('criticalExpenseCommitments', commitment);
+  notifyBoardChanged();
 }
 
 export async function getCriticalExpenseCommitment(month: string): Promise<CriticalExpenseCommitment | undefined> {
@@ -334,6 +352,7 @@ export async function getCriticalExpenseCommitment(month: string): Promise<Criti
 export async function deleteCriticalExpenseCommitment(month: string): Promise<void> {
   const db = await getDB();
   await db.delete('criticalExpenseCommitments', month);
+  notifyBoardChanged();
 }
 
 // News Cache
@@ -411,4 +430,76 @@ export async function clearAllData(): Promise<void> {
 // Utility: Generate UUID
 export function generateId(): string {
   return crypto.randomUUID();
+}
+
+// ── Shared board (couple sync) ──────────────────────────────────────────────
+
+/**
+ * Serialize the 8 shared local stores into a single BoardSnapshot.
+ * User-local stores (settings, newsCache, locationCache) are intentionally excluded.
+ */
+export async function serializeBoard(): Promise<BoardSnapshot> {
+  const db = await getDB();
+  const [
+    wizardProfile,
+    expenses,
+    budgets,
+    bills,
+    savingsGoals,
+    netWorthSnapshots,
+    debts,
+    criticalExpenseCommitments,
+  ] = await Promise.all([
+    db.get('wizardProfile', 'current'),
+    db.getAll('expenses'),
+    db.getAll('budgets'),
+    db.getAll('bills'),
+    db.getAll('savingsGoals'),
+    db.getAll('netWorthSnapshots'),
+    db.getAll('debts'),
+    db.getAll('criticalExpenseCommitments'),
+  ]);
+
+  return {
+    wizardProfile: wizardProfile ?? null,
+    expenses,
+    budgets,
+    bills,
+    savingsGoals,
+    netWorthSnapshots,
+    debts,
+    criticalExpenseCommitments,
+  };
+}
+
+/**
+ * Bulk-overwrite the 8 shared local stores from a BoardSnapshot.
+ * Does NOT emit BOARD_CHANGED_EVENT — applying a remote board must not echo back as a push.
+ */
+export async function replaceBoardData(board: BoardSnapshot): Promise<void> {
+  const db = await getDB();
+  const stores = [
+    'wizardProfile', 'expenses', 'budgets', 'bills', 'savingsGoals',
+    'netWorthSnapshots', 'debts', 'criticalExpenseCommitments',
+  ] as const;
+  const tx = db.transaction(stores, 'readwrite');
+
+  for (const store of stores) {
+    await tx.objectStore(store).clear();
+  }
+
+  if (board.wizardProfile) {
+    tx.objectStore('wizardProfile').put(board.wizardProfile, 'current');
+  }
+  for (const e of board.expenses) tx.objectStore('expenses').put(e);
+  for (const b of board.budgets) tx.objectStore('budgets').put(b);
+  for (const b of board.bills) tx.objectStore('bills').put(b);
+  for (const g of board.savingsGoals) tx.objectStore('savingsGoals').put(g);
+  for (const s of board.netWorthSnapshots) tx.objectStore('netWorthSnapshots').put(s);
+  for (const d of board.debts) tx.objectStore('debts').put(d);
+  for (const c of board.criticalExpenseCommitments) {
+    tx.objectStore('criticalExpenseCommitments').put(c);
+  }
+
+  await tx.done;
 }
