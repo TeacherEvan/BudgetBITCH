@@ -412,7 +412,23 @@ export async function getSettings(): Promise<{
   return db.get('settings', 'current');
 }
 
-// Utility: Clear all data (for reset)
+// The 8 user-data object stores. Excludes caches (newsCache, locationCache) and
+// the persistent settings store so a "reset" never silently discards preferences
+// or offline/board sync queues.
+export const USER_DATA_STORES = [
+  'wizardProfile',
+  'expenses',
+  'budgets',
+  'bills',
+  'savingsGoals',
+  'netWorthSnapshots',
+  'debts',
+  'criticalExpenseCommitments',
+] as const;
+
+export type UserDataStore = (typeof USER_DATA_STORES)[number];
+
+// Utility: Clear all data (for full wipe, e.g. dev/test)
 export async function clearAllData(): Promise<void> {
   const db = await getDB();
   const stores = [
@@ -422,6 +438,16 @@ export async function clearAllData(): Promise<void> {
   ] as const;
   const tx = db.transaction(stores, 'readwrite');
   for (const store of stores) {
+    await tx.objectStore(store).clear();
+  }
+  await tx.done;
+}
+
+// Utility: Clear only user-owned data (settings + caches preserved)
+export async function clearAllUserData(): Promise<void> {
+  const db = await getDB();
+  const tx = db.transaction(USER_DATA_STORES, 'readwrite');
+  for (const store of USER_DATA_STORES) {
     await tx.objectStore(store).clear();
   }
   await tx.done;
@@ -491,13 +517,13 @@ export async function replaceBoardData(board: BoardSnapshot): Promise<void> {
   if (board.wizardProfile) {
     tx.objectStore('wizardProfile').put(board.wizardProfile, 'current');
   }
-  for (const e of board.expenses) tx.objectStore('expenses').put(e);
-  for (const b of board.budgets) tx.objectStore('budgets').put(b);
-  for (const b of board.bills) tx.objectStore('bills').put(b);
-  for (const g of board.savingsGoals) tx.objectStore('savingsGoals').put(g);
-  for (const s of board.netWorthSnapshots) tx.objectStore('netWorthSnapshots').put(s);
-  for (const d of board.debts) tx.objectStore('debts').put(d);
-  for (const c of board.criticalExpenseCommitments) {
+  for (const e of board.expenses ?? []) tx.objectStore('expenses').put(e);
+  for (const b of board.budgets ?? []) tx.objectStore('budgets').put(b);
+  for (const b of board.bills ?? []) tx.objectStore('bills').put(b);
+  for (const g of board.savingsGoals ?? []) tx.objectStore('savingsGoals').put(g);
+  for (const s of board.netWorthSnapshots ?? []) tx.objectStore('netWorthSnapshots').put(s);
+  for (const d of board.debts ?? []) tx.objectStore('debts').put(d);
+  for (const c of board.criticalExpenseCommitments ?? []) {
     tx.objectStore('criticalExpenseCommitments').put(c);
   }
 
