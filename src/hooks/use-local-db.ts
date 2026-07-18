@@ -69,6 +69,8 @@ export function useWizardProfile() {
         }
         setLoading(false);
       }
+    }).catch(() => {
+      if (mounted) setLoading(false);
     });
     return () => { mounted = false; };
   }, []);
@@ -98,6 +100,8 @@ export function useExpenses() {
         setExpenses(e.sort((a, b) => b.date.localeCompare(a.date)));
         setLoading(false);
       }
+    }).catch(() => {
+      if (mounted) setLoading(false);
     });
     return () => { mounted = false; };
   }, []);
@@ -138,6 +142,8 @@ export function useBudgets() {
         setBudgets(b);
         setLoading(false);
       }
+    }).catch(() => {
+      if (mounted) setLoading(false);
     });
     return () => { mounted = false; };
   }, []);
@@ -172,6 +178,8 @@ export function useBills() {
         setBills(b);
         setLoading(false);
       }
+    }).catch(() => {
+      if (mounted) setLoading(false);
     });
     return () => { mounted = false; };
   }, []);
@@ -206,6 +214,8 @@ export function useSavingsGoals() {
         setGoals(g);
         setLoading(false);
       }
+    }).catch(() => {
+      if (mounted) setLoading(false);
     });
     return () => { mounted = false; };
   }, []);
@@ -242,6 +252,8 @@ export function useCriticalExpenseCommitment(month?: string) {
         setCommitment(c ?? null);
         setLoading(false);
       }
+    }).catch(() => {
+      if (mounted) setLoading(false);
     });
     return () => { mounted = false; };
   }, [targetMonth]);
@@ -266,6 +278,8 @@ export function useNetWorth() {
         setSnapshot(s ?? null);
         setLoading(false);
       }
+    }).catch(() => {
+      if (mounted) setLoading(false);
     });
     return () => { mounted = false; };
   }, []);
@@ -439,6 +453,8 @@ export function useDebtPayoff() {
         setDebts(d);
         setLoading(false);
       }
+    }).catch(() => {
+      if (mounted) setLoading(false);
     });
     return () => { mounted = false; };
   }, []);

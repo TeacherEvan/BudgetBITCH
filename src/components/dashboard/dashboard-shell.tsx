@@ -17,6 +17,7 @@ import { Subscriptions } from '@/components/dashboard/panels/subscriptions';
 import { EmergencyFund } from '@/components/dashboard/panels/emergency-fund';
 import { DebtPayoff } from '@/components/dashboard/panels/debt-payoff';
 import { CashFlowForecast } from '@/components/dashboard/panels/cash-flow-forecast';
+import { Modal } from '@/components/ui/modal';
 import { useWizardProfile } from '@/hooks/use-local-db';
 import { useCriticalExpense } from '@/hooks/use-critical-expense';
 import { BentoGrid, PanelConfig } from '@/components/dashboard/bento-grid';
@@ -65,6 +66,7 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openPanels, setOpenPanels] = useState<PanelKey[]>(['expenses', 'budget']);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [marketWatchOpen, setMarketWatchOpen] = useState(false);
 
   const togglePanel = (panel: PanelKey) => {
     setOpenPanels(prev => prev.includes(panel) ? prev.filter(p => p !== panel) : [...prev, panel]);
@@ -95,7 +97,7 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
             </h3>
             <button
               onClick={() => setCriticalExpenseOpen(true)}
-              className="w-full flex items-center gap-3 p-3 rounded-xl bg-amber-400/10 border border-amber-400/30 hover:bg-amber-400/20 transition-colors text-left"
+              className="w-full flex items-center gap-3 p-3 rounded-xl bg-amber-400/10 border border-amber-400/30 hover:bg-amber-400/20 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={commitmentLoading}
             >
               <span className="text-2xl">🎯</span>
@@ -110,6 +112,23 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
               <ChevronDown className="text-amber-400" />
             </button>
             {commitmentLoading && <p className="text-xs text-white/50 text-center">{locale === 'th' ? 'กำลังโหลด...' : 'Loading...'}</p>}
+
+            {/* Market Watch - desktop sidebar, only below xl */}
+            <button
+              onClick={() => setMarketWatchOpen(true)}
+              className="xl:hidden w-full flex items-center gap-3 p-3 rounded-xl bg-sky-400/10 border border-sky-400/30 hover:bg-sky-400/20 transition-colors text-left"
+            >
+              <span className="text-2xl">📰</span>
+              <div className="flex-1 text-left">
+                <p className="font-medium text-white text-sm">
+                  {locale === 'th' ? 'ข่าวและข้อมูลล่าสุด' : 'Market Watch'}
+                </p>
+                <p className="text-xs text-white/60">
+                  {locale === 'th' ? 'ดูราคาน้ำมัน โปรโมชั่น ข่าว' : 'Fuel, deals & news'}
+                </p>
+              </div>
+              <ChevronDown className="text-sky-400" />
+            </button>
           </div>
 
           <div className="space-y-2">
@@ -146,10 +165,16 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-white">{locale === 'th' ? 'เมนู' : 'Menu'}</h3>
             </div>
-            <button className="w-full flex items-center gap-3 p-3 rounded-xl bg-amber-400/10 border border-amber-400/30 text-left" onClick={() => { setCriticalExpenseOpen(true); setMobileMenuOpen(false); }}>
+            <button className="w-full flex items-center gap-3 p-3 rounded-xl bg-amber-400/10 border border-amber-400/30 text-left disabled:opacity-50 disabled:cursor-not-allowed" onClick={() => { setCriticalExpenseOpen(true); setMobileMenuOpen(false); }} disabled={commitmentLoading}>
               <span className="text-2xl">🎯</span>
               <div>
                 <p className="font-medium text-white">{locale === 'th' ? 'เลือก 1 อย่างลดในเดือนนี้' : 'Pick 1 to cut this month'}</p>
+              </div>
+            </button>
+            <button className="w-full flex items-center gap-3 p-3 rounded-xl bg-sky-400/10 border border-sky-400/30 text-left" onClick={() => { setMarketWatchOpen(true); setMobileMenuOpen(false); }}>
+              <span className="text-2xl">📰</span>
+              <div>
+                <p className="font-medium text-white">{locale === 'th' ? 'ข่าวและข้อมูลล่าสุด' : 'Market Watch'}</p>
               </div>
             </button>
             {PANEL_ORDER.map(panel => {
@@ -191,7 +216,7 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
           </div>
         </div>
 
-        {/* Alerts Sidebar - Desktop */}
+        {/* Alerts Sidebar - Desktop (xl+) */}
         <aside className="hidden xl:block w-80 flex-shrink-0 border-l border-white/5 bg-black/30 p-4 overflow-y-auto">
           <AlertsSidebar locale={locale} />
         </aside>
@@ -203,10 +228,15 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
           locale={locale}
         />
 
-        {/* Mobile Alerts Bottom Sheet */}
-        <div className="xl:hidden fixed bottom-20 left-4 right-4 z-30 md:bottom-24 md:left-auto md:right-4 md:w-96">
+        {/* Market Watch Modal */}
+        <Modal
+          isOpen={marketWatchOpen}
+          onClose={() => setMarketWatchOpen(false)}
+          showCloseButton={true}
+          size="lg"
+        >
           <AlertsSidebar locale={locale} />
-        </div>
+        </Modal>
       </main>
     </div>
   );

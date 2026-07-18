@@ -13,12 +13,16 @@ export function useCriticalExpense() {
 
   useEffect(() => {
     let mounted = true;
-    getCriticalExpenseCommitment(targetMonth).then(c => {
-      if (mounted) {
-        setCommitment(c || null);
-        setLoading(false);
-      }
-    });
+    getCriticalExpenseCommitment(targetMonth)
+      .then(c => {
+        if (mounted) {
+          setCommitment(c || null);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (mounted) setLoading(false);
+      });
     return () => { mounted = false; };
   }, [targetMonth]);
 
