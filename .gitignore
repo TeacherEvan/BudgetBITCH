@@ -50,3 +50,4 @@ local-db-*
 *.test.ts
 # except the Convex function test suite (must be committed)
 !budgetbitch/convex/**/*.test.ts
+!convex/**/*.test.ts

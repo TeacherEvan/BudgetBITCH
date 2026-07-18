@@ -4,13 +4,12 @@ import { defineConfig } from "vitest/config";
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
 
+// Convex function tests require the edge-runtime environment.
 export default defineConfig({
   test: {
-    environment: "jsdom",
+    environment: "edge-runtime",
     globals: true,
-    setupFiles: ["./src/test/setup.ts"],
-    include: ["src/**/*.{test,spec}.{ts,tsx}"],
-    exclude: ["tests/e2e/**", "node_modules/**", ".next/**", "convex/**"],
+    include: ["convex/**/*.test.ts"],
   },
   resolve: {
     alias: {

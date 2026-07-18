@@ -11,6 +11,7 @@
     "start": "node ./scripts/run-with-sanitized-env.mjs next start",
     "lint": "eslint .",
     "test": "vitest run",
+    "test:convex": "vitest run --config convex/vitest.config.ts",
     "test:watch": "vitest",
     "test:e2e": "playwright test"
   },
