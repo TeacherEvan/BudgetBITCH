@@ -4,12 +4,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, act, waitFor } from '@testing-library/react';
 import { BOARD_CHANGED_EVENT } from '@/lib/types/budget';
 import { saveWizardProfile, getWizardProfile, clearAllData } from '@/lib/db/local-db';
-import type { WizardProfile } from '@/lib/types/budget';
+import type { WizardProfile, BoardSnapshot } from '@/lib/types/budget';
 
 // Control the values the hook reads from useQuery.
 let queryResults: Record<string, unknown> = {};
 const pushBoard = vi.fn(async () => ({ success: true, applied: true }));
-const resolveShareCode = vi.fn(async () => ({ exists: true, displayName: null }));
+const resolveShareCode = vi.fn(async (_args: Record<string, unknown>) => ({ exists: true, displayName: null }));
 
 vi.mock('@convex-dev/auth/react', () => ({
   useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
@@ -21,12 +21,12 @@ vi.mock('convex/react', () => ({
     query: async (_ref: unknown, args: Record<string, unknown>) =>
       resolveShareCode(args),
   }),
-  useMutation: (ref: any) => {
-    // Convex returns stable references across renders; return stable mocks.
+  useMutation: () => {
+    // Convex returns stable references across renders; return a stable mock.
     // For this hook test only pushBoard is asserted, so all slots reuse it.
     return pushBoard;
   },
-  useQuery: (ref: any, args: unknown) => {
+  useQuery: (_ref: unknown, args: unknown) => {
     const isBoard = args !== null && typeof args === 'object' && 'boardId' in (args as object);
     const isSkip = args === 'skip';
     if (!isBoard && !isSkip) {
@@ -65,6 +65,16 @@ function makeProfile(): WizardProfile {
   };
 }
 
+type FixtureBoard = {
+  boardId: string;
+  updatedAt: number;
+  data: BoardSnapshot | null;
+  _id?: string;
+  memberA?: string;
+  memberB?: string;
+  updatedBy?: string;
+};
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 beforeEach(async () => {
@@ -85,12 +95,11 @@ describe('useSharedBoard', () => {
 
     const result = render(<HookProbe />);
 
-    const remoteBoard = {
-      _id: 'b1' as any,
-      _creationTime: 0,
+    const remoteBoard: FixtureBoard = {
+      _id: 'b1',
       boardId: 'board_1',
-      memberA: 'u1' as any,
-      memberB: 'u2' as any,
+      memberA: 'u1',
+      memberB: 'u2',
       data: {
         wizardProfile: {
           ...makeProfile(),
@@ -105,7 +114,7 @@ describe('useSharedBoard', () => {
         criticalExpenseCommitments: [],
       },
       updatedAt: 5000,
-      updatedBy: 'u2' as any,
+      updatedBy: 'u2',
     };
 
     await act(async () => {
@@ -126,7 +135,7 @@ describe('useSharedBoard', () => {
   it('debounces rapid local edits into a single push', async () => {
     queryResults = {
       getMyProfile: { shareCode: 'ABCD1234', displayName: null, linkedBoardId: 'board_1' },
-      getBoard: { boardId: 'board_1', updatedAt: 100, data: null },
+      getBoard: { boardId: 'board_1', updatedAt: 100, data: null } as FixtureBoard,
     };
     render(<HookProbe />);
 
@@ -138,13 +147,14 @@ describe('useSharedBoard', () => {
     });
 
     expect(pushBoard).toHaveBeenCalledTimes(1);
-    expect(pushBoard.mock.calls[0][0].boardId).toBe('board_1');
+    const firstCall = (pushBoard.mock.calls[0] as unknown[])[0] as { boardId: string };
+    expect(firstCall.boardId).toBe('board_1');
   });
 
   it('queues an offline edit to localStorage instead of pushing', async () => {
     queryResults = {
       getMyProfile: { shareCode: 'ABCD1234', displayName: null, linkedBoardId: 'board_1' },
-      getBoard: { boardId: 'board_1', updatedAt: 100, data: null },
+      getBoard: { boardId: 'board_1', updatedAt: 100, data: null } as FixtureBoard,
     };
     Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
 

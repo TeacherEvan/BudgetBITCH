@@ -11,7 +11,6 @@ import {
   type BoardSnapshot,
 } from '@/lib/db/local-db';
 import { BOARD_CHANGED_EVENT } from '@/lib/types/budget';
-import type { Doc } from '../../convex/_generated/dataModel';
 
 const PUSH_DEBOUNCE_MS = 800;
 const BOARD_QUEUE_KEY = 'budgetbitch:boardQueue';
@@ -34,7 +33,6 @@ function writeQueue(items: QueuedPush[]) {
 
 export interface UseSharedBoard {
   myProfile: { shareCode: string | null; displayName: string | null; linkedBoardId: string | null } | null;
-  partnerName: string | null;
   isLinked: boolean;
   boardId: string | null;
   lastSyncedAt: number | null;
@@ -53,7 +51,6 @@ export function useSharedBoard(): UseSharedBoard {
   const auth = useConvexAuth();
   const isAuthenticated = auth?.isAuthenticated ?? false;
 
-  const [partnerName, setPartnerName] = useState<string | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
   const [resolving, setResolving] = useState(false);
 
@@ -130,16 +127,6 @@ export function useSharedBoard(): UseSharedBoard {
     writeQueue(remaining);
   }, [boardId, pushBoard]);
 
-  // Resolve partner display name for a linked board (other member).
-  useEffect(() => {
-    if (!board || !myProfile) {
-      setPartnerName(null);
-      return;
-    }
-    // partnerName is informational; left null for now (profiles have no name by default).
-    setPartnerName(null);
-  }, [board, myProfile]);
-
   // PUSH: debounce local edits, then push (or queue if offline).
   useEffect(() => {
     if (!boardId) return;
@@ -215,7 +202,6 @@ export function useSharedBoard(): UseSharedBoard {
           linkedBoardId: myProfile.linkedBoardId,
         }
       : null,
-    partnerName,
     isLinked: !!boardId,
     boardId,
     lastSyncedAt,
