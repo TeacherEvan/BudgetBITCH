@@ -395,3 +395,72 @@ describe("authz + deletion", () => {
     expect(couple!.boardId).toBe(boardId);
   });
 });
+
+describe("invite token (QR / link)", () => {
+  test("owner creates a token, joiner redeems it and becomes a member", async () => {
+    const aliceId = await seedUser(t, "alice");
+    const bobId = await seedUser(t, "bob");
+    const { accountId, boardId } = await createAccount(aliceId, "family", "Our Family");
+
+    const { token } = await asUser(aliceId).mutation(api.accounts.createInviteToken, {
+      accountId,
+    });
+    expect(token).toBeTruthy();
+
+    const res = await asUser(bobId).mutation(api.accounts.redeemInviteToken, { token });
+    expect(res.accountId).toBe(accountId);
+    expect(res.boardId).toBe(boardId);
+    expect(res.alreadyMember).toBe(false);
+
+    // Bob now sees the account as a joined member.
+    const bobListed = await asUser(bobId).query(api.accounts.listMyAccounts, {});
+    const joined = bobListed.find((a: any) => a.accountId === accountId);
+    expect(joined).toBeTruthy();
+    expect(joined!.role).toBe("member");
+    expect(joined!.memberCount).toBe(2);
+  });
+
+  test("redeeming an unknown token throws", async () => {
+    const bobId = await seedUser(t, "bob");
+    await expect(
+      asUser(bobId).mutation(api.accounts.redeemInviteToken, { token: "nope" }),
+    ).rejects.toThrow(/invalid or expired/);
+  });
+
+  test("redeem is idempotent for the same user", async () => {
+    const aliceId = await seedUser(t, "alice");
+    const bobId = await seedUser(t, "bob");
+    const { accountId } = await createAccount(aliceId, "friends", "Crew");
+    const { token } = await asUser(aliceId).mutation(api.accounts.createInviteToken, {
+      accountId,
+    });
+    await asUser(bobId).mutation(api.accounts.redeemInviteToken, { token });
+    const again = await asUser(bobId).mutation(api.accounts.redeemInviteToken, { token });
+    expect(again.alreadyMember).toBe(true);
+  });
+
+  test("token generation respects the member cap", async () => {
+    const aliceId = await seedUser(t, "alice");
+    const { accountId } = await createAccount(aliceId, "school", "Class");
+    // Fill the board to the cap with members directly.
+    const others: any[] = [];
+    for (let i = 0; i < 7; i++) others.push(await seedUser(t, `s${i}`));
+    await t.run(async (ctx: any) => {
+      const acc = await ctx.db
+        .query("accounts")
+        .withIndex("by_accountId", (q: any) => q.eq("accountId", accountId))
+        .unique();
+      for (const u of others) {
+        await ctx.db.insert("boardMembers", {
+          boardId: acc.boardId,
+          userId: u,
+          role: "member",
+          joinedAt: Date.now(),
+        });
+      }
+    });
+    await expect(
+      asUser(aliceId).mutation(api.accounts.createInviteToken, { accountId }),
+    ).rejects.toThrow(/at most 8/);
+  });
+});

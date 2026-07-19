@@ -59,6 +59,7 @@ export default defineSchema({
   // Multi-member shared board (generalizes the couple sharedBoards).
   accountBoards: defineTable({
     boardId: v.string(),
+    accountId: v.string(),
     ownerId: v.id("users"),
     members: v.array(v.id("users")), // 1..8; index[0] = owner
     umbrella: v.string(),
@@ -72,13 +73,16 @@ export default defineSchema({
   invites: defineTable({
     boardId: v.string(),
     fromUserId: v.id("users"),
-    toUserId: v.id("users"),
+    toUserId: v.optional(v.id("users")),
     status: v.string(), // 'pending' | 'accepted' | 'declined'
     createdAt: v.number(),
     accountId: v.string(),
+    // Shareable board-invite token (for QR/link joins). Empty for shareCode invites.
+    token: v.optional(v.string()),
   })
     .index("by_toUser_status", ["toUserId", "status"])
-    .index("by_board", ["boardId"]),
+    .index("by_board", ["boardId"])
+    .index("by_token", ["token"]),
 
   dailySnapshots: defineTable({
     userId: v.id("users"),

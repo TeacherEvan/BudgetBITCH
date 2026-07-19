@@ -30,16 +30,15 @@ BudgetBITCH/
 ├── src/                             # 🎯 MAIN SOURCE CODE
 │   ├── app/                         # Next.js App Router pages
 │   │   ├── layout.tsx               # Root layout: Providers (ConvexAuth, next-intl, PWA, Voice)
-│   │   ├── page.tsx                 # Landing → LanguageSelect → redirect
+│   │   ├── page.tsx                 # Landing → welcome gate / dashboard redirect
 │   │   ├── globals.css              # Global styles: 3 themes (amber/dark/gold)
-│   │   ├── sign-in/[[...page]].tsx  # Convex Auth sign-in
-│   │   ├── sign-up/[[...page]].tsx  # Convex Auth sign-up
-│   │   ├── wizard/
-│   │   │   └── page.tsx             # WizardShell (protected)
-│   │   ├── dashboard/
-│   │   │   └── page.tsx             # DashboardShell (protected)
-│   │   └── settings/
-│   │       └── page.tsx             # Settings (protected)
+│   │   ├── sign-in/page.tsx        # Convex Auth sign-in (email/password)
+│   │   ├── sign-up/page.tsx        # Convex Auth sign-up (email/password)
+│   │   ├── forgot-password/page.tsx # Password reset request
+│   │   ├── reset/page.tsx          # Password reset completion (token from email)
+│   │   ├── (app)/
+│   │   │   ├── dashboard/page.tsx   # DashboardShell (protected, post-auth landing)
+│   │   │   └── wizard/page.tsx      # WizardShell (protected)
 │   ├── components/                  # React components
 │   │   ├── onboarding/
 │   │   │   └── language-select-modal.tsx    # 🎯 FIRST SCREEN — Thai/English
@@ -83,7 +82,17 @@ BudgetBITCH/
 │   │   │       └── empty-state.tsx           # Empty panel fallback
 │   │   ├── layout/
 │   │   │   └── header-bar.tsx                # 🎯 Globe🌐 + Wrench🔧 (persistent)
-│   │   ├── auth/                             # Minimal Convex Auth UI
+│   │   ├── auth/                             # Account recovery, entry panel, password form
+│   │   ├── dashboard/                        # Dashboard shell, panels, alerts sidebar, modals
+│   │   ├── launch/                           # Splash, manifesto interstitial/notification
+│   │   ├── layout/                           # Header bar
+│   │   ├── legal/                            # Cookie consent, site footer, legal pages
+│   │   ├── mobile/                           # Mobile panel frame
+│   │   ├── onboarding/                       # Language select modal (first screen)
+│   │   ├── pwa/                              # Install prompt
+│   │   ├── shared-board/                     # Shared couple-board UI
+│   │   ├── welcome/                          # Welcome window
+│   │   ├── wizard/                           # Onboarding wizard (shell, steps, voice toggle)
 │   │   └── ui/                               # Shared primitives
 │   │       ├── button.tsx
 │   │       ├── card.tsx
@@ -104,21 +113,14 @@ BudgetBITCH/
 │   │   # Daily Convex snapshot sync lives in src/lib/convex/sync-snapshots.ts
 │   │   # + convex/snapshots.ts (no use-daily-snapshot.ts hook).
 │   ├── lib/                               # Core libraries
-│   │   ├── db/
-│   │   │   └── local-db.ts              # 🎯 idb wrapper: CRUD + migrations v1
-│   │   ├── convex/
-│   │   │   └── sync-snapshots.ts        # Daily push to Convex
-│   │   ├── news/
-│   │   │   └── rss-fetcher.ts           # RSS parsing + caching (TH/EN, 6h TTL)
-│   │   ├── utils/
-│   │   │   ├── thai-category-mapper.ts  # Voice Thai → ExpenseCategory
-│   │   │   ├── compound-calculator.ts   # Critical expense projections
-│   │   │   ├── currency.ts              # THB/USD formatting (Intl)
-│   │   │   └── date.ts                  # Thai calendar, holidays
-│   │   └── types/
-│   │       ├── budget.ts                # All TypeScript interfaces
-│   │       ├── speech.d.ts              # Web Speech API types
-│   │       └── next-pwa.d.ts            # Next PWA types
+│   │   ├── auth/                          # Auth utilities (e2e-auth-override, route-guard, routes)
+│   │   ├── convex/                        # Convex HTTP client, sync snapshots
+│   │   ├── db/                            # Local IndexedDB wrapper (local-db.ts)
+│   │   ├── location/                      # Location helpers (city suggestions)
+│   │   ├── news/                          # RSS fetcher (rss-parser)
+│   │   ├── types/                         # Budget types
+│   │   ├── utils/                         # cn, compound-calculator, currency, thai-category-mapper
+│   │   └── url.ts                         # URL utilities
 │   └── middleware.ts                    # Auth middleware (minimal)
 ├── .cache/                              # 🚫 GITIGNORED — Agent token cache
 ├── .gitignore                           # 📝 .cache/, *.idb, local-db-*

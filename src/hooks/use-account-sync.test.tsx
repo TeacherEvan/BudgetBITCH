@@ -1,0 +1,165 @@
+// hooks/use-account-sync.test.tsx
+import 'fake-indexeddb/auto';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, act, waitFor } from '@testing-library/react';
+import { BOARD_CHANGED_EVENT } from '@/lib/types/budget';
+import {
+  saveWizardProfile,
+  getWizardProfile,
+  clearAllData,
+} from '@/lib/db/local-db';
+import {
+  getCurrentAccountId,
+  setCurrentAccountId,
+  saveLocalAccount,
+} from '@/lib/db/accountStorage';
+import type { WizardProfile } from '@/lib/types/budget';
+
+let queryResults: Record<string, unknown> = {};
+const pushBoard = vi.fn(async () => ({ success: true, applied: true }));
+
+vi.mock('@convex-dev/auth/react', () => ({
+  useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
+}));
+
+vi.mock('convex/react', () => ({
+  useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
+  useConvex: () => ({
+    query: async () => null,
+  }),
+  useMutation: () => pushBoard,
+  useQuery: (_ref: unknown, args: unknown) => {
+    if (args === 'skip') return undefined;
+    return queryResults.getBoard ?? null;
+  },
+}));
+
+import { useAccountSync } from './use-account-sync';
+
+function HookProbe() {
+  useAccountSync();
+  return null;
+}
+
+function makeProfile(income = 50000): WizardProfile {
+  return {
+    completed: true,
+    completedAt: new Date().toISOString(),
+    version: 1,
+    locale: 'en',
+    answers: {
+      income, rent: 8000, transport: 2000, phoneInternet: 1000,
+      subscriptions: 500, entertainment: 1500, healthcare: 1000,
+      savingsRatePct: 10, riskTolerance: 'medium', locationConsent: false,
+      currency: 'THB',
+    },
+  };
+}
+
+type FixtureBoard = {
+  boardId: string;
+  updatedAt: number;
+  data: Record<string, { value: unknown; updatedAt: number }> | null;
+};
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+beforeEach(async () => {
+  queryResults = { getBoard: null };
+  pushBoard.mockClear();
+  await clearAllData();
+  localStorage.clear();
+  // Seed the active account as a shared account with a boardId.
+  await setCurrentAccountId('acc-family');
+  await saveLocalAccount({
+    accountId: 'acc-family',
+    umbrella: 'family',
+    name: 'Family',
+    boardId: 'board_family',
+    inviteCode: 'ABCDEF12',
+    role: 'owner',
+    hasLocalData: true,
+  });
+});
+
+describe('useAccountSync', () => {
+  it('pulls a newer remote account board into local storage', async () => {
+    await saveWizardProfile(makeProfile(50000));
+    expect((await getWizardProfile())?.answers.income).toBe(50000);
+
+    const result = render(<HookProbe />);
+
+    await act(async () => {
+      queryResults = {
+        getBoard: {
+          boardId: 'board_family',
+          updatedAt: 5000,
+          data: {
+            'wizardProfile:current': {
+              value: { ...makeProfile(999999) },
+              updatedAt: 5000,
+            },
+          },
+        } as FixtureBoard,
+      };
+      result.rerender(<HookProbe />);
+      await sleep(50);
+    });
+
+    await waitFor(async () => {
+      const local = await getWizardProfile();
+      expect(local?.answers.income).toBe(999999);
+    });
+  });
+
+  it('debounces rapid local edits into a single push to the account board', async () => {
+    render(<HookProbe />);
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT));
+      window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT));
+      window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT));
+      await sleep(1000);
+    });
+
+    expect(pushBoard).toHaveBeenCalledTimes(1);
+    const firstCall = (pushBoard.mock.calls[0] as unknown[])[0] as {
+      boardId: string;
+    };
+    expect(firstCall.boardId).toBe('board_family');
+  });
+
+  it('does nothing when the active board is personal (no boardId)', async () => {
+    await setCurrentAccountId('personal');
+    render(<HookProbe />);
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT));
+      await sleep(1000);
+    });
+    expect(pushBoard).not.toHaveBeenCalled();
+  });
+
+  it('queues an offline edit to localStorage instead of pushing', async () => {
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+    render(<HookProbe />);
+
+    // Let the active account's boardId resolve before editing.
+    await act(async () => {
+      await sleep(50);
+    });
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT));
+      await sleep(1000);
+    });
+
+    expect(pushBoard).not.toHaveBeenCalled();
+    const queue = JSON.parse(localStorage.getItem('budgetbitch:accountBoardQueue') || '[]');
+    expect(queue).toHaveLength(1);
+    await act(async () => {
+      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+      window.dispatchEvent(new Event('online'));
+      await sleep(200);
+    });
+    expect(pushBoard).toHaveBeenCalledTimes(1);
+  });
+});

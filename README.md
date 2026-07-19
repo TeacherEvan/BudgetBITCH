@@ -38,7 +38,7 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 ## Codebase shape
 
 - `src/app/**` contains routes, route groups, layouts, and API handlers
-- `src/app/page.tsx` (auth-first root gate), `src/app/sign-in/**`, `src/app/sign-up/**`, and the `(app)` route group (`dashboard`, `wizard`) are the only live routes. There is no `/auth/continue` route — `src/lib/auth/routes.ts` maps the post-auth step to `/ln` (Launcher).
+- `src/app/page.tsx` (auth-first root gate), `src/app/sign-in/`, `src/app/sign-up/`, `src/app/forgot-password/`, `src/app/reset/`, and the `(app)` route group (`dashboard`, `wizard`) are the live routes. `src/lib/auth/routes.ts` defines `AUTH_ROUTES.continue = "/auth/continue"`, but no page implements that route; post-auth users land on `/dashboard`.
 - `src/lib/auth/routes.ts` centralizes protected path prefixes and auth route constants used by route protection
 - `src/modules/**` contains business/domain logic grouped by capability; currently `src/modules/budgeting/` (budget math) and `src/modules/home-base/` (root board orchestration)
 - `src/components/start-smart/**` contains reusable UI for the Money Survival Blueprint flow
@@ -50,8 +50,8 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 ## Auth-first root flow
 
 - `/` is the auth-first gate: signed-out visitors stay on the welcome window, signed-in visitors without a completed launch profile move into the launch wizard, and signed-in visitors with a completed launch profile land on the root board.
-- `/sign-in` and `/sign-up` keep only sanitized in-app `redirectTo` targets.
-- After sign-in, the post-auth bootstrap resolves any missing local user/workspace records, then routes to the launch target (`/ln`) before the dashboard opens.
+- `/sign-in`, `/sign-up`, `/forgot-password`, and `/reset` keep only sanitized in-app `redirectTo` targets.
+- After sign-in, the post-auth bootstrap resolves any missing local user/workspace records, then lands on `/dashboard` (the wizard runs for users without a completed launch profile).
 - `src/middleware.ts` protects the shared product surface by reading the centralized prefixes in `src/lib/auth/routes.ts`. Signed-out browser routes redirect to `/sign-in`.
 
 ## Local setup
@@ -113,10 +113,13 @@ See `.env.example` for the authoritative list. Required for this slice:
 
 - `CONVEX_DEPLOYMENT` — identifies the Convex deployment for CLI/codegen commands.
 - `NEXT_PUBLIC_CONVEX_URL` — the Convex cloud URL (baked into the browser bundle at build time; changing it requires a redeploy).
+- `NEXT_PUBLIC_CONVEX_SITE_URL` — the Convex site URL, mirrored into the browser bundle for client-side redirect/issuer reference.
 - `CONVEX_SITE_URL` — the Convex site URL used as the Convex Auth issuer. Built-in Convex variable; do not `npx convex env set` it.
 - `SITE_URL` — the app origin accepted by Convex Auth redirects (e.g. `http://localhost:3000` locally).
+- `NEXT_PUBLIC_APP_URL` — the public app origin used in reset/verification email links (Convex Auth reads it at runtime; falls back to `SITE_URL` locally).
+- `CONVEX_SYNC_SECRET` — shared secret for trusted server-side Convex sync (auth bootstrap + projection replay). Must match between the Vercel build env and the Convex deployment env.
 
-> Reserved but not consumed in this slice: `CONVEX_SYNC_SECRET` (listed in `.env.example`, no code reads it yet), and any future `PROVIDER_SECRET_ENCRYPTION_KEY` / `CRON_SECRET` for the unbuilt integration/provider-vault work. `RESEND_API_KEY` / `INNGEST_*` are not present in `.env.example` and are unused.
+> Reserved but not consumed in this slice: `PROVIDER_SECRET_ENCRYPTION_KEY` / `CRON_SECRET` for the unbuilt integration/provider-vault work. `RESEND_API_KEY` and `AUTH_EMAIL_FROM` are listed in `.env.example` as commented secrets (optional) — Convex Auth reads `RESEND_API_KEY` at runtime to deliver password-reset emails once an account-recovery flow is wired; they are not yet actively used by the app code in this slice. See `.env.example` for the authoritative, current list.
 
 ## Start Smart regional data
 

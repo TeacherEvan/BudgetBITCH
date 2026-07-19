@@ -199,8 +199,19 @@ export function HeaderBar({ locale, onLocaleChange, voiceEnabled, onVoiceToggle 
             </div>
           </section>
 
-          {/* Divider + Full Settings link */}
-          <div className="border-t border-white/10 pt-4">
+          {/* Divider + Accounts + Full Settings links */}
+          <div className="border-t border-white/10 pt-4 space-y-2">
+            <Link
+              href="/accounts"
+              onClick={() => setSettingsOpen(false)}
+              className="flex w-full items-center justify-between rounded-xl border border-[rgba(201,150,12,0.25)] bg-[rgba(201,150,12,0.10)] px-4 py-3 text-sm font-medium text-white/80 transition-colors hover:border-[rgba(201,150,12,0.45)] hover:text-white group"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-[#E8B020]">🏦</span>
+                {locale === 'th' ? 'บัญชี' : 'Accounts'}
+              </div>
+              <ExternalLink className="w-3.5 h-3.5 text-white/30 group-hover:text-[#C9960C] transition-colors" />
+            </Link>
             <Link
               href="/settings"
               onClick={() => setSettingsOpen(false)}

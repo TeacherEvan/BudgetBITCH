@@ -69,10 +69,38 @@ interface BudgetBITCHDB extends DBSchema {
       privacyDisclaimerAccepted: boolean;
     };
   };
+  // Accounts feature (local-first multi-board): per-account stashed BoardSnapshot.
+  accountsData: {
+    key: string; // accountId
+    value: {
+      accountId: string;
+      snapshot: unknown;
+      stashedAt: number;
+    };
+  };
+  // Local cache of account metadata for the Accounts listing (mirror of Convex listMyAccounts).
+  localAccounts: {
+    key: string; // accountId
+    value: {
+      accountId: string;
+      umbrella: string;
+      name: string;
+      boardId: string | null;
+      inviteCode: string | null;
+      role: 'owner' | 'member';
+      hasLocalData?: boolean;
+    };
+  };
+  // Misc cross-cutting string flags (e.g. bb:currentAccount). Untyped
+  // key/value store so it never conflicts with the strict settings schema.
+  bbMeta: {
+    key: string;
+    value: string;
+  };
 }
 
 const DB_NAME = 'budgetbitch';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 let dbInstance: IDBPDatabase<BudgetBITCHDB> | null = null;
 
 export async function getDB(): Promise<IDBPDatabase<BudgetBITCHDB>> {
@@ -178,6 +206,21 @@ export async function getDB(): Promise<IDBPDatabase<BudgetBITCHDB>> {
       // settings
       if (!db.objectStoreNames.contains('settings')) {
         db.createObjectStore('settings');
+      }
+
+      // accountsData (per-account BoardSnapshot stash) — Accounts feature
+      if (!db.objectStoreNames.contains('accountsData')) {
+        db.createObjectStore('accountsData');
+      }
+
+      // localAccounts (account meta cache) — Accounts feature
+      if (!db.objectStoreNames.contains('localAccounts')) {
+        db.createObjectStore('localAccounts');
+      }
+
+      // bbMeta (misc cross-cutting string flags) — Accounts feature
+      if (!db.objectStoreNames.contains('bbMeta')) {
+        db.createObjectStore('bbMeta');
       }
     },
   });

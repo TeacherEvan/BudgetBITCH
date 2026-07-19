@@ -51,7 +51,7 @@ Treat them as distinct systems. The root app is the one to extend unless a task 
   - `types/` — Budget types
   - `url.ts` — URL utilities
   - `utils/` — `cn`, `compound-calculator`, `currency`, `thai-category-mapper`
-- `src/middleware.ts` — Convex Auth Next.js middleware (protects `/dashboard`, `/settings`, `/wizard`, `/auth/continue`, `/api/v1/auth/bootstrap`)
+- `src/middleware.ts` — Convex Auth Next.js middleware (protects `/dashboard`, `/settings`, `/wizard`, `/api/v1/auth/bootstrap`). Note: `src/lib/auth/routes.ts` defines `AUTH_ROUTES.continue = "/auth/continue"`, but no page implements that route and it is not in the protected prefixes; post-auth users land on `/dashboard`.
 - `src/test/` — Test setup, smoke test
 - `src/types/` — TypeScript declarations (Next PWA, Speech API)
 - `convex/` — Convex backend
@@ -70,7 +70,7 @@ The root app is auth-first, local-first PWA:
 2. Language selection → stored in `localStorage` (`budgetbitch:locale`).
 3. PWA install prompt shown after language selection.
 4. Signed-in users → redirect to `/wizard` (if not complete) or `/dashboard` (if complete).
-5. Protected surfaces: `/dashboard`, `/settings`, `/wizard`, `/auth/continue`, `/api/v1/auth/bootstrap`.
+5. Protected surfaces: `/dashboard`, `/settings`, `/wizard`, `/api/v1/auth/bootstrap`. (`/auth/continue` is a route constant in `src/lib/auth/routes.ts` but has no page implementation and is not protected.)
 6. Convex handles auth, realtime data, and daily snapshot persistence.
 7. IndexedDB + Service Worker provide offline-first UX; data syncs to Convex daily.
 

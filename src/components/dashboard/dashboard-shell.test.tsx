@@ -29,6 +29,28 @@ vi.mock('@/hooks/use-voice', () => ({
   }),
 }));
 
+// The AccountSwitcher child uses useAccounts (Convex); mock it so the shell
+// test only exercises panel switching, not the accounts data layer.
+vi.mock('@/hooks/use-accounts', () => ({
+  useAccounts: () => ({
+    accounts: [
+      { accountId: 'personal', umbrella: 'personal', name: 'Personal', boardId: null, inviteCode: null, role: 'owner', hasLocalData: true, memberCount: 1 },
+    ],
+    currentAccountId: 'personal',
+    loading: false,
+    ready: true,
+    switchTo: vi.fn(),
+    refresh: vi.fn(),
+    createAccount: vi.fn(),
+    createInviteToken: vi.fn(),
+    acceptInvite: vi.fn(),
+    declineInvite: vi.fn(),
+    leaveAccount: vi.fn(),
+    removeMember: vi.fn(),
+    renameAccount: vi.fn(),
+  }),
+}));
+
 // Mock panel modules so the test only exercises the shell's mobile panel switching,
 // not the panels' internal data hooks. Factories must be self-contained (vi.mock is hoisted).
 vi.mock('@/components/dashboard/panels/expense-tracker', () => ({
@@ -123,9 +145,9 @@ describe('DashboardShell (mobile)', () => {
     const sheet = screen.getByTestId('mobile-sheet');
     // Cut One Expense lives in the mobile sheet (primary mobile access point).
     expect(within(sheet).getByRole('button', { name: /pick 1 to cut this month/i })).toBeInTheDocument();
-    // All 10 panels are reachable from the sheet.
-    // 13 = close(X) + Cut One + Market Watch + 10 panels.
-    expect(within(sheet).getAllByRole('button')).toHaveLength(13);
+    // All 10 panels are reachable from the sheet, plus the account switcher.
+    // 14 = close(X) + Cut One + Market Watch + AccountSwitcher + 10 panels.
+    expect(within(sheet).getAllByRole('button')).toHaveLength(14);
   });
 
   it('does not render the floating FAB', () => {

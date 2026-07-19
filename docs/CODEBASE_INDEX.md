@@ -15,7 +15,7 @@ flowchart TD
     A --> H[convex]
 
     B --> B1[page.tsx\nauth-first root gate]
-    B --> B2[(app)/auth/continue\npost-auth local bootstrap boundary]
+    B --> B2[(app)/dashboard\nprotected dashboard entry]
     B --> B3[settings/page.tsx\nSettings page]
 
     C --> C1[auth/]
@@ -49,11 +49,14 @@ flowchart TD
 │   ├── app/
 │   │   ├── page.tsx
 │   │   ├── (app)/
-│   │   │   └── auth/continue/page.tsx
+│   │   │   ├── dashboard/page.tsx
+│   │   │   └── wizard/page.tsx
 │   │   ├── sign-in/
 │   │   │   └── page.tsx
 │   │   ├── sign-up/
 │   │   │   └── page.tsx
+│   │   ├── forgot-password/page.tsx
+│   │   ├── reset/page.tsx
 │   │   └── settings/page.tsx
 │   ├── components/
 │   │   ├── auth/
@@ -104,9 +107,9 @@ flowchart TD
 | Area             | File / Folder                      | Why it matters                                                                   |
 | ---------------- | ---------------------------------- | -------------------------------------------------------------------------------- |
 | App shell        | `src/app/layout.tsx`               | Global layout and top-level app wrapper                                          |
-| Root auth gate   | `src/app/page.tsx`                 | Auth-first root gate for welcome, launch wizard, or landing board                |
-| Auth bootstrap   | `src/app/(app)/auth/continue/page.tsx` | Post-auth local bootstrap and safe redirect boundary                       |
-| Route protection | `src/middleware.ts`                | Protected-surface handling for auth continue, dashboard, settings, and protected `/api/v1` routes |
+| Root auth gate   | `src/app/page.tsx`                | Auth-first root gate for welcome, launch wizard, or landing board                |
+| Auth bootstrap   | `src/lib/auth/routes.ts` (`continue`) | `routes.ts` defines `AUTH_ROUTES.continue = "/auth/continue"`, but no page implementation exists yet; post-auth users land on `/dashboard` |
+| Route protection | `src/middleware.ts`                | Protected-surface handling for `/dashboard`, `/settings`, `/wizard`, and protected `/api/v1/auth/bootstrap` routes |
 | Auth route map   | `src/lib/auth/routes.ts`           | Centralized auth route constants and protected-path prefix rules                 |
 | Root config      | `next.config.ts`                   | Next.js runtime config, including dev origin allowance                           |
 | Data model       | `convex/schema.ts`                 | Canonical schema for `dailySnapshots` + `authTables`                             |
@@ -121,7 +124,10 @@ flowchart TD
 | `/`                          | `src/app/page.tsx`                                        | Auth-first gate for welcome, wizard, or landing board       |
 | `/sign-in`                   | `src/app/sign-in/page.tsx`                               | Convex Auth sign-in entry (email/password)                  |
 | `/sign-up`                   | `src/app/sign-up/page.tsx`                               | Convex Auth sign-up entry (email/password)                  |
-| `/auth/continue`             | `src/app/(app)/auth/continue/page.tsx`                    | Post-auth bootstrap and safe post-auth redirect             |
+| `/forgot-password`           | `src/app/forgot-password/page.tsx`                       | Password reset request entry                                |
+| `/reset`                     | `src/app/reset/page.tsx`                                 | Password reset completion (token from email)                |
+| `/dashboard`                 | `src/app/(app)/dashboard/page.tsx`                       | Protected dashboard (post-auth landing target)              |
+| `/wizard`                    | `src/app/(app)/wizard/page.tsx`                          | Protected launch wizard                                     |
 | `/settings`                  | `src/app/settings/page.tsx`                               | Settings page (theme, sync status)                          |
 | `/settings/integrations`     | Not yet implemented                                       | Provider connection hub (planned)                           |
 
@@ -277,7 +283,7 @@ Useful anchors (representative files that exist):
 ### I want to change auth entry or the root gate
 
 1. Start at `src/app/page.tsx`
-2. Check `src/components/welcome/**`, `src/app/(app)/auth/continue/**`
+2. Check `src/components/welcome/**`, `src/app/sign-in/**`, `src/app/sign-up/**`, `src/app/(app)/dashboard/**`, and `src/app/(app)/wizard/**`
 3. Check `src/lib/auth/routes.ts`, `src/lib/auth/route-guard.ts`, and related auth helpers
 4. Re-run the related route tests plus `tests/e2e/dogfood.spec.ts`
 

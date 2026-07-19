@@ -87,7 +87,10 @@ export function useVoice(initialLang: 'th-TH' | 'en-US' = 'en-US') {
         }
       }
       if (finalTranscript) {
-        setState(prev => ({ ...prev, transcript: finalTranscript }));
+        // A final result means the utterance is complete. Clear the listening
+        // flag here (not only in onend) so downstream consumers never get stuck
+        // waiting for onend, which some browsers omit after a final result.
+        setState(prev => ({ ...prev, transcript: finalTranscript, isListening: false }));
       }
     };
 
@@ -144,11 +147,13 @@ export function useVoice(initialLang: 'th-TH' | 'en-US' = 'en-US') {
   // Start listening
   const startListening = useCallback(() => {
     if (!isSupported || !recognitionRef.current) return;
-    setState(prev => ({ ...prev, transcript: '', error: null }));
+    setState(prev => ({ ...prev, transcript: '', error: null, isListening: true }));
     try {
       recognitionRef.current.start();
     } catch {
-      // Already started
+      // Already started (InvalidStateError). Ensure the UI reflects listening
+      // rather than leaving isListening false while a session is actually open.
+      setState(prev => ({ ...prev, isListening: true }));
     }
   }, [isSupported]);
 

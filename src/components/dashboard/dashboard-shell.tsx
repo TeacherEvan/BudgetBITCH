@@ -5,6 +5,7 @@ import { useState, useRef } from 'react';
 import { X, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { HeaderBar } from '@/components/layout/header-bar';
+import { AccountSwitcher } from '@/components/accounts/account-switcher';
 import { DailyDisposableHero } from '@/components/dashboard/daily-disposable-hero';
 import { CriticalExpensesModal } from '@/components/dashboard/critical-expenses-modal';
 import { AlertsSidebar } from '@/components/dashboard/alerts-sidebar';
@@ -138,7 +139,8 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
       <main className="flex min-h-0 flex-1 flex-row overflow-hidden">
         {/* Desktop Sidebar - only on lg+ */}
         <aside className="hidden w-80 flex-shrink-0 overflow-y-auto border-r border-[var(--gold-border-soft)] bg-[var(--bg-surface-1)] p-4 lg:block">
-          <div className="mb-6 space-y-3">
+          <AccountSwitcher locale={locale} />
+          <div className="mb-6 mt-4 space-y-3">
             <h3 className="bb-kicker">
               {locale === 'th' ? 'ค่าใช้จ่ายที่ต้องลด' : 'Cut One Expense'}
             </h3>
@@ -274,6 +276,9 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
               <p className="font-medium text-[var(--text-1)] truncate">{locale === 'th' ? 'ข่าวและข้อมูลล่าสุด' : 'Market Watch'}</p>
             </div>
           </button>
+          <div className="pt-1">
+            <AccountSwitcher locale={locale} />
+          </div>
           {PANEL_ORDER.map(panel => {
             const config = PANEL_CONFIG[panel];
             const isActive = mobileActivePanel === panel;

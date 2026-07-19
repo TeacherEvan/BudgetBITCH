@@ -131,6 +131,7 @@ export const createAccount = mutation({
     });
     await ctx.db.insert("accountBoards", {
       boardId,
+      accountId,
       ownerId: userId,
       members: [userId],
       umbrella,
@@ -225,7 +226,7 @@ export const listMyAccounts = query({
               .unique();
             const members = await getBoardMemberIds(ctx, board.boardId);
             return {
-              accountId: acc?.accountId ?? board.boardId,
+              accountId: board.accountId,
               umbrella: board.umbrella,
               name: board.name,
               role: "member" as const,
@@ -507,6 +508,114 @@ export const inviteByCode = mutation({
       accountId: acc.accountId,
     });
     return { success: true };
+  },
+});
+
+// Generate a shareable board-invite TOKEN (for QR code / link joins).
+// Creates an open pending invite (no specific invitee) the joiner redeems.
+export const createInviteToken = mutation({
+  args: { accountId: v.string() },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Authentication required");
+
+    const acc = await ctx.db
+      .query("accounts")
+      .withIndex("by_accountId", (q) => q.eq("accountId", args.accountId))
+      .unique();
+    if (!acc) throw new Error("Account not found");
+    if (acc.ownerId !== userId) throw new Error("Only the owner can invite");
+    if (!acc.boardId) throw new Error("Account has no shared board");
+
+    // Respect the member cap (count accepted members + outstanding tokens).
+    const memberRows = await ctx.db
+      .query("boardMembers")
+      .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
+      .collect();
+    const tokenRows = await ctx.db
+      .query("invites")
+      .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
+      .collect();
+    const outstanding = tokenRows.filter(
+      (r) => r.status === "pending" && !r.toUserId,
+    ).length;
+    if (memberRows.length + outstanding >= MAX_MEMBERS) {
+      throw new Error(`An account can have at most ${MAX_MEMBERS} members`);
+    }
+
+    // Short, URL-friendly, collision-resistant token.
+    const token =
+      (typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID().replace(/-/g, "").slice(0, 16)
+        : Math.random().toString(36).slice(2, 18));
+
+    await ctx.db.insert("invites", {
+      boardId: acc.boardId,
+      fromUserId: userId,
+      toUserId: undefined,
+      status: "pending",
+      createdAt: Date.now(),
+      accountId: acc.accountId,
+      token,
+    });
+    return { token };
+  },
+});
+
+// Redeem a board-invite TOKEN (join via QR / link). Idempotent for the user.
+export const redeemInviteToken = mutation({
+  args: { token: v.string() },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Authentication required");
+    // Ensure the joiner has a sharing profile doc (so listMyAccounts works).
+    await ensureProfileDoc(ctx, userId);
+
+    const token = args.token.trim();
+    // Find the invite by token (filter, since token is optional-indexed).
+    const allInvites = await ctx.db.query("invites").collect();
+    const invite = allInvites.find((r) => r.token === token);
+    if (!invite) {
+      throw new Error("Invite link is invalid or expired");
+    }
+
+    const acc = await ctx.db
+      .query("accounts")
+      .withIndex("by_accountId", (q) => q.eq("accountId", invite.accountId))
+      .unique();
+    if (!acc || !acc.boardId) throw new Error("Account not found");
+
+    // Already a member? (supports idempotent re-redeem)
+    const boardRows = await ctx.db
+      .query("boardMembers")
+      .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
+      .collect();
+    if (boardRows.some((r) => r.userId === userId)) {
+      await ctx.db.patch(invite._id, { status: "accepted", toUserId: userId });
+      return { accountId: acc.accountId, boardId: acc.boardId, alreadyMember: true };
+    }
+
+    if (invite.status !== "pending") {
+      throw new Error("Invite link has already been used");
+    }
+
+    // Cap check (don't exceed MAX_MEMBERS).
+    const members = await ctx.db
+      .query("boardMembers")
+      .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
+      .collect();
+    if (members.length >= MAX_MEMBERS) {
+      throw new Error(`An account can have at most ${MAX_MEMBERS} members`);
+    }
+
+    await ctx.db.insert("boardMembers", {
+      boardId: acc.boardId,
+      userId,
+      role: "member",
+      joinedAt: Date.now(),
+    });
+    await ctx.db.patch(invite._id, { status: "accepted", toUserId: userId });
+    return { accountId: acc.accountId, boardId: acc.boardId, alreadyMember: false };
   },
 });
 
