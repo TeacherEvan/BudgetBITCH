@@ -562,8 +562,10 @@ export async function replaceBoardData(board: BoardSnapshot): Promise<void> {
     const all = await os.getAll();
     const keyPath = os.keyPath as string | null;
     for (const record of all) {
-      const key = keyPath ? (record as Record<string, unknown>)[keyPath] : (record as { id: string }).id;
-      if (!incomingKeys.has(`${store}:${key}`)) {
+      const key = keyPath
+        ? (record as unknown as Record<string, unknown>)[keyPath]
+        : (record as { id: string }).id;
+      if (!incomingKeys.has(`${store}:${String(key)}`)) {
         // Local-only record: keep it (do not delete).
         continue;
       }
