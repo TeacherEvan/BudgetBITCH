@@ -1,5 +1,5 @@
-const APP_SHELL_CACHE = "bb-app-shell-v1";
-const STATIC_ASSET_CACHE = "bb-static-assets-v1";
+const APP_SHELL_CACHE = "bb-app-shell-v2";
+const STATIC_ASSET_CACHE = "bb-static-assets-v2";
 const SAFE_ROUTE_SHELLS = ["/", "/dashboard", "/wizard", "/settings"];
 const STATIC_ASSET_PATH_PREFIXES = ["/_next/static/", "/icons/"];
 
@@ -51,21 +51,22 @@ async function warmStaticCache() {
   ]);
 }
 
-async function cacheFirst(request) {
+async function staleWhileRevalidate(request) {
   const cache = await caches.open(STATIC_ASSET_CACHE);
   const cachedResponse = await cache.match(request);
 
-  if (cachedResponse) {
-    return cachedResponse;
-  }
+  const networkPromise = fetch(request)
+    .then((networkResponse) => {
+      if (networkResponse.ok) {
+        cache.put(request, networkResponse.clone());
+      }
+      return networkResponse;
+    })
+    .catch(() => cachedResponse);
 
-  const networkResponse = await fetch(request);
-
-  if (networkResponse.ok) {
-    await cache.put(request, networkResponse.clone());
-  }
-
-  return networkResponse;
+  // Always prefer the network for hashed /_next/static chunks so a fresh
+  // deploy never serves a stale bundle behind a permanent cache name.
+  return (await networkPromise) ?? cachedResponse;
 }
 
 async function networkFirst(request) {
@@ -119,7 +120,7 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (isStaticAssetPath(requestUrl.pathname)) {
-    event.respondWith(cacheFirst(event.request));
+    event.respondWith(staleWhileRevalidate(event.request));
     return;
   }
 

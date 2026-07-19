@@ -304,7 +304,7 @@ export default function SettingsPage() {
                   <p className="text-xs text-white/50">{isSupported ? (locale === 'th' ? 'รองรับในเบราว์เซอร์นี้' : 'Supported in this browser') : (locale === 'th' ? 'ไม่รองรับ' : 'Not supported')}</p>
                 </div>
               </div>
-              <Toggle checked={voiceSettings.enabled} onChange={handleVoiceToggle} disabled={!isSupported} />
+              <Toggle checked={voiceSettings.enabled} onCheckedChange={handleVoiceToggle} disabled={!isSupported} />
             </div>
 
             {voiceSettings.enabled && (
