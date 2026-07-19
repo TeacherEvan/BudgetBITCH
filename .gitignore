@@ -41,6 +41,9 @@ pnpm-debug.log*
 # agent cache
 .cache/
 
+# docs (local planning working set — kept on disk, not committed)
+/docs/plans/
+
 # local DB (dev only)
 *.idb
 local-db-*

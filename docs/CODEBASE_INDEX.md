@@ -135,9 +135,17 @@ flowchart TD
 | `src/components/dashboard/daily-disposable-hero.tsx`     | Daily disposable income hero panel                   |
 | `src/components/dashboard/alerts-sidebar.tsx`            | Alerts sidebar                                       |
 | `src/components/dashboard/critical-expenses-modal.tsx`   | Critical expenses modal                              |
-| `src/components/dashboard/bento-grid.tsx`                | Responsive bento grid layout for panels              |
+| `src/components/dashboard/bento-grid.tsx`             | Responsive bento grid layout for panels              |
 | `src/components/dashboard/mobile-panel-tabs.tsx`         | Mobile panel tab switcher                            |
+| `src/components/dashboard/priority-guide.tsx`            | Priority-alert strip (critical/warning/info tiers) with session-scoped dismissal |
 | `src/components/dashboard/panels/`                       | Panel set: bills, budget-visual, budget-alerts, cash-flow-forecast, debt-payoff, savings-goals, expense-tracker, voice-expense-input, subscriptions, net-worth (+ section/header/form/items), emergency-fund, empty-state |
+
+### Launch components
+
+| File / Folder                                       | Purpose                                                        |
+| --------------------------------------------------- | -------------------------------------------------------------- |
+| `src/components/launch/golden-splash.tsx`           | Brand splash overlay on the auth-first root gate (`src/app/page.tsx`) |
+| `src/components/launch/manifesto-notification.tsx`  | Manifesto notification card rendered on the dashboard shell   |
 
 ### Wizard components
 

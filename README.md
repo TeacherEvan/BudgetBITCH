@@ -6,22 +6,17 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 
 - `docs/CODEBASE_INDEX.md` — consolidated orientation map, route/module index, and practical filesystem tree
 
-## Features in Phase 1
+## Features
 
-- Start Smart onboarding that generates a Money Survival Blueprint
-- Learn! story-driven lessons linked from blueprint recommendations
-- Jobs hub with blueprint-aware seeded listing recommendations
-- Connected Finance expansion for banking, investing, payroll, tax, and finance-ops guidance
-- protected dashboard routes
-- workspace roles and audit-log foundations
-- budget health scoring and due-soon automation
-- notification fanout and email template scaffolding
-- auth-first root entry that sends signed-out visitors to the welcome window, signed-in users without a saved launch profile to the launch wizard, and signed-in users with a saved launch profile to the landing board
-- privacy shield disclosures and consent receipt helpers
-- API endpoints for auth bootstrap, budget health, Start Smart blueprint generation, Learn recommendations/module detail, Jobs search/recommendations
+- Start Smart onboarding that generates a Money Survival Blueprint (10-question wizard, Q10 = location consent)
+- Auth-first root entry: signed-out visitors stay on the welcome window; signed-in users without a completed launch profile move to the launch wizard; signed-in users with a profile land on the dashboard
+- Protected dashboard with scan-first panels (Daily Disposable hero, bills/due-soon priority guide, expenses, subscriptions, savings goals, net worth, critical-expense cut-one flow)
+- Local-first storage in IndexedDB with offline queue that flushes to Convex on reconnect
+- Daily snapshot sync to Convex (`upsertDailySnapshot`) via the Service Worker / online event
+- privacy shield disclosures and consent helpers
+- i18n (English + Thai) via next-intl
 
-> Planned (not yet implemented in the current root app slice): the provider connection hub (Claude, OpenAI, GitHub Copilot, OpenClaw, Gemini, Perplexity, Mistral, Wise, Revolut, PayPal, Xero, Deel), the encrypted provider-secret vault primitives and revoke flow, and the integration connect/revoke API under `/settings/integrations`. These are tracked in `docs/CODEBASE_INDEX.md` (route map) and the revamp design plan, but no route or components exist yet.
-- compact launch wizard preferences with searchable city selection and threshold-based loading feedback
+> Not in this slice (no routes or components exist): Learn!, Jobs hub, Connected Finance integrations, provider connection hub, workspace roles, audit log, notification fanout, email templates. The i18n catalog and a middleware test still reference legacy `/api/v1/learn` and `/api/v1/jobs` paths; those API routes are not implemented.
 
 ## Tech stack
 
@@ -43,32 +38,29 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 ## Codebase shape
 
 - `src/app/**` contains routes, route groups, layouts, and API handlers
-- `src/app/page.tsx`, `src/app/sign-in/**`, `src/app/sign-up/**`, and `src/app/(app)/auth/continue/**` define the auth-first root entry and post-auth bootstrap path
+- `src/app/page.tsx` (auth-first root gate), `src/app/sign-in/**`, `src/app/sign-up/**`, and the `(app)` route group (`dashboard`, `wizard`) are the only live routes. There is no `/auth/continue` route — `src/lib/auth/routes.ts` maps the post-auth step to `/ln` (Launcher).
 - `src/lib/auth/routes.ts` centralizes protected path prefixes and auth route constants used by route protection
 - `src/modules/**` contains business/domain logic grouped by capability; currently `src/modules/budgeting/` (budget math) and `src/modules/home-base/` (root board orchestration)
 - `src/components/start-smart/**` contains reusable UI for the Money Survival Blueprint flow
 - `src/components/dashboard/`, `src/components/wizard/`, `src/components/welcome/`, `src/components/auth/`, `src/components/shared-board/`, and `src/components/mobile/` hold the primary UI surfaces
-- `src/components/integrations/**` and the `/settings/integrations` route do not exist yet — the provider connection hub is planned (see "Planned" note above); no route or components are present
-- `tests/e2e/**` currently holds `dogfood.spec.ts`, which exercises the signed-in root gate path. The welcome-auth/smoke split is not yet present.
+- `src/lib/convex/sync-snapshots.ts` handles the local→Convex daily snapshot sync and offline queue flush
+- `tests/e2e/**` currently holds `dogfood.spec.ts`, which exercises the signed-in root gate path.
 - `budgetbitch/` is a separate nested Convex prototype/reference subtree and is **not** the primary app being built from the repo root
 
 ## Auth-first root flow
 
 - `/` is the auth-first gate: signed-out visitors stay on the welcome window, signed-in visitors without a completed launch profile move into the launch wizard, and signed-in visitors with a completed launch profile land on the root board.
-- `/sign-in` and `/sign-up` keep only sanitized in-app `redirectTo` targets. Safe root and dashboard targets are routed through `/auth/continue` before the final landing step.
-- `/auth/continue` is the post-auth bootstrap boundary. It shows the final local-setup panel, then the continue action resolves any missing local user and workspace records before redirecting to the safe post-auth destination.
-- `src/middleware.ts` protects the shared product surface by reading the centralized prefixes in `src/lib/auth/routes.ts`. Signed-out browser routes redirect to `/sign-in`, protected API routes return JSON authentication errors, and the non-production signed-in E2E override is still honored for protected coverage.
+- `/sign-in` and `/sign-up` keep only sanitized in-app `redirectTo` targets.
+- After sign-in, the post-auth bootstrap resolves any missing local user/workspace records, then routes to the launch target (`/ln`) before the dashboard opens.
+- `src/middleware.ts` protects the shared product surface by reading the centralized prefixes in `src/lib/auth/routes.ts`. Signed-out browser routes redirect to `/sign-in`.
 
 ## Local setup
 
 1. Copy environment values from `.env.example` into `.env.local`.
 2. Install dependencies with `npm install`.
-3. Create or link a Convex deployment with Convex Auth enabled, then set `CONVEX_DEPLOYMENT`, `NEXT_PUBLIC_CONVEX_URL`, `CONVEX_SITE_URL`, and `SITE_URL`.
-4. Set `PROVIDER_SECRET_ENCRYPTION_KEY` to a long random server-side secret before using integration connect/revoke routes under `/settings/integrations`.
-5. Set `CONVEX_SYNC_SECRET` in both the Next.js/Vercel environment and the Convex deployment so auth bootstrap profile sync and projection replay use the same trusted secret.
-6. Set `CRON_SECRET` in Vercel so the scheduled replay route can authenticate Vercel Cron requests.
-7. Mirror the same Convex, projection, and provider-secret variables in Vercel before shipping preview or production deployments.
-8. Start development with `npm run dev`.
+3. Create or link a Convex deployment with Convex Auth enabled, then set `CONVEX_DEPLOYMENT`, `NEXT_PUBLIC_CONVEX_URL`, `CONVEX_SITE_URL`, and `SITE_URL` (see Environment variables).
+4. Mirror the same Convex variables in Vercel before shipping preview or production deployments.
+5. Start development with `npm run dev`.
 9. For browser tests, keep the Playwright web server on its dedicated webpack path. `playwright.config.ts` now starts `npm run dev -- --webpack --port 3100` through `scripts/run-with-sanitized-env.mjs`, with server reuse disabled, so local auth values do not change the auth-root test behavior and Turbopack does not hang on the first `/` request.
 
 ## Verification
@@ -106,36 +98,26 @@ For deeper orientation, start with `docs/CODEBASE_INDEX.md`.
 - Service Worker provides background sync: posts daily snapshots to Convex via `upsertDailySnapshot`.
 - Server-side secrets: Convex Auth config, environment variables.
 
-### Daily snapshot flow
+### Daily snapshot sync
 
-- `POST /api/v1/check-ins` writes the durable check-in first, then queues a `ProjectionOutbox` job.
-- `/api/internal/projections/check-ins/replay` replays queued jobs into Convex using `CONVEX_SYNC_SECRET`.
-- Vercel Cron calls `/api/cron/projections/check-ins/replay` once per day by default using `CRON_SECRET`, which keeps the default `vercel.json` compatible with the lowest-cost Hobby plan.
-- If you need faster live projection on Vercel, raise the cron frequency on a Pro plan or point an external scheduler at the same route.
+- IndexedDB holds the local budget state (wizard profile, transactions, expenses, bills, savings goals, net worth, critical-expense commitments).
+- `src/lib/convex/sync-snapshots.ts` gathers a daily snapshot from IndexedDB and calls the Convex mutation `upsertDailySnapshot` (table: `dailySnapshots`).
+- If Convex is not configured or the call fails, the snapshot is queued in `localStorage` (`budgetbitch:offlineQueue`); `flushOfflineQueue()` replays queued snapshots to Convex on reconnect (navigator `online` event).
+- The Service Worker (`public/sw.js`) registers and requests periodic sync for the daily snapshot.
+- `vercel.json` still declares a legacy cron path (`/api/cron/projections/check-ins/replay`) that has no matching route handler in this slice; the daily snapshot is pushed client-side, not via the cron. Remove or wire that cron before relying on it.
 - Convex Auth email/password accounts are created by users through `/sign-up`; end users do not add environment files or OAuth credentials.
 
 ## Environment variables
 
-See `.env.example` for the full list of required variables, including authentication, Convex projection sync, and provider-secret encryption settings.
+See `.env.example` for the authoritative list. Required for this slice:
 
-Environment notes:
+- `CONVEX_DEPLOYMENT` — identifies the Convex deployment for CLI/codegen commands.
+- `NEXT_PUBLIC_CONVEX_URL` — the Convex cloud URL (baked into the browser bundle at build time; changing it requires a redeploy).
+- `CONVEX_SITE_URL` — the Convex site URL used as the Convex Auth issuer. Built-in Convex variable; do not `npx convex env set` it.
+- `SITE_URL` — the app origin accepted by Convex Auth redirects (e.g. `http://localhost:3000` locally).
 
-- `CONVEX_DEPLOYMENT` identifies the Convex deployment for CLI/codegen commands.
-- `NEXT_PUBLIC_CONVEX_URL` must be the Convex cloud URL, for example `https://steady-ox-280.convex.cloud`. Because it is a public Next.js variable, Vercel bakes it into the browser bundle at build time, so changing it requires a redeploy.
-- `CONVEX_SITE_URL` must be the Convex site URL used as the Convex Auth issuer, for example `https://steady-ox-280.convex.site`.
-- `SITE_URL` must be the app origin accepted by Convex Auth redirects, for example `http://localhost:3000` locally and `https://budget-bitch-green.vercel.app` in production.
-- `CONVEX_SYNC_SECRET` must be set to the same long random value in the Next.js/Vercel environment and in the Convex deployment; `/auth/continue` and projection replay both depend on it for trusted server-side Convex sync.
-- `PROVIDER_SECRET_ENCRYPTION_KEY` is only required when you want to exercise the encrypted integration connect/revoke routes. No `/settings/integrations` route or components exist yet, so this is currently unused; it is reserved for the planned provider-vault work tracked in `docs/CODEBASE_INDEX.md`.
-- Email (`RESEND_API_KEY`) and webhook/queue (`INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY`, `WEBHOOK_SIGNING_SECRET`) surfaces are not active in the current root app slice and are not present in `.env.example`. They are listed here only so a future integration slice can add them without colliding with the existing Convex sync secrets.
+> Reserved but not consumed in this slice: `CONVEX_SYNC_SECRET` (listed in `.env.example`, no code reads it yet), and any future `PROVIDER_SECRET_ENCRYPTION_KEY` / `CRON_SECRET` for the unbuilt integration/provider-vault work. `RESEND_API_KEY` / `INNGEST_*` are not present in `.env.example` and are unused.
 
 ## Start Smart regional data
 
 The Start Smart flow uses curated, attributable regional inputs rather than open-ended scraping. Seeded assumptions keep the wizard responsive, then higher-trust data can refine those defaults when available. Major assumptions are labeled as verified, estimated, or user-entered so the resulting blueprint remains explainable.
-
-## Learn recommendation model
-
-The Learn! phase uses a static lesson catalog plus deterministic recommendation logic derived from stored Money Survival Blueprint signals. Recommendations are based on the latest persisted blueprint snapshot for a workspace, not on freeform AI generation or open-web content fetching.
-
-## Jobs + Connected Finance model
-
-The Jobs phase currently uses seeded job listings plus deterministic blueprint-aware ranking rather than live job-board ingestion. The Connected Finance expansion is guidance-first in this slice: newly added banking, investing, payroll, tax, and finance-ops providers extend the registry metadata and hub organization without introducing new auth flows yet.
