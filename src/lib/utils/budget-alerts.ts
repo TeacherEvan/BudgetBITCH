@@ -29,7 +29,7 @@ export function generateBudgetAlerts(
     }
   });
   
-  budgets.forEach((budget, index) => {
+  budgets.forEach((budget) => {
     const spent = spending.get(budget.category) || 0;
     const limit = budget.monthlyLimit;
     const pct = limit > 0 ? (spent / limit) * 100 : 0;
@@ -37,15 +37,15 @@ export function generateBudgetAlerts(
     if (limit === 0) return; // No budget set
     
     const categoryLabel = getCategoryLabel(budget.category, locale);
-    
+
     if (pct >= 100) {
       alerts.push({
         id: `alert-${budget.category}-critical`,
         type: 'critical',
         category: budget.category,
         message: locale === 'th'
-          ? `{categoryLabel} เกินงบแล้ว (${formatCurrency(spent, locale)}/${formatCurrency(limit, locale)})`
-          : `{categoryLabel} over budget (${formatCurrency(spent, locale)}/${formatCurrency(limit, locale)})`,
+          ? `${categoryLabel} เกินงบแล้ว (${formatCurrency(spent, locale)}/${formatCurrency(limit, locale)})`
+          : `${categoryLabel} over budget (${formatCurrency(spent, locale)}/${formatCurrency(limit, locale)})`,
         actionable: locale === 'th'
           ? 'พิจารณาลดค่าใช้จ่ายหรือปรับงบประมาณ'
           : 'Consider reducing spending or adjusting budget',
@@ -59,8 +59,8 @@ export function generateBudgetAlerts(
         type: 'warning',
         category: budget.category,
         message: locale === 'th'
-          ? `{categoryLabel} ใกล้ถึงขีดจำกัด (${Math.round(pct)}%)`
-          : `{categoryLabel} approaching limit (${Math.round(pct)}%)`,
+          ? `${categoryLabel} ใกล้ถึงขีดจำกัด (${Math.round(pct)}%)`
+          : `${categoryLabel} approaching limit (${Math.round(pct)}%)`,
         actionable: locale === 'th'
           ? 'ติดตามค่าใช้จ่ายในหมวดนี้'
           : 'Monitor spending in this category',
@@ -75,8 +75,8 @@ export function generateBudgetAlerts(
         type: 'success',
         category: budget.category,
         message: locale === 'th'
-          ? `{categoryLabel} อยู่ในงบ (${Math.round(pct)}%)`
-          : `{categoryLabel} on track (${Math.round(pct)}%)`,
+          ? `${categoryLabel} อยู่ในงบ (${Math.round(pct)}%)`
+          : `${categoryLabel} on track (${Math.round(pct)}%)`,
         spent,
         limit,
         pct,

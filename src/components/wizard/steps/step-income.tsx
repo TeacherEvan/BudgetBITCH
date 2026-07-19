@@ -1,7 +1,6 @@
 // components/wizard/steps/step-income.tsx
 'use client';
 
-import { useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 
@@ -14,8 +13,6 @@ interface StepIncomeProps {
 }
 
 export function StepIncome({ locale, value, onChange, error, disabled }: StepIncomeProps) {
-  const t = useTranslations('wizard.income');
-
   const labels = {
     th: {
       title: 'รายได้ต่อเดือน',

@@ -9,7 +9,6 @@ import { generateBudgetAlerts, getBudgetSummary } from '@/lib/utils/budget-alert
 import { formatCurrency } from '@/lib/utils/currency';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import type { BudgetAlert } from '@/lib/utils/budget-alerts';
 import type { BudgetCategory, ExpenseEntry } from '@/lib/types/budget';
 
 interface BudgetAlertsProps {

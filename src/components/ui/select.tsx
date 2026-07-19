@@ -21,7 +21,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     const selectId = id || props.name;
 
     return (
-      <div className="space-y-1.5">
+      <div className={`space-y-1.5 ${className}`}>
         {label && (
           <label htmlFor={selectId} className="block text-sm font-medium text-white">
             {label}

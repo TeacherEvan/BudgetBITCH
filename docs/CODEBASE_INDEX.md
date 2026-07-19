@@ -50,6 +50,10 @@ flowchart TD
 │   │   ├── page.tsx
 │   │   ├── (app)/
 │   │   │   └── auth/continue/page.tsx
+│   │   ├── sign-in/
+│   │   │   └── page.tsx
+│   │   ├── sign-up/
+│   │   │   └── page.tsx
 │   │   └── settings/page.tsx
 │   ├── components/
 │   │   ├── auth/
@@ -59,6 +63,9 @@ flowchart TD
 │   │   ├── mobile/
 │   │   ├── onboarding/
 │   │   ├── pwa/
+│   │   ├── providers/
+│   │   ├── shared-board/
+│   │   ├── start-smart/
 │   │   ├── ui/
 │   │   ├── welcome/
 │   │   └── wizard/
@@ -72,6 +79,9 @@ flowchart TD
 │   │   ├── types/
 │   │   └── utils/
 │   ├── i18n/
+│   ├── modules/
+│   │   ├── budgeting/
+│   │   └── home-base/
 │   ├── middleware.ts
 │   ├── test/
 │   └── types/
@@ -109,8 +119,8 @@ flowchart TD
 | Route                        | File                                                      | Purpose                                                     |
 | ---------------------------- | --------------------------------------------------------- | ----------------------------------------------------------- |
 | `/`                          | `src/app/page.tsx`                                        | Auth-first gate for welcome, wizard, or landing board       |
-| `/sign-in`                   | Handled by Convex Auth via `/api/convex-auth`             | Convex Auth sign-in entry                                   |
-| `/sign-up`                   | Handled by Convex Auth via `/api/convex-auth`             | Convex Auth sign-up entry                                   |
+| `/sign-in`                   | `src/app/sign-in/page.tsx`                               | Convex Auth sign-in entry (email/password)                  |
+| `/sign-up`                   | `src/app/sign-up/page.tsx`                               | Convex Auth sign-up entry (email/password)                  |
 | `/auth/continue`             | `src/app/(app)/auth/continue/page.tsx`                    | Post-auth bootstrap and safe post-auth redirect             |
 | `/settings`                  | `src/app/settings/page.tsx`                               | Settings page (theme, sync status)                          |
 | `/settings/integrations`     | Not yet implemented                                       | Provider connection hub (planned)                           |
@@ -119,16 +129,15 @@ flowchart TD
 
 ### Dashboard components
 
-| File                                                     | Purpose                                              |
+| File / Folder                                            | Purpose                                              |
 | -------------------------------------------------------- | ---------------------------------------------------- |
 | `src/components/dashboard/dashboard-shell.tsx`           | Main dashboard layout with panels, sidebar, modal    |
 | `src/components/dashboard/daily-disposable-hero.tsx`     | Daily disposable income hero panel                   |
-| `src/components/dashboard/budget-visual.tsx`             | Budget visualization panel                           |
-| `src/components/dashboard/bills.tsx`                     | Bills tracking panel                                 |
-| `src/components/dashboard/cash-flow-forecast.tsx`        | Cash flow forecast panel                             |
-| `src/components/dashboard/debt-payoff.tsx`               | Debt payoff visualization panel                      |
 | `src/components/dashboard/alerts-sidebar.tsx`            | Alerts sidebar                                       |
 | `src/components/dashboard/critical-expenses-modal.tsx`   | Critical expenses modal                              |
+| `src/components/dashboard/bento-grid.tsx`                | Responsive bento grid layout for panels              |
+| `src/components/dashboard/mobile-panel-tabs.tsx`         | Mobile panel tab switcher                            |
+| `src/components/dashboard/panels/`                       | Panel set: bills, budget-visual, budget-alerts, cash-flow-forecast, debt-payoff, savings-goals, expense-tracker, voice-expense-input, subscriptions, net-worth (+ section/header/form/items), emergency-fund, empty-state |
 
 ### Wizard components
 
@@ -143,6 +152,13 @@ flowchart TD
 | -------------------------------------------------------- | ---------------------------------------------------- |
 | `src/components/welcome/welcome-window.tsx`              | Welcome window for signed-out visitors               |
 
+### Shared board & providers
+
+| File / Folder                       | Purpose                                              |
+| ----------------------------------- | ---------------------------------------------------- |
+| `src/components/shared-board/`      | Shared couple boards (sync, snapshots) UI            |
+| `src/components/providers/`         | App-level React context providers                    |
+
 ### UI primitives
 
 | File                                                     | Purpose                                              |
@@ -155,7 +171,9 @@ flowchart TD
 | `src/components/ui/progress-ring.tsx`                    | Progress ring primitive                              |
 | `src/components/ui/select.tsx`                           | Select primitive                                     |
 | `src/components/ui/slider.tsx`                           | Slider primitive                                     |
-| `src/components/ui/toggle.tsx`                           | Toggle primitive                                     |
+| `src/components/ui/toggle.tsx`       | Toggle primitive                                     |
+| `src/components/ui/theme-toggle.tsx` | Theme toggle primitive                               |
+| `src/components/ui/confetti.tsx`     | Confetti effect primitive                            |
 
 ## 4. Hooks index
 
@@ -220,23 +238,24 @@ flowchart TD
 - Located beside the code they exercise under `src/**`
 - Pattern: `*.test.ts` or `*.test.tsx`
 
-Useful anchors:
+Useful anchors (representative files that exist):
 
 - `src/app/page.test.tsx`
-- `src/app/(app)/auth/continue/page.test.tsx`
-- `src/components/dashboard/*.test.tsx`
-- `src/components/welcome/*.test.tsx`
-- `src/components/wizard/*.test.tsx`
-- `src/lib/convex/*.test.ts`
-- `src/lib/auth/*.test.ts`
 - `src/middleware.test.ts`
+- `src/components/welcome/welcome-window.test.tsx`
+- `src/components/dashboard/dashboard-shell.test.tsx`
+- `src/components/dashboard/panels/budget-ring.test.tsx`
+- `src/components/dashboard/mobile-panel-tabs.test.tsx`
+- `src/components/dashboard/bento-grid.test.tsx`
+- `src/lib/convex/http-client.test.ts`
+- `src/lib/auth/route-guard.test.ts`
+- `src/components/ui/modal.test.tsx`
 
 ### E2E tests
 
 | File                                      | Coverage                               |
 | ----------------------------------------- | -------------------------------------- |
-| `tests/e2e/welcome-auth.spec.ts`          | Signed-out root entry, welcome auth links, and preserved `redirectTo` |
-| `tests/e2e/smoke.spec.ts`                 | Signed-in root gate smoke for wizard-first and landing-first paths |
+| `tests/e2e/dogfood.spec.ts`               | Signed-in root gate path (auth-first entry) |
 
 ## 8. Non-primary subtree note
 
@@ -252,20 +271,20 @@ Useful anchors:
 1. Start at `src/app/page.tsx`
 2. Check `src/components/welcome/**`, `src/app/(app)/auth/continue/**`
 3. Check `src/lib/auth/routes.ts`, `src/lib/auth/route-guard.ts`, and related auth helpers
-4. Re-run the related route tests plus `tests/e2e/welcome-auth.spec.ts` and `tests/e2e/smoke.spec.ts`
+4. Re-run the related route tests plus `tests/e2e/dogfood.spec.ts`
 
 ### I want to change dashboard UI or data behavior
 
 1. Start at `src/components/dashboard/dashboard-shell.tsx`
 2. Check individual panel components in `src/components/dashboard/`
 3. Check `src/hooks/use-local-db.ts` for local data access
-4. Re-run dashboard component tests and `tests/e2e/smoke.spec.ts`
+4. Re-run dashboard component tests and `tests/e2e/dogfood.spec.ts`
 
 ### I want to change the onboarding wizard
 
 1. Start at `src/components/wizard/wizard-shell.tsx`
 2. Check individual step components in `src/components/wizard/`
-2. Re-run wizard component tests
+3. Re-run wizard component tests
 
 ### I want to change Convex backend
 

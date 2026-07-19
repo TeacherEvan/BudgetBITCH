@@ -18,7 +18,6 @@ import { EmergencyFund } from '@/components/dashboard/panels/emergency-fund';
 import { DebtPayoff } from '@/components/dashboard/panels/debt-payoff';
 import { CashFlowForecast } from '@/components/dashboard/panels/cash-flow-forecast';
 import { Modal } from '@/components/ui/modal';
-import { useWizardProfile } from '@/hooks/use-local-db';
 import { useCriticalExpense } from '@/hooks/use-critical-expense';
 import { BentoGrid, PanelConfig } from '@/components/dashboard/bento-grid';
 import { MobilePanelTabs } from '@/components/dashboard/mobile-panel-tabs';
@@ -61,10 +60,8 @@ interface DashboardShellProps {
 }
 
 export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, onVoiceToggle }: DashboardShellProps) {
-  const { profile } = useWizardProfile();
-  const { commitment, loading: commitmentLoading } = useCriticalExpense();
+  const { loading: commitmentLoading } = useCriticalExpense();
   const [criticalExpenseOpen, setCriticalExpenseOpen] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openPanels, setOpenPanels] = useState<PanelKey[]>(['expenses', 'budget']);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [marketWatchOpen, setMarketWatchOpen] = useState(false);

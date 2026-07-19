@@ -45,13 +45,11 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 - `src/app/**` contains routes, route groups, layouts, and API handlers
 - `src/app/page.tsx`, `src/app/sign-in/**`, `src/app/sign-up/**`, and `src/app/(app)/auth/continue/**` define the auth-first root entry and post-auth bootstrap path
 - `src/lib/auth/routes.ts` centralizes protected path prefixes and auth route constants used by route protection
-- `src/modules/dashboard/dashboard-data.ts` is the dashboard orchestration boundary, with demo-state builders in `src/modules/dashboard/dashboard-demo-factory.ts`, data mappers in `src/modules/dashboard/dashboard-mappers.ts`, and shared dashboard types in `src/modules/dashboard/types.ts`
+- `src/modules/**` contains business/domain logic grouped by capability; currently `src/modules/budgeting/` (budget math) and `src/modules/home-base/` (root board orchestration)
 - `src/components/start-smart/**` contains reusable UI for the Money Survival Blueprint flow
-- `src/components/learn/**` contains reusable UI for the Learn! hub and lesson detail flow
-- `src/components/jobs/**` contains reusable UI for the Jobs hub and job detail flow
-- `src/modules/**` contains business/domain logic grouped by capability
-- `src/components/integrations/**` contains reusable UI for the connection hub and provider wizards
-- `tests/e2e/**` contains Playwright journeys for the auth-first root flow, dashboard, Start Smart, Learn!, Jobs, and provider wizards
+- `src/components/dashboard/`, `src/components/wizard/`, `src/components/welcome/`, `src/components/auth/`, `src/components/shared-board/`, and `src/components/mobile/` hold the primary UI surfaces
+- `src/components/integrations/**` and the `/settings/integrations` route do not exist yet — the provider connection hub is planned (see "Planned" note above); no route or components are present
+- `tests/e2e/**` currently holds `dogfood.spec.ts`, which exercises the signed-in root gate path. The welcome-auth/smoke split is not yet present.
 - `budgetbitch/` is a separate nested Convex prototype/reference subtree and is **not** the primary app being built from the repo root
 
 ## Auth-first root flow
@@ -90,7 +88,7 @@ Current browser-test note:
 
 - `npm run test:e2e` uses a dedicated webpack-backed dev server on port `3100` with server reuse disabled so the suite does not attach to a hanging Turbopack process.
 - The Playwright web server strips local auth env on purpose so signed-out welcome coverage and the non-production signed-in fallback stay deterministic even when `.env.local` contains real dev keys.
-- Playwright root coverage is split between `tests/e2e/welcome-auth.spec.ts` for signed-out entry behavior and `tests/e2e/smoke.spec.ts` for the signed-in root gate path.
+- Playwright coverage currently lives in `tests/e2e/dogfood.spec.ts` (signed-in root gate path). The welcome-auth/smoke split described in older notes is not present in this slice.
 
 For deeper orientation, start with `docs/CODEBASE_INDEX.md`.
 

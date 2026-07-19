@@ -91,6 +91,7 @@ export const Slider = forwardRef<HTMLInputElement, SliderProps>(
             disabled={disabled}
             className="absolute inset-0 w-full h-6 appearance-none bg-transparent cursor-pointer"
             aria-label={label}
+            {...props}
           />
           <div
             ref={thumbRef}

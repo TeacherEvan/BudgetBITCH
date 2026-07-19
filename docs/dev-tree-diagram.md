@@ -20,7 +20,8 @@ BudgetBITCH/
 │   └── tsconfig.json
 ├── docs/                            # Documentation
 │   ├── plans/                       # Design & implementation plans
-│   │   └── 2026-06-13-budgetbitch-complete-revamp-design.md
+│   │   ├── .archive/                 # Completed/verified plans (badged)
+│   │   │   └── 2026-06-13-budgetbitch-complete-revamp-design.md
 │   └── dev-tree-diagram.md          # THIS FILE
 ├── public/                          # Static assets
 │   ├── manifest.json                # PWA manifest
@@ -64,16 +65,22 @@ BudgetBITCH/
 │   │   │   ├── daily-disposable-hero.tsx     # 🎯 ONE BIG NUMBER: Daily disposable
 │   │   │   ├── critical-expenses-modal.tsx   # 8 items + compound calculator
 │   │   │   ├── alerts-sidebar.tsx            # Actionable RSS alerts (TH/EN)
-│   │   │   └── panels/                       # 9 Accordion panels (not tabs)
+│   │   │   ├── bento-grid.tsx                # Responsive bento grid layout
+│   │   │   ├── mobile-panel-tabs.tsx         # Mobile panel tab switcher
+│   │   │   └── panels/                       # Accordion panels (not tabs)
 │   │   │       ├── expense-tracker.tsx       # Category tracking + budgets
 │   │   │       ├── budget-visual.tsx         # Bar chart: Income vs Expense
+│   │   │       ├── budget-alerts.tsx         # Budget alert generation
+│   │   │       ├── budget-ring.tsx           # Savings-rate progress ring
 │   │   │       ├── bills.tsx                 # Due-soon + Thai holidays
 │   │   │       ├── savings-goals.tsx         # Progress rings
-│   │   │       ├── net-worth.tsx             # Assets - Liabilities
-│   │   │       ├── subscriptions.tsx         # Detected recurring (TrueWallet, GrabPay)
-│   │   │       ├── emergency-fund.tsx        # Target + progress
+│   │   │       ├── net-worth.tsx             # Assets - Liabilities (+ section/header/form/items/types/skeleton)
+│   │   │       ├── subscriptions.tsx         # Detected recurring (TrueWallet, GrabPay) (+ skeleton)
+│   │   │       ├── emergency-fund.tsx        # Target + progress (+ skeleton)
 │   │   │       ├── debt-payoff.tsx           # Avalanche/Snowball
-│   │   │       └── cash-flow-forecast.tsx    # 30/60/90 day projection
+│   │   │       ├── cash-flow-forecast.tsx    # 30/60/90 day projection
+│   │   │       ├── voice-expense-input.tsx   # Voice-driven expense entry
+│   │   │       └── empty-state.tsx           # Empty panel fallback
 │   │   ├── layout/
 │   │   │   └── header-bar.tsx                # 🎯 Globe🌐 + Wrench🔧 (persistent)
 │   │   ├── auth/                             # Minimal Convex Auth UI
@@ -91,7 +98,11 @@ BudgetBITCH/
 │   │   ├── use-voice.ts                 # 🎯 Web Speech API (STT/TTS)
 │   │   ├── use-local-db.ts              # IndexedDB reactor (idb)
 │   │   ├── use-critical-expense.ts      # Critical expense state
-│   │   └── use-daily-snapshot.ts        # Convex sync trigger (SW)
+│   │   ├── use-haptic.ts                # Haptic feedback (mobile)
+│   │   └── use-shared-board.ts          # Shared couple-board sync state
+│   │
+│   │   # Daily Convex snapshot sync lives in src/lib/convex/sync-snapshots.ts
+│   │   # + convex/snapshots.ts (no use-daily-snapshot.ts hook).
 │   ├── lib/                               # Core libraries
 │   │   ├── db/
 │   │   │   └── local-db.ts              # 🎯 idb wrapper: CRUD + migrations v1
@@ -129,7 +140,7 @@ BudgetBITCH/
 | Priority | File | Why |
 |----------|------|-----|
 | 1 | `docs/dev-tree-diagram.md` | **This file** — start here |
-| 2 | `docs/plans/2026-06-13-budgetbitch-complete-revamp-design.md` | Full design spec |
+| 2 | `docs/plans/.archive/2026-06-13-budgetbitch-complete-revamp-design.md` | Full design spec (archived) |
 | 3 | `src/lib/types/budget.ts` | All data models |
 | 4 | `src/lib/db/local-db.ts` | Local DB API |
 | 5 | `src/components/wizard/wizard-shell.tsx` | Onboarding flow |
@@ -189,7 +200,7 @@ User Action
 | Change RSS source | `src/lib/news/rss-fetcher.ts` (RSS_FEEDS constant) |
 | Add Thai category alias | `src/lib/utils/thai-category-mapper.ts` |
 | Modify compound calc | `src/lib/utils/compound-calculator.ts` |
-| Change locale behavior | `src/components/onboarding/language-select-modal.tsx`, `src/hooks/use-locale.ts` |
+| Change locale behavior | `src/components/onboarding/language-select-modal.tsx`, `src/i18n/*` (request/server/messages) |
 | Update Convex schema | `convex/schema.ts`, `convex/snapshots.ts` |
 | Add PWA feature | `public/manifest.json`, `public/sw.js`, `next.config.ts` |
 
@@ -209,6 +220,19 @@ local-db-*
 public/sw.js.map
 public/manifest.json.map
 ```
+
+---
+
+## Known Gaps (verified 2026-07-19)
+
+- **`middleware.ts` → `proxy.ts`**: Next.js 16.2 deprecates the `middleware.ts`
+  convention in favor of `proxy.ts`. The root `src/middleware.ts` still works
+  (warning only). `@convex-dev/auth@0.0.92` does **not** yet export a `proxy`
+  variant of `convexAuthNextjsMiddleware`, so do not rename the file/export until
+  the auth library adds proxy support. Tracked, not a code change.
+- **Multiple lockfiles warning**: `budgetbitch/package-lock.json` (nested
+  prototype subtree) triggers Next's "additional lockfiles" build warning.
+  Benign — leave the prototype untouched; do not hoist its lockfile.
 
 ---
 

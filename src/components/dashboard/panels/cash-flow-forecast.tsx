@@ -2,10 +2,10 @@
 'use client';
 
 import { useMemo } from 'react';
-import { TrendingUp, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils/currency';
-import { format, addDays, endOfMonth } from 'date-fns';
+import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
 import { useBills, useDebtPayoff } from '@/hooks/use-local-db';
 

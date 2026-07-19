@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { ConvexPasswordAuthForm } from "./convex-password-auth-form";
 import { LocaleSwitcher } from "@/components/i18n/locale-switcher";
 

@@ -15,26 +15,6 @@ const RSS_FEEDS = [
   { url: 'https://www.reuters.com/world/rss', locale: 'en' as const, category: 'economy' as const, source: 'Reuters World' },
 ];
 
-const ACTIONABLE_KEYWORDS = [
-  // Fuel
-  'fuel', 'gas', 'petrol', 'diesel', 'oil price', 'gasoline',
-  'n้ำมัน', 'แก๊ส', 'ดีเซล', 'ราคาน้ำมัน',
-  // Deals
-  '1+1', 'buy 1 get 1', 'promotion', 'discount', 'sale', 'promo',
-  'ลดราคา', 'โปรโมชั่น', 'ซื้อ 1 แถม 1', 'พิเศษ',
-  // Transport
-  'bts', 'mrt', 'bus', 'train', 'fare', 'monthly pass',
-  'บีทีเอส', 'เอ็มอาร์टी', 'รถไฟ', 'รถเมล์', 'บัตรประจำเดือน',
-  // Utilities
-  'electricity', 'water bill', 'electric bill',
-  'ค่าไฟ', 'ค่าน้ำ',
-];
-
-function isActionable(title: string): boolean {
-  const lower = title.toLowerCase();
-  return ACTIONABLE_KEYWORDS.some(keyword => lower.includes(keyword.toLowerCase()));
-}
-
 function getActionableText(item: { title: string; category: string }): string | undefined {
   const lower = item.title.toLowerCase();
   

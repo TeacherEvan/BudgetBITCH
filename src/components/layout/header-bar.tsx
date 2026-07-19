@@ -1,7 +1,7 @@
 // components/layout/header-bar.tsx
 'use client';
 
-import { Globe, Wrench, Menu, X } from 'lucide-react';
+import { Globe, Wrench } from 'lucide-react';
 import { useState } from 'react';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';

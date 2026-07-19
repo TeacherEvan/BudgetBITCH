@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { MapPin, Shield, AlertCircle, CheckCircle } from 'lucide-react';
+import { MapPin, Shield, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface StepLocationConsentProps {

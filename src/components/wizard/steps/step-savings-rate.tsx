@@ -11,7 +11,7 @@ interface StepSavingsRateProps {
   disabled?: boolean;
 }
 
-export function StepSavingsRate({ locale, value, onChange, error, disabled }: StepSavingsRateProps) {
+export function StepSavingsRate({ locale, value, onChange, disabled }: StepSavingsRateProps) {
   const labels = {
     th: {
       title: 'อัตราการออม',

@@ -24,7 +24,7 @@ const spaceGrotesk = Space_Grotesk({
 
 export const metadata: Metadata = {
   title: 'BudgetBITCH',
-  description: '',
+  description: 'A Bitching Budget app that everyone needs.',
 };
 
 export default async function RootLayout({

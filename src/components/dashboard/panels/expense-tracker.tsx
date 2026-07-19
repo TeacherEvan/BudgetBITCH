@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { THAI_CATEGORY_ALIASES } from '@/lib/utils/thai-category-mapper';
 import { formatCurrency } from '@/lib/utils/currency';
 import type { ExpenseCategory } from '@/lib/types/budget';
 import { VoiceExpenseInput } from './voice-expense-input';
@@ -236,7 +235,6 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
               .map(expense => {
                 const budget = categoryBudgets.get(expense.category);
                 const spent = categorySpending.get(expense.category) || 0;
-                const pct = budget ? (spent / budget) * 100 : 0;
                 const cat = CATEGORIES.find(c => c.value === expense.category);
                 const catLabel = locale === 'th' ? cat?.label.th : cat?.label.en;
                 const overBudget = budget && spent > budget;
