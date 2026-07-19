@@ -9,7 +9,7 @@ import type { WizardProfile, BoardSnapshot } from '@/lib/types/budget';
 // Control the values the hook reads from useQuery.
 let queryResults: Record<string, unknown> = {};
 const pushBoard = vi.fn(async () => ({ success: true, applied: true }));
-const resolveShareCode = vi.fn(async (_args: Record<string, unknown>) => ({ exists: true, displayName: null }));
+const resolveShareCode = vi.fn(async () => ({ exists: true, displayName: null }));
 
 vi.mock('@convex-dev/auth/react', () => ({
   useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),

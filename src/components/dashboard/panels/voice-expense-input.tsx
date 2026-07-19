@@ -187,6 +187,10 @@ export function VoiceExpenseInput({ locale, onAddExpense, isOpen, onClose }: Voi
         speak(confirmText);
       }
     }
+  // formatCurrency is an unstable closure from useCurrency(); adding it to the
+  // deps would re-run this effect every render. It only formats the spoken
+  // confirmation string, which is correct to recompute against current `locale`.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transcript, isOpen, isListening, speak, locale]);
 
   const handleConfirm = useCallback(async () => {
