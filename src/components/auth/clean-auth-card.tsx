@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ConvexPasswordAuthForm } from "./convex-password-auth-form";
+import { ForgotPasswordForm } from "./forgot-password-form";
 import { LocaleSwitcher } from "@/components/i18n/locale-switcher";
 
 type CleanAuthCardProps = {
@@ -9,8 +10,15 @@ type CleanAuthCardProps = {
   redirectTo?: string;
 };
 
+type View = "auth" | "forgot";
+
 export function CleanAuthCard({ initialFlow, redirectTo = "/dashboard" }: CleanAuthCardProps) {
   const [flow, setFlow] = useState<"signIn" | "signUp">(initialFlow);
+  const [view, setView] = useState<View>("auth");
+
+  if (view === "forgot") {
+    return <ForgotPasswordForm onBack={() => setView("auth")} />;
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-black p-4">
@@ -61,6 +69,19 @@ export function CleanAuthCard({ initialFlow, redirectTo = "/dashboard" }: CleanA
           passwordLabel="Password"
           helperText=""
         />
+
+        {/* Forgot password link (sign-in only) */}
+        {flow === "signIn" ? (
+          <div className="mt-3 text-right text-sm">
+            <button
+              type="button"
+              onClick={() => setView("forgot")}
+              className="font-semibold text-amber-400 hover:underline cursor-pointer"
+            >
+              Forgot password?
+            </button>
+          </div>
+        ) : null}
 
         {/* Footer switcher */}
         <div className="mt-6 pt-4 border-t border-white/5 text-center text-sm">

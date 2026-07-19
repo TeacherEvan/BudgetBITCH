@@ -6,8 +6,8 @@ import { Doc, Id } from "./_generated/dataModel";
 
 const SHARE_CODE_LEN = 8;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface StoredRecord {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   value: any;
   updatedAt: number;
 }

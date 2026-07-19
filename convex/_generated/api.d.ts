@@ -8,7 +8,9 @@
  * @module
  */
 
+import type * as accounts from "../accounts.js";
 import type * as auth from "../auth.js";
+import type * as boardMerge from "../boardMerge.js";
 import type * as http from "../http.js";
 import type * as legal from "../legal.js";
 import type * as lib_auth from "../lib/auth.js";
@@ -22,7 +24,9 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  accounts: typeof accounts;
   auth: typeof auth;
+  boardMerge: typeof boardMerge;
   http: typeof http;
   legal: typeof legal;
   "lib/auth": typeof lib_auth;
