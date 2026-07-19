@@ -56,9 +56,11 @@ export function useVoice(initialLang: 'th-TH' | 'en-US' = 'en-US') {
   // render agree (avoids a hydration mismatch on the Settings page).
   const [isSupported, setIsSupported] = useState(false);
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
     setIsSupported(
       !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition),
     );
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
   // Initialize Speech Recognition
