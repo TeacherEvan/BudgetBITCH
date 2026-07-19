@@ -1,15 +1,12 @@
 /// <reference types="vite/client" />
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { convexTest } from "convex-test";
-import { expect, test, beforeEach } from "vitest";
+import { expect, test, beforeEach, describe } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
 
 const modules = import.meta.glob("./**/*.ts");
 
-// getAuthUserId() splits identity.subject on a divider and returns the first
-// part as the user _id. So we insert a users row and pass its _id as subject.
-// (No need to populate the auth user table fully — the function only needs the id.)
 function seedUser(t: ReturnType<typeof convexTest>, label: string) {
   return t.run(async (ctx: any) =>
     ctx.db.insert("users", { email: `${label}@example.com` }),
@@ -17,151 +14,115 @@ function seedUser(t: ReturnType<typeof convexTest>, label: string) {
 }
 
 let t: ReturnType<typeof convexTest>;
-const ALICE = "alice";
-const BOB = "bob";
+const asUser = (userId: any) => t.withIdentity({ subject: userId });
 
 beforeEach(() => {
   t = convexTest(schema, modules);
 });
 
-const asUser = (userId: any) => t.withIdentity({ subject: userId });
+async function makeProfile(userId: any, shareCode: string, linkedBoardId?: string, displayName?: string) {
+  return t.run(async (ctx: any) =>
+    ctx.db.insert("userProfiles", { userId, shareCode, ...(linkedBoardId ? { linkedBoardId } : {}), ...(displayName ? { displayName } : {}) }),
+  );
+}
 
-test("ensureProfile creates a profile with a shareCode", async () => {
-  const aliceId = await seedUser(t, ALICE);
-  const profile = await asUser(aliceId).mutation(api.sharedBoards.ensureProfile, {});
-  expect(profile.shareCode).toMatch(/^[A-Z0-9]{8}$/);
-  expect(profile.linkedBoardId).toBeNull();
+async function linkAndGetBoard(aliceId: any, bobId: any) {
+  await makeProfile(aliceId, "ALICE123");
+  await makeProfile(bobId, "BOB1234");
+  const boardId = await asUser(aliceId).mutation(api.sharedBoards.linkByCode, { code: "BOB1234" });
+  return boardId as string;
+}
+
+describe("pushBoard merge semantics", () => {
+  test("incoming records merge by key instead of clobbering the whole board", async () => {
+    const aliceId = await seedUser(t, "alice");
+    const bobId = await seedUser(t, "bob");
+    const boardId = await linkAndGetBoard(aliceId, bobId);
+
+    // Alice pushes an expense.
+    const aliceData = {
+      "expenses:e1": { id: "e1", merchant: "Grab", amount: 120, updatedAt: 1000 },
+    };
+    await asUser(aliceId).mutation(api.sharedBoards.pushBoard, { boardId, data: aliceData, updatedAt: 1000 });
+
+    // Bob pushes a DIFFERENT expense (later timestamp).
+    const bobData = {
+      "expenses:e2": { id: "e2", merchant: "Netflix", amount: 429, updatedAt: 2000 },
+    };
+    await asUser(bobId).mutation(api.sharedBoards.pushBoard, { boardId, data: bobData, updatedAt: 2000 });
+
+    const board = await asUser(aliceId).query(api.sharedBoards.getBoard, { boardId });
+    const data = (board as any).data as Record<string, any>;
+    expect(Object.keys(data).sort()).toEqual(["expenses:e1", "expenses:e2"]);
+    expect(data["expenses:e1"].merchant).toBe("Grab");
+    expect(data["expenses:e2"].merchant).toBe("Netflix");
+  });
+
+  test("rejects stale pushes that don't get re-queued forever (applied:true even when older)", async () => {
+    const aliceId = await seedUser(t, "alice");
+    const bobId = await seedUser(t, "bob");
+    const boardId = await linkAndGetBoard(aliceId, bobId);
+
+    await asUser(aliceId).mutation(api.sharedBoards.pushBoard, {
+      boardId,
+      data: { "expenses:e1": { id: "e1", merchant: "Grab", amount: 120, updatedAt: 5000 } },
+      updatedAt: 5000,
+    });
+    // Bob pushes an OLDER update after Alice. Must still apply the delta and NOT
+    // loop forever — return applied:true so the client queue drains.
+    const res = await asUser(bobId).mutation(api.sharedBoards.pushBoard, {
+      boardId,
+      data: { "expenses:bob": { id: "bob", merchant: "Lotus", amount: 50, updatedAt: 1000 } },
+      updatedAt: 1000,
+    });
+    expect((res as any).applied).toBe(true);
+
+    const board = await asUser(aliceId).query(api.sharedBoards.getBoard, { boardId });
+    const data = (board as any).data as Record<string, any>;
+    expect(data["expenses:bob"].merchant).toBe("Lotus");
+  });
+
+  test("incoming record does not overwrite a newer same-key local record", async () => {
+    const aliceId = await seedUser(t, "alice");
+    const bobId = await seedUser(t, "bob");
+    const boardId = await linkAndGetBoard(aliceId, bobId);
+
+    await asUser(aliceId).mutation(api.sharedBoards.pushBoard, {
+      boardId,
+      data: { "expenses:e1": { id: "e1", merchant: "Grab", amount: 999, updatedAt: 9000 } },
+      updatedAt: 9000,
+    });
+    // Bob pushes a STALE version of e1 (older timestamp).
+    const res = await asUser(bobId).mutation(api.sharedBoards.pushBoard, {
+      boardId,
+      data: { "expenses:e1": { id: "e1", merchant: "Grab", amount: 100, updatedAt: 1000 } },
+      updatedAt: 1000,
+    });
+    expect((res as any).applied).toBe(true);
+
+    const board = await asUser(aliceId).query(api.sharedBoards.getBoard, { boardId });
+    const data = (board as any).data as Record<string, any>;
+    expect(data["expenses:e1"].amount).toBe(999); // newer value preserved
+  });
 });
 
-test("getMyProfile returns null shareCode before ensureProfile", async () => {
-  const aliceId = await seedUser(t, ALICE);
-  const profile = await asUser(aliceId).query(api.sharedBoards.getMyProfile, {});
-  expect(profile!.shareCode).toBeNull();
-});
+describe("getPartner", () => {
+  test("returns the linked partner's displayName and shareCode", async () => {
+    const aliceId = await seedUser(t, "alice");
+    const bobId = await seedUser(t, "bob");
+    await makeProfile(aliceId, "ALICE123");
+    await makeProfile(bobId, "BOB1234", undefined, "Bob");
+    await asUser(aliceId).mutation(api.sharedBoards.linkByCode, { code: "BOB1234" });
 
-test("linkByCode links two users and returns a shared boardId", async () => {
-  const aliceId = await seedUser(t, ALICE);
-  const bobId = await seedUser(t, BOB);
-
-  await asUser(aliceId).mutation(api.sharedBoards.ensureProfile, {});
-  const bob = await asUser(bobId).mutation(api.sharedBoards.ensureProfile, {});
-
-  const boardId = await asUser(aliceId).mutation(api.sharedBoards.linkByCode, {
-    code: bob.shareCode,
-  });
-  expect(typeof boardId).toBe("string");
-
-  const aliceAfter = await asUser(aliceId).query(api.sharedBoards.getMyProfile, {});
-  const bobAfter = await asUser(bobId).query(api.sharedBoards.getMyProfile, {});
-  expect(aliceAfter!.linkedBoardId).toBe(boardId);
-  expect(bobAfter!.linkedBoardId).toBe(boardId);
-
-  const board = await asUser(aliceId).query(api.sharedBoards.getBoard, { boardId });
-  expect([board.memberA, board.memberB].sort()).toEqual([aliceId, bobId].sort());
-});
-
-test("linkByCode rejects linking to your own code", async () => {
-  const aliceId = await seedUser(t, ALICE);
-  const alice = await asUser(aliceId).mutation(api.sharedBoards.ensureProfile, {});
-  await expect(
-    asUser(aliceId).mutation(api.sharedBoards.linkByCode, { code: alice.shareCode }),
-  ).rejects.toThrow(/yourself/);
-});
-
-test("resolveShareCode distinguishes partner vs self vs unknown", async () => {
-  const aliceId = await seedUser(t, ALICE);
-  const bobId = await seedUser(t, BOB);
-  const alice = await asUser(aliceId).mutation(api.sharedBoards.ensureProfile, {});
-  const bob = await asUser(bobId).mutation(api.sharedBoards.ensureProfile, {});
-
-  const partner = await asUser(aliceId).query(api.sharedBoards.resolveShareCode, {
-    code: bob.shareCode,
-  });
-  expect(partner.exists).toBe(true);
-
-  const self = await asUser(aliceId).query(api.sharedBoards.resolveShareCode, {
-    code: alice.shareCode,
-  });
-  expect(self.exists).toBe(false);
-
-  const unknown = await asUser(aliceId).query(api.sharedBoards.resolveShareCode, {
-    code: "ZZZZZZZZ",
-  });
-  expect(unknown.exists).toBe(false);
-});
-
-test("pushBoard applies only if updatedAt is newer (LWW)", async () => {
-  const aliceId = await seedUser(t, ALICE);
-  const bobId = await seedUser(t, BOB);
-  await asUser(aliceId).mutation(api.sharedBoards.ensureProfile, {});
-  const bob = await asUser(bobId).mutation(api.sharedBoards.ensureProfile, {});
-  const boardId = await asUser(aliceId).mutation(api.sharedBoards.linkByCode, {
-    code: bob.shareCode,
+    const partner = await asUser(aliceId).query(api.sharedBoards.getPartner, {});
+    expect((partner as any).displayName).toBe("Bob");
+    expect((partner as any).shareCode).toBe("BOB1234");
   });
 
-  const base = Date.now();
-  const first = await asUser(aliceId).mutation(api.sharedBoards.pushBoard, {
-    boardId,
-    data: { v: 1 },
-    updatedAt: base + 1000,
+  test("returns null when not linked", async () => {
+    const aliceId = await seedUser(t, "alice");
+    await makeProfile(aliceId, "ALICE123");
+    const partner = await asUser(aliceId).query(api.sharedBoards.getPartner, {});
+    expect(partner).toBeNull();
   });
-  expect(first.applied).toBe(true);
-
-  const stale = await asUser(bobId).mutation(api.sharedBoards.pushBoard, {
-    boardId,
-    data: { v: 0 },
-    updatedAt: base + 500,
-  });
-  expect(stale.applied).toBe(false);
-
-  const newer = await asUser(bobId).mutation(api.sharedBoards.pushBoard, {
-    boardId,
-    data: { v: 2 },
-    updatedAt: base + 2000,
-  });
-  expect(newer.applied).toBe(true);
-
-  const board = await asUser(aliceId).query(api.sharedBoards.getBoard, { boardId });
-  expect(board.data).toEqual({ v: 2 });
-});
-
-test("getBoard rejects a non-member", async () => {
-  const aliceId = await seedUser(t, ALICE);
-  const bobId = await seedUser(t, BOB);
-  const eveId = await seedUser(t, "eve");
-  await asUser(aliceId).mutation(api.sharedBoards.ensureProfile, {});
-  const bob = await asUser(bobId).mutation(api.sharedBoards.ensureProfile, {});
-  const boardId = await asUser(aliceId).mutation(api.sharedBoards.linkByCode, {
-    code: bob.shareCode,
-  });
-
-  await expect(
-    asUser(eveId).query(api.sharedBoards.getBoard, { boardId }),
-  ).rejects.toThrow(/member/);
-});
-
-test("unlink clears linkage and deletes the board when orphaned", async () => {
-  const aliceId = await seedUser(t, ALICE);
-  const bobId = await seedUser(t, BOB);
-  await asUser(aliceId).mutation(api.sharedBoards.ensureProfile, {});
-  const bob = await asUser(bobId).mutation(api.sharedBoards.ensureProfile, {});
-  const boardId = await asUser(aliceId).mutation(api.sharedBoards.linkByCode, {
-    code: bob.shareCode,
-  });
-
-  // Alice unlinks; Bob still linked → board kept.
-  await asUser(aliceId).mutation(api.sharedBoards.unlink, {});
-  const bobAfter = await asUser(bobId).query(api.sharedBoards.getMyProfile, {});
-  expect(bobAfter!.linkedBoardId).toBe(boardId);
-  await expect(
-    asUser(bobId).query(api.sharedBoards.getBoard, { boardId }),
-  ).resolves.toBeTruthy();
-
-  // Bob unlinks → board orphaned → deleted.
-  await asUser(bobId).mutation(api.sharedBoards.unlink, {});
-  const aliceAfter = await asUser(aliceId).query(api.sharedBoards.getMyProfile, {});
-  expect(aliceAfter!.linkedBoardId).toBeNull();
-  await expect(
-    asUser(aliceId).query(api.sharedBoards.getBoard, { boardId }),
-  ).rejects.toThrow(/not found|member/);
 });

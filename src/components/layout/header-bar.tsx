@@ -43,7 +43,7 @@ export function HeaderBar({ locale, onLocaleChange, voiceEnabled, onVoiceToggle 
 
       {/* Center: Gold gradient title */}
       <h1
-        className="hidden font-display text-xl font-bold uppercase sm:block"
+        className="font-display text-sm sm:text-xl font-bold uppercase text-center"
         style={{
           letterSpacing: '0.2em',
           backgroundImage: 'linear-gradient(90deg, #C9960C, #F5D742)',

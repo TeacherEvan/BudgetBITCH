@@ -6,16 +6,15 @@ import { useConvexAuth } from '@convex-dev/auth/react';
 import { useQuery, useMutation, useConvex } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import {
-  serializeBoard,
-  replaceBoardData,
-  type BoardSnapshot,
+  serializeBoardForSync,
+  applyRemoteBoard,
 } from '@/lib/db/local-db';
 import { BOARD_CHANGED_EVENT } from '@/lib/types/budget';
 
 const PUSH_DEBOUNCE_MS = 800;
 const BOARD_QUEUE_KEY = 'budgetbitch:boardQueue';
 
-type QueuedPush = { data: BoardSnapshot; updatedAt: number };
+type QueuedPush = { data: Record<string, { value: unknown; updatedAt: number }>; updatedAt: number };
 
 function readQueue(): QueuedPush[] {
   if (typeof window === 'undefined') return [];
@@ -33,11 +32,14 @@ function writeQueue(items: QueuedPush[]) {
 
 export interface UseSharedBoard {
   myProfile: { shareCode: string | null; displayName: string | null; linkedBoardId: string | null } | null;
+  partnerName: string | null;
   isLinked: boolean;
   boardId: string | null;
   lastSyncedAt: number | null;
+  pendingCount: number;
   linkByCode: (code: string) => Promise<{ ok: true } | { ok: false; error: string }>;
   unlink: () => Promise<void>;
+  syncNow: () => Promise<void>;
   resolving: boolean;
 }
 
@@ -68,6 +70,10 @@ export function useSharedBoard(): UseSharedBoard {
     api.sharedBoards.getBoard,
     boardId ? { boardId } : 'skip',
   );
+  const partner = useQuery(
+    api.sharedBoards.getPartner,
+    isAuthenticated ? {} : 'skip',
+  );
 
   const ensureProfile = useMutation(api.sharedBoards.ensureProfile);
   const pushBoard = useMutation(api.sharedBoards.pushBoard);
@@ -92,7 +98,7 @@ export function useSharedBoard(): UseSharedBoard {
       applyingRemote.current = true;
       try {
         if (board.data) {
-          await replaceBoardData(board.data as BoardSnapshot);
+          await applyRemoteBoard(board.data as Record<string, { value: unknown; updatedAt: number }>);
         }
         lastAppliedAt.current = board.updatedAt;
         setLastSyncedAt(board.updatedAt);
@@ -134,7 +140,7 @@ export function useSharedBoard(): UseSharedBoard {
 
     const doPush = async () => {
       const updatedAt = Date.now();
-      const data = await serializeBoard();
+      const data = await serializeBoardForSync();
       if (navigator.onLine) {
         try {
           const res = await pushBoard({ boardId, data, updatedAt });
@@ -194,6 +200,24 @@ export function useSharedBoard(): UseSharedBoard {
     await unlinkMut({});
   }, [unlinkMut]);
 
+  // Force an immediate push + drain the offline queue.
+  const syncNow = useCallback(async () => {
+    if (!boardId) return;
+    const updatedAt = Date.now();
+    const data = await serializeBoardForSync();
+    try {
+      const res = await pushBoard({ boardId, data, updatedAt });
+      if (res.applied) setLastSyncedAt(updatedAt);
+    } catch {
+      const queue = readQueue();
+      queue.push({ data, updatedAt });
+      writeQueue(queue);
+    }
+    await flushQueue();
+  }, [boardId, pushBoard, flushQueue]);
+
+  const pendingCount = readQueue().length;
+
   return {
     myProfile: myProfile
       ? {
@@ -202,11 +226,14 @@ export function useSharedBoard(): UseSharedBoard {
           linkedBoardId: myProfile.linkedBoardId,
         }
       : null,
+    partnerName: partner?.displayName ?? partner?.shareCode ?? null,
     isLinked: !!boardId,
     boardId,
     lastSyncedAt,
+    pendingCount,
     linkByCode,
     unlink,
+    syncNow,
     resolving,
   };
 }

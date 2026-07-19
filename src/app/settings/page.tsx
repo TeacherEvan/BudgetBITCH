@@ -72,6 +72,9 @@ const labels = {
     linking: 'กำลังเชื่อมต่อ...',
     linkError: 'ไม่พบโค้ดนี้',
     lastSynced: 'ซิงค์ล่าสุด',
+    partnerPending: 'รอซิงค์',
+    syncBoard: 'ซิงค์บอร์ดคู่',
+    syncBoardNow: 'ซิงค์ตอนนี้',
   },
   en: {
     title: 'Settings',
@@ -122,6 +125,9 @@ const labels = {
     linking: 'Linking...',
     linkError: 'Share code not found',
     lastSynced: 'Last synced',
+    partnerPending: 'Pending',
+    syncBoard: 'Sync couple board',
+    syncBoardNow: 'Sync now',
   },
 };
 
@@ -161,6 +167,7 @@ export default function SettingsPage() {
   const [exportStatus, setExportStatus] = useState<Status>('idle');
   const [importStatus, setImportStatus] = useState<Status>('idle');
   const [syncStatus, setSyncStatus] = useState<Status>('idle');
+  const [boardSyncing, setBoardSyncing] = useState(false);
 
   const handleVoiceToggle = () => {
     toggleVoice();
@@ -386,7 +393,7 @@ export default function SettingsPage() {
                     : l.neverSynced}
                 </span>
               </div>
-              <p className="text-sm text-white/50 mb-4">{locale === 'th' ? 'ซิงค์ข้อมูลโปรไฟล์และสแนปช็อตไปยัง Convex' : 'Sync profile and daily snapshot to Convex'}</p>
+              <p className="text-sm text-white/50 mb-4">{locale === 'th' ? 'ซิงค์โปรไฟล์และสแนปช็อตของคุณไปยัง Convex (ไม่ใช่บอร์ดคู่)' : 'Sync your profile & daily snapshot to Convex (not the couple board)'}</p>
               <Button variant="primary" onClick={handleSyncNow} disabled={syncing} className="w-full">
                 {syncing ? l.syncing : l.syncNow}
               </Button>
@@ -421,6 +428,9 @@ export default function SettingsPage() {
                   <Shield className="w-5 h-5 text-amber-400" />
                   <div>
                     <p className="font-medium text-white">{l.linkedWith}</p>
+                    {shared.partnerName && (
+                      <p className="text-xs text-white/60">{shared.partnerName}</p>
+                    )}
                     <p className="text-xs text-white/50">{locale === 'th' ? `บอร์ด: ${shared.boardId}` : `Board: ${shared.boardId}`}</p>
                   </div>
                 </div>
@@ -429,6 +439,26 @@ export default function SettingsPage() {
                     {l.lastSynced}: {format(new Date(shared.lastSyncedAt), locale === 'th' ? 'd MMM yyyy HH:mm' : 'MMM d, yyyy HH:mm')}
                   </p>
                 )}
+                <Button
+                  variant="primary"
+                  onClick={async () => {
+                    setBoardSyncing(true);
+                    try {
+                      await shared.syncNow();
+                    } finally {
+                      setBoardSyncing(false);
+                    }
+                  }}
+                  disabled={boardSyncing}
+                  className="w-full"
+                >
+                  {boardSyncing ? l.syncing : l.syncBoardNow}
+                  {shared.pendingCount > 0 && (
+                    <span className="ml-2 rounded-full bg-amber-400/30 px-2 py-0.5 text-xs text-amber-300">
+                      {shared.pendingCount} {l.partnerPending}
+                    </span>
+                  )}
+                </Button>
                 <Button
                   variant="secondary"
                   onClick={() => shared.unlink()}

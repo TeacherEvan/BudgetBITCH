@@ -585,3 +585,62 @@ export async function replaceBoardData(board: BoardSnapshot): Promise<void> {
 
   await tx.done;
 }
+
+/**
+ * Serialize the 8 shared stores into the keyed-map form the server expects
+ * for per-record merge sync: `{ "<store>:<key>": { value, updatedAt } }`.
+ * Key scheme matches `applyRemoteBoard` and the server merge.
+ */
+export async function serializeBoardForSync(): Promise<Record<string, { value: unknown; updatedAt: number }>> {
+  const board = await serializeBoard();
+  const now = Date.now();
+  const out: Record<string, { value: unknown; updatedAt: number }> = {};
+
+  if (board.wizardProfile) {
+    out['wizardProfile:current'] = { value: board.wizardProfile, updatedAt: now };
+  }
+  for (const e of board.expenses ?? []) out[`expenses:${e.id}`] = { value: e, updatedAt: now };
+  for (const b of board.budgets ?? []) out[`budgets:${b.category}`] = { value: b, updatedAt: now };
+  for (const b of board.bills ?? []) out[`bills:${b.id}`] = { value: b, updatedAt: now };
+  for (const g of board.savingsGoals ?? []) out[`savingsGoals:${g.id}`] = { value: g, updatedAt: now };
+  for (const s of board.netWorthSnapshots ?? []) out[`netWorthSnapshots:${s.date}`] = { value: s, updatedAt: now };
+  for (const d of board.debts ?? []) out[`debts:${d.id}`] = { value: d, updatedAt: now };
+  for (const c of board.criticalExpenseCommitments ?? []) out[`criticalExpenseCommitments:${c.month}`] = { value: c, updatedAt: now };
+
+  return out;
+}
+
+/**
+ * Apply a server keyed-map onto local stores. Writes each record's value into
+ * the matching store/key, preserving local-only records the server didn't
+ * touch. Does NOT emit BOARD_CHANGED_EVENT (avoid echo-back push).
+ */
+export async function applyRemoteBoard(map: Record<string, { value: unknown; updatedAt: number }>): Promise<void> {
+  const db = await getDB();
+  const stores = [
+    'wizardProfile', 'expenses', 'budgets', 'bills', 'savingsGoals',
+    'netWorthSnapshots', 'debts', 'criticalExpenseCommitments',
+  ] as const;
+
+  const stage: { store: typeof stores[number]; value: unknown; explicitKey?: string | number }[] = [];
+  for (const [key, rec] of Object.entries(map)) {
+    const [store, ...rest] = key.split(':');
+    const recordKey = rest.join(':');
+    if (!stores.includes(store as typeof stores[number])) continue;
+    if (store === 'wizardProfile') {
+      stage.push({ store: 'wizardProfile', value: rec.value, explicitKey: 'current' });
+    } else {
+      stage.push({ store: store as typeof stores[number], value: rec.value, explicitKey: recordKey });
+    }
+  }
+
+  const tx = db.transaction(stores, 'readwrite');
+  for (const item of stage) {
+    if (item.explicitKey !== undefined) {
+      tx.objectStore(item.store).put(item.value as never, item.explicitKey as never);
+    } else {
+      tx.objectStore(item.store).put(item.value as never);
+    }
+  }
+  await tx.done;
+}

@@ -1,157 +1,228 @@
 // components/dashboard/daily-disposable-hero.tsx
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useWizardProfile } from '@/hooks/use-local-db';
 import { useCurrency } from '@/hooks/use-currency';
 import { calculateBudgetFromWizard } from '@/lib/utils/budget-calculator';
+import { motion } from 'framer-motion';
 
 interface DailyDisposableHeroProps {
   locale: 'th' | 'en';
   onSetup?: () => void;
 }
 
-function useCountUp(target: number, duration = 600) {
-  const [value, setValue] = useState(0);
-  const raf = useRef<number | null>(null);
+function CountUp({ value, duration = 800, formatter }: { value: number; duration?: number; formatter: (val: number) => string }) {
+  const [displayValue, setDisplayValue] = useState(0);
+
   useEffect(() => {
-    const reduce = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduce) {
-      // Jump to target without animating; defer out of the effect body.
-      const id = requestAnimationFrame(() => setValue(target));
-      return () => cancelAnimationFrame(id);
-    }
-    const start = performance.now();
-    const tick = (now: number) => {
-      const t = Math.min(1, (now - start) / duration);
-      const eased = 1 - Math.pow(1 - t, 3);
-      setValue(Math.round(target * eased));
-      if (t < 1) raf.current = requestAnimationFrame(tick);
+    let startTimestamp: number | null = null;
+    let animationFrameId: number;
+
+    const step = (timestamp: number) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      setDisplayValue(progress * value);
+      if (progress < 1) {
+        animationFrameId = window.requestAnimationFrame(step);
+      }
     };
-    raf.current = requestAnimationFrame(tick);
+    animationFrameId = window.requestAnimationFrame(step);
+
     return () => {
-      if (raf.current) cancelAnimationFrame(raf.current);
+      if (animationFrameId) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
     };
-  }, [target, duration]);
-  return value;
+  }, [value, duration]);
+
+  return <span>{formatter(displayValue)}</span>;
 }
 
-function useClock() {
-  const [now, setNow] = useState<Date | null>(null);
-  useEffect(() => {
-    // Defer the first read to a rAF so setState isn't called synchronously
-    // inside the effect body (Next 16 ESLint: react-hooks/set-state-in-effect).
-    const id = requestAnimationFrame(() => setNow(new Date()));
-    const interval = setInterval(() => setNow(new Date()), 1000);
-    return () => {
-      cancelAnimationFrame(id);
-      clearInterval(interval);
-    };
-  }, []);
-  return now;
-}
+function LiveClock({ locale }: { locale: 'th' | 'en' }) {
+  const [time, setTime] = useState("");
 
-const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-const DAYS = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const options: Intl.DateTimeFormatOptions = {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      };
+      const formatted = now.toLocaleDateString(locale === 'th' ? 'th-TH' : 'en-US', options);
+      setTime(formatted.toUpperCase());
+    };
+
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, [locale]);
+
+  return <span className="text-[10px] md:text-[11px] font-bold text-[var(--text-muted)] tracking-wider">{time} LOCAL</span>;
+}
 
 export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProps) {
   const formatCurrency = useCurrency();
   const { profile } = useWizardProfile();
-  const now = useClock();
 
   const calculation = useMemo(() => {
-    if (!profile) return null;
+    if (!profile || !profile.completed) return null;
     return calculateBudgetFromWizard(profile);
   }, [profile]);
 
-  const target = calculation?.dailyDisposable || 0;
-  const counted = useCountUp(target);
-
-  const income = calculation?.income || 0;
-  const fixed = calculation?.totalFixedExpenses || 0;
-  const savings = calculation?.savingsTarget || 0;
-
-  const clockLabel = useMemo(() => {
-    if (!now) return '';
-    const d = DAYS[now.getDay()];
-    const day = now.getDate();
-    const mon = MONTHS[now.getMonth()];
-    const hh = String(now.getHours()).padStart(2, '0');
-    const mm = String(now.getMinutes()).padStart(2, '0');
-    return `${d} ${day} ${mon} • ${hh}:${mm} local`;
-  }, [now]);
-
   const daysLeft = useMemo(() => {
-    if (!now) return null;
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    const lastDay = new Date(year, month + 1, 0).getDate();
-    return lastDay - now.getDate();
-  }, [now]);
+    const today = new Date();
+    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+    return daysInMonth - today.getDate();
+  }, []);
+
+  const monthName = useMemo(() => {
+    const today = new Date();
+    return today.toLocaleDateString(locale === 'th' ? 'th-TH' : 'en-US', { month: 'long' });
+  }, [locale]);
 
   if (!calculation) {
     return (
-      <div className="bb-panel bb-panel-strong relative overflow-hidden p-6 md:p-8">
-        <div className="relative z-10 flex flex-col items-center gap-4 text-center">
-          <span className="bb-status-pill border border-[#E8A020]/40 bg-[#E8A020]/15 text-[#E8A020]">
-            ⚠ {locale === 'th' ? 'ต้องตั้งค่า' : 'SETUP REQUIRED'}
-          </span>
-          <p className="text-sm text-[rgba(248,243,232,0.72)]">
-            {locale === 'th' ? 'กรุณาเปิดตัวช่วยตั้งค่าเพื่อดูงบประจำวัน' : 'Run the setup wizard to see your daily budget.'}
+      <div className="relative rounded-2xl border border-[var(--warning)]/30 bg-gradient-to-br from-[var(--warning)]/5 to-[var(--bg-base)] p-6 md:p-8 text-center overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(232,160,32,0.1),transparent_70%)] pointer-events-none" />
+        <div className="relative z-10 flex flex-col items-center">
+          <div className="flex items-center justify-between w-full mb-6">
+            <span className="text-[10px] md:text-[11px] font-bold text-[var(--warning)] uppercase tracking-widest">
+              ⚠ {locale === 'th' ? 'ต้องทำการตั้งค่า' : 'Setup Required'}
+            </span>
+            <LiveClock locale={locale} />
+          </div>
+
+          <div className="text-4xl md:text-5xl font-bold font-mono text-[var(--warning)] mb-4 bb-shake">
+            {formatCurrency(0, locale)}
+          </div>
+
+          <p className="max-w-md text-sm text-[var(--text-2)] mb-6">
+            {locale === 'th'
+              ? 'โปรดทำแบบสอบถามตั้งค่าให้เสร็จสิ้นเพื่อคำนวณงบประมาณรายวันของคุณ'
+              : 'Complete the setup wizard to calculate your customized daily disposable budget.'}
           </p>
+
           <button
-            type="button"
-            onClick={() => onSetup?.()}
-            className="bb-button-primary"
+            onClick={onSetup}
+            className="px-6 py-2.5 bg-[var(--gold-base)] hover:bg-[var(--gold-bright)] active:scale-[0.97] transition-all text-[var(--accent-ink)] font-bold text-xs uppercase tracking-widest cursor-pointer"
+            style={{ fontFamily: 'var(--font-display)' }}
           >
-            {locale === 'th' ? 'ตั้งค่าตอนนี้ →' : 'Complete Setup →'}
+            {locale === 'th' ? 'เริ่มตั้งค่าเลย →' : 'Complete Setup →'}
           </button>
         </div>
       </div>
     );
   }
 
-  const isZero = target === 0;
-  const pct = Math.min(100, Math.round((counted / Math.max(target, 1)) * 100));
-  const barColor = pct >= 95 ? '#E84040' : pct >= 80 ? '#E8A020' : '#E8B020';
+  const { dailyDisposable, income, totalFixedExpenses, savingsTarget, remainingDisposable } = calculation;
+
+  const usagePercentage = income > 0 ? Math.max(0, Math.min(100, Math.round(((income - remainingDisposable) / income) * 100))) : 0;
+  
+  // Decide usage bar color class based on percent
+  let barColorClass = "bg-[var(--gold-bright)]";
+  if (usagePercentage >= 95) {
+    barColorClass = "bg-[var(--danger)]";
+  } else if (usagePercentage >= 80) {
+    barColorClass = "bg-[var(--warning)]";
+  }
 
   return (
-    <div className="bb-panel bb-panel-strong relative overflow-hidden p-6 md:p-8">
-      <div className="relative z-10">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="bb-kicker">{locale === 'th' ? 'งบประจำวันที่เหลือ' : 'Daily Budget Remaining'}</span>
-          <span className="bb-mono text-xs text-[rgba(248,243,232,0.44)]">{clockLabel}</span>
+    <div className="relative rounded-2xl border border-[var(--gold-border-strong)] bg-gradient-to-br from-[var(--bg-surface-2)] to-[var(--bg-surface-1)] p-6 md:p-8 overflow-hidden">
+      {/* Glow effect based on spending pressure */}
+      <div 
+        className="absolute inset-0 pointer-events-none opacity-20"
+        style={{
+          background: usagePercentage >= 95 
+            ? "radial-gradient(circle at center, rgba(232,64,64,0.12) 0%, transparent 70%)"
+            : usagePercentage >= 80
+            ? "radial-gradient(circle at center, rgba(232,160,32,0.12) 0%, transparent 70%)"
+            : "radial-gradient(circle at center, rgba(201,150,12,0.12) 0%, transparent 70%)",
+        }}
+      />
+      
+      <div className="relative z-10 flex flex-col">
+        {/* Header strip */}
+        <div className="flex items-center justify-between w-full mb-4">
+          <span className="text-[10px] md:text-[11px] font-bold text-[var(--gold-muted)] uppercase tracking-wider">
+            {locale === 'th' ? 'เงินใช้จ่ายประจำวันคงเหลือ' : 'Daily Budget Remaining'}
+          </span>
+          <LiveClock locale={locale} />
+        </div>
+        
+        {/* Main large figure with CountUp */}
+        <div 
+          className={`text-5xl md:text-7xl font-bold font-mono tracking-tight leading-none mb-6 bb-mono ${
+            dailyDisposable === 0 ? "text-[var(--danger)] bb-shake" : "text-[var(--gold-bright)]"
+          }`}
+        >
+          <CountUp value={dailyDisposable} formatter={(val) => formatCurrency(Math.round(val), locale)} />
         </div>
 
-        <div className="mt-3">
-          <div
-            className={`bb-mono text-[clamp(3rem,9vw,4.5rem)] font-bold leading-none ${isZero ? 'bb-shake text-[#E84040]' : 'text-[#E8B020]'}`}
-            style={{ textShadow: isZero ? 'none' : '0 0 24px rgba(232,176,32,0.35)' }}
-          >
-            {formatCurrency(counted, locale)}
+        {/* Usage bar */}
+        <div className="w-full flex items-center justify-between text-xs text-[var(--text-muted)] mb-2 font-mono">
+          <span>{locale === 'th' ? 'การจัดสรรงบประมาณ' : 'Budget Allocation'}</span>
+          <span className={`${usagePercentage >= 95 ? "text-[var(--danger)]" : usagePercentage >= 80 ? "text-[var(--warning)]" : "text-[var(--gold-bright)]"}`}>
+            ({usagePercentage}%)
+          </span>
+        </div>
+        <div className="w-full h-[6px] bg-white/12 rounded-full overflow-hidden mb-6">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${usagePercentage}%` }}
+            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+            className={`h-full ${barColorClass} rounded-full`}
+            style={{
+              boxShadow: usagePercentage >= 95 
+                ? "0 0 10px rgba(232,64,64,0.4)"
+                : usagePercentage >= 80
+                ? "0 0 10px rgba(232,160,32,0.4)"
+                : "0 0 10px rgba(201,150,12,0.4)"
+            }}
+          />
+        </div>
+
+        {/* Supporting metrics */}
+        <div className="grid grid-cols-3 gap-2 border-t border-[var(--gold-border-soft)] pt-4 text-xs font-medium">
+          <div>
+            <span className="block text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-0.5">
+              {locale === 'th' ? 'รายได้' : 'Income'}
+            </span>
+            <span className="text-[var(--text-1)] font-semibold font-mono">
+              {formatCurrency(income, locale)}/mo
+            </span>
           </div>
-          <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full" style={{ background: 'rgba(248,243,232,0.12)' }}>
-            <div
-              className="h-full rounded-full transition-[width] duration-700 ease-out"
-              style={{ width: `${pct}%`, background: barColor, boxShadow: `0 0 10px ${barColor}` }}
-            />
+          <div>
+            <span className="block text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-0.5">
+              {locale === 'th' ? 'คงที่' : 'Fixed'}
+            </span>
+            <span className="text-[var(--text-1)] font-semibold font-mono">
+              {formatCurrency(totalFixedExpenses, locale)}/mo
+            </span>
+          </div>
+          <div>
+            <span className="block text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-0.5">
+              {locale === 'th' ? 'การออม' : 'Savings'}
+            </span>
+            <span className="text-[var(--text-1)] font-semibold font-mono">
+              {formatCurrency(savingsTarget, locale)}/mo
+            </span>
           </div>
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[rgba(248,243,232,0.5)]">
-          <span>{locale === 'th' ? 'รายได้' : 'Income'}: {formatCurrency(income, locale)}/mo</span>
-          <span>•</span>
-          <span>{locale === 'th' ? 'ค่าคงที่' : 'Fixed'}: {formatCurrency(fixed, locale)}/mo</span>
-          <span>•</span>
-          <span>{locale === 'th' ? 'ออม' : 'Savings'}: {savings > 0 ? formatCurrency(savings, locale) : '0'}/mo</span>
+        {/* Footer date anchor */}
+        <div className="flex items-center gap-1.5 mt-4 text-[11px] text-[var(--text-muted)] font-medium">
+          <span className={`w-1.5 h-1.5 rounded-full ${dailyDisposable === 0 ? "bg-[var(--danger)] animate-pulse" : "bg-[var(--success)]"}`} />
+          <span>
+            {locale === 'th'
+              ? `เหลืออีก ${daysLeft} วันในเดือน${monthName}`
+              : `${daysLeft} days left in ${monthName}`}
+          </span>
         </div>
-
-        {daysLeft !== null && (
-          <div className="mt-3 flex items-center gap-2 text-sm text-[rgba(248,243,232,0.72)]">
-            <span className="inline-block h-2 w-2 rounded-full bg-[#40C87A]" />
-            {daysLeft} {locale === 'th' ? 'วันเหลือในเดือนนี้' : `days left in ${MONTHS[new Date().getMonth()]}`}
-          </div>
-        )}
       </div>
     </div>
   );

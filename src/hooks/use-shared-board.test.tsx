@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, act, waitFor } from '@testing-library/react';
 import { BOARD_CHANGED_EVENT } from '@/lib/types/budget';
 import { saveWizardProfile, getWizardProfile, clearAllData } from '@/lib/db/local-db';
-import type { WizardProfile, BoardSnapshot } from '@/lib/types/budget';
+import type { WizardProfile } from '@/lib/types/budget';
 
 // Control the values the hook reads from useQuery.
 let queryResults: Record<string, unknown> = {};
@@ -68,7 +68,7 @@ function makeProfile(): WizardProfile {
 type FixtureBoard = {
   boardId: string;
   updatedAt: number;
-  data: BoardSnapshot | null;
+  data: Record<string, { value: unknown; updatedAt: number }> | null;
   _id?: string;
   memberA?: string;
   memberB?: string;
@@ -101,17 +101,13 @@ describe('useSharedBoard', () => {
       memberA: 'u1',
       memberB: 'u2',
       data: {
-        wizardProfile: {
-          ...makeProfile(),
-          answers: { ...makeProfile().answers, income: 999999 },
+        'wizardProfile:current': {
+          value: {
+            ...makeProfile(),
+            answers: { ...makeProfile().answers, income: 999999 },
+          },
+          updatedAt: 5000,
         },
-        expenses: [],
-        budgets: [],
-        bills: [],
-        savingsGoals: [],
-        netWorthSnapshots: [],
-        debts: [],
-        criticalExpenseCommitments: [],
       },
       updatedAt: 5000,
       updatedBy: 'u2',
