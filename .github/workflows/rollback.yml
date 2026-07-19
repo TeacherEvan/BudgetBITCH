@@ -1,0 +1,60 @@
+# Manual, reversible production rollback for this repo.
+#
+# This project auto-deploys from `main` via the Vercel git integration, so a
+# "deploy" job is redundant (and becomes the lone red job when deploy-secrets
+# drift). Rollback here does NOT rebuild: it promotes a *previous* Vercel
+# deployment back to production via `vercel rollback`, which is instant and
+# reversible (Vercel keeps the prior deployment for re-promotion).
+#
+# Usage: Actions -> Rollback -> Run workflow
+#   deployment: URL or deployment id of the prior good deployment.
+#               Defaults to the most recent production deployment before the
+#               current one is NOT available from the CLI directly, so supply
+#               the target explicitly (e.g. the dashboard URL of the deploy you
+#               want back, or its id from `vercel ls`).
+#   ref:        git ref to check out for context only (no build occurs).
+#
+# This workflow still sets up Node + npm so `vercel` runs in a known toolchain
+# (the skill's `pnpm: command not found` pitfall applies to `vercel` too — the
+# CLI needs Node on PATH).
+on:
+  workflow_dispatch:
+    inputs:
+      deployment:
+        description: "Vercel deployment URL or id to roll back TO (the good one)"
+        required: true
+        default: ""
+      ref:
+        description: "Git ref to check out (context only; no rebuild happens)"
+        required: false
+        default: "main"
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  rollback:
+    name: Rollback Production
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rollback to previous deployment
+        run: npx vercel@latest rollback "${{ inputs.deployment }}" --yes --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
