@@ -54,11 +54,20 @@ export function ConvexPasswordAuthForm({
         const msg = caughtError.message.toLowerCase();
         if (msg.includes("already exists") || msg.includes("duplicate")) {
           setError("An account with this email already exists.");
+        } else if (
+          // The Convex Auth Next.js proxy masks every auth error (incl. a normal
+          // wrong-password) as a generic "Server Error" / MIDDLEWARE_INVOCATION_FAILED
+          // 500. Surface a friendly credential hint instead of the raw proxy message.
+          msg.includes("server error") ||
+          msg.includes("middleware_invocation_failed") ||
+          msg.includes("middleware invocation failed")
+        ) {
+          setError("Check your email and password, then try again.");
         } else {
           setError(caughtError.message);
         }
       } else {
-        setError("Sign-in failed.");
+        setError("Check your email and password, then try again.");
       }
     } finally {
       setIsSubmitting(false);
