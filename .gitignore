@@ -51,3 +51,6 @@ local-db-*
 # except the Convex function test suite (must be committed)
 !budgetbitch/convex/**/*.test.ts
 !convex/**/*.test.ts
+# src unit tests are also committed (consistent with tracked src/**/*.test.ts(x))
+!src/**/*.test.ts
+!src/**/*.test.tsx

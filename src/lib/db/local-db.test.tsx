@@ -16,6 +16,26 @@ import {
   saveLocationCache,
   getNewsByLocale,
   getLocationCache,
+  saveBudgetCategory,
+  getBudgetCategory,
+  getAllBudgets,
+  addBill,
+  updateBill,
+  deleteBill,
+  getAllBills,
+  addDebt,
+  updateDebt,
+  deleteDebt,
+  getAllDebts,
+  addSavingsGoal,
+  updateSavingsGoal,
+  deleteSavingsGoal,
+  getAllSavingsGoals,
+  saveNetWorthSnapshot,
+  getLatestNetWorthSnapshot,
+  saveCriticalExpenseCommitment,
+  getCriticalExpenseCommitment,
+  deleteCriticalExpenseCommitment,
 } from './local-db';
 import { BOARD_CHANGED_EVENT } from '@/lib/types/budget';
 import type { WizardProfile, ExpenseEntry, NewsItem } from '@/lib/types/budget';
@@ -198,5 +218,168 @@ describe('clearAllUserData (focused reset)', () => {
     // preserved
     expect(await getNewsByLocale('en')).toHaveLength(1);
     expect(await getLocationCache()).toBeDefined();
+  });
+});
+
+describe('budgets CRUD', () => {
+  beforeEach(async () => {
+    await clearAllData();
+    localStorage.clear();
+  });
+
+  it('saves and reads a budget category', async () => {
+    const budget = { category: 'food' as const, monthlyLimit: 5000, alertAtPct: 80 };
+    await saveBudgetCategory(budget);
+    expect(await getBudgetCategory('food')).toEqual(budget);
+    expect(await getAllBudgets()).toHaveLength(1);
+  });
+
+  it('overwrites an existing budget category by key', async () => {
+    await saveBudgetCategory({ category: 'food' as const, monthlyLimit: 5000, alertAtPct: 80 });
+    await saveBudgetCategory({ category: 'food' as const, monthlyLimit: 8000, alertAtPct: 90 });
+    const all = await getAllBudgets();
+    expect(all).toHaveLength(1);
+    expect(all[0].monthlyLimit).toBe(8000);
+  });
+});
+
+describe('bills CRUD', () => {
+  beforeEach(async () => {
+    await clearAllData();
+    localStorage.clear();
+  });
+
+  const makeBill = (id: string) => ({
+    id,
+    name: 'Electricity',
+    amount: 1200,
+    dueDay: 15,
+    category: 'utilities' as const,
+    isActive: true,
+    reminderDaysBefore: 3,
+  });
+
+  it('adds, updates, and deletes a bill', async () => {
+    await addBill(makeBill('b1'));
+    expect(await getAllBills()).toHaveLength(1);
+
+    await updateBill({ ...makeBill('b1'), amount: 1500 });
+    const updated = await getAllBills();
+    expect(updated).toHaveLength(1);
+    expect(updated[0].amount).toBe(1500);
+
+    await deleteBill('b1');
+    expect(await getAllBills()).toHaveLength(0);
+  });
+});
+
+describe('debts CRUD', () => {
+  beforeEach(async () => {
+    await clearAllData();
+    localStorage.clear();
+  });
+
+  const makeDebt = (id: string) => ({
+    id,
+    name: 'CC',
+    balance: 50000,
+    apr: 18,
+    minimumPayment: 2000,
+    type: 'credit_card' as const,
+  });
+
+  it('adds a debt and lists all', async () => {
+    const debt = makeDebt('d1');
+    await addDebt(debt);
+    expect(await getAllDebts()).toEqual([debt]);
+  });
+
+  it('updates and deletes a debt', async () => {
+    await addDebt(makeDebt('d1'));
+    await updateDebt({ ...makeDebt('d1'), balance: 30000 });
+    expect((await getAllDebts())[0].balance).toBe(30000);
+
+    await deleteDebt('d1');
+    expect(await getAllDebts()).toHaveLength(0);
+  });
+});
+
+describe('savings goals CRUD', () => {
+  beforeEach(async () => {
+    await clearAllData();
+    localStorage.clear();
+  });
+
+  const makeGoal = (id: string) => ({
+    id,
+    name: 'Emergency',
+    targetAmount: 100000,
+    currentAmount: 25000,
+    category: 'emergency' as const,
+  });
+
+  it('adds, updates, and deletes a savings goal', async () => {
+    await addSavingsGoal(makeGoal('g1'));
+    expect(await getAllSavingsGoals()).toHaveLength(1);
+
+    await updateSavingsGoal({ ...makeGoal('g1'), currentAmount: 50000 });
+    expect((await getAllSavingsGoals())[0].currentAmount).toBe(50000);
+
+    await deleteSavingsGoal('g1');
+    expect(await getAllSavingsGoals()).toHaveLength(0);
+  });
+});
+
+describe('net worth snapshots', () => {
+  beforeEach(async () => {
+    await clearAllData();
+    localStorage.clear();
+  });
+
+  const snap = (date: string) => ({
+    date,
+    assets: [{ id: 'a1', name: 'Cash', value: 100000, type: 'cash' as const }],
+    liabilities: [],
+    netWorth: 100000,
+  });
+
+  it('saves and returns the latest snapshot by date', async () => {
+    await saveNetWorthSnapshot(snap('2026-01-01'));
+    await saveNetWorthSnapshot(snap('2026-06-01'));
+    const latest = await getLatestNetWorthSnapshot();
+    expect(latest?.date).toBe('2026-06-01');
+    expect(latest?.netWorth).toBe(100000);
+  });
+
+  it('returns undefined when no snapshots exist', async () => {
+    expect(await getLatestNetWorthSnapshot()).toBeUndefined();
+  });
+});
+
+describe('critical expense commitments', () => {
+  beforeEach(async () => {
+    await clearAllData();
+    localStorage.clear();
+  });
+
+  const commitment = (month: string) => ({
+    month,
+    expenseKey: 'coffee' as const,
+    estimatedMonthlyCost: 3000,
+    committedAt: new Date().toISOString(),
+    status: 'active' as const,
+    compoundProjection: { oneYear: 36000, fiveYears: 180000, tenYears: 360000 },
+  });
+
+  it('saves, reads, and deletes a commitment by month key', async () => {
+    await saveCriticalExpenseCommitment(commitment('2026-07'));
+    expect((await getCriticalExpenseCommitment('2026-07'))?.estimatedMonthlyCost).toBe(3000);
+
+    // keyPath store — same month overwrites
+    await saveCriticalExpenseCommitment({ ...commitment('2026-07'), estimatedMonthlyCost: 4000 });
+    expect((await getCriticalExpenseCommitment('2026-07'))?.estimatedMonthlyCost).toBe(4000);
+
+    await deleteCriticalExpenseCommitment('2026-07');
+    expect(await getCriticalExpenseCommitment('2026-07')).toBeUndefined();
   });
 });
