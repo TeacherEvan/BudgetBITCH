@@ -6,6 +6,8 @@ import { ConvexAuthNextjsServerProvider } from '@convex-dev/auth/nextjs/server';
 import { ConvexClientProvider } from '@/components/providers/convex-client-provider';
 import { SharedBoardSync } from '@/components/shared-board/shared-board-sync';
 import { PWARegister } from '@/components/pwa/pwa-register';
+import { SiteFooter } from '@/components/legal/site-footer';
+import { CookieConsentBanner } from '@/components/legal/cookie-consent-banner';
 import { NextIntlClientProvider } from 'next-intl';
 import { cookies } from 'next/headers';
 import { resolveLocale, localeMessages, localeCookieName } from '@/i18n/messages';
@@ -45,7 +47,7 @@ export default async function RootLayout({
         <meta name="theme-color" content="#0a0a0f" media="(prefers-color-scheme: dark)" />
         <meta name="theme-color" content="#f5d742" media="(prefers-color-scheme: light)" />
       </head>
-      <body className="min-h-screen bg-black text-white">
+      <body className="flex min-h-screen flex-col bg-black text-white">
         <ConvexAuthNextjsServerProvider apiRoute="/api/convex-auth">
           <NextIntlClientProvider messages={messages} locale={locale}>
             <ThemeProvider>
@@ -53,6 +55,8 @@ export default async function RootLayout({
                 <SharedBoardSync />
                 <PWARegister />
                 {children}
+                <SiteFooter />
+                <CookieConsentBanner />
               </ConvexClientProvider>
             </ThemeProvider>
           </NextIntlClientProvider>

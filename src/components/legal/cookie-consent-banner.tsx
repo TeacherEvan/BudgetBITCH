@@ -1,0 +1,126 @@
+"use client";
+
+import { useState } from "react";
+import { useMutation } from "convex/react";
+import { useLocale } from "next-intl";
+import { api } from "../../../convex/_generated/api";
+import { shortLocale } from "@/lib/legal/versions";
+import { COOKIE_POLICY_VERSION } from "@/lib/legal/versions";
+
+const STORAGE_KEY = "budgetbitch:cookieConsent";
+
+type StoredChoice = {
+  accepted: boolean;
+  optionalAccepted: boolean;
+  version: string;
+};
+
+const COPY = {
+  en: {
+    title: "Cookies",
+    body: "We use essential cookies to keep you signed in and remember your settings. Optional cookies help us improve the app. See our",
+    acceptAll: "Accept all",
+    essentialOnly: "Essential only",
+    cookiePolicy: "Cookie Policy",
+  },
+  th: {
+    title: "คุกกี้",
+    body: "เราใช้คุกกี้ที่จำเป็นเพื่อคงสถานะการเข้าสู่ระบบและจดจำการตั้งค่าของคุณ คุกกี้แบบเลือกได้ช่วยให้เราปรับปรุงแอป ดู",
+    acceptAll: "ยอมรับทั้งหมด",
+    essentialOnly: "เฉพาะที่จำเป็น",
+    cookiePolicy: "นโยบายคุกกี้",
+  },
+};
+
+function readStored(): StoredChoice | null {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as StoredChoice;
+  } catch {
+    return null;
+  }
+}
+
+function initialVisible(): boolean {
+  if (typeof window === "undefined") return false;
+  const stored = readStored();
+  // Show only when no choice exists, or the policy version changed.
+  return !stored || stored.version !== COOKIE_POLICY_VERSION;
+}
+
+export function CookieConsentBanner() {
+  const localeRaw = useLocale();
+  const locale = shortLocale(localeRaw);
+  const copy = COPY[locale];
+
+  const recordCookieConsent = useMutation(api.legal.recordCookieConsent);
+
+  const [visible, setVisible] = useState(initialVisible);
+
+  function persist(accepted: boolean, optionalAccepted: boolean) {
+    const choice: StoredChoice = {
+      accepted,
+      optionalAccepted,
+      version: COOKIE_POLICY_VERSION,
+    };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(choice));
+    } catch {
+      // Non-fatal: consent UX must not break if storage is unavailable.
+    }
+    setVisible(false);
+
+    // Fire-and-forget server record. Never block the UI on telemetry failure.
+    void recordCookieConsent({
+      accepted,
+      optionalAccepted,
+      version: COOKIE_POLICY_VERSION,
+      userAgent:
+        typeof navigator !== "undefined" ? navigator.userAgent : undefined,
+    }).catch(() => {
+      /* intentionally ignored */
+    });
+  }
+
+  if (!visible) return null;
+
+  return (
+    <div
+      role="dialog"
+      aria-label={copy.title}
+      className="fixed inset-x-0 bottom-0 z-50 border-t-2 border-amber-400/60 bg-zinc-950/95 px-4 py-4 backdrop-blur-xl sm:px-6"
+    >
+      <div className="mx-auto flex max-w-4xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-white/80">
+          <span className="font-semibold text-white">{copy.title}.</span>{" "}
+          {copy.body}{" "}
+          <a
+            href="/cookie-policy"
+            className="font-semibold text-amber-400 underline hover:text-amber-300"
+          >
+            {copy.cookiePolicy}
+          </a>
+          .
+        </p>
+        <div className="flex shrink-0 gap-2">
+          <button
+            type="button"
+            onClick={() => persist(true, false)}
+            className="bb-button-secondary px-4 py-2 text-sm font-semibold"
+          >
+            {copy.essentialOnly}
+          </button>
+          <button
+            type="button"
+            onClick={() => persist(true, true)}
+            className="bb-button-primary px-4 py-2 text-sm font-semibold"
+          >
+            {copy.acceptAll}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

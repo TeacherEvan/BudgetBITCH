@@ -47,4 +47,32 @@ export default defineSchema({
     })),
     createdAt: v.number(),
   }).index("by_user_and_date", ["userId", "date"]),
+
+  // Versioned, timestamped acceptance record of Terms + Privacy Policy at sign-up.
+  // One record per acceptance event (re-recording on version bump is expected).
+  legalAgreements: defineTable({
+    userId: v.id("users"),
+    termsVersion: v.string(),
+    privacyVersion: v.string(),
+    acceptedAt: v.number(),
+    // Optional client metadata captured at acceptance time.
+    ipAddress: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_acceptedAt", ["acceptedAt"]),
+
+  // Optional cookie consent. Auth-optional: captured before/without sign-in.
+  // Kept as a separate table from legalAgreements per compliance isolation.
+  cookieConsents: defineTable({
+    userId: v.optional(v.id("users")),
+    accepted: v.boolean(),
+    optionalAccepted: v.boolean(),
+    version: v.string(),
+    acceptedAt: v.number(),
+    ipAddress: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_acceptedAt", ["acceptedAt"]),
 });

@@ -10,6 +10,7 @@
 
 import type * as auth from "../auth.js";
 import type * as http from "../http.js";
+import type * as legal from "../legal.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as sharedBoards from "../sharedBoards.js";
 import type * as snapshots from "../snapshots.js";
@@ -23,6 +24,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   http: typeof http;
+  legal: typeof legal;
   "lib/auth": typeof lib_auth;
   sharedBoards: typeof sharedBoards;
   snapshots: typeof snapshots;
