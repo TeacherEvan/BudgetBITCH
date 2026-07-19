@@ -81,17 +81,20 @@ test("recordCookieConsent succeeds anonymously (auth-optional)", async () => {
   expect(rows[0].version).toBe("2026-07-19");
 });
 
-test("recordCookieConsent attaches userId when authenticated", async () => {
+test("recordCookieConsent stores a server-supplied IP when provided", async () => {
   const aliceId = await seedUser(t, "alice");
   await asUser(aliceId).mutation(api.legal.recordCookieConsent, {
     accepted: true,
     optionalAccepted: true,
     version: "2026-07-19",
+    ipAddress: "203.0.113.7",
+    userAgent: "vitest-agent",
   });
 
   const rows = await t.run(async (ctx: any) =>
     ctx.db.query("cookieConsents").collect(),
   );
-  expect(rows[0].userId).toBe(aliceId);
-  expect(rows[0].optionalAccepted).toBe(true);
+  expect(rows[0].ipAddress).toBe("203.0.113.7");
+  expect(rows[0].userAgent).toBe("vitest-agent");
 });
+

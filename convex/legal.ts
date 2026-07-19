@@ -48,6 +48,9 @@ export const recordCookieConsent = mutation({
     accepted: v.boolean(),
     optionalAccepted: v.boolean(),
     version: v.string(),
+    // `ipAddress` is intentionally NOT a client arg — it is derived on the
+    // server by the relay route from the real request header, so it cannot be
+    // spoofed by the client.
     ipAddress: v.optional(v.string()),
     userAgent: v.optional(v.string()),
   },

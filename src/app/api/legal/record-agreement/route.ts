@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getConvexHttpClient } from "@/lib/convex/http-client";
 import { convexAuthNextjsToken } from "@convex-dev/auth/nextjs/server";
 import { api } from "../../../../../convex/_generated/api";
+import { clientIp } from "@/lib/http/client-ip";
 import { z } from "zod";
 
 export const runtime = "nodejs";
@@ -23,15 +24,6 @@ const Body = z.object({
   userAgent: z.string().optional(),
   token: z.string().min(1),
 });
-
-function clientIp(req: NextRequest): string | undefined {
-  const xff = req.headers.get("x-forwarded-for");
-  if (xff) {
-    // First hop is the original client; subsequent entries are proxies.
-    return xff.split(",")[0]?.trim() || undefined;
-  }
-  return req.headers.get("x-real-ip")?.trim() || undefined;
-}
 
 export async function POST(req: NextRequest) {
   let json: unknown;

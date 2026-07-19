@@ -1,11 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation } from "convex/react";
+import { useAuthToken } from "@convex-dev/auth/react";
 import { useLocale } from "next-intl";
-import { api } from "../../../convex/_generated/api";
-import { shortLocale } from "@/lib/legal/versions";
-import { COOKIE_POLICY_VERSION } from "@/lib/legal/versions";
+import { shortLocale, COOKIE_POLICY_VERSION } from "@/lib/legal/versions";
 
 const STORAGE_KEY = "budgetbitch:cookieConsent";
 
@@ -54,8 +52,9 @@ export function CookieConsentBanner() {
   const localeRaw = useLocale();
   const locale = shortLocale(localeRaw);
   const copy = COPY[locale];
-
-  const recordCookieConsent = useMutation(api.legal.recordCookieConsent);
+  // Optional: forwarded to the relay only when a user is signed in. Anonymous
+  // visitors stay anonymous (the relay leaves userId undefined).
+  const authToken = useAuthToken();
 
   const [visible, setVisible] = useState(initialVisible);
 
@@ -72,13 +71,20 @@ export function CookieConsentBanner() {
     }
     setVisible(false);
 
-    // Fire-and-forget server record. Never block the UI on telemetry failure.
-    void recordCookieConsent({
-      accepted,
-      optionalAccepted,
-      version: COOKIE_POLICY_VERSION,
-      userAgent:
-        typeof navigator !== "undefined" ? navigator.userAgent : undefined,
+    // Fire-and-forget server record via the relay. The relay captures the real
+    // client IP server-side (Convex mutations can't see the request). Never
+    // block the consent UI on a telemetry failure.
+    void fetch("/api/legal/record-cookie-consent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        accepted,
+        optionalAccepted,
+        version: COOKIE_POLICY_VERSION,
+        userAgent:
+          typeof navigator !== "undefined" ? navigator.userAgent : undefined,
+        token: authToken ?? undefined,
+      }),
     }).catch(() => {
       /* intentionally ignored */
     });
