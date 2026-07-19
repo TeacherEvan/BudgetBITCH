@@ -6,6 +6,7 @@ import { useEffect, useSyncExternalStore } from "react";
 import { LanguageSelectModal } from "@/components/onboarding/language-select-modal";
 import { PWAInstallPrompt } from "@/components/pwa/install-prompt";
 import { CleanAuthCard } from "@/components/auth/clean-auth-card";
+import { GoldenSplash } from "@/components/launch/golden-splash";
 
 export const dynamic = 'force-dynamic';
 
@@ -59,8 +60,10 @@ export default function Home() {
   // DEFAULT: The login screen is ALWAYS shown as the startup screen.
   // If no language is selected yet, the language select modal overlays on top.
   // After dismissing the language modal, the login card remains fully visible.
+  // GoldenSplash overlays above the auth card as a brand moment, then collapses.
   return (
     <div className="relative">
+      <GoldenSplash />
       <CleanAuthCard initialFlow="signIn" redirectTo="/dashboard" />
       <LanguageSelectModal
         isOpen={showLanguageModal}

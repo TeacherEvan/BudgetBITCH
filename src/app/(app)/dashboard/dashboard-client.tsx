@@ -24,6 +24,7 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
   const [wizardCompleted, setWizardCompleted] = useState(initialWizardCompleted);
   const [isLoading, setIsLoading] = useState(false);
   const [budgetsInitialized, setBudgetsInitialized] = useState(false);
+  const [wizardForced, setWizardForced] = useState(false);
 
   const voice = useVoice(locale === 'th' ? 'th-TH' : 'en-US');
   const voiceEnabled = voice.settings.enabled;
@@ -99,9 +100,10 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
         onLocaleChange={handleLocaleChange}
         onVoiceToggle={voice.toggleVoice}
         voiceEnabled={voiceEnabled}
+        onSetup={() => setWizardForced(true)}
       />
       
-      {!wizardCompleted && (
+      {(!wizardCompleted || wizardForced) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
           <WizardShell
             locale={locale}

@@ -1,7 +1,7 @@
 // components/layout/header-bar.tsx
 'use client';
 
-import { Globe, Wrench } from 'lucide-react';
+import { Wrench } from 'lucide-react';
 import { useState } from 'react';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
@@ -10,65 +10,70 @@ import { Toggle } from '@/components/ui/toggle';
 interface HeaderBarProps {
   locale: 'th' | 'en';
   onLocaleChange: (locale: 'th' | 'en') => void;
-  onSettingsOpen: () => void;
   voiceEnabled: boolean;
   onVoiceToggle: () => void;
 }
 
-export function HeaderBar({ locale, onLocaleChange, onSettingsOpen, voiceEnabled, onVoiceToggle }: HeaderBarProps) {
+export function HeaderBar({ locale, onLocaleChange, voiceEnabled, onVoiceToggle }: HeaderBarProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  // Prefer the caller-supplied handler (e.g. dashboard mobile sheet); fall back
-  // to the in-header settings modal when none is provided.
-  const openSettings = () => {
-    if (onSettingsOpen) {
-      onSettingsOpen();
-    } else {
-      setSettingsOpen(true);
-    }
-  };
-
   return (
-    <header className="sticky top-0 z-40 flex items-center justify-between gap-3 px-4 py-3 bg-black/80 backdrop-blur-xl border-b border-white/10">
-      {/* Left: Globe + Locale indicator */}
-      <div className="flex items-center gap-2">
-        <div className="relative group">
-          <button
-            onClick={() => onLocaleChange(locale === 'th' ? 'en' : 'th')}
-            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
-            aria-label={`Current language: ${locale === 'th' ? 'Thai' : 'English'}. Click to change.`}
-          >
-            <Globe className="h-5 w-5 text-white" />
-          </button>
-          <span className="absolute -top-2 -right-2 text-[10px] font-bold bg-amber-400 text-slate-950 px-1.5 py-0.5 rounded-full">
-            {locale.toUpperCase()}
-          </span>
+    <header className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[rgba(201,150,12,0.18)] bg-black/60 px-4 py-3 backdrop-blur-[24px] [box-shadow:0_1px_0_rgba(201,150,12,0.08)]">
+      {/* Left: TH | EN segmented control */}
+      <div className="flex items-center">
+        <div className="flex rounded-full border border-[rgba(201,150,12,0.30)] bg-white/5 p-0.5">
+          {(['th', 'en'] as const).map((l) => {
+            const active = locale === l;
+            return (
+              <button
+                key={l}
+                type="button"
+                onClick={() => onLocaleChange(l)}
+                aria-pressed={active}
+                className={`min-h-[32px] rounded-full px-3 text-xs font-bold uppercase tracking-[0.08em] transition-colors ${
+                  active ? 'bg-[#C9960C] text-[#080600]' : 'text-[rgba(248,243,232,0.6)] hover:text-[#F8F3E8]'
+                }`}
+              >
+                {l === 'th' ? 'TH' : 'EN'}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Center: App Title */}
-      <h1 className="text-lg font-semibold text-white hidden sm:block">
+      {/* Center: Gold gradient title */}
+      <h1
+        className="hidden font-display text-xl font-bold uppercase sm:block"
+        style={{
+          letterSpacing: '0.2em',
+          backgroundImage: 'linear-gradient(90deg, #C9960C, #F5D742)',
+          WebkitBackgroundClip: 'text',
+          backgroundClip: 'text',
+          color: 'transparent',
+        }}
+      >
         BudgetBITCH
       </h1>
 
-      {/* Right: Voice Toggle + Settings */}
-      <div className="flex items-center gap-2">
-        <Toggle
-          checked={voiceEnabled}
-          onCheckedChange={onVoiceToggle}
-          label="Voice"
-          size="sm"
-          className="hidden md:flex"
-        />
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={openSettings}
-          className="p-2"
+      {/* Right: Voice pill + Settings */}
+      <div className="flex items-center gap-3">
+        <div className="hidden items-center gap-2 md:flex">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[rgba(248,243,232,0.5)]">Voice</span>
+          <Toggle
+            checked={voiceEnabled}
+            onCheckedChange={onVoiceToggle}
+            size="sm"
+            aria-label="Toggle voice guidance"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() => setSettingsOpen(true)}
           aria-label="Settings"
+          className="flex h-9 w-9 items-center justify-center rounded-xl text-[rgba(248,243,232,0.7)] transition-transform duration-200 hover:rotate-90 hover:text-[#E8B020]"
         >
           <Wrench className="h-5 w-5" />
-        </Button>
+        </button>
       </div>
 
       {/* Settings Modal */}
@@ -81,7 +86,7 @@ export function HeaderBar({ locale, onLocaleChange, onSettingsOpen, voiceEnabled
       >
         <div className="space-y-6">
           <section>
-            <h3 className="text-sm font-medium text-white/70 mb-3">Language</h3>
+            <h3 className="mb-3 text-sm font-medium text-white/70">Language</h3>
             <div className="flex gap-2">
               <Button
                 variant={locale === 'th' ? 'primary' : 'secondary'}
@@ -101,7 +106,7 @@ export function HeaderBar({ locale, onLocaleChange, onSettingsOpen, voiceEnabled
           </section>
 
           <section>
-            <h3 className="text-sm font-medium text-white/70 mb-3">Voice Assistant</h3>
+            <h3 className="mb-3 text-sm font-medium text-white/70">Voice Assistant</h3>
             <Toggle
               checked={voiceEnabled}
               onCheckedChange={onVoiceToggle}
@@ -111,26 +116,18 @@ export function HeaderBar({ locale, onLocaleChange, onSettingsOpen, voiceEnabled
           </section>
 
           <section>
-            <h3 className="text-sm font-medium text-white/70 mb-3">Data</h3>
-            <Button variant="secondary" className="w-full justify-start">
-              Export Data (JSON)
-            </Button>
-            <Button variant="secondary" className="w-full justify-start mt-2">
-              Export Data (CSV)
-            </Button>
-            <Button variant="danger" className="w-full justify-start mt-2">
-              Reset All Data
-            </Button>
+            <h3 className="mb-3 text-sm font-medium text-white/70">Data</h3>
+            <Button variant="secondary" className="w-full justify-start">Export Data (JSON)</Button>
+            <Button variant="secondary" className="mt-2 w-full justify-start">Export Data (CSV)</Button>
+            <Button variant="danger" className="mt-2 w-full justify-start">Reset All Data</Button>
           </section>
 
           <section>
-            <h3 className="text-sm font-medium text-white/70 mb-3">Privacy</h3>
-            <p className="text-sm text-white/70 mb-3">
+            <h3 className="mb-3 text-sm font-medium text-white/70">Privacy</h3>
+            <p className="mb-3 text-sm text-white/70">
               Your budget data stays on this device. Daily snapshots are sent to Convex for backup only.
             </p>
-            <Button variant="secondary" className="w-full justify-start">
-              View Privacy Disclaimer
-            </Button>
+            <Button variant="secondary" className="w-full justify-start">View Privacy Disclaimer</Button>
           </section>
         </div>
       </Modal>

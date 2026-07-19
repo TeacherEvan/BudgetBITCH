@@ -1,12 +1,15 @@
 // components/dashboard/dashboard-shell.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { X, ChevronDown, ChevronUp } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { HeaderBar } from '@/components/layout/header-bar';
 import { DailyDisposableHero } from '@/components/dashboard/daily-disposable-hero';
 import { CriticalExpensesModal } from '@/components/dashboard/critical-expenses-modal';
 import { AlertsSidebar } from '@/components/dashboard/alerts-sidebar';
+import { PriorityGuide } from '@/components/dashboard/priority-guide';
+import { ManifestoNotification } from '@/components/launch/manifesto-notification';
 import { ExpenseTracker } from '@/components/dashboard/panels/expense-tracker';
 import { BudgetVisual } from '@/components/dashboard/panels/budget-visual';
 import { BudgetAlerts } from '@/components/dashboard/panels/budget-alerts';
@@ -19,6 +22,7 @@ import { DebtPayoff } from '@/components/dashboard/panels/debt-payoff';
 import { CashFlowForecast } from '@/components/dashboard/panels/cash-flow-forecast';
 import { Modal } from '@/components/ui/modal';
 import { useCriticalExpense } from '@/hooks/use-critical-expense';
+import { useWizardProfile, useBudgets, useBills } from '@/hooks/use-local-db';
 import { BentoGrid, PanelConfig } from '@/components/dashboard/bento-grid';
 import { MobilePanelTabs } from '@/components/dashboard/mobile-panel-tabs';
 
@@ -52,20 +56,70 @@ const PANELS: PanelConfig[] = [
   { id: 'forecast', title: 'Forecast', children: <CashFlowForecast /> },
 ];
 
+const MANIFESTO_KEY = 'bb:manifesto-v1';
+
 interface DashboardShellProps {
   locale: 'th' | 'en';
   onLocaleChange?: (locale: 'th' | 'en') => void;
   voiceEnabled?: boolean;
   onVoiceToggle?: () => void;
+  onSetup?: () => void;
 }
 
-export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, onVoiceToggle }: DashboardShellProps) {
+export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, onVoiceToggle, onSetup }: DashboardShellProps) {
   const { loading: commitmentLoading } = useCriticalExpense();
+  const { profile } = useWizardProfile();
+  const { budgets, loading: budgetsLoading } = useBudgets();
+  const { bills } = useBills();
   const [criticalExpenseOpen, setCriticalExpenseOpen] = useState(false);
   const [openPanels, setOpenPanels] = useState<PanelKey[]>(['expenses', 'budget']);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [marketWatchOpen, setMarketWatchOpen] = useState(false);
   const [mobileActivePanel, setMobileActivePanel] = useState<PanelKey>('expenses');
+
+  // T3: manifesto banner shown once per account (localStorage).
+  const [showManifesto, setShowManifesto] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let seen = false;
+    try {
+      seen = localStorage.getItem(MANIFESTO_KEY) === '1';
+    } catch {
+      /* ignore */
+    }
+    // Intentional post-mount reveal; keeps SSR HTML minimal and avoids hydration mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!seen) setShowManifesto(true);
+  }, []);
+
+  // T5: direction-aware panel transitions. Direction is decided in the
+  // select handler and stored in state (never read a ref during render).
+  const prevIndexRef = useRef(0);
+  const [direction, setDirection] = useState(1);
+  const handleSelectPanel = (panel: PanelKey) => {
+    const nextIndex = PANEL_ORDER.indexOf(panel);
+    const dir = nextIndex >= prevIndexRef.current ? 1 : -1;
+    prevIndexRef.current = nextIndex;
+    setDirection(dir);
+    setMobileActivePanel(panel);
+  };
+
+  // T9: alert badge count for the More tab (critical = no income, warning = bill due soon).
+  let alertCount = 0;
+  if (!profile || !profile.completed || !profile.answers?.income) {
+    alertCount += 1;
+  } else if (!budgetsLoading && budgets.length === 0) {
+    alertCount += 1;
+  } else {
+    const today = new Date();
+    const dayOfMonth = today.getDate();
+    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+    const dueSoon = bills.filter(b => b.isActive).some(b => {
+      const diff = (((b.dueDay - dayOfMonth) % daysInMonth) + daysInMonth) % daysInMonth;
+      return diff > 0 && diff <= 7;
+    });
+    if (dueSoon) alertCount += 1;
+  }
 
   const togglePanel = (panel: PanelKey) => {
     setOpenPanels(prev => prev.includes(panel) ? prev.filter(p => p !== panel) : [...prev, panel]);
@@ -80,52 +134,77 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
   const mobilePanel = PANELS.find((panel) => panel.id === mobileActivePanel) ?? PANELS[0];
 
   return (
-    <div className="min-h-screen bg-black flex flex-col">
+    <div className="bb-viewport-fill bg-[var(--bg-base)]">
       {/* Header Bar */}
-      <HeaderBar
-        locale={locale}
-        onLocaleChange={(next) => onLocaleChange?.(next)}
-        onSettingsOpen={() => setMobileMenuOpen(true)}
-        voiceEnabled={voiceEnabled}
-        onVoiceToggle={() => onVoiceToggle?.()}
-      />
+      <header className="flex-shrink-0">
+        <HeaderBar
+          locale={locale}
+          onLocaleChange={(next) => onLocaleChange?.(next)}
+          voiceEnabled={voiceEnabled}
+          onVoiceToggle={() => onVoiceToggle?.()}
+        />
+      </header>
 
-      <main className="flex-1 flex lg:flex-row overflow-hidden">
+      {/* T6: priority guidance strip — 0 height when empty */}
+      <div className="bb-status-strip flex-shrink-0">
+        <PriorityGuide />
+      </div>
+
+      {/* T3: startup manifesto banner — slides content down */}
+      <AnimatePresence initial={false}>
+        {showManifesto && (
+          <div className="flex-shrink-0 px-3 lg:px-4">
+            <ManifestoNotification
+              locale={locale}
+              onDismiss={() => {
+                try {
+                  localStorage.setItem(MANIFESTO_KEY, '1');
+                } catch {
+                  /* ignore */
+                }
+                setShowManifesto(false);
+              }}
+            />
+          </div>
+        )}
+      </AnimatePresence>
+
+      <main className="flex min-h-0 flex-1 flex-row overflow-hidden">
         {/* Desktop Sidebar - only on lg+ */}
-        <aside className="hidden lg:block w-72 flex-shrink-0 border-r border-white/5 bg-black/30 p-4 overflow-y-auto">
-          <div className="space-y-3 mb-6">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-400">
+        <aside className="hidden w-72 flex-shrink-0 overflow-y-auto border-r border-[var(--gold-border-soft)] bg-[var(--bg-surface-1)] p-4 lg:block">
+          <div className="mb-6 space-y-3">
+            <h3 className="bb-kicker">
               {locale === 'th' ? 'ค่าใช้จ่ายที่ต้องลด' : 'Cut One Expense'}
             </h3>
             <button
               onClick={() => setCriticalExpenseOpen(true)}
-              className="w-full flex items-center gap-3 p-3 rounded-xl bg-amber-400/10 border border-amber-400/30 hover:bg-amber-400/20 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex w-full items-center gap-3 rounded-xl border border-[var(--gold-border-strong)] bg-[var(--gold-base)]/10 p-3 text-left transition-colors hover:bg-[var(--gold-base)]/20 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={commitmentLoading}
             >
               <span className="text-2xl">🎯</span>
               <div className="flex-1 text-left">
-                <p className="font-medium text-white text-sm">
+                <p className="text-sm font-medium text-[var(--text-1)]">
                   {locale === 'th' ? 'เลือก 1 อย่างลดในเดือนนี้' : 'Pick 1 to cut this month'}
                 </p>
-                <p className="text-xs text-white/60">
+                <p className="text-xs text-[var(--text-2)]">
                   {locale === 'th' ? 'ดูเงินที่จะประหยัดได้' : 'See your savings potential'}
                 </p>
               </div>
-              <ChevronDown className="text-amber-400" />
+              <ChevronDown className="text-[var(--gold-bright)]" />
             </button>
-            {commitmentLoading && <p className="text-xs text-white/50 text-center">{locale === 'th' ? 'กำลังโหลด...' : 'Loading...'}</p>}
+            {commitmentLoading && <p className="text-center text-xs text-[var(--text-2)]">{locale === 'th' ? 'กำลังโหลด...' : 'Loading...'}</p>}
 
             {/* Market Watch - desktop sidebar, only below xl */}
             <button
               onClick={() => setMarketWatchOpen(true)}
-              className="xl:hidden w-full flex items-center gap-3 p-3 rounded-xl bg-sky-400/10 border border-sky-400/30 hover:bg-sky-400/20 transition-colors text-left"
+              className="xl:hidden flex w-full items-center gap-3 rounded-xl border border-sky-400/30 bg-sky-400/10 p-3 text-left transition-colors hover:bg-sky-400/20"
             >
               <span className="text-2xl">📰</span>
               <div className="flex-1 text-left">
-                <p className="font-medium text-white text-sm">
+                <p className="text-sm font-medium text-[var(--text-1)]">
                   {locale === 'th' ? 'ข่าวและข้อมูลล่าสุด' : 'Market Watch'}
                 </p>
-                <p className="text-xs text-white/60">
+                <p className="text-xs text-[var(--text-2)]">
                   {locale === 'th' ? 'ดูราคาน้ำมัน โปรโมชั่น ข่าว' : 'Fuel, deals & news'}
                 </p>
               </div>
@@ -133,7 +212,7 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
             </button>
           </div>
 
-          <div className="space-y-2">
+          <div className="relative space-y-2">
             {PANEL_ORDER.map(panel => {
               const config = PANEL_CONFIG[panel];
               const isOpen = isPanelOpen(panel);
@@ -141,81 +220,50 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
                 <button
                   key={panel}
                   onClick={() => togglePanel(panel)}
-                  className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left ${
+                  className={`relative flex w-full items-center gap-3 rounded-xl p-3 text-left transition-colors ${
                     isOpen
-                      ? 'bg-white/5 border border-white/10'
-                      : 'bg-black/30 hover:bg-white/5'
+                      ? 'border border-[var(--gold-border-soft)] bg-[var(--bg-surface-2)]'
+                      : 'bg-[var(--bg-surface-1)] hover:bg-[var(--bg-surface-2)]'
                   }`}
                 >
+                  {isOpen && (
+                    <motion.span
+                      layoutId="sidebar-active"
+                      className="absolute inset-y-1 left-0 w-[3px] rounded-full"
+                      style={{ background: 'var(--gold-bright)', boxShadow: '0 0 8px var(--gold-bright)' }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 38 }}
+                    />
+                  )}
                   <span className="text-xl">{config.icon}</span>
-                  <span className="font-medium text-white text-sm flex-1 text-left">
+                  <span className={`flex-1 text-left text-sm font-medium ${isOpen ? 'text-[var(--gold-bright)]' : 'text-[var(--text-2)]'}`}>
                     {config.label[locale]}
                   </span>
-                  {isOpen ? <ChevronUp className="text-white/50" /> : <ChevronDown className="text-white/40" />}
+                  {isOpen ? <ChevronUp className="text-[var(--text-muted)]" /> : <ChevronDown className="text-[var(--text-muted)]" />}
                 </button>
               );
             })}
           </div>
         </aside>
 
-        {/* Mobile Bottom Sheet Sidebar */}
-        <div data-testid="mobile-sheet" className={`lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-xl border-t border-white/10 rounded-t-2xl p-4 max-h-[70vh] overflow-y-auto transform transition-transform duration-300 ${mobileMenuOpen ? 'translate-y-0' : 'translate-y-full'}`}>
-          <button onClick={() => setMobileMenuOpen(false)} className="absolute -top-3 right-4 w-10 h-10 rounded-full bg-black/80 border border-white/10 flex items-center justify-center">
-            <X className="w-5 h-5 text-white/50" />
-          </button>
-          <div className="space-y-4 pt-2">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-white">{locale === 'th' ? 'เมนู' : 'Menu'}</h3>
-            </div>
-            <button className="w-full flex items-center gap-3 p-3 rounded-xl bg-amber-400/10 border border-amber-400/30 text-left disabled:opacity-50 disabled:cursor-not-allowed" onClick={() => { setCriticalExpenseOpen(true); setMobileMenuOpen(false); }} disabled={commitmentLoading}>
-              <span className="text-2xl">🎯</span>
-              <div>
-                <p className="font-medium text-white">{locale === 'th' ? 'เลือก 1 อย่างลดในเดือนนี้' : 'Pick 1 to cut this month'}</p>
-              </div>
-            </button>
-            <button className="w-full flex items-center gap-3 p-3 rounded-xl bg-sky-400/10 border border-sky-400/30 text-left" onClick={() => { setMarketWatchOpen(true); setMobileMenuOpen(false); }}>
-              <span className="text-2xl">📰</span>
-              <div>
-                <p className="font-medium text-white">{locale === 'th' ? 'ข่าวและข้อมูลล่าสุด' : 'Market Watch'}</p>
-              </div>
-            </button>
-            {PANEL_ORDER.map(panel => {
-              const config = PANEL_CONFIG[panel];
-              const isOpen = mobileActivePanel === panel;
-              return (
-                <button
-                  key={panel}
-                  onClick={() => { setMobileActivePanel(panel); setMobileMenuOpen(false); }}
-                  className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left ${
-                    isOpen ? 'bg-white/5 border border-white/10' : 'bg-black/30 hover:bg-white/5'
-                  }`}
-                >
-                  <span className="text-xl">{config.icon}</span>
-                  <span className="font-medium text-white text-sm flex-1">{config.label[locale]}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Mobile bottom tab bar - swaps the single active panel */}
-        <MobilePanelTabs
-          activePanel={mobileActivePanel}
-          onSelect={setMobileActivePanel}
-          onMore={() => setMobileMenuOpen(true)}
-          locale={locale}
-        />
-
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col overflow-y-auto p-4 lg:p-6 pb-24 lg:pb-6">
+        {/* THE ONLY SCROLL ZONE */}
+        <div className="bb-scroll-zone flex flex-col px-4 py-4 lg:px-6">
           {/* Daily Disposable Hero */}
-          <DailyDisposableHero locale={locale} />
+          <DailyDisposableHero locale={locale} onSetup={onSetup} />
 
           {/* Panels */}
           <div className="mt-6">
-            {/* Mobile: one active panel at a time (no scroll stack) */}
+            {/* Mobile: one active panel at a time (direction-aware slide-in).
+                Keyed motion.div animates the enter transition on each swap;
+                no AnimatePresence so the panel swaps immediately (no lingering
+                exiting node) — important for instant state and tests. */}
             <div className="lg:hidden" data-testid="mobile-panels">
-              <BentoGrid panels={[mobilePanel]} />
+              <motion.div
+                key={mobileActivePanel}
+                initial={{ opacity: 0, x: direction * 32 }}
+                animate={{ opacity: 1, x: 0, transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] } }}
+              >
+                <BentoGrid panels={[mobilePanel]} />
+              </motion.div>
             </div>
             {/* Desktop: toggled grid */}
             <div className="hidden lg:block" data-testid="desktop-panels">
@@ -225,28 +273,77 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
         </div>
 
         {/* Alerts Sidebar - Desktop (xl+) */}
-        <aside className="hidden xl:block w-80 flex-shrink-0 border-l border-white/5 bg-black/30 p-4 overflow-y-auto">
+        <aside className="hidden w-80 flex-shrink-0 overflow-y-auto border-l border-[var(--gold-border-soft)] bg-[var(--bg-surface-1)] p-4 xl:block">
           <AlertsSidebar locale={locale} />
         </aside>
-
-        {/* Critical Expenses Modal */}
-        <CriticalExpensesModal
-          isOpen={criticalExpenseOpen}
-          onClose={() => setCriticalExpenseOpen(false)}
-          locale={locale}
-        />
-
-        {/* Market Watch Modal */}
-        <Modal
-          isOpen={marketWatchOpen}
-          onClose={() => setMarketWatchOpen(false)}
-          showCloseButton={true}
-          size="lg"
-          title={locale === 'th' ? 'ข่าวและข้อมูลล่าสุด' : 'Market Watch'}
-        >
-          <AlertsSidebar locale={locale} />
-        </Modal>
       </main>
+
+      {/* Mobile bottom tab bar - swaps the single active panel */}
+      <MobilePanelTabs
+        activePanel={mobileActivePanel}
+        onSelect={handleSelectPanel}
+        onMore={() => setMobileMenuOpen(true)}
+        locale={locale}
+        alertCount={alertCount}
+      />
+
+      {/* Mobile Bottom Sheet Sidebar */}
+      <div data-testid="mobile-sheet" className={`lg:hidden fixed bottom-0 left-0 right-0 z-40 transform rounded-t-2xl border-t bg-[var(--bg-base)]/95 p-4 backdrop-blur-xl transition-transform duration-300 ${mobileMenuOpen ? 'translate-y-0' : 'translate-y-full'}`} style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+        <button onClick={() => setMobileMenuOpen(false)} className="absolute -top-3 right-4 flex h-10 w-10 items-center justify-center rounded-full border border-[var(--gold-border-soft)] bg-[var(--bg-base)]/80">
+          <X className="h-5 w-5 text-[var(--text-muted)]" />
+        </button>
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-[var(--text-1)]">{locale === 'th' ? 'เมนู' : 'Menu'}</h3>
+          </div>
+          <button className="flex w-full items-center gap-3 rounded-xl border border-[var(--gold-border-strong)] bg-[var(--gold-base)]/10 p-3 text-left disabled:cursor-not-allowed disabled:opacity-50" onClick={() => { setCriticalExpenseOpen(true); setMobileMenuOpen(false); }} disabled={commitmentLoading}>
+            <span className="text-2xl">🎯</span>
+            <div>
+              <p className="font-medium text-[var(--text-1)]">{locale === 'th' ? 'เลือก 1 อย่างลดในเดือนนี้' : 'Pick 1 to cut this month'}</p>
+            </div>
+          </button>
+          <button className="flex w-full items-center gap-3 rounded-xl border border-sky-400/30 bg-sky-400/10 p-3 text-left" onClick={() => { setMarketWatchOpen(true); setMobileMenuOpen(false); }}>
+            <span className="text-2xl">📰</span>
+            <div>
+              <p className="font-medium text-[var(--text-1)]">{locale === 'th' ? 'ข่าวและข้อมูลล่าสุด' : 'Market Watch'}</p>
+            </div>
+          </button>
+          {PANEL_ORDER.map(panel => {
+            const config = PANEL_CONFIG[panel];
+            const isActive = mobileActivePanel === panel;
+            return (
+              <button
+                key={panel}
+                onClick={() => { setMobileActivePanel(panel); setMobileMenuOpen(false); }}
+                className={`flex w-full items-center gap-3 rounded-xl p-3 text-left transition-colors ${
+                  isActive ? 'border border-[var(--gold-border-soft)] bg-[var(--bg-surface-2)]' : 'bg-[var(--bg-surface-1)] hover:bg-[var(--bg-surface-2)]'
+                }`}
+              >
+                <span className="text-xl">{config.icon}</span>
+                <span className={`flex-1 text-left text-sm font-medium ${isActive ? 'text-[var(--gold-bright)]' : 'text-[var(--text-2)]'}`}>{config.label[locale]}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Critical Expenses Modal */}
+      <CriticalExpensesModal
+        isOpen={criticalExpenseOpen}
+        onClose={() => setCriticalExpenseOpen(false)}
+        locale={locale}
+      />
+
+      {/* Market Watch Modal */}
+      <Modal
+        isOpen={marketWatchOpen}
+        onClose={() => setMarketWatchOpen(false)}
+        showCloseButton={true}
+        size="lg"
+        title={locale === 'th' ? 'ข่าวและข้อมูลล่าสุด' : 'Market Watch'}
+      >
+        <AlertsSidebar locale={locale} />
+      </Modal>
     </div>
   );
 }

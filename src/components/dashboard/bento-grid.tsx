@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils/cn';
 
@@ -37,9 +38,20 @@ const itemVariants = {
 };
 
 export function BentoGrid({ panels, className }: BentoGridProps) {
-  const prefersReducedMotion = typeof window !== 'undefined' 
-    ? window.matchMedia('(prefers-reduced-motion: reduce)').matches 
-    : false;
+  // Hydration-safe reduced-motion: default to false on the server/first
+  // render, then read the media query after mount. Reading during render
+  // caused a React #418 mismatch (server=false, client=true).
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    // Intentional post-mount read of a media query (cannot be known during SSR).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPrefersReducedMotion(mq.matches);
+    const onChange = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
 
   return (
     <motion.div
