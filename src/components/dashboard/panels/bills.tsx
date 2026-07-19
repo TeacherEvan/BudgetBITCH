@@ -190,7 +190,7 @@ export function Bills({ locale = 'en' }: BillsProps) {
               <Calendar className="w-3.5 h-3.5" /> {locale === 'th' ? 'ปฏิทิน' : 'Calendar'}
             </button>
           </div>
-          <Button variant="primary" size="sm" onClick={() => { setShowForm(true); setEditingId(null); resetForm(); }}>
+          <Button variant="primary" size="sm" onClick={() => { setEditingId(null); resetForm(); setShowForm(true); }}>
             <Plus className="w-4 h-4 mr-1" /> {locale === 'th' ? 'เพิ่ม' : 'Add'}
           </Button>
         </div>

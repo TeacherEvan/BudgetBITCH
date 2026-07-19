@@ -51,8 +51,15 @@ export function useVoice(initialLang: 'th-TH' | 'en-US' = 'en-US') {
 
   const recognitionRef = useRef<SpeechRecognitionType | null>(null);
   const synthesisRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const isSupported = typeof window !== 'undefined' && 
-    !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+
+  // Compute support on the client only, after mount, so SSR and first client
+  // render agree (avoids a hydration mismatch on the Settings page).
+  const [isSupported, setIsSupported] = useState(false);
+  useEffect(() => {
+    setIsSupported(
+      !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition),
+    );
+  }, []);
 
   // Initialize Speech Recognition
   useEffect(() => {

@@ -4,7 +4,6 @@
 import { useState } from 'react';
 import { useLocale } from 'next-intl';
 import { Globe, Volume2, Palette, Trash2, AlertCircle, Shield, Download, Upload } from 'lucide-react';
-import { useConvexAuth } from '@convex-dev/auth/react';
 import { useWizardProfile } from '@/hooks/use-local-db';
 import { useVoice } from '@/hooks/use-voice';
 import { useCriticalExpense } from '@/hooks/use-critical-expense';
@@ -141,8 +140,6 @@ export default function SettingsPage() {
   const localeRaw = useLocale();
   const locale: SettingsLocale = localeRaw === 'th' ? 'th' : 'en';
 
-  const auth = useConvexAuth();
-  const { isAuthenticated, isLoading: authLoading } = auth ?? { isAuthenticated: false, isLoading: true };
   const { clear: clearProfile } = useWizardProfile();
   const { settings: voiceSettings, updateSettings: updateVoiceSettings, toggleVoice, isSupported } = useVoice(
     locale === 'th' ? 'th-TH' : 'en-US'
@@ -271,14 +268,6 @@ export default function SettingsPage() {
       setSyncing(false);
     }
   };
-
-  if (authLoading) {
-    return <div className="min-h-screen flex items-center justify-center"><div className="animate-pulse text-amber-400">Loading...</div></div>;
-  }
-
-  if (!isAuthenticated) {
-    return <div className="min-h-screen flex items-center justify-center text-white/50">Please sign in to access settings</div>;
-  }
 
   const l = labels[locale];
 

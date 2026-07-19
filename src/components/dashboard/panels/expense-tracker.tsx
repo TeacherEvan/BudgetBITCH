@@ -155,7 +155,7 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
             <Mic className="w-4 h-4" />
             {locale === 'th' ? 'เสียง' : 'Voice'}
           </Button>
-          <Button variant="primary" size="sm" onClick={() => { setShowForm(true); setEditingId(null); resetForm(); }}>
+          <Button variant="primary" size="sm" onClick={() => { setEditingId(null); resetForm(); setShowForm(true); }}>
             <Plus className="w-4 h-4 mr-1" /> {locale === 'th' ? 'เพิ่ม' : 'Add'}
           </Button>
         </div>
