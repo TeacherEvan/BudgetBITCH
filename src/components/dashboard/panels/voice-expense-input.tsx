@@ -31,38 +31,41 @@ const THAI_NUMBER_WORDS: Record<string, number> = {
   'ร้อย': 100, 'พัน': 1000, 'หมื่น': 10000, 'แสน': 100000, 'ล้าน': 1000000,
 };
 
-function parseThaiNumber(text: string): number | null {
+export function parseThaiNumber(text: string): number | null {
   // Try direct number first
   const directMatch = text.match(/(\d+(?:,\d{3})*(?:\.\d+)?)/);
   if (directMatch) {
     return parseFloat(directMatch[1].replace(/,/g, ''));
   }
 
-  // Try Thai number words (simplified)
-  const words = text.split(/\s+/);
-  let result = 0;
+  // Thai number words are not space-separated in real input
+  // (e.g. "สามร้อยบาท"), so scan the string for known tokens in order
+  // and accumulate by place value.
+  const tokens = Object.keys(THAI_NUMBER_WORDS).sort((a, b) => b.length - a.length);
+  const pattern = new RegExp(tokens.map(escapeRegExp).join('|'), 'g');
+
+  let total = 0;
   let current = 0;
-  
-  for (const word of words) {
-    if (THAI_NUMBER_WORDS[word] !== undefined) {
-      const val = THAI_NUMBER_WORDS[word];
-      if (val >= 1000) {
-        current = current || 1;
-        result += current * val;
-        current = 0;
-      } else if (val >= 10) {
-        current = (current || 1) * val;
-      } else {
-        current += val;
-      }
+  for (const match of text.matchAll(pattern)) {
+    const val = THAI_NUMBER_WORDS[match[0]];
+    if (val >= 10) {
+      // Unit word (สิบ/ร้อย/พัน/...): multiply the accumulated lower digit by it.
+      total += (current || 1) * val;
+      current = 0;
+    } else {
+      current = val;
     }
   }
-  result += current;
-  
-  return result > 0 ? result : null;
+  total += current;
+
+  return total > 0 ? total : null;
 }
 
-function parseExpenseFromText(text: string): ParsedExpense | null {
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export function parseExpenseFromText(text: string): ParsedExpense | null {
   const lowerText = text.toLowerCase().trim();
   
   // Extract amount - look for number patterns
