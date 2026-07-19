@@ -6,6 +6,7 @@ import { AlertCircle, TrendingUp, Fuel, Zap, ShoppingBag, ExternalLink } from 'l
 import { NewsItem } from '@/lib/types/budget';
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
+import { useNewsPrefs } from '@/hooks/use-news-prefs';
 
 const CATEGORY_ICONS: Record<NewsItem['category'], React.ReactNode> = {
   finance: <TrendingUp className="w-5 h-5 text-amber-400" />,
@@ -35,10 +36,11 @@ async function fetchNewsAPI(locale: 'th' | 'en'): Promise<NewsItem[]> {
   return data.items || [];
 }
 
-export function AlertsSidebar({ locale }: { locale: 'th' | 'en' }) {
+export function AlertsSidebar({ locale, isModal = false }: { locale: 'th' | 'en'; isModal?: boolean }) {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { filterByGenre } = useNewsPrefs();
 
   useEffect(() => {
     let mounted = true;
@@ -96,13 +98,13 @@ export function AlertsSidebar({ locale }: { locale: 'th' | 'en' }) {
         </h3>
       </div>
 
-      {news.length === 0 ? (
+      {news.filter(filterByGenre).length === 0 ? (
         <div className="text-center py-8 text-white/50">
         <p>{locale === 'th' ? '📡 ยังไม่มีข่าวล่าสุดในพื้นที่ — ไว้กลับมาดูใหม่ทีหลัง เราค้นหาราคาน้ำมัน โปรโมชั่น และข่าวที่กระทบงบคุณ' : '📡 No local updates right now — check back later. We scan for fuel prices, deals, and news that affect your budget.'}</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {news.map((item) => (
+          {news.filter(filterByGenre).map((item) => (
             <article
               key={item.link}
               className="group p-4 rounded-xl bg-black/30 border border-white/10 hover:border-white/20 transition-colors"
@@ -112,7 +114,7 @@ export function AlertsSidebar({ locale }: { locale: 'th' | 'en' }) {
                   {CATEGORY_ICONS[item.category]}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className="text-xs font-medium text-amber-400 uppercase">
                       {CATEGORY_LABELS[item.category][locale]}
                     </span>
@@ -120,7 +122,7 @@ export function AlertsSidebar({ locale }: { locale: 'th' | 'en' }) {
                       {format(new Date(item.pubDate), locale === 'th' ? 'd MMM yyyy' : 'MMM d, yyyy', { locale: locale === 'th' ? th : undefined })}
                     </span>
                   </div>
-                  <h4 className="font-medium text-white text-sm line-clamp-2 group-hover:text-amber-400 transition-colors">
+                  <h4 className={`font-medium text-white text-sm ${isModal ? 'line-clamp-3' : 'line-clamp-2'} group-hover:text-amber-400 transition-colors`}>
                     {item.title}
                   </h4>
                   {item.actionable && (

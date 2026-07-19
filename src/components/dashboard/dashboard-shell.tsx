@@ -1,15 +1,14 @@
 // components/dashboard/dashboard-shell.tsx
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { X, ChevronDown, ChevronUp } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { HeaderBar } from '@/components/layout/header-bar';
 import { DailyDisposableHero } from '@/components/dashboard/daily-disposable-hero';
 import { CriticalExpensesModal } from '@/components/dashboard/critical-expenses-modal';
 import { AlertsSidebar } from '@/components/dashboard/alerts-sidebar';
 import { PriorityGuide } from '@/components/dashboard/priority-guide';
-import { ManifestoNotification } from '@/components/launch/manifesto-notification';
 import { ExpenseTracker } from '@/components/dashboard/panels/expense-tracker';
 import { BudgetVisual } from '@/components/dashboard/panels/budget-visual';
 import { BudgetAlerts } from '@/components/dashboard/panels/budget-alerts';
@@ -56,7 +55,6 @@ const PANELS: PanelConfig[] = [
   { id: 'forecast', title: 'Forecast', children: <CashFlowForecast /> },
 ];
 
-const MANIFESTO_KEY = 'bb:manifesto-v1';
 
 interface DashboardShellProps {
   locale: 'th' | 'en';
@@ -77,20 +75,6 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
   const [marketWatchOpen, setMarketWatchOpen] = useState(false);
   const [mobileActivePanel, setMobileActivePanel] = useState<PanelKey>('expenses');
 
-  // T3: manifesto banner shown once per account (localStorage).
-  const [showManifesto, setShowManifesto] = useState(false);
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    let seen = false;
-    try {
-      seen = localStorage.getItem(MANIFESTO_KEY) === '1';
-    } catch {
-      /* ignore */
-    }
-    // Intentional post-mount reveal; keeps SSR HTML minimal and avoids hydration mismatch.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!seen) setShowManifesto(true);
-  }, []);
 
   // T5: direction-aware panel transitions. Direction is decided in the
   // select handler and stored in state (never read a ref during render).
@@ -150,28 +134,10 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
         <PriorityGuide />
       </div>
 
-      {/* T3: startup manifesto banner — slides content down */}
-      <AnimatePresence initial={false}>
-        {showManifesto && (
-          <div className="flex-shrink-0 px-3 lg:px-4">
-            <ManifestoNotification
-              locale={locale}
-              onDismiss={() => {
-                try {
-                  localStorage.setItem(MANIFESTO_KEY, '1');
-                } catch {
-                  /* ignore */
-                }
-                setShowManifesto(false);
-              }}
-            />
-          </div>
-        )}
-      </AnimatePresence>
 
       <main className="flex min-h-0 flex-1 flex-row overflow-hidden">
         {/* Desktop Sidebar - only on lg+ */}
-        <aside className="hidden w-72 flex-shrink-0 overflow-y-auto border-r border-[var(--gold-border-soft)] bg-[var(--bg-surface-1)] p-4 lg:block">
+        <aside className="hidden w-80 flex-shrink-0 overflow-y-auto border-r border-[var(--gold-border-soft)] bg-[var(--bg-surface-1)] p-4 lg:block">
           <div className="mb-6 space-y-3">
             <h3 className="bb-kicker">
               {locale === 'th' ? 'ค่าใช้จ่ายที่ต้องลด' : 'Cut One Expense'}
@@ -182,8 +148,8 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
               disabled={commitmentLoading}
             >
               <span className="text-2xl">🎯</span>
-              <div className="flex-1 text-left">
-                <p className="text-sm font-medium text-[var(--text-1)]">
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-sm font-medium text-[var(--text-1)] truncate">
                   {locale === 'th' ? 'เลือก 1 อย่างลดในเดือนนี้' : 'Pick 1 to cut this month'}
                 </p>
                 <p className="text-xs text-[var(--text-2)]">
@@ -200,8 +166,8 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
               className="xl:hidden flex w-full items-center gap-3 rounded-xl border border-sky-400/30 bg-sky-400/10 p-3 text-left transition-colors hover:bg-sky-400/20"
             >
               <span className="text-2xl">📰</span>
-              <div className="flex-1 text-left">
-                <p className="text-sm font-medium text-[var(--text-1)]">
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-sm font-medium text-[var(--text-1)] truncate">
                   {locale === 'th' ? 'ข่าวและข้อมูลล่าสุด' : 'Market Watch'}
                 </p>
                 <p className="text-xs text-[var(--text-2)]">
@@ -235,7 +201,7 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
                     />
                   )}
                   <span className="text-xl">{config.icon}</span>
-                  <span className={`flex-1 text-left text-sm font-medium ${isOpen ? 'text-[var(--gold-bright)]' : 'text-[var(--text-2)]'}`}>
+                  <span className={`flex-1 text-left text-sm font-medium truncate ${isOpen ? 'text-[var(--gold-bright)]' : 'text-[var(--text-2)]'}`}>
                     {config.label[locale]}
                   </span>
                   {isOpen ? <ChevronUp className="text-[var(--text-muted)]" /> : <ChevronDown className="text-[var(--text-muted)]" />}
@@ -288,7 +254,7 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
       />
 
       {/* Mobile Bottom Sheet Sidebar */}
-      <div data-testid="mobile-sheet" className={`lg:hidden fixed bottom-0 left-0 right-0 z-40 transform rounded-t-2xl border-t bg-[var(--bg-base)]/95 p-4 backdrop-blur-xl transition-transform duration-300 ${mobileMenuOpen ? 'translate-y-0' : 'translate-y-full'}`} style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+      <div data-testid="mobile-sheet" className={`lg:hidden fixed bottom-0 left-0 right-0 z-40 transform rounded-t-2xl border-t bg-[var(--bg-base)]/95 p-4 backdrop-blur-xl transition-transform duration-300 ${mobileMenuOpen ? 'translate-y-0' : 'translate-y-full'}`} style={{ maxHeight: '82vh', overflowY: 'auto' }}>
         <button onClick={() => setMobileMenuOpen(false)} className="absolute -top-3 right-4 flex h-10 w-10 items-center justify-center rounded-full border border-[var(--gold-border-soft)] bg-[var(--bg-base)]/80">
           <X className="h-5 w-5 text-[var(--text-muted)]" />
         </button>
@@ -298,14 +264,14 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
           </div>
           <button className="flex w-full items-center gap-3 rounded-xl border border-[var(--gold-border-strong)] bg-[var(--gold-base)]/10 p-3 text-left disabled:cursor-not-allowed disabled:opacity-50" onClick={() => { setCriticalExpenseOpen(true); setMobileMenuOpen(false); }} disabled={commitmentLoading}>
             <span className="text-2xl">🎯</span>
-            <div>
-              <p className="font-medium text-[var(--text-1)]">{locale === 'th' ? 'เลือก 1 อย่างลดในเดือนนี้' : 'Pick 1 to cut this month'}</p>
+            <div className="min-w-0">
+              <p className="font-medium text-[var(--text-1)] truncate">{locale === 'th' ? 'เลือก 1 อย่างลดในเดือนนี้' : 'Pick 1 to cut this month'}</p>
             </div>
           </button>
           <button className="flex w-full items-center gap-3 rounded-xl border border-sky-400/30 bg-sky-400/10 p-3 text-left" onClick={() => { setMarketWatchOpen(true); setMobileMenuOpen(false); }}>
             <span className="text-2xl">📰</span>
-            <div>
-              <p className="font-medium text-[var(--text-1)]">{locale === 'th' ? 'ข่าวและข้อมูลล่าสุด' : 'Market Watch'}</p>
+            <div className="min-w-0">
+              <p className="font-medium text-[var(--text-1)] truncate">{locale === 'th' ? 'ข่าวและข้อมูลล่าสุด' : 'Market Watch'}</p>
             </div>
           </button>
           {PANEL_ORDER.map(panel => {
@@ -320,7 +286,7 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
                 }`}
               >
                 <span className="text-xl">{config.icon}</span>
-                <span className={`flex-1 text-left text-sm font-medium ${isActive ? 'text-[var(--gold-bright)]' : 'text-[var(--text-2)]'}`}>{config.label[locale]}</span>
+                <span className={`flex-1 text-left text-sm font-medium truncate ${isActive ? 'text-[var(--gold-bright)]' : 'text-[var(--text-2)]'}`}>{config.label[locale]}</span>
               </button>
             );
           })}
@@ -339,10 +305,10 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
         isOpen={marketWatchOpen}
         onClose={() => setMarketWatchOpen(false)}
         showCloseButton={true}
-        size="lg"
+        size="2xl"
         title={locale === 'th' ? 'ข่าวและข้อมูลล่าสุด' : 'Market Watch'}
       >
-        <AlertsSidebar locale={locale} />
+        <AlertsSidebar locale={locale} isModal={true} />
       </Modal>
     </div>
   );

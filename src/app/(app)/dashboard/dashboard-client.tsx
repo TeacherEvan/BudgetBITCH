@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { DashboardShell } from '@/components/dashboard/dashboard-shell';
 import { WizardShell } from '@/components/wizard/wizard-shell';
+import { ManifestoInterstitial } from '@/components/launch/manifesto-interstitial';
 import { useVoice } from '@/hooks/use-voice';
 import { useWizardProfile } from '@/hooks/use-local-db';
 import { initializeBudgetsFromWizard } from '@/lib/utils/budget-calculator';
@@ -16,6 +17,8 @@ interface DashboardClientProps {
   wizardCompleted: boolean;
 }
 
+const MANIFESTO_KEY = 'bb:manifesto-v1';
+
 export function DashboardClient({ wizardCompleted: initialWizardCompleted }: DashboardClientProps) {
   const router = useRouter();
   const locale = useLocale() as 'th' | 'en';
@@ -25,6 +28,22 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
   const [isLoading, setIsLoading] = useState(false);
   const [budgetsInitialized, setBudgetsInitialized] = useState(false);
   const [wizardForced, setWizardForced] = useState(false);
+
+  // Manifesto gate — shown once per account, before the dashboard is interactive
+  const [showManifesto, setShowManifesto] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let seen = false;
+    try { seen = localStorage.getItem(MANIFESTO_KEY) === '1'; } catch { /* ignore */ }
+    // Intentional post-mount check; keeps SSR HTML minimal and avoids hydration mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!seen) setShowManifesto(true);
+  }, []);
+
+  const handleManifestoDone = () => {
+    try { localStorage.setItem(MANIFESTO_KEY, '1'); } catch { /* ignore */ }
+    setShowManifesto(false);
+  };
 
   const voice = useVoice(locale === 'th' ? 'th-TH' : 'en-US');
   const voiceEnabled = voice.settings.enabled;
@@ -95,6 +114,11 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
 
   return (
     <>
+      {/* Manifesto gate — full-screen, shown once after login. Dashboard renders underneath. */}
+      {showManifesto && (
+        <ManifestoInterstitial locale={locale} onDone={handleManifestoDone} />
+      )}
+
       <DashboardShell
         locale={locale}
         onLocaleChange={handleLocaleChange}

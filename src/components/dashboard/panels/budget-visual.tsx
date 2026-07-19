@@ -5,7 +5,12 @@ import { useExpenses, useBudgets, useWizardProfile } from '@/hooks/use-local-db'
 import { Card } from '@/components/ui/card';
 import { useCurrency } from '@/hooks/use-currency';
 import { format } from 'date-fns';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { useDisplayPrefs } from '@/hooks/use-display-prefs';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
+  LineChart, Line,
+  PieChart, Pie, Legend,
+} from 'recharts';
 
 const CATEGORIES = [
   { value: 'housing', label: { th: 'ที่อยู่อาศัย', en: 'Housing' } },
@@ -41,6 +46,7 @@ interface Budget {
 
 export function BudgetVisual({ locale = 'en' }: BudgetVisualProps) {
   const formatCurrency = useCurrency();
+  const { graphType } = useDisplayPrefs();
 
   const { expenses: rawExpenses } = useExpenses();
   const { budgets: rawBudgets } = useBudgets();
@@ -108,17 +114,49 @@ export function BudgetVisual({ locale = 'en' }: BudgetVisualProps) {
         {budgetData.length > 0 && (
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={budgetData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                <XAxis type="number" tick={{ fill: '#ffffff80', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis dataKey="category" type="category" width={100} tick={{ fill: '#ffffff80', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #ffffff20', borderRadius: '8px' }} />
-                <Bar dataKey="spent" radius={[0, 4, 4, 0]}>
-                  {budgetData.map((_, index: number) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
+              {(graphType === 'pie' || graphType === 'donut') ? (
+                <PieChart>
+                  <Pie
+                    data={budgetData.map((d, i) => ({ name: d.category, value: d.spent, fill: COLORS[i % COLORS.length] }))}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={90}
+                    innerRadius={graphType === 'donut' ? 42 : 0}
+                    strokeWidth={0}
+                  >
+                    {budgetData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #ffffff20', borderRadius: '8px' }} />
+                  <Legend wrapperStyle={{ fontSize: 11, color: '#ffffff80' }} />
+                </PieChart>
+              ) : graphType === 'line' ? (
+                <LineChart data={budgetData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                  <XAxis dataKey="category" tick={{ fill: '#ffffff80', fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: '#ffffff80', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #ffffff20', borderRadius: '8px' }} />
+                  <Line type="monotone" dataKey="spent" stroke="#E8B020" strokeWidth={2} dot={{ fill: '#E8B020', r: 4 }} />
+                  {budgetData.some(d => d.budget > 0) && (
+                    <Line type="monotone" dataKey="budget" stroke="#ffffff40" strokeWidth={1} strokeDasharray="4 4" dot={false} />
+                  )}
+                </LineChart>
+              ) : (
+                <BarChart data={budgetData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                  <XAxis type="number" tick={{ fill: '#ffffff80', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis dataKey="category" type="category" width={100} tick={{ fill: '#ffffff80', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #ffffff20', borderRadius: '8px' }} />
+                  <Bar dataKey="spent" radius={[0, 4, 4, 0]}>
+                    {budgetData.map((_, index: number) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              )}
             </ResponsiveContainer>
           </div>
         )}

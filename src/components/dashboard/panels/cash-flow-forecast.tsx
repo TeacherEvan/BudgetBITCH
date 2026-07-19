@@ -41,6 +41,7 @@ export function CashFlowForecast({ locale = 'en' }: CashFlowForecastProps) {
 
   const { bills, loading: billsLoading } = useBills();
   const { debts, loading: debtsLoading } = useDebtPayoff();
+  const activeBills = bills.filter(b => b.isActive);
 
   const loading = billsLoading || debtsLoading;
 
@@ -48,8 +49,7 @@ export function CashFlowForecast({ locale = 'en' }: CashFlowForecastProps) {
   const upcoming = useMemo(() => {
     const items: { name: string; amount: number; date: Date; type: 'bill' | 'debt' }[] = [];
 
-    bills
-      .filter(b => b.isActive)
+    activeBills
       .forEach(b => {
         const [next] = nextDueDates(b.dueDay, 1);
         if (next) items.push({ name: b.name, amount: b.amount, date: next, type: 'bill' });
@@ -70,13 +70,13 @@ export function CashFlowForecast({ locale = 'en' }: CashFlowForecastProps) {
       .filter(i => i.amount > 0)
       .sort((a, b) => a.date.getTime() - b.date.getTime())
       .slice(0, 6);
-  }, [bills, debts]);
+  }, [activeBills, debts]);
 
   const totalUpcoming = upcoming.reduce((sum, i) => sum + i.amount, 0);
 
   // Monthly fixed outflow (bills + debt minimums).
   const monthlyOutflow =
-    bills.filter(b => b.isActive).reduce((sum, b) => sum + b.amount, 0) +
+    activeBills.reduce((sum, b) => sum + b.amount, 0) +
     debts.reduce((sum, d) => sum + (d.minimumPayment || 0), 0);
 
   if (loading) {

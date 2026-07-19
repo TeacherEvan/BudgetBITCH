@@ -3,11 +3,13 @@
 
 import { useState } from 'react';
 import { useLocale } from 'next-intl';
-import { Globe, Volume2, Palette, Trash2, AlertCircle, Shield, Download, Upload } from 'lucide-react';
+import { Globe, Volume2, Palette, Trash2, AlertCircle, Shield, Download, Upload, BarChart2, TrendingUp, PieChart, Circle, User, Newspaper } from 'lucide-react';
 import { useWizardProfile } from '@/hooks/use-local-db';
 import { useVoice } from '@/hooks/use-voice';
 import { useCriticalExpense } from '@/hooks/use-critical-expense';
 import { useSharedBoard } from '@/hooks/use-shared-board';
+import { useDisplayPrefs, type GraphType } from '@/hooks/use-display-prefs';
+import { useNewsPrefs, ALL_GENRES, type NewsGenre } from '@/hooks/use-news-prefs';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
@@ -146,12 +148,14 @@ export default function SettingsPage() {
   const localeRaw = useLocale();
   const locale: SettingsLocale = localeRaw === 'th' ? 'th' : 'en';
 
-  const { clear: clearProfile } = useWizardProfile();
+  const { profile, clear: clearProfile } = useWizardProfile();
   const { settings: voiceSettings, updateSettings: updateVoiceSettings, toggleVoice, isSupported } = useVoice(
     locale === 'th' ? 'th-TH' : 'en-US'
   );
   const { commitment } = useCriticalExpense();
   const shared = useSharedBoard();
+  const { graphType, setGraphType, accentColor, setAccentColor } = useDisplayPrefs();
+  const { isGenreEnabled, toggleGenre } = useNewsPrefs();
   const [code, setCode] = useState('');
   const [linkError, setLinkError] = useState<string | null>(null);
 
@@ -284,16 +288,179 @@ export default function SettingsPage() {
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-xl font-bold text-white">{l.title}</h1>
         </div>
+        {/* Section nav tabs */}
+        <nav className="max-w-4xl mx-auto px-4 pb-3 flex gap-1 overflow-x-auto scrollbar-none">
+          {([
+            { id: 'general',     label: { en: 'General',  th: 'ทั่วไป' },    icon: <Globe className="w-3.5 h-3.5" /> },
+            { id: 'profile',     label: { en: 'Profile',  th: 'โปรไฟล์' },  icon: <User className="w-3.5 h-3.5" /> },
+            { id: 'display',     label: { en: 'Display',  th: 'การแสดงผล' },icon: <Palette className="w-3.5 h-3.5" /> },
+            { id: 'news',        label: { en: 'News',     th: 'ข่าวสาร' },   icon: <Newspaper className="w-3.5 h-3.5" /> },
+            { id: 'data',        label: { en: 'Data',     th: 'ข้อมูล' },    icon: <Download className="w-3.5 h-3.5" /> },
+            { id: 'privacy',     label: { en: 'Privacy',  th: 'ความเป็นส่วนตัว' }, icon: <Shield className="w-3.5 h-3.5" /> },
+          ] as const).map(tab => (
+            <a
+              key={tab.id}
+              href={`#settings-${tab.id}`}
+              className="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-white/60 transition-colors hover:border-[rgba(201,150,12,0.4)] hover:text-[#E8B020] flex-shrink-0"
+            >
+              {tab.icon}
+              {tab.label[locale]}
+            </a>
+          ))}
+        </nav>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-6 space-y-6 pb-24">
+      <main className="max-w-4xl mx-auto px-4 py-6 space-y-10 pb-24">
         {/* General Section */}
-        <section>
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-amber-400 mb-4">{l.sections.general}</h2>
+        <section id="settings-general">
+          <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#C9960C] mb-4">{l.sections.general}</h2>
           <Card className="p-4 space-y-4">
             <div>
               <label className="block text-sm font-medium text-white/70 mb-2">{l.locale} <Globe className="inline w-4 h-4 ml-1" /></label>
               <LocaleSwitcher />
+            </div>
+          </Card>
+        </section>
+
+        {/* ── PROFILE SECTION ── */}
+        <section id="settings-profile">
+          <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#C9960C] mb-4">
+            {locale === 'th' ? 'โปรไฟล์' : 'Profile'}
+          </h2>
+          <Card className="p-4 space-y-4">
+            {profile?.answers ? (
+              <>
+                <div className="flex items-center gap-3 p-3 bg-white/4 rounded-xl border border-white/8">
+                  <div className="w-10 h-10 rounded-full bg-[#C9960C]/20 flex items-center justify-center text-[#E8B020] font-bold text-lg flex-shrink-0">
+                    💰
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-white truncate">
+                      {profile.answers.currency ?? 'THB'} {locale === 'th' ? 'โปรไฟล์' : 'Profile'}
+                    </p>
+                    <p className="text-xs text-white/50 mt-0.5">
+                      {locale === 'th' ? 'รายรับต่อเดือน: ' : 'Monthly income: '}
+                      <span className="text-[#E8B020] font-mono">
+                        {typeof profile.answers.income === 'number' ? profile.answers.income.toLocaleString() : '—'}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-white/50">{locale === 'th' ? 'ยังไม่ได้ตั้งค่าโปรไฟล์' : 'No profile set up yet'}</p>
+            )}
+            <button
+              type="button"
+              onClick={() => { clearProfile?.(); window.location.href = '/dashboard'; }}
+              className="flex w-full items-center gap-2 rounded-xl border border-[rgba(201,150,12,0.3)] bg-[rgba(201,150,12,0.08)] px-4 py-3 text-sm font-medium text-[#E8B020] transition-colors hover:bg-[rgba(201,150,12,0.15)]"
+            >
+              🔄 {locale === 'th' ? 'เริ่มวิซาร์ดตั้งค่าใหม่อีกครั้ง' : 'Re-run Setup Wizard'}
+            </button>
+          </Card>
+        </section>
+
+        {/* ── DISPLAY SECTION ── */}
+        <section id="settings-display">
+          <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#C9960C] mb-4">
+            {locale === 'th' ? 'การแสดงผล' : 'Display'}
+          </h2>
+          <Card className="p-4 space-y-6">
+            {/* Graph Type */}
+            <div>
+              <p className="text-sm font-medium text-white mb-1">{locale === 'th' ? 'รูปแบบกราฟ' : 'Chart Style'}</p>
+              <p className="text-xs text-white/40 mb-3">{locale === 'th' ? 'ใช้กับแผงภาพรวมงบประมาณ' : 'Applied to the Budget Overview panel'}</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {([
+                  { type: 'bar'   as GraphType, icon: <BarChart2 className="w-5 h-5" />,  label: { th: 'แท่ง',   en: 'Bar'   } },
+                  { type: 'line'  as GraphType, icon: <TrendingUp className="w-5 h-5" />, label: { th: 'เส้น',   en: 'Line'  } },
+                  { type: 'pie'   as GraphType, icon: <PieChart className="w-5 h-5" />,   label: { th: 'วงกลม', en: 'Pie'   } },
+                  { type: 'donut' as GraphType, icon: <Circle className="w-5 h-5" />,     label: { th: 'โดนัท',  en: 'Donut' } },
+                ]).map(({ type, icon, label }) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setGraphType(type)}
+                    className={`flex flex-col items-center gap-2 rounded-xl border py-4 px-2 text-sm font-semibold transition-all ${
+                      graphType === type
+                        ? 'border-[#C9960C] bg-[rgba(201,150,12,0.15)] text-[#E8B020]'
+                        : 'border-white/10 bg-white/4 text-white/50 hover:border-white/20 hover:text-white/80'
+                    }`}
+                  >
+                    {icon}
+                    <span>{label[locale]}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            {/* Accent Color */}
+            <div>
+              <p className="text-sm font-medium text-white mb-1">{locale === 'th' ? 'สีหลัก' : 'Accent Color'}</p>
+              <p className="text-xs text-white/40 mb-3">{locale === 'th' ? 'เปลี่ยนสีธีมทันที' : 'Changes theme color instantly'}</p>
+              <div className="flex gap-3">
+                {([
+                  { color: 'gold'    as const, hex: '#C9960C', label: { th: 'ทอง',    en: 'Gold'    } },
+                  { color: 'amber'   as const, hex: '#E8A020', label: { th: 'อำพัน',  en: 'Amber'   } },
+                  { color: 'emerald' as const, hex: '#2DB870', label: { th: 'มรกต',   en: 'Emerald' } },
+                ]).map(({ color, hex, label }) => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setAccentColor(color)}
+                    title={label[locale]}
+                    className={`flex flex-col items-center gap-1.5 rounded-xl border px-4 py-3 text-xs font-medium transition-all ${
+                      accentColor === color
+                        ? 'border-white/60 ring-2 ring-offset-1 ring-offset-black'
+                        : 'border-white/15 hover:border-white/30'
+                    }`}
+                  >
+                    <span className="w-6 h-6 rounded-full block" style={{ backgroundColor: hex }} />
+                    <span className="text-white/70">{label[locale]}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </Card>
+        </section>
+
+        {/* ── NEWS FLOW SECTION ── */}
+        <section id="settings-news">
+          <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#C9960C] mb-4">
+            {locale === 'th' ? 'กรองข่าว Market Watch' : 'News Flow — Market Watch'}
+          </h2>
+          <Card className="p-4">
+            <p className="text-sm text-white/60 mb-4">
+              {locale === 'th'
+                ? 'เลือกหมวดข่าวที่ต้องการแสดงในแผง Market Watch กดปิดหมวดที่ไม่ต้องการ'
+                : 'Choose which news categories appear in Market Watch. Tap to disable.'}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {ALL_GENRES.map((genre: NewsGenre) => {
+                const enabled = isGenreEnabled(genre);
+                const meta: Record<NewsGenre, { th: string; en: string; emoji: string }> = {
+                  finance:  { th: 'การเงิน',     en: 'Finance',  emoji: '📈' },
+                  economy:  { th: 'เศรษฐกิจ',    en: 'Economy',  emoji: '⚡' },
+                  local:    { th: 'ท้องถิ่น',    en: 'Local',    emoji: '📍' },
+                  eco_tips: { th: 'เคล็ดลับ',    en: 'Tips',     emoji: '💡' },
+                  fuel:     { th: 'น้ำมัน',      en: 'Fuel',     emoji: '⛽' },
+                  deals:    { th: 'โปรโมชั่น',   en: 'Deals',    emoji: '🛍️' },
+                };
+                return (
+                  <button
+                    key={genre}
+                    type="button"
+                    onClick={() => toggleGenre(genre)}
+                    className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-all ${
+                      enabled
+                        ? 'border-[rgba(201,150,12,0.4)] bg-[rgba(201,150,12,0.12)] text-[#E8B020]'
+                        : 'border-white/10 bg-white/4 text-white/35 line-through'
+                    }`}
+                  >
+                    <span>{meta[genre].emoji}</span>
+                    <span>{meta[genre][locale]}</span>
+                  </button>
+                );
+              })}
             </div>
           </Card>
         </section>

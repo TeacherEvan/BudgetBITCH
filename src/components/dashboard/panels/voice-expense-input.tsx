@@ -31,6 +31,14 @@ const THAI_NUMBER_WORDS: Record<string, number> = {
   'ร้อย': 100, 'พัน': 1000, 'หมื่น': 10000, 'แสน': 100000, 'ล้าน': 1000000,
 };
 
+const THAI_NUMBER_PATTERN = new RegExp(
+  Object.keys(THAI_NUMBER_WORDS)
+    .sort((a, b) => b.length - a.length)
+    .map(escapeRegExp)
+    .join('|'),
+  'g'
+);
+
 export function parseThaiNumber(text: string): number | null {
   // Try direct number first
   const directMatch = text.match(/(\d+(?:,\d{3})*(?:\.\d+)?)/);
@@ -41,8 +49,7 @@ export function parseThaiNumber(text: string): number | null {
   // Thai number words are not space-separated in real input
   // (e.g. "สามร้อยบาท"), so scan the string for known tokens in order
   // and accumulate by place value.
-  const tokens = Object.keys(THAI_NUMBER_WORDS).sort((a, b) => b.length - a.length);
-  const pattern = new RegExp(tokens.map(escapeRegExp).join('|'), 'g');
+  const pattern = THAI_NUMBER_PATTERN;
 
   let total = 0;
   let current = 0;

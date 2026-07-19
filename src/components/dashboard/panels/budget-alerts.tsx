@@ -69,9 +69,13 @@ export function BudgetAlerts({ locale = 'en' }: BudgetAlertsProps) {
     );
   }
 
-  const criticalCount = alerts.filter(a => a.type === 'critical').length;
-  const warningCount = alerts.filter(a => a.type === 'warning').length;
-  const successCount = alerts.filter(a => a.type === 'success').length;
+  const counts = { critical: 0, warning: 0, success: 0 };
+  for (const a of alerts) {
+    if (a.type === 'critical') counts.critical++;
+    else if (a.type === 'warning') counts.warning++;
+    else if (a.type === 'success') counts.success++;
+  }
+  const { critical: criticalCount, warning: warningCount, success: successCount } = counts;
 
   return (
     <div className="space-y-4">
