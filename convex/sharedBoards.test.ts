@@ -43,7 +43,7 @@ test("linkByCode links two users and returns a shared boardId", async () => {
   const aliceId = await seedUser(t, ALICE);
   const bobId = await seedUser(t, BOB);
 
-  const alice = await asUser(aliceId).mutation(api.sharedBoards.ensureProfile, {});
+  await asUser(aliceId).mutation(api.sharedBoards.ensureProfile, {});
   const bob = await asUser(bobId).mutation(api.sharedBoards.ensureProfile, {});
 
   const boardId = await asUser(aliceId).mutation(api.sharedBoards.linkByCode, {

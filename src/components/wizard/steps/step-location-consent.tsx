@@ -16,7 +16,6 @@ interface StepLocationConsentProps {
 
 export function StepLocationConsent({ locale, value, onChange, error, disabled, speak }: StepLocationConsentProps) {
   const [disclaimerRead, setDisclaimerRead] = useState(false);
-  const [locationGranted, setLocationGranted] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [unsupported, setUnsupported] = useState(
     () => typeof navigator === 'undefined' || !('geolocation' in navigator)
@@ -74,7 +73,6 @@ export function StepLocationConsent({ locale, value, onChange, error, disabled, 
     navigator.geolocation.getCurrentPosition(
       () => {
         setRequesting(false);
-        setLocationGranted(true);
         onChange('locationConsent', true);
         const msg = locale === 'th' ? 'อนุญาตตำแหน่งแล้ว' : 'Location permission granted';
         speak(msg);

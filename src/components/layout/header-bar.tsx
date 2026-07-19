@@ -18,6 +18,16 @@ interface HeaderBarProps {
 export function HeaderBar({ locale, onLocaleChange, onSettingsOpen, voiceEnabled, onVoiceToggle }: HeaderBarProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  // Prefer the caller-supplied handler (e.g. dashboard mobile sheet); fall back
+  // to the in-header settings modal when none is provided.
+  const openSettings = () => {
+    if (onSettingsOpen) {
+      onSettingsOpen();
+    } else {
+      setSettingsOpen(true);
+    }
+  };
+
   return (
     <header className="sticky top-0 z-40 flex items-center justify-between gap-3 px-4 py-3 bg-black/80 backdrop-blur-xl border-b border-white/10">
       {/* Left: Globe + Locale indicator */}
@@ -53,7 +63,7 @@ export function HeaderBar({ locale, onLocaleChange, onSettingsOpen, voiceEnabled
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setSettingsOpen(true)}
+          onClick={openSettings}
           className="p-2"
           aria-label="Settings"
         >

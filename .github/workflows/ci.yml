@@ -52,6 +52,25 @@ jobs:
       - name: Test
         run: npm test -- --run
 
+  convex-test:
+    name: Convex Backend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Convex tests
+        run: npm run test:convex
+
   build:
     name: Build (type-check + next build)
     runs-on: ubuntu-latest
@@ -83,10 +102,10 @@ jobs:
       - name: Build
         run: npm run build
 
-  # Surfaced but non-blocking: there is a known transitive high-severity
-  # vuln (next-pwa -> workbox-build -> serialize-javascript, RCE) with no
-  # in-scope fix other than a breaking next-pwa downgrade. Tracked for the
-  # next PWA-toolchain upgrade rather than gating every merge on it.
+  # Surfaced but non-blocking: next-pwa (the prior source of a transitive RCE
+  # via workbox-build) has been removed in favor of a hand-written service
+  # worker, so that specific advisory no longer applies. Any remaining
+  # high-severity advisories are reviewed but do not gate every merge.
   security-audit:
     name: Security Audit
     runs-on: ubuntu-latest

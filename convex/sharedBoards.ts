@@ -1,6 +1,6 @@
 // convex/sharedBoards.ts
 import { v } from "convex/values";
-import { query, mutation, QueryCtx, MutationCtx } from "./_generated/server";
+import { query, mutation, MutationCtx } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { Doc, Id } from "./_generated/dataModel";
 
@@ -8,10 +8,8 @@ const SHARE_CODE_LEN = 8;
 
 function generateShareCode(): string {
   // Short, human-shareable, uppercase. Collision handled by caller retry.
-  return (
-    Math.random().toString(36).slice(2, 2 + SHARE_CODE_LEN).toUpperCase() +
-    Math.random().toString(36).slice(2, 2 + SHARE_CODE_LEN).toUpperCase()
-  ).slice(0, SHARE_CODE_LEN);
+  // Single random slice, zero-padded so the code is always SHARE_CODE_LEN chars.
+  return Math.random().toString(36).slice(2, 2 + SHARE_CODE_LEN).toUpperCase().padEnd(SHARE_CODE_LEN, "0");
 }
 
 async function ensureProfileDoc(
