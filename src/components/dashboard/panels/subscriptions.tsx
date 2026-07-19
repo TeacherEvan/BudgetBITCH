@@ -12,6 +12,7 @@ import { Modal } from '@/components/ui/modal';
 import { useCurrency } from '@/hooks/use-currency';
 import { SubscriptionsSkeleton } from './subscriptions-skeleton';
 import { EmptyState } from './empty-state';
+import { DetectedSubscriptions } from './detected-subscriptions';
 import type { ExpenseEntry } from '@/lib/types/budget';
 
 interface SubscriptionsProps {
@@ -242,6 +243,8 @@ export function Subscriptions({ locale = 'en' }: SubscriptionsProps) {
           })}
         </motion.div>
       )}
+
+      <DetectedSubscriptions locale={locale} />
 
       <Modal
         isOpen={isFormOpen}
