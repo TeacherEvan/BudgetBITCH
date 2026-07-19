@@ -2,8 +2,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Trash2, Edit, Mic } from 'lucide-react';
+import { Plus, Trash2, Edit, Mic, FileSpreadsheet } from 'lucide-react';
 import { useExpenses, useBudgets } from '@/hooks/use-local-db';
+import { addExpense, generateId } from '@/lib/db/local-db';
+import type { ExpenseEntry } from '@/lib/types/budget';
+import type { ParsedExpense } from '@/modules/budgeting/csv-import';
+import { ImportCsvModal } from './import-csv-modal';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -58,6 +62,7 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showVoiceInput, setShowVoiceInput] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   
   const [formData, setFormData] = useState<FormData>({
     merchant: '',
@@ -82,6 +87,23 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
       date: new Date().toISOString().split('T')[0],
       source: 'voice',
     });
+  };
+
+  const handleImportRows = async (rows: ParsedExpense[]) => {
+    // Persist each parsed row as an ExpenseEntry with a generated id.
+    await Promise.all(
+      rows.map((row) =>
+        addExpense({
+          id: generateId(),
+          date: row.date,
+          category: row.category,
+          merchant: row.merchant,
+          amount: row.amount,
+          note: row.note,
+          source: 'import',
+        } as ExpenseEntry),
+      ),
+    );
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -156,6 +178,16 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
             <Mic className="w-4 h-4" />
             {locale === 'th' ? 'เสียง' : 'Voice'}
           </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setShowImport(true)}
+            className="flex items-center gap-1"
+            data-testid="import-csv-btn"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            {locale === 'th' ? 'นำเข้า' : 'Import'}
+          </Button>
           <Button variant="primary" size="sm" onClick={() => { setEditingId(null); resetForm(); setShowForm(true); }}>
             <Plus className="w-4 h-4 mr-1" /> {locale === 'th' ? 'เพิ่ม' : 'Add'}
           </Button>
@@ -168,6 +200,14 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
         onAddExpense={handleVoiceAdd}
         isOpen={showVoiceInput}
         onClose={() => setShowVoiceInput(false)}
+      />
+
+      {/* CSV Import Modal */}
+      <ImportCsvModal
+        locale={locale}
+        isOpen={showImport}
+        onClose={() => setShowImport(false)}
+        onImport={handleImportRows}
       />
 
       {showForm && (
