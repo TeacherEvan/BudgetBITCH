@@ -126,4 +126,21 @@ describe('DashboardShell (mobile)', () => {
     renderShell();
     expect(screen.queryByRole('button', { name: /open menu/i })).toBeNull();
   });
+
+  it('Market Watch modal renders with a title header', () => {
+    renderShell();
+    const triggers = screen.getAllByRole('button', { name: /market watch/i });
+    fireEvent.click(triggers[0]);
+    expect(screen.getByRole('heading', { name: /market watch/i })).toBeInTheDocument();
+  });
+
+  it('Critical Expenses modal body is scrollable (overflow-y-auto)', () => {
+    renderShell();
+    const triggers = screen.getAllByRole('button', { name: /pick 1 to cut this month/i });
+    fireEvent.click(triggers[0]);
+    // The scrollable modal body wraps the "Pick one expense to cut" content.
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.querySelector('.overflow-y-auto')).not.toBeNull();
+    expect(dialog.className).toContain('max-h-[85vh]');
+  });
 });

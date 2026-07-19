@@ -222,7 +222,7 @@ export function CriticalExpensesModal({ isOpen, onClose, locale }: CriticalExpen
           </div>
 
           {selectedExpense && (
-            <Card variant="strong" className="p-4">
+            <Card variant="strong" className="p-3 sm:p-4">
               <h4 className="font-semibold text-white mb-4">
                 {locale === 'th' ? 'ตั้งค่าจำนวนเงิน' : 'Set Amount'}:
                 {CRITICAL_EXPENSES[selectedExpense][locale === 'th' ? 'labelTh' : 'labelEn']}
@@ -245,13 +245,13 @@ export function CriticalExpensesModal({ isOpen, onClose, locale }: CriticalExpen
                   </span>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2">
+                <div className="flex flex-wrap gap-2">
                   {[1000, 3000, 5000, 8000, 10000].map(amt => (
                     <button
                       key={amt}
                       type="button"
                       onClick={() => setCustomAmount(String(amt))}
-                      className={`px-3 py-2 rounded-xl text-sm font-medium transition ${
+                      className={`flex-1 min-w-[4.5rem] px-3 py-2 rounded-xl text-sm font-medium transition ${
                         Number(customAmount) === amt
                           ? 'bg-amber-400 text-slate-950'
                           : 'bg-white/5 text-white/70 hover:bg-white/10'
@@ -287,7 +287,7 @@ export function CriticalExpensesModal({ isOpen, onClose, locale }: CriticalExpen
 
                 <Button 
                   variant="primary" 
-                  className="w-full" 
+                  className="w-full sticky bottom-0 z-10 bg-amber-400"
                   size="lg"
                   onClick={handleSave}
                   disabled={!customAmount || Number(customAmount) <= 0}

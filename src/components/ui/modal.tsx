@@ -65,14 +65,14 @@ export function Modal({
       />
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
-          className={`w-full ${sizeStyles[size]} bg-black/95 border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200`}
+          className={`w-full ${sizeStyles[size]} max-h-[85vh] sm:max-h-[90vh] bg-black/95 border border-white/10 rounded-2xl shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-200`}
           role="dialog"
           aria-modal="true"
           aria-labelledby={title ? 'modal-title' : undefined}
           aria-describedby={description ? 'modal-description' : undefined}
         >
           {(title || showCloseButton) && (
-            <div className="flex items-start justify-between p-5 border-b border-white/10">
+            <div className="flex items-start justify-between p-5 border-b border-white/10 flex-shrink-0">
               <div>
                 {title && (
                   <h2 id="modal-title" className="text-xl font-semibold text-white">
@@ -98,7 +98,7 @@ export function Modal({
               )}
             </div>
           )}
-          <div className="p-5">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
             {children}
           </div>
         </div>

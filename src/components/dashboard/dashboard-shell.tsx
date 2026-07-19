@@ -245,6 +245,7 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
           onClose={() => setMarketWatchOpen(false)}
           showCloseButton={true}
           size="lg"
+          title={locale === 'th' ? 'ข่าวและข้อมูลล่าสุด' : 'Market Watch'}
         >
           <AlertsSidebar locale={locale} />
         </Modal>
