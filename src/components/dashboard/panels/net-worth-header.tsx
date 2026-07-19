@@ -19,7 +19,7 @@ export function NetWorthHeader({ locale, totalAssets, totalLiabilities, netWorth
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="grid gap-4 sm:grid-cols-3 mb-6"
+      className="grid gap-4 grid-cols-1 @sm:grid-cols-3 mb-6"
     >
       <motion.div
         initial={{ opacity: 0, y: 10 }}

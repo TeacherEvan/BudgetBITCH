@@ -176,7 +176,7 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
             className="flex items-center gap-1"
           >
             <Mic className="w-4 h-4" />
-            {locale === 'th' ? 'เสียง' : 'Voice'}
+            <span className="hidden @xs:inline">{locale === 'th' ? 'เสียง' : 'Voice'}</span>
           </Button>
           <Button
             variant="secondary"
@@ -186,10 +186,11 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
             data-testid="import-csv-btn"
           >
             <FileSpreadsheet className="w-4 h-4" />
-            {locale === 'th' ? 'นำเข้า' : 'Import'}
+            <span className="hidden @xs:inline">{locale === 'th' ? 'นำเข้า' : 'Import'}</span>
           </Button>
-          <Button variant="primary" size="sm" onClick={() => { setEditingId(null); resetForm(); setShowForm(true); }}>
-            <Plus className="w-4 h-4 mr-1" /> {locale === 'th' ? 'เพิ่ม' : 'Add'}
+          <Button variant="primary" size="sm" onClick={() => { setEditingId(null); resetForm(); setShowForm(true); }} className="flex items-center">
+            <Plus className="w-4 h-4 @xs:mr-1" />
+            <span className="hidden @xs:inline">{locale === 'th' ? 'เพิ่ม' : 'Add'}</span>
           </Button>
         </div>
       </div>

@@ -61,8 +61,9 @@ export function BentoGrid({ panels, className }: BentoGridProps) {
         'grid gap-4',
         'grid-cols-1',
         'sm:grid-cols-2',
-        'lg:grid-cols-3',
-        'xl:grid-cols-4',
+        'lg:grid-cols-2',
+        'xl:grid-cols-2',
+        '2xl:grid-cols-3',
         className
       )}
       initial={prefersReducedMotion ? false : 'hidden'}
@@ -76,7 +77,7 @@ export function BentoGrid({ panels, className }: BentoGridProps) {
           custom={index}
           variants={itemVariants}
           className={cn(
-            'bb-panel relative overflow-hidden min-h-[200px]',
+            'bb-panel relative overflow-hidden min-h-[200px] @container',
             panel.className
           )}
           style={{ '--delay': `${index * 100}ms` } as React.CSSProperties}

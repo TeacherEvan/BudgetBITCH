@@ -83,7 +83,7 @@ export function useSharedBoard(): UseSharedBoard {
 
   // Ensure a profile (shareCode) exists once authenticated.
   useEffect(() => {
-    if (isAuthenticated && myProfile === null) {
+    if (isAuthenticated && (myProfile === null || (myProfile && !myProfile.shareCode))) {
       ensureProfile().catch(() => {});
     }
   }, [isAuthenticated, myProfile, ensureProfile]);

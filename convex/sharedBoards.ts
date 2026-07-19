@@ -104,7 +104,7 @@ export const getMyProfile = query({
       .query("userProfiles")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .unique();
-    if (!profile) return { shareCode: null, displayName: null, linkedBoardId: null };
+    if (!profile) return null;
     return {
       shareCode: profile.shareCode,
       displayName: profile.displayName ?? null,

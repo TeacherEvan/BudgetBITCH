@@ -99,7 +99,7 @@ export function BudgetAlerts({ locale = 'en' }: BudgetAlertsProps) {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
+      <div className="grid grid-cols-1 @sm:grid-cols-3 gap-3 mb-4">
         <Card className="p-3 bg-amber-400/10 border-amber-400/30">
           <p className="text-xs text-amber-400">{locale === 'th' ? 'งบประมาณรวม' : 'Total Budget'}</p>
           <p className="font-mono text-lg text-white">{formatCurrency(summary.totalBudget, locale)}</p>
@@ -160,7 +160,7 @@ export function BudgetAlerts({ locale = 'en' }: BudgetAlertsProps) {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-3 gap-2 text-center pt-2 border-t border-white/10">
+      <div className="grid grid-cols-1 @sm:grid-cols-3 gap-2 text-center pt-2 border-t border-white/10">
         <div className={summary.categoriesOverBudget > 0 ? 'text-rose-400' : 'text-white/50'}>
           <p className="text-2xl font-bold">{summary.categoriesOverBudget}</p>
           <p className="text-xs">{locale === 'th' ? 'เกินงบ' : 'Over Budget'}</p>

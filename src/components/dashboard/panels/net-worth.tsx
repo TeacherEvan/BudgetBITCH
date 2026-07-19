@@ -109,12 +109,12 @@ export function NetWorth({ locale = 'en' }: { locale?: 'th' | 'en' }) {
         </h3>
         <div className="flex gap-2">
           <Button variant="primary" size="sm" onClick={() => openAssetForm()}>
-            <Plus className="w-4 h-4 mr-1" />
-            {locale === 'th' ? '+ ทรัพย์สิน' : '+ Asset'}
+            <Plus className="w-4 h-4" />
+            <span className="hidden @xs:inline ml-1">{locale === 'th' ? 'ทรัพย์สิน' : 'Asset'}</span>
           </Button>
           <Button variant="secondary" size="sm" onClick={() => openLiabilityForm()}>
-            <Plus className="w-4 h-4 mr-1" />
-            {locale === 'th' ? '+ หนี้สิน' : '+ Liability'}
+            <Plus className="w-4 h-4" />
+            <span className="hidden @xs:inline ml-1">{locale === 'th' ? 'หนี้สิน' : 'Liability'}</span>
           </Button>
         </div>
       </motion.div>

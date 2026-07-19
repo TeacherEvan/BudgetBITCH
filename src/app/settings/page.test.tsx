@@ -9,8 +9,13 @@ vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
 }));
 
+const mockRouter = vi.hoisted(() => ({
+  push: vi.fn(),
+  refresh: vi.fn(),
+}));
+
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ refresh: () => undefined }),
+  useRouter: () => mockRouter,
 }));
 
 // Mock the hooks used in SettingsPage
@@ -139,7 +144,7 @@ describe('SettingsPage', () => {
 
   it('renders the Shared Board section with the user share code', () => {
     renderWithProviders(<SettingsPage />);
-    expect(screen.getByText(/shared board/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /shared board/i })).toBeInTheDocument();
     expect(screen.getByText('ABCD1234')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /link/i })).toBeInTheDocument();
   });
@@ -182,5 +187,36 @@ describe('SettingsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /^link$/i }));
 
     expect(await screen.findByText(/share code not found/i)).toBeInTheDocument();
+  });
+
+  it('navigates to /dashboard via router (no full reload) when re-running the wizard', () => {
+    renderWithProviders(<SettingsPage />);
+    fireEvent.click(screen.getByRole('button', { name: /re-run setup wizard/i }));
+    expect(mockRouter.push).toHaveBeenCalledWith('/dashboard');
+    expect(window.location.pathname).not.toBe('/dashboard');
+  });
+
+  it('exposes a labelled section nav with one tab per rendered section', () => {
+    const { container } = renderWithProviders(<SettingsPage />);
+    const nav = screen.getByRole('navigation', { name: /settings sections/i });
+    expect(nav).toBeInTheDocument();
+
+    // Every section anchor id must be present in the DOM and referenced by a tab.
+    const expectedIds = [
+      'settings-general',
+      'settings-profile',
+      'settings-display',
+      'settings-news',
+      'settings-preferences',
+      'settings-data',
+      'settings-shared',
+      'settings-privacy',
+    ];
+    for (const id of expectedIds) {
+      const section = container.querySelector(`#${id}`);
+      expect(section).not.toBeNull();
+      const tab = nav.querySelector(`a[href="#${id}"]`);
+      expect(tab).not.toBeNull();
+    }
   });
 });

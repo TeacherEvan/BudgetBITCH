@@ -2,8 +2,9 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
-import { Globe, Volume2, Palette, Trash2, AlertCircle, Shield, Download, Upload, BarChart2, TrendingUp, PieChart, Circle, User, Newspaper } from 'lucide-react';
+import { Globe, Volume2, Palette, Trash2, AlertCircle, Shield, Download, Upload, BarChart2, TrendingUp, PieChart, Circle, User, Newspaper, Users, Settings } from 'lucide-react';
 import { useWizardProfile } from '@/hooks/use-local-db';
 import { useVoice } from '@/hooks/use-voice';
 import { useCriticalExpense } from '@/hooks/use-critical-expense';
@@ -147,6 +148,7 @@ const RESET_PRESERVE = [
 export default function SettingsPage() {
   const localeRaw = useLocale();
   const locale: SettingsLocale = localeRaw === 'th' ? 'th' : 'en';
+  const router = useRouter();
 
   const { profile, clear: clearProfile } = useWizardProfile();
   const { settings: voiceSettings, updateSettings: updateVoiceSettings, toggleVoice, isSupported } = useVoice(
@@ -158,6 +160,7 @@ export default function SettingsPage() {
   const { isGenreEnabled, toggleGenre } = useNewsPrefs();
   const [code, setCode] = useState('');
   const [linkError, setLinkError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const [lastSync, setLastSync] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
@@ -181,6 +184,8 @@ export default function SettingsPage() {
     const c = shared.myProfile?.shareCode;
     if (c && navigator.clipboard?.writeText) {
       void navigator.clipboard.writeText(c);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -289,13 +294,15 @@ export default function SettingsPage() {
           <h1 className="text-xl font-bold text-white">{l.title}</h1>
         </div>
         {/* Section nav tabs */}
-        <nav className="max-w-4xl mx-auto px-4 pb-3 flex gap-1 overflow-x-auto scrollbar-none">
+        <nav aria-label="Settings sections" className="max-w-4xl mx-auto px-4 pb-3 flex gap-1 overflow-x-auto scrollbar-none">
           {([
-            { id: 'general',     label: { en: 'General',  th: 'ทั่วไป' },    icon: <Globe className="w-3.5 h-3.5" /> },
-            { id: 'profile',     label: { en: 'Profile',  th: 'โปรไฟล์' },  icon: <User className="w-3.5 h-3.5" /> },
-            { id: 'display',     label: { en: 'Display',  th: 'การแสดงผล' },icon: <Palette className="w-3.5 h-3.5" /> },
-            { id: 'news',        label: { en: 'News',     th: 'ข่าวสาร' },   icon: <Newspaper className="w-3.5 h-3.5" /> },
-            { id: 'data',        label: { en: 'Data',     th: 'ข้อมูล' },    icon: <Download className="w-3.5 h-3.5" /> },
+            { id: 'general',     label: { en: 'General',  th: 'ทั่วไป' },      icon: <Globe className="w-3.5 h-3.5" /> },
+            { id: 'profile',     label: { en: 'Profile',  th: 'โปรไฟล์' },    icon: <User className="w-3.5 h-3.5" /> },
+            { id: 'display',     label: { en: 'Display',  th: 'การแสดงผล' }, icon: <Palette className="w-3.5 h-3.5" /> },
+            { id: 'news',        label: { en: 'News',     th: 'ข่าวสาร' },    icon: <Newspaper className="w-3.5 h-3.5" /> },
+            { id: 'preferences', label: { en: 'Preferences', th: 'การตั้งค่า' }, icon: <Settings className="w-3.5 h-3.5" /> },
+            { id: 'data',        label: { en: 'Data',     th: 'ข้อมูล' },     icon: <Download className="w-3.5 h-3.5" /> },
+            { id: 'shared',      label: { en: 'Shared Board', th: 'บอร์ดคู่' }, icon: <Users className="w-3.5 h-3.5" /> },
             { id: 'privacy',     label: { en: 'Privacy',  th: 'ความเป็นส่วนตัว' }, icon: <Shield className="w-3.5 h-3.5" /> },
           ] as const).map(tab => (
             <a
@@ -312,7 +319,7 @@ export default function SettingsPage() {
 
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-10 pb-24">
         {/* General Section */}
-        <section id="settings-general">
+        <section id="settings-general" className="scroll-mt-24">
           <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#C9960C] mb-4">{l.sections.general}</h2>
           <Card className="p-4 space-y-4">
             <div>
@@ -323,7 +330,7 @@ export default function SettingsPage() {
         </section>
 
         {/* ── PROFILE SECTION ── */}
-        <section id="settings-profile">
+        <section id="settings-profile" className="scroll-mt-24">
           <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#C9960C] mb-4">
             {locale === 'th' ? 'โปรไฟล์' : 'Profile'}
           </h2>
@@ -352,7 +359,7 @@ export default function SettingsPage() {
             )}
             <button
               type="button"
-              onClick={() => { clearProfile?.(); window.location.href = '/dashboard'; }}
+              onClick={() => { clearProfile?.(); router.push('/dashboard'); }}
               className="flex w-full items-center gap-2 rounded-xl border border-[rgba(201,150,12,0.3)] bg-[rgba(201,150,12,0.08)] px-4 py-3 text-sm font-medium text-[#E8B020] transition-colors hover:bg-[rgba(201,150,12,0.15)]"
             >
               🔄 {locale === 'th' ? 'เริ่มวิซาร์ดตั้งค่าใหม่อีกครั้ง' : 'Re-run Setup Wizard'}
@@ -361,7 +368,7 @@ export default function SettingsPage() {
         </section>
 
         {/* ── DISPLAY SECTION ── */}
-        <section id="settings-display">
+        <section id="settings-display" className="scroll-mt-24">
           <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#C9960C] mb-4">
             {locale === 'th' ? 'การแสดงผล' : 'Display'}
           </h2>
@@ -424,7 +431,7 @@ export default function SettingsPage() {
         </section>
 
         {/* ── NEWS FLOW SECTION ── */}
-        <section id="settings-news">
+        <section id="settings-news" className="scroll-mt-24">
           <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#C9960C] mb-4">
             {locale === 'th' ? 'กรองข่าว Market Watch' : 'News Flow — Market Watch'}
           </h2>
@@ -466,7 +473,7 @@ export default function SettingsPage() {
         </section>
 
         {/* Preferences Section */}
-        <section>
+        <section id="settings-preferences" className="scroll-mt-24">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-amber-400 mb-4">{l.sections.preferences}</h2>
           <Card className="p-4 space-y-4">
             {/* Voice */}
@@ -515,7 +522,7 @@ export default function SettingsPage() {
         </section>
 
         {/* Data Section */}
-        <section>
+        <section id="settings-data" className="scroll-mt-24">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-amber-400 mb-4">{l.sections.data}</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <Card className="p-4">
@@ -586,7 +593,7 @@ export default function SettingsPage() {
         </section>
 
         {/* Shared Board Section */}
-        <section>
+        <section id="settings-shared" className="scroll-mt-24">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-amber-400 mb-4">{l.sharedBoard}</h2>
           <Card className="p-4 space-y-4">
             {shared.isLinked ? (
@@ -643,7 +650,7 @@ export default function SettingsPage() {
                       {shared.myProfile?.shareCode ?? '—'}
                     </code>
                     <Button variant="secondary" onClick={handleCopyCode}>
-                      {l.copyCode}
+                      {copied ? (locale === 'th' ? 'คัดลอกแล้ว!' : 'Copied!') : l.copyCode}
                     </Button>
                   </div>
                 </div>
@@ -670,7 +677,7 @@ export default function SettingsPage() {
         </section>
 
         {/* Privacy Section */}
-        <section>
+        <section id="settings-privacy" className="scroll-mt-24">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-amber-400 mb-4">{l.sections.privacy}</h2>
           <Card className="p-4 space-y-4 border-emerald-400/30 bg-emerald-400/5">
             <div className="flex items-start gap-3">
