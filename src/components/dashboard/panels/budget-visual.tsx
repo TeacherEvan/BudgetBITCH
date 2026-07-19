@@ -3,7 +3,7 @@
 
 import { useExpenses, useBudgets, useWizardProfile } from '@/hooks/use-local-db';
 import { Card } from '@/components/ui/card';
-import { formatCurrency } from '@/lib/utils/currency';
+import { useCurrency } from '@/hooks/use-currency';
 import { format } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
@@ -40,6 +40,8 @@ interface Budget {
 }
 
 export function BudgetVisual({ locale = 'en' }: BudgetVisualProps) {
+  const formatCurrency = useCurrency();
+
   const { expenses: rawExpenses } = useExpenses();
   const { budgets: rawBudgets } = useBudgets();
   const { profile } = useWizardProfile();

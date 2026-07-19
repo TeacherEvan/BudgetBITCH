@@ -2,7 +2,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { formatCurrency } from '@/lib/utils/currency';
+import { useCurrency } from '@/hooks/use-currency';
 
 interface NetWorthHeaderProps {
   locale: 'th' | 'en';
@@ -13,6 +13,8 @@ interface NetWorthHeaderProps {
 }
 
 export function NetWorthHeader({ locale, totalAssets, totalLiabilities, netWorth, isPositive }: NetWorthHeaderProps) {
+  const formatCurrency = useCurrency();
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}

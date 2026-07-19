@@ -9,7 +9,7 @@ import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ProgressRing } from '@/components/ui/progress-ring';
-import { formatCurrency } from '@/lib/utils/currency';
+import { useCurrency } from '@/hooks/use-currency';
 import { format } from 'date-fns';
 import { SavingsGoal } from '@/lib/types/budget';
 
@@ -18,6 +18,8 @@ interface SavingsGoalsProps {
 }
 
 export function SavingsGoals({ locale = 'en' }: SavingsGoalsProps) {
+  const formatCurrency = useCurrency();
+
   const { goals, add, update, remove, loading } = useSavingsGoals();
   // eslint-disable-next-line react-hooks/purity
   const now = useMemo(() => Date.now(), []);

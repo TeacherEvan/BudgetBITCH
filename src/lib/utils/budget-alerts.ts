@@ -1,6 +1,6 @@
 // lib/utils/budget-alerts.ts
 import type { ExpenseCategory, BudgetCategory } from '@/lib/types/budget';
-import { formatCurrency } from '@/lib/utils/currency';
+import { formatCurrency, type CurrencyCode } from '@/lib/utils/currency';
 
 export interface BudgetAlert {
   id: string;
@@ -17,7 +17,8 @@ export interface BudgetAlert {
 export function generateBudgetAlerts(
   budgets: BudgetCategory[],
   expenses: { category: ExpenseCategory; amount: number }[],
-  locale: 'th' | 'en' = 'en'
+  locale: 'th' | 'en' = 'en',
+  currency?: CurrencyCode | null
 ): BudgetAlert[] {
   const alerts: BudgetAlert[] = [];
   
@@ -44,8 +45,8 @@ export function generateBudgetAlerts(
         type: 'critical',
         category: budget.category,
         message: locale === 'th'
-          ? `${categoryLabel} เกินงบแล้ว (${formatCurrency(spent, locale)}/${formatCurrency(limit, locale)})`
-          : `${categoryLabel} over budget (${formatCurrency(spent, locale)}/${formatCurrency(limit, locale)})`,
+          ? `${categoryLabel} เกินงบแล้ว (${formatCurrency(spent, locale, currency)}/${formatCurrency(limit, locale, currency)})`
+          : `${categoryLabel} over budget (${formatCurrency(spent, locale, currency)}/${formatCurrency(limit, locale, currency)})`,
         actionable: locale === 'th'
           ? 'พิจารณาลดค่าใช้จ่ายหรือปรับงบประมาณ'
           : 'Consider reducing spending or adjusting budget',

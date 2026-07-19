@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
-import { formatCurrency } from '@/lib/utils/currency';
+import { useCurrency } from '@/hooks/use-currency';
 import { SubscriptionsSkeleton } from './subscriptions-skeleton';
 import { EmptyState } from './empty-state';
 import type { ExpenseEntry } from '@/lib/types/budget';
@@ -56,6 +56,8 @@ const paymentOptions = [
 ];
 
 export function Subscriptions({ locale = 'en' }: SubscriptionsProps) {
+  const formatCurrency = useCurrency();
+
   const { subscriptions, add, update, remove, loading } = useSubscriptions();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);

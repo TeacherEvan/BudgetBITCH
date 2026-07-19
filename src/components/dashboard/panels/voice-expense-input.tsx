@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Mic, X, Check, Sparkles } from 'lucide-react';
 import { useVoice } from '@/hooks/use-voice';
 import { mapThaiToCategory } from '@/lib/utils/thai-category-mapper';
-import { formatCurrency } from '@/lib/utils/currency';
+import { useCurrency } from '@/hooks/use-currency';
 import { Button } from '@/components/ui/button';
 import type { ExpenseCategory } from '@/lib/types/budget';
 
@@ -139,6 +139,8 @@ function parseExpenseFromText(text: string): ParsedExpense | null {
 }
 
 export function VoiceExpenseInput({ locale, onAddExpense, isOpen, onClose }: VoiceExpenseInputProps) {
+  const formatCurrency = useCurrency();
+
   const { 
     speak, 
     startListening, 

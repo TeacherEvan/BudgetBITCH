@@ -4,7 +4,7 @@
 import { motion } from 'framer-motion';
 import { Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { formatCurrency } from '@/lib/utils/currency';
+import { useCurrency } from '@/hooks/use-currency';
 import { LIABILITY_TYPES } from './net-worth-types';
 
 interface Liability {
@@ -23,6 +23,8 @@ interface LiabilityItemProps {
 }
 
 export function LiabilityItem({ liability, locale, onEdit, onDelete, index }: LiabilityItemProps) {
+  const formatCurrency = useCurrency();
+
   const typeInfo = LIABILITY_TYPES.find(t => t.value === liability.type);
 
   return (

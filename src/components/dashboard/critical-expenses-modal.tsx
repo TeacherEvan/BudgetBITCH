@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { ProgressRing } from '@/components/ui/progress-ring';
 import { Card } from '@/components/ui/card';
 import { CRITICAL_EXPENSES, CriticalExpenseKey } from '@/lib/types/budget';
-import { calculateCompoundProjection, formatCurrency, getSuggestedCriticalExpenseCost } from '@/lib/utils/compound-calculator';
+import { calculateCompoundProjection, getSuggestedCriticalExpenseCost } from '@/lib/utils/compound-calculator';
+import { useCurrency } from '@/hooks/use-currency';
 import { useCriticalExpense } from '@/hooks/use-critical-expense';
 import { useWizardProfile } from '@/hooks/use-local-db';
 
@@ -23,6 +24,7 @@ export function CriticalExpensesModal({ isOpen, onClose, locale }: CriticalExpen
   const { commitment, loading: commitmentLoading, save: saveCommitment, clear: clearCommitment } = useCriticalExpense();
   const [selectedExpense, setSelectedExpense] = useState<CriticalExpenseKey | null>(null);
   const [customAmount, setCustomAmount] = useState<string>('');
+  const formatCurrency = useCurrency();
 
   const expenseList = Object.entries(CRITICAL_EXPENSES) as [CriticalExpenseKey, typeof CRITICAL_EXPENSES[CriticalExpenseKey]][];
   

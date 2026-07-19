@@ -4,7 +4,7 @@
 import { useMemo } from 'react';
 import { Info } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { formatCurrency } from '@/lib/utils/currency';
+import { useCurrency } from '@/hooks/use-currency';
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
 import { useBills, useDebtPayoff } from '@/hooks/use-local-db';
@@ -37,6 +37,8 @@ function nextDueDates(dueDay: number, count: number): Date[] {
 }
 
 export function CashFlowForecast({ locale = 'en' }: CashFlowForecastProps) {
+  const formatCurrency = useCurrency();
+
   const { bills, loading: billsLoading } = useBills();
   const { debts, loading: debtsLoading } = useDebtPayoff();
 

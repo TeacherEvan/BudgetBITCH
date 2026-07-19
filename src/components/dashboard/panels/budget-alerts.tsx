@@ -6,7 +6,7 @@ import { AlertCircle, CheckCircle, AlertTriangle, Info, TrendingUp } from 'lucid
 import { useExpenses, useBudgets } from '@/hooks/use-local-db';
 import { useWizardProfile } from '@/hooks/use-local-db';
 import { generateBudgetAlerts, getBudgetSummary } from '@/lib/utils/budget-alerts';
-import { formatCurrency } from '@/lib/utils/currency';
+import { useCurrency } from '@/hooks/use-currency';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import type { BudgetCategory, ExpenseEntry } from '@/lib/types/budget';
@@ -30,6 +30,8 @@ const COLORS = {
 };
 
 export function BudgetAlerts({ locale = 'en' }: BudgetAlertsProps) {
+  const formatCurrency = useCurrency();
+
   const { expenses: rawExpenses } = useExpenses();
   const { budgets: rawBudgets } = useBudgets();
   const { profile } = useWizardProfile();

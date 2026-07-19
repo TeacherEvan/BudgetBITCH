@@ -4,7 +4,7 @@
 import { motion } from 'framer-motion';
 import { Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { formatCurrency } from '@/lib/utils/currency';
+import { useCurrency } from '@/hooks/use-currency';
 import { ASSET_TYPES } from './net-worth-types';
 
 interface Asset {
@@ -23,6 +23,8 @@ interface AssetItemProps {
 }
 
 export function AssetItem({ asset, locale, onEdit, onDelete, index }: AssetItemProps) {
+  const formatCurrency = useCurrency();
+
   const typeInfo = ASSET_TYPES.find(t => t.value === asset.type);
 
   return (

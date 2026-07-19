@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { formatCurrency } from '@/lib/utils/currency';
+import { useCurrency } from '@/hooks/use-currency';
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
 import type { ExpenseCategory } from '@/lib/types/budget';
@@ -47,6 +47,8 @@ interface BillsProps {
 }
 
 export function Bills({ locale = 'en' }: BillsProps) {
+  const formatCurrency = useCurrency();
+
   const { bills, add, update, remove, loading } = useBills();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);

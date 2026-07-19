@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ProgressRing } from '@/components/ui/progress-ring';
 import { Modal } from '@/components/ui/modal';
-import { formatCurrency } from '@/lib/utils/currency';
+import { useCurrency } from '@/hooks/use-currency';
 import { EmergencyFundSkeleton } from './emergency-fund-skeleton';
 
 interface EmergencyFundProps {
@@ -30,6 +30,8 @@ const initialFormData: FormData = {
 };
 
 export function EmergencyFund({ locale = 'en' }: EmergencyFundProps) {
+  const formatCurrency = useCurrency();
+
   const { fund, loading, update: updateFund } = useEmergencyFund();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formData, setFormData] = useState<FormData>(initialFormData);

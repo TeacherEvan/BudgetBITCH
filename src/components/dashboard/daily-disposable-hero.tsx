@@ -3,7 +3,7 @@
 
 import { useMemo } from 'react';
 import { useWizardProfile } from '@/hooks/use-local-db';
-import { formatCurrency } from '@/lib/utils/currency';
+import { useCurrency } from '@/hooks/use-currency';
 import { calculateBudgetFromWizard } from '@/lib/utils/budget-calculator';
 
 interface DailyDisposableHeroProps {
@@ -11,6 +11,8 @@ interface DailyDisposableHeroProps {
 }
 
 export function DailyDisposableHero({ locale }: DailyDisposableHeroProps) {
+  const formatCurrency = useCurrency();
+
   const { profile } = useWizardProfile();
 
   const calculation = useMemo(() => {

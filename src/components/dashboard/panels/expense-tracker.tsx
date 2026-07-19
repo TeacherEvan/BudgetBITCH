@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { formatCurrency } from '@/lib/utils/currency';
+import { useCurrency } from '@/hooks/use-currency';
 import type { ExpenseCategory } from '@/lib/types/budget';
 import { VoiceExpenseInput } from './voice-expense-input';
 
@@ -51,6 +51,8 @@ interface FormData {
 }
 
 export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
+  const formatCurrency = useCurrency();
+
   const { expenses, add, update, remove, loading } = useExpenses();
   const { budgets } = useBudgets();
   const [showForm, setShowForm] = useState(false);

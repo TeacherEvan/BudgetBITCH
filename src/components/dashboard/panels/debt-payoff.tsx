@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { formatCurrency } from '@/lib/utils/currency';
+import { useCurrency } from '@/hooks/use-currency';
 
 interface DebtPayoffProps {
   locale?: 'th' | 'en';
@@ -36,6 +36,8 @@ const DEBT_TYPES = [
 ];
 
 export function DebtPayoff({ locale = 'en' }: DebtPayoffProps) {
+  const formatCurrency = useCurrency();
+
   const { debts, add, update, remove } = useDebtPayoff();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);

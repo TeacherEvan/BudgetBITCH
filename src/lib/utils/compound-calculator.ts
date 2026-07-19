@@ -55,11 +55,22 @@ export function calculateCompoundProjection(options: CompoundCalculatorOptions):
 /**
  * Format currency for display (THB or USD)
  */
-export function formatCurrency(amount: number, locale: 'th' | 'en' = 'en'): string {
-  const currency = locale === 'th' ? 'THB' : 'USD';
-  return new Intl.NumberFormat(locale === 'th' ? 'th-TH' : 'en-US', {
+export function formatCurrency(
+  amount: number,
+  locale: 'th' | 'en' = 'en',
+  currency?: import('@/lib/utils/currency').CurrencyCode | null,
+): string {
+  const resolved = currency === undefined ? (locale === 'th' ? 'THB' : 'USD') : currency;
+  const localeTag = locale === 'th' ? 'th-TH' : 'en-US';
+  if (resolved === null) {
+    return new Intl.NumberFormat(localeTag, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  }
+  return new Intl.NumberFormat(localeTag, {
     style: 'currency',
-    currency,
+    currency: resolved,
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
