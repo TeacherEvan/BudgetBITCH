@@ -501,8 +501,14 @@ export async function serializeBoard(): Promise<BoardSnapshot> {
 }
 
 /**
- * Bulk-overwrite the 8 shared local stores from a BoardSnapshot.
- * Does NOT emit BOARD_CHANGED_EVENT — applying a remote board must not echo back as a push.
+ * Merge the 8 shared local stores from a BoardSnapshot (union by key).
+ * Local records whose keys are absent from the incoming snapshot are preserved;
+ * incoming records overwrite same-key local records. This prevents a partner's
+ * snapshot from clobbering local edits (e.g. an expense you just added on this
+ * device) during the 2-way sync pull.
+ *
+ * Does NOT emit BOARD_CHANGED_EVENT — applying a remote board must not echo
+ * back as a push.
  */
 export async function replaceBoardData(board: BoardSnapshot): Promise<void> {
   const db = await getDB();
@@ -512,21 +518,67 @@ export async function replaceBoardData(board: BoardSnapshot): Promise<void> {
   ] as const;
   const tx = db.transaction(stores, 'readwrite');
 
-  for (const store of stores) {
-    await tx.objectStore(store).clear();
-  }
+  // Capture the set of keys present in the incoming snapshot so we can keep
+  // local records the remote board didn't touch (the merge, not clear).
+  const incomingKeys = new Set<string>();
+  const stage: { store: typeof stores[number]; value: unknown; explicitKey?: string | number }[] = [];
 
   if (board.wizardProfile) {
-    tx.objectStore('wizardProfile').put(board.wizardProfile, 'current');
+    incomingKeys.add('wizardProfile:current');
+    stage.push({ store: 'wizardProfile', value: board.wizardProfile, explicitKey: 'current' });
   }
-  for (const e of board.expenses ?? []) tx.objectStore('expenses').put(e);
-  for (const b of board.budgets ?? []) tx.objectStore('budgets').put(b);
-  for (const b of board.bills ?? []) tx.objectStore('bills').put(b);
-  for (const g of board.savingsGoals ?? []) tx.objectStore('savingsGoals').put(g);
-  for (const s of board.netWorthSnapshots ?? []) tx.objectStore('netWorthSnapshots').put(s);
-  for (const d of board.debts ?? []) tx.objectStore('debts').put(d);
+  for (const e of board.expenses ?? []) {
+    incomingKeys.add(`expenses:${e.id}`);
+    stage.push({ store: 'expenses', value: e });
+  }
+  for (const b of board.budgets ?? []) {
+    incomingKeys.add(`budgets:${b.category}`);
+    stage.push({ store: 'budgets', value: b });
+  }
+  for (const b of board.bills ?? []) {
+    incomingKeys.add(`bills:${b.id}`);
+    stage.push({ store: 'bills', value: b });
+  }
+  for (const g of board.savingsGoals ?? []) {
+    incomingKeys.add(`savingsGoals:${g.id}`);
+    stage.push({ store: 'savingsGoals', value: g });
+  }
+  for (const s of board.netWorthSnapshots ?? []) {
+    incomingKeys.add(`netWorthSnapshots:${s.date}`);
+    stage.push({ store: 'netWorthSnapshots', value: s });
+  }
+  for (const d of board.debts ?? []) {
+    incomingKeys.add(`debts:${d.id}`);
+    stage.push({ store: 'debts', value: d });
+  }
   for (const c of board.criticalExpenseCommitments ?? []) {
-    tx.objectStore('criticalExpenseCommitments').put(c);
+    incomingKeys.add(`criticalExpenseCommitments:${c.month}`);
+    stage.push({ store: 'criticalExpenseCommitments', value: c });
+  }
+
+  // Keep local records not present in the incoming snapshot (merge semantics).
+  for (const store of stores) {
+    const os = tx.objectStore(store);
+    const all = await os.getAll();
+    const keyPath = os.keyPath as string | null;
+    for (const record of all) {
+      const key = keyPath ? (record as Record<string, unknown>)[keyPath] : (record as { id: string }).id;
+      if (!incomingKeys.has(`${store}:${key}`)) {
+        // Local-only record: keep it (do not delete).
+        continue;
+      }
+    }
+  }
+
+  // Write incoming records (overwriting same-key local ones). wizardProfile has
+  // no keyPath on its value, so it needs the explicit 'current' key; the rest
+  // carry their key on the record (keyPath stores).
+  for (const item of stage) {
+    if (item.explicitKey !== undefined) {
+      tx.objectStore(item.store).put(item.value as never, item.explicitKey as never);
+    } else {
+      tx.objectStore(item.store).put(item.value as never);
+    }
   }
 
   await tx.done;

@@ -92,17 +92,41 @@ describe('shared board serialize/replace', () => {
     expect(await getExpenses()).toHaveLength(1);
   });
 
-  it('replaceBoardData overwrites (does not merge) existing data', async () => {
+  it('replaceBoardData MERGES (preserves local records absent from the snapshot)', async () => {
     await saveWizardProfile(makeProfile());
     await addExpense(makeExpense());
     await addExpense({ ...makeExpense(), id: 'exp-2' });
     expect((await getExpenses())).toHaveLength(2);
 
-    const empty = await serializeBoard();
-    empty.expenses = [];
-    await replaceBoardData(empty);
+    // Remote snapshot only knows about one of the two local expenses.
+    const partial = await serializeBoard();
+    partial.expenses = partial.expenses.filter(e => e.id === 'exp-1');
 
-    expect(await getExpenses()).toHaveLength(0);
+    await replaceBoardData(partial);
+
+    // The local-only expense (exp-2) must survive the merge.
+    const remaining = await getExpenses();
+    expect(remaining).toHaveLength(2);
+    expect(remaining.map(e => e.id).sort()).toEqual(['exp-1', 'exp-2']);
+  });
+
+  it('regression: a locally-added expense survives a shared-board pull (merge, not clear)', async () => {
+    // Simulates the sync race: user adds exp-3 locally, a pull brings a snapshot
+    // that predates it (no exp-3). The pull must NOT delete exp-3.
+    await addExpense({ ...makeExpense(), id: 'exp-old' });
+
+    const remoteSnapshot = await serializeBoard(); // board as partner sees it (no exp-3 yet)
+    remoteSnapshot.expenses = remoteSnapshot.expenses.filter(e => e.id === 'exp-old');
+
+    // Local user adds a new expense after the snapshot was taken.
+    await addExpense({ ...makeExpense(), id: 'exp-3' });
+    expect((await getExpenses()).map(e => e.id)).toContain('exp-3');
+
+    // Partner's board arrives (pull) — only knows exp-old.
+    await replaceBoardData(remoteSnapshot);
+
+    const after = await getExpenses();
+    expect(after.map(e => e.id).sort()).toEqual(['exp-3', 'exp-old']);
   });
 
   it('replaceBoardData does NOT emit a board-changed event', async () => {
