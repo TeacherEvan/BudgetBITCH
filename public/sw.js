@@ -128,3 +128,32 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(networkFirst(event.request));
   }
 });
+
+// --- Background sync (C2) --------------------------------------------------
+// Daily snapshots are queued in localStorage by src/lib/convex/sync-snapshots.ts
+// when Convex is unreachable. The SW cannot reach the authenticated Convex
+// client itself, so the `sync` / `periodicsync` events ask the page to flush
+// the queue using the browser's already-authenticated Convex client.
+
+const SYNC_TAG = "daily-snapshot";
+
+async function triggerClientFlush() {
+  const clients = await self.clients.matchAll({ includeUncontrolled: true });
+  for (const client of clients) {
+    // The page (src/components/pwa/pwa-register.tsx) listens for this and calls
+    // flushOfflineQueue(), which drains budgetbitch:offlineQueue via Convex.
+    client.postMessage({ type: "TRIGGER_FLUSH", tag: SYNC_TAG });
+  }
+}
+
+self.addEventListener("sync", (event) => {
+  if (event.tag === SYNC_TAG) {
+    event.waitUntil(triggerClientFlush());
+  }
+});
+
+self.addEventListener("periodicsync", (event) => {
+  if (event.tag === SYNC_TAG) {
+    event.waitUntil(triggerClientFlush());
+  }
+});

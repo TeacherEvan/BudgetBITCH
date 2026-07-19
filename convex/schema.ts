@@ -26,7 +26,7 @@ export default defineSchema({
   }).index("by_boardId", ["boardId"]),
 
   dailySnapshots: defineTable({
-    userId: v.string(),
+    userId: v.id("users"),
     date: v.string(),
     wizardProfile: v.any(),
     totals: v.object({

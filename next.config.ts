@@ -1,55 +1,16 @@
 // next.config.ts
 import type { NextConfig } from "next";
-import withPWA from "next-pwa";
 import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin();
-
-const withPWAConfig = withPWA({
-  dest: "public",
-  register: true,
-  skipWaiting: true,
-  disable: process.env.NODE_ENV === "development",
-  runtimeCaching: [
-    {
-      urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-      handler: "CacheFirst",
-      options: {
-        cacheName: "google-fonts",
-        expiration: {
-          maxEntries: 4,
-          maxAgeSeconds: 365 * 24 * 60 * 60,
-        },
-      },
-    },
-    {
-      urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-      handler: "CacheFirst",
-      options: {
-        cacheName: "google-fonts-static",
-        expiration: {
-          maxEntries: 4,
-          maxAgeSeconds: 365 * 24 * 60 * 60,
-        },
-      },
-    },
-    {
-      urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/i,
-      handler: "CacheFirst",
-      options: {
-        cacheName: "images",
-        expiration: {
-          maxEntries: 50,
-          maxAgeSeconds: 30 * 24 * 60 * 60,
-        },
-      },
-    },
-  ],
-});
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1"],
   turbopack: {},
 };
 
-export default withNextIntl(withPWAConfig(nextConfig));
+// NOTE: PWA is handled by the hand-written public/sw.js (registered in
+// src/components/pwa/pwa-register.tsx). next-pwa was removed because v5 writes
+// its own sw.js into public/ at build time (dest: "public"), which overwrites
+// the curated Service Worker below and makes caching non-deterministic.
+export default withNextIntl(nextConfig);

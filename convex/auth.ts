@@ -1,7 +1,7 @@
 import { convexAuth } from "@convex-dev/auth/server";
 import { Password } from "@convex-dev/auth/providers/Password";
 
-function normalizePasswordEmail(email: unknown) {
+export function normalizePasswordEmail(email: unknown) {
   if (typeof email !== "string") {
     throw new Error("An email address is required.");
   }

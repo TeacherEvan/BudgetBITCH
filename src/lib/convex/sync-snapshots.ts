@@ -1,17 +1,16 @@
 // lib/convex/sync-snapshots.ts
 'use client';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { ConvexReactClient } from 'convex/react';
-import { 
-  getWizardProfile, 
-  getExpenses, 
-  getAllBudgets, 
-  getLatestNetWorthSnapshot, 
-  getCriticalExpenseCommitment 
+import {
+  getWizardProfile,
+  getExpenses,
+  getAllBudgets,
+  getLatestNetWorthSnapshot,
+  getCriticalExpenseCommitment,
 } from '@/lib/db/local-db';
 import { calculateNetWorthBaseline } from '@/lib/utils/budget-calculator';
+import type { WizardProfile } from '@/lib/types/budget';
 import { api } from '../../../convex/_generated/api';
 
 let clientInstance: ConvexReactClient | null = null;
@@ -31,14 +30,16 @@ function getConvexClient(): ConvexReactClient | null {
   }
 }
 
+interface SyncSnapshotTotals {
+  income: number;
+  expenses: number;
+  savings: number;
+  netWorth?: number;
+}
+
 interface SyncSnapshotArgs {
-  wizardProfile: any;
-  totals: {
-    income: number;
-    expenses: number;
-    savings: number;
-    netWorth?: number;
-  };
+  wizardProfile: WizardProfile | null;
+  totals: SyncSnapshotTotals;
   criticalExpenseCommitment?: {
     expenseKey: string;
     estimatedMonthlyCost: number;
@@ -51,57 +52,68 @@ interface SyncSnapshotArgs {
   };
 }
 
+export interface GatherResult {
+  wizardProfile: WizardProfile | null;
+  totals: SyncSnapshotTotals;
+  criticalExpenseCommitment?: SyncSnapshotArgs['criticalExpenseCommitment'];
+}
+
+// Single source of truth for the daily snapshot payload. Previously duplicated
+// in both the try and catch branches of syncDailySnapshot (C3).
+export async function gatherSnapshotData(): Promise<GatherResult> {
+  const profile = await getWizardProfile();
+  const budgets = await getAllBudgets();
+  const expensesList = await getExpenses();
+  const latestNetWorth = await getLatestNetWorthSnapshot();
+  const today = new Date().toISOString().split('T')[0];
+  const currentMonth = today.slice(0, 7); // 'YYYY-MM'
+  const criticalExpense = await getCriticalExpenseCommitment(currentMonth);
+
+  // Calculate income: wizard profile income, or fallback to budget limit for savings, or default 50000
+  const income = profile?.answers?.income || budgets.find((b) => b.category === 'savings')?.monthlyLimit || 50000;
+
+  // Calculate expenses: sum of all expenses logged this month
+  const currentMonthExpenses = expensesList.filter((e) => e.date && e.date.startsWith(currentMonth));
+  const expenses = currentMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
+
+  // Calculate savings: income - expenses (must be >= 0)
+  const savings = Math.max(0, income - expenses);
+
+  // Net worth: latest snapshot net worth, or baseline derived from profile, or 0
+  let netWorth = 0;
+  if (latestNetWorth) {
+    const assetsTotal = latestNetWorth.assets?.reduce((sum, a) => sum + a.value, 0) || 0;
+    const liabilitiesTotal = latestNetWorth.liabilities?.reduce((sum, l) => sum + l.value, 0) || 0;
+    netWorth = assetsTotal - liabilitiesTotal;
+  } else if (profile) {
+    const baseline = calculateNetWorthBaseline(profile);
+    netWorth = baseline.assets - baseline.liabilities;
+  }
+
+  const totals: SyncSnapshotTotals = { income, expenses, savings, netWorth };
+
+  const criticalExpenseCommitment = criticalExpense
+    ? {
+        expenseKey: criticalExpense.expenseKey,
+        estimatedMonthlyCost: criticalExpense.estimatedMonthlyCost,
+        status: criticalExpense.status,
+        compoundProjection: {
+          oneYear: criticalExpense.compoundProjection.oneYear,
+          fiveYears: criticalExpense.compoundProjection.fiveYears,
+          tenYears: criticalExpense.compoundProjection.tenYears,
+        },
+      }
+    : undefined;
+
+  return { wizardProfile: profile || null, totals, criticalExpenseCommitment };
+}
+
 export async function syncDailySnapshot(): Promise<{ success: boolean; date: string }> {
   const today = new Date().toISOString().split('T')[0];
-  
+
   try {
-    const profile = await getWizardProfile();
-    const budgets = await getAllBudgets();
-    const expensesList = await getExpenses();
-    const latestNetWorth = await getLatestNetWorthSnapshot();
-    const currentMonth = today.slice(0, 7); // 'YYYY-MM'
-    const criticalExpense = await getCriticalExpenseCommitment(currentMonth);
-    
-    // Calculate income: wizard profile income, or fallback to budget limit for savings, or default 50000
-    const income = profile?.answers?.income || budgets.find(b => b.category === 'savings')?.monthlyLimit || 50000;
-    
-    // Calculate expenses: sum of all expenses logged this month
-    const currentMonthExpenses = expensesList.filter(e => e.date && e.date.startsWith(currentMonth));
-    const expenses = currentMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
-    
-    // Calculate savings: income - expenses (must be >= 0)
-    const savings = Math.max(0, income - expenses);
-    
-    // Net worth: latest snapshot net worth, or baseline derived from profile, or 0
-    let netWorth = 0;
-    if (latestNetWorth) {
-      const assetsTotal = latestNetWorth.assets?.reduce((sum, a) => sum + a.value, 0) || 0;
-      const liabilitiesTotal = latestNetWorth.liabilities?.reduce((sum, l) => sum + l.value, 0) || 0;
-      netWorth = assetsTotal - liabilitiesTotal;
-    } else if (profile) {
-      const baseline = calculateNetWorthBaseline(profile);
-      netWorth = baseline.assets - baseline.liabilities;
-    }
-    
-    const totals = { income, expenses, savings, netWorth };
-    
-    const criticalExpenseCommitment = criticalExpense ? {
-      expenseKey: criticalExpense.expenseKey,
-      estimatedMonthlyCost: criticalExpense.estimatedMonthlyCost,
-      status: criticalExpense.status,
-      compoundProjection: {
-        oneYear: criticalExpense.compoundProjection.oneYear,
-        fiveYears: criticalExpense.compoundProjection.fiveYears,
-        tenYears: criticalExpense.compoundProjection.tenYears,
-      }
-    } : undefined;
-    
-    const syncArgs: SyncSnapshotArgs = {
-      wizardProfile: profile || null,
-      totals,
-      criticalExpenseCommitment,
-    };
-    
+    const syncArgs = await gatherSnapshotData();
+
     // Call the Convex mutation
     const convex = getConvexClient();
     if (convex) {
@@ -114,51 +126,13 @@ export async function syncDailySnapshot(): Promise<{ success: boolean; date: str
     }
   } catch (error) {
     console.error('Sync failed:', error);
-    // Queue for offline sync if it's a network/mutation failure
+    // Queue the snapshot offline so it can retry once connectivity returns.
     try {
-      const profile = await getWizardProfile();
-      const budgets = await getAllBudgets();
-      const expensesList = await getExpenses();
-      const latestNetWorth = await getLatestNetWorthSnapshot();
-      const currentMonth = today.slice(0, 7);
-      const criticalExpense = await getCriticalExpenseCommitment(currentMonth);
-      
-      const income = profile?.answers?.income || budgets.find(b => b.category === 'savings')?.monthlyLimit || 50000;
-      const currentMonthExpenses = expensesList.filter(e => e.date && e.date.startsWith(currentMonth));
-      const expenses = currentMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
-      const savings = Math.max(0, income - expenses);
-      
-      let netWorth = 0;
-      if (latestNetWorth) {
-        const assetsTotal = latestNetWorth.assets?.reduce((sum, a) => sum + a.value, 0) || 0;
-        const liabilitiesTotal = latestNetWorth.liabilities?.reduce((sum, l) => sum + l.value, 0) || 0;
-        netWorth = assetsTotal - liabilitiesTotal;
-      } else if (profile) {
-        const baseline = calculateNetWorthBaseline(profile);
-        netWorth = baseline.assets - baseline.liabilities;
-      }
-      
-      const totals = { income, expenses, savings, netWorth };
-      const criticalExpenseCommitment = criticalExpense ? {
-        expenseKey: criticalExpense.expenseKey,
-        estimatedMonthlyCost: criticalExpense.estimatedMonthlyCost,
-        status: criticalExpense.status,
-        compoundProjection: {
-          oneYear: criticalExpense.compoundProjection.oneYear,
-          fiveYears: criticalExpense.compoundProjection.fiveYears,
-          tenYears: criticalExpense.compoundProjection.tenYears,
-        }
-      } : undefined;
-      
-      await queueOfflineSnapshot({
-        wizardProfile: profile || null,
-        totals,
-        criticalExpenseCommitment,
-      });
+      await queueOfflineSnapshot(await gatherSnapshotData());
     } catch (queueErr) {
       console.error('Failed to queue offline snapshot:', queueErr);
     }
-    
+
     return { success: false, date: today };
   }
 }
@@ -171,9 +145,15 @@ export function registerSyncWorker() {
       
       // Request periodic sync if supported
       if ('periodicSync' in registration) {
-        (registration as any).periodicSync.register('daily-snapshot', {
+        interface PeriodicSyncManager {
+          register(tag: string, options?: { minInterval?: number }): Promise<void>;
+        }
+        const periodicSync = (registration as ServiceWorkerRegistration & {
+          periodicSync: PeriodicSyncManager;
+        }).periodicSync;
+        periodicSync.register('daily-snapshot', {
           minInterval: 24 * 60 * 60 * 1000,
-        }).catch((err: any) => {
+        }).catch((err: unknown) => {
           console.log('Periodic sync not available:', err);
         });
       }
