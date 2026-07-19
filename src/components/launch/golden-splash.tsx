@@ -33,7 +33,10 @@ export function GoldenSplash({ onProceed }: GoldenSplashProps) {
   const titleLetters = Array.from("BUDGETBITCH");
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#080600] text-[#F8F3E8] overflow-hidden select-none">
+    <div
+      data-testid="golden-splash"
+      className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#080600] text-[#F8F3E8] overflow-hidden select-none"
+    >
       {/* Radial gold background burst */}
       <div 
         className="absolute inset-0 pointer-events-none opacity-25"
