@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getConvexHttpClient } from "@/lib/convex/http-client";
-import { convexAuthNextjsToken } from "@convex-dev/auth/nextjs/server";
 import { api } from "../../../../../convex/_generated/api";
 import { clientIp } from "@/lib/http/client-ip";
 import { z } from "zod";
@@ -9,18 +8,17 @@ export const runtime = "nodejs";
 
 // Server-trusted relay for optional cookie-consent recording.
 //
-// Mirrors /api/legal/record-agreement: the client IP is captured from the real
-// request header (Convex mutations cannot see it). Cookie consent is anonymous
-// by design, so the auth token is OPTIONAL — visitors who are not signed in
-// stay anonymous (userId resolves to undefined in the mutation). When a token
-// is present (signed-in user) their userId is attached, matching the prior
-// behaviour of the direct Convex mutation.
+// Convex Auth now stores the JWT in localStorage (client-only), so the server
+// cannot read a cookie-resolved token. The signed-in client forwards its JWT
+// via useAuthToken(); anonymous visitors send none. The forwarded JWT is a
+// signed Convex token, so it's safe to trust as the bearer for resolving
+// identity (the same token the browser uses for WebSocket calls).
 const Body = z.object({
   accepted: z.boolean(),
   optionalAccepted: z.boolean(),
   version: z.string(),
   userAgent: z.string().optional(),
-  // Optional: forwarded by the client only when a Convex Auth token exists.
+  // Forwarded by the client only when a Convex Auth token exists.
   token: z.string().optional(),
 });
 
@@ -42,10 +40,8 @@ export async function POST(req: NextRequest) {
 
   const { accepted, optionalAccepted, version, userAgent, token } = parsed.data;
 
-  // Prefer the server-resolved token; fall back to the client-forwarded one.
-  // Anonymous visitors send no token, so this stays undefined.
-  const authToken = (await convexAuthNextjsToken()) || token || undefined;
-
+  // Client-forwarded JWT only (no server cookie in localStorage auth mode).
+  const authToken = token || undefined;
   const client = getConvexHttpClient({ auth: authToken });
 
   try {

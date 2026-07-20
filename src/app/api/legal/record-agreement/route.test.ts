@@ -13,12 +13,6 @@ vi.mock("@/lib/convex/http-client", () => ({
   },
 }));
 
-// Mock the server-side token reader (localStorage storage => usually undefined).
-const mockTokenFromServer = vi.fn();
-vi.mock("@convex-dev/auth/nextjs/server", () => ({
-  convexAuthNextjsToken: () => mockTokenFromServer(),
-}));
-
 // Import after mocks are registered.
 const { POST } = await import("./route");
 
@@ -41,7 +35,6 @@ const validBody = {
 beforeEach(() => {
   mockMutation.mockReset();
   mockGetClient.mockReset();
-  mockTokenFromServer.mockReset();
 });
 
 describe("POST /api/legal/record-agreement", () => {
@@ -74,22 +67,21 @@ describe("POST /api/legal/record-agreement", () => {
     );
   });
 
-  it("prefers the server-resolved token over the client-forwarded one", async () => {
-    mockTokenFromServer.mockResolvedValue("server.resolved.jwt");
+  it("uses the client-forwarded JWT as the bearer (localStorage auth mode)", async () => {
     mockMutation.mockResolvedValue({ id: "legal-3" });
-    await POST(makeReq({ "x-real-ip": "198.51.100.9" }, validBody));
-    // The auth passed to the Convex client should be the server token.
-    expect(mockGetClient).toHaveBeenCalledWith(
-      expect.objectContaining({ auth: "server.resolved.jwt" }),
-    );
-  });
-
-  it("uses the client-forwarded token when the server has none (localStorage auth)", async () => {
-    mockTokenFromServer.mockResolvedValue(undefined);
-    mockMutation.mockResolvedValue({ id: "legal-4" });
     await POST(makeReq({ "x-real-ip": "198.51.100.9" }, validBody));
     expect(mockGetClient).toHaveBeenCalledWith(
       expect.objectContaining({ auth: "client.jwt.token" }),
+    );
+  });
+
+  it("stays anonymous (no auth) for visitors without a token", async () => {
+    mockMutation.mockResolvedValue({ id: "legal-4" });
+    await POST(
+      makeReq({ "x-real-ip": "198.51.100.9" }, { ...validBody, token: "" }),
+    );
+    expect(mockGetClient).toHaveBeenCalledWith(
+      expect.objectContaining({ auth: undefined }),
     );
   });
 
@@ -103,19 +95,5 @@ describe("POST /api/legal/record-agreement", () => {
     mockMutation.mockRejectedValue(new Error("convex down"));
     const res = await POST(makeReq({ "x-real-ip": "198.51.100.9" }, validBody));
     expect(res.status).toBe(502);
-  });
-
-  it("accepts an empty client token (useAuthToken not yet hydrated) and relies on the server-resolved token", async () => {
-    mockTokenFromServer.mockResolvedValue(undefined);
-    mockMutation.mockResolvedValue({ id: "legal-5" });
-    const res = await POST(
-      makeReq({ "x-real-ip": "198.51.100.9" }, { ...validBody, token: "" }),
-    );
-    expect(res.status).toBe(200);
-    // With no server token and a blank client token, the client is built with
-    // undefined auth (cookie JWT is read by the http client instead).
-    expect(mockGetClient).toHaveBeenCalledWith(
-      expect.objectContaining({ auth: "" }),
-    );
   });
 });

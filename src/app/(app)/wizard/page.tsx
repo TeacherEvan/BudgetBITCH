@@ -1,6 +1,7 @@
 // app/(app)/wizard/page.tsx
 import { getWizardProfile } from '@/lib/db/local-db';
 import { WizardClient } from './wizard-client';
+import { RequireAuth } from '@/components/auth/require-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,8 +10,8 @@ export default async function WizardPage() {
   
   if (profile?.completed) {
     // This will be handled client-side via redirect
-    return <WizardClient wizardCompleted={true} />;
+    return <RequireAuth><WizardClient wizardCompleted={true} /></RequireAuth>;
   }
 
-  return <WizardClient wizardCompleted={false} />;
+  return <RequireAuth><WizardClient wizardCompleted={false} /></RequireAuth>;
 }
