@@ -83,6 +83,17 @@ export function ConvexPasswordAuthForm({
         // The token is forwarded because Convex Auth uses localStorage storage,
         // so the server cannot read the fresh sign-up token on its own.
         if (flow === "signUp") {
+          let tokenToUse = authToken;
+          if (!tokenToUse && typeof window !== "undefined") {
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i);
+              if (key && key.startsWith("__convexAuthJWT_")) {
+                tokenToUse = localStorage.getItem(key);
+                break;
+              }
+            }
+          }
+
           try {
             const res = await fetch("/api/legal/record-agreement", {
               method: "POST",
@@ -94,7 +105,7 @@ export function ConvexPasswordAuthForm({
                   typeof navigator !== "undefined"
                     ? navigator.userAgent
                     : undefined,
-                token: authToken ?? "",
+                token: tokenToUse ?? "",
               }),
             });
             if (!res.ok) {
