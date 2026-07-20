@@ -17,7 +17,7 @@ export interface WizardProfile {
     savingsRatePct: number;   // Q8 (0-50)
     riskTolerance: 'low' | 'medium' | 'high'; // Q9
     locationConsent: boolean; // Q10
-    currency: 'THB' | 'USD'; // derived from locale
+    currency: import('@/lib/utils/currency').CurrencyCode | null; // from locale or location
   };
 }
 
@@ -197,7 +197,8 @@ export interface LocationCache {
   lon: number;
   city: string;
   province: string;
-  country: 'TH' | 'US' | 'OTHER';
+  /** ISO 3166-1 alpha-2 country code (e.g. 'TH', 'GB', 'JP', 'SG'). */
+  country: string | null;
   timestamp: number;
   timezone: string;
 }

@@ -35,7 +35,7 @@ async function persistResolvedArea(lat: number, lon: number): Promise<void> {
       lon,
       city: homeBase.city,
       province: homeBase.region,
-      country: homeBase.countryCode as LocationCache['country'],
+      country: homeBase.countryCode,
       timestamp: Date.now(),
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     };

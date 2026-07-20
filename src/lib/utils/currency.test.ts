@@ -24,6 +24,45 @@ describe('currencyFromLocation', () => {
     expect(currencyFromLocation(undefined as never)).toBeNull();
     expect(currencyFromLocation('')).toBeNull();
   });
+
+  // ── Worldwide coverage (top budgeting apps auto-pick currency by region) ──
+  it('maps Europe to EUR', () => {
+    expect(currencyFromLocation('DE')).toBe('EUR');
+    expect(currencyFromLocation('FR')).toBe('EUR');
+    expect(currencyFromLocation('ES')).toBe('EUR');
+  });
+
+  it('maps United Kingdom to GBP', () => {
+    expect(currencyFromLocation('GB')).toBe('GBP');
+  });
+
+  it('maps Japan to JPY', () => {
+    expect(currencyFromLocation('JP')).toBe('JPY');
+  });
+
+  it('maps Singapore to SGD', () => {
+    expect(currencyFromLocation('SG')).toBe('SGD');
+  });
+
+  it('maps Australia to AUD', () => {
+    expect(currencyFromLocation('AU')).toBe('AUD');
+  });
+
+  it('maps Canada / Brazil / India to their currencies', () => {
+    expect(currencyFromLocation('CA')).toBe('CAD');
+    expect(currencyFromLocation('BR')).toBe('BRL');
+    expect(currencyFromLocation('IN')).toBe('INR');
+  });
+
+  it('is case-insensitive and trims whitespace', () => {
+    expect(currencyFromLocation(' gb ')).toBe('GBP');
+    expect(currencyFromLocation('Jp')).toBe('JPY');
+  });
+
+  it('returns null for unsupported / no-currency codes', () => {
+    expect(currencyFromLocation('AQ')).toBeNull(); // Antarctica
+    expect(currencyFromLocation('XX')).toBeNull();
+  });
 });
 
 describe('formatMoney', () => {
@@ -61,8 +100,8 @@ describe('formatCurrency (legacy locale helper)', () => {
 });
 
 describe('CurrencyCode type', () => {
-  it('is the union of known codes', () => {
-    const codes: CurrencyCode[] = ['THB', 'USD'];
-    expect(codes).toHaveLength(2);
+  it('covers THB, USD and major world currencies', () => {
+    const codes: CurrencyCode[] = ['THB', 'USD', 'GBP', 'EUR', 'JPY', 'SGD', 'AUD'];
+    expect(codes).toHaveLength(7);
   });
 });
