@@ -4,6 +4,12 @@
 import { useState } from 'react';
 import { MapPin, Shield, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { saveLocationCache } from '@/lib/db/local-db';
+import type { LocationCache } from '@/lib/types/budget';
+import {
+  lookupReverseGeocodeCandidate,
+  normalizeReverseGeocodeLabel,
+} from '@/modules/home-base/reverse-geocode-label';
 
 interface StepLocationConsentProps {
   locale: 'th' | 'en';
@@ -12,6 +18,31 @@ interface StepLocationConsentProps {
   error?: string | null;
   disabled?: boolean;
   speak: (text: string) => void;
+}
+
+/**
+ * Reverse-geocodes a coordinate to a city/region/country and persists it to
+ * the location cache. This is what makes `useResolvedCurrency` and Market
+ * Watch resolve to the user's actual country instead of staying null.
+ */
+async function persistResolvedArea(lat: number, lon: number): Promise<void> {
+  try {
+    const candidate = await lookupReverseGeocodeCandidate({ latitude: lat, longitude: lon });
+    const homeBase = normalizeReverseGeocodeLabel(candidate);
+    if (!homeBase) return;
+    const payload: LocationCache = {
+      lat,
+      lon,
+      city: homeBase.city,
+      province: homeBase.region,
+      country: homeBase.countryCode as LocationCache['country'],
+      timestamp: Date.now(),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    };
+    await saveLocationCache(payload);
+  } catch {
+    // Non-fatal: location consent is already recorded upstream.
+  }
 }
 
 export function StepLocationConsent({ locale, value, onChange, error, disabled, speak }: StepLocationConsentProps) {
@@ -71,11 +102,15 @@ export function StepLocationConsent({ locale, value, onChange, error, disabled, 
     // supported across Chrome, Firefox, Safari (macOS + iOS) and all mobile
     // browsers. It triggers the native permission prompt on its own.
     navigator.geolocation.getCurrentPosition(
-      () => {
+      async (position) => {
         setRequesting(false);
         onChange('locationConsent', true);
         const msg = locale === 'th' ? 'อนุญาตตำแหน่งแล้ว' : 'Location permission granted';
         speak(msg);
+        // Resolve + persist the area so currency and Market Watch are
+        // location-driven. Non-fatal: consent is still granted even if the
+        // reverse geocode fails.
+        void persistResolvedArea(position.coords.latitude, position.coords.longitude);
       },
       (err) => {
         setRequesting(false);

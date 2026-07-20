@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
-import { Globe, Volume2, Palette, Trash2, AlertCircle, Shield, Download, Upload, BarChart2, TrendingUp, PieChart, Circle, User, Newspaper, Users, Settings } from 'lucide-react';
+import { Globe, Volume2, Palette, Trash2, AlertCircle, Shield, Download, Upload, BarChart2, TrendingUp, PieChart, Circle, User, Newspaper, Users, Settings, ArrowLeft } from 'lucide-react';
 import { useWizardProfile } from '@/hooks/use-local-db';
 import { useVoice } from '@/hooks/use-voice';
 import { useCriticalExpense } from '@/hooks/use-critical-expense';
@@ -291,7 +291,17 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-black">
       <header className="sticky top-0 z-40 bg-black/95 backdrop-blur-xl border-b border-white/10">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-white">{l.title}</h1>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => router.push('/dashboard')}
+              aria-label={locale === 'th' ? 'กลับ' : 'Back'}
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-white/70 transition-colors hover:border-[rgba(201,150,12,0.4)] hover:text-[#E8B020]"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <h1 className="text-xl font-bold text-white">{l.title}</h1>
+          </div>
         </div>
         {/* Section nav tabs */}
         <nav aria-label="Settings sections" className="max-w-4xl mx-auto px-4 pb-3 flex gap-1 overflow-x-auto scrollbar-none">

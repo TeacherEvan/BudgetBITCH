@@ -35,6 +35,32 @@ export function useResolvedCurrency(): CurrencyCode | null {
 }
 
 /**
+ * Resolves the user's stored location country (TH / US / OTHER) from the
+ * location cache. Returns null until the cache is read (SSR-safe) and null
+ * when no country was accepted/resolved. Used to make Market Watch and other
+ * surfaces location-aware.
+ */
+export function useResolvedCountry(): string | null {
+  const [country, setCountry] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    getLocationCache()
+      .then((cache) => {
+        if (mounted) setCountry(cache?.country ?? null);
+      })
+      .catch(() => {
+        if (mounted) setCountry(null);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  return country;
+}
+
+/**
  * Returns a currency formatter with the SAME signature as the old
  * `formatCurrency(amount, locale)` so existing call sites need only swap
  * the import for `const formatCurrency = useCurrency();`.

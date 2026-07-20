@@ -7,6 +7,7 @@ import { NewsItem } from '@/lib/types/budget';
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
 import { useNewsPrefs } from '@/hooks/use-news-prefs';
+import { useResolvedCountry } from '@/hooks/use-currency';
 
 const CATEGORY_ICONS: Record<NewsItem['category'], React.ReactNode> = {
   finance: <TrendingUp className="w-5 h-5 text-amber-400" />,
@@ -26,8 +27,10 @@ const CATEGORY_LABELS: Record<NewsItem['category'], { th: string; en: string }> 
   deals: { th: 'โปรโมชั่น', en: 'Deals' },
 };
 
-async function fetchNewsAPI(locale: 'th' | 'en'): Promise<NewsItem[]> {
-  const res = await fetch(`/api/news?locale=${locale}`, { 
+async function fetchNewsAPI(locale: 'th' | 'en', country: string | null = null): Promise<NewsItem[]> {
+  const params = new URLSearchParams({ locale });
+  if (country) params.set('country', country);
+  const res = await fetch(`/api/news?${params.toString()}`, { 
     cache: 'no-store',
     headers: { 'Accept': 'application/json' }
   });
@@ -41,14 +44,17 @@ export function AlertsSidebar({ locale, isModal = false }: { locale: 'th' | 'en'
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { filterByGenre } = useNewsPrefs();
+  // Make Market Watch location-aware: a resolved country (TH) overrides the
+  // feed locale even when the UI language is English.
+  const country = useResolvedCountry();
 
   useEffect(() => {
     let mounted = true;
-    
+
     const loadNews = async () => {
       try {
         setLoading(true);
-        const items = await fetchNewsAPI(locale);
+        const items = await fetchNewsAPI(locale, country);
         if (mounted) {
           // Sort by actionable first, then by date
           const sorted = items.sort((a, b) => {
@@ -70,7 +76,7 @@ export function AlertsSidebar({ locale, isModal = false }: { locale: 'th' | 'en'
 
     loadNews();
     return () => { mounted = false; };
-  }, [locale]);
+  }, [locale, country]);
 
   if (loading) {
     return (

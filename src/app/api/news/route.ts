@@ -70,13 +70,16 @@ async function fetchAllNews(): Promise<NewsItem[]> {
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const locale = searchParams.get('locale') as 'th' | 'en' | null;
+  const localeParam = searchParams.get('locale') as 'th' | 'en' | null;
+  // Location-driven: a resolved country selects the feed locale.
+  const country = searchParams.get('country');
+  const effectiveLocale: 'th' | 'en' = country === 'TH' ? 'th' : (localeParam ?? 'en');
 
   const now = Date.now();
 
   // Use cache if valid
   if (newsCache && (now - lastFetch) < CACHE_TTL) {
-    const filtered = newsCache.filter(item => !locale || item.locale === locale);
+    const filtered = newsCache.filter(item => item.locale === effectiveLocale);
     return NextResponse.json({ items: filtered });
   }
 
@@ -85,13 +88,13 @@ export async function GET(request: NextRequest) {
     newsCache = allNews;
     lastFetch = now;
 
-    const filtered = allNews.filter(item => !locale || item.locale === locale);
+    const filtered = allNews.filter(item => item.locale === effectiveLocale);
     return NextResponse.json({ items: filtered });
   } catch (error) {
     console.error('Failed to fetch news:', error);
     // Return cached data even if stale on error
     if (newsCache) {
-      const filtered = newsCache.filter(item => !locale || item.locale === locale);
+      const filtered = newsCache.filter(item => item.locale === effectiveLocale);
       return NextResponse.json({ items: filtered, stale: true });
     }
     return NextResponse.json({ error: 'Failed to fetch news' }, { status: 500 });

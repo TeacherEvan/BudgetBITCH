@@ -61,19 +61,25 @@ export function HeaderBar({ locale, onLocaleChange, voiceEnabled, onVoiceToggle 
         </div>
       </div>
 
-      {/* Center: Gold gradient title */}
-      <h1
-        className="font-display text-sm sm:text-xl font-bold uppercase text-center"
-        style={{
-          letterSpacing: '0.2em',
-          backgroundImage: 'linear-gradient(90deg, #C9960C, #F5D742)',
-          WebkitBackgroundClip: 'text',
-          backgroundClip: 'text',
-          color: 'transparent',
-        }}
+      {/* Center: Gold gradient title — click to return Home (dashboard) */}
+      <Link
+        href="/dashboard"
+        aria-label={locale === 'th' ? 'หน้าแรก' : 'Home'}
+        className="no-underline"
       >
-        BudgetBITCH
-      </h1>
+        <h1
+          className="font-display text-sm sm:text-xl font-bold uppercase text-center"
+          style={{
+            letterSpacing: '0.2em',
+            backgroundImage: 'linear-gradient(90deg, #C9960C, #F5D742)',
+            WebkitBackgroundClip: 'text',
+            backgroundClip: 'text',
+            color: 'transparent',
+          }}
+        >
+          BudgetBITCH
+        </h1>
+      </Link>
 
       {/* Right: Voice pill + Settings wrench */}
       <div className="flex items-center gap-3">
