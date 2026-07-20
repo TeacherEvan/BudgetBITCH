@@ -8,6 +8,10 @@ vi.mock('@/lib/db/local-db', () => ({
   getLocationCache: vi.fn(),
 }));
 
+// Override hook reads/writes localStorage; isolate it per test.
+beforeEach(() => {
+  window.localStorage.clear();
+});
 describe('useResolvedCurrency', () => {
   it('resolves TH country to THB after mount', async () => {
     vi.mocked(localDb.getLocationCache).mockResolvedValue({
@@ -35,6 +39,25 @@ describe('useResolvedCurrency', () => {
       await Promise.resolve();
     });
     expect(result.current).toBeNull();
+  });
+
+  it('lets a manual override beat the resolved location', async () => {
+    // Location says Thailand (THB), but user pinned GBP in Settings.
+    window.localStorage.setItem('bb:currencyOverride', 'GBP');
+    vi.mocked(localDb.getLocationCache).mockResolvedValue({
+      lat: 0,
+      lon: 0,
+      city: 'Bangkok',
+      province: 'Bangkok',
+      country: 'TH',
+      timestamp: 0,
+      timezone: 'Asia/Bangkok',
+    });
+    const { result } = renderHook(() => useResolvedCurrency());
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(result.current).toBe('GBP');
   });
 });
 

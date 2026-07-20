@@ -8,17 +8,25 @@ import {
   formatMoney,
   type CurrencyCode,
 } from '@/lib/utils/currency';
+import { useCurrencyOverride } from './use-currency-override';
 
 /**
- * Resolves the display currency from the user's stored location country.
- * Returns null until the cache is read (SSR-safe) and null when no country
- * was accepted/resolved — meaning "no currency symbol, numerals only".
+ * Resolves the display currency from the user's stored location country,
+ * overridden by any explicit manual selection (Settings → Currency).
+ * Returns null until resolved (SSR-safe) and null when no country was
+ * accepted/resolved and no override is set — meaning "no currency symbol".
  */
 export function useResolvedCurrency(): CurrencyCode | null {
   const [currency, setCurrency] = useState<CurrencyCode | null>(null);
+  const { override } = useCurrencyOverride();
 
   useEffect(() => {
     let mounted = true;
+    if (override) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCurrency(override);
+      return;
+    }
     getLocationCache()
       .then((cache) => {
         if (mounted) setCurrency(currencyFromLocation(cache?.country ?? null));
@@ -29,7 +37,7 @@ export function useResolvedCurrency(): CurrencyCode | null {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [override]);
 
   return currency;
 }
