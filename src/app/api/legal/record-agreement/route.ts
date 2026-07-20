@@ -22,7 +22,10 @@ const Body = z.object({
   termsVersion: z.string(),
   privacyVersion: z.string(),
   userAgent: z.string().optional(),
-  token: z.string().min(1),
+  // Client-forwarded fallback only. The server prefers the cookie-resolved
+  // token (see convexAuthNextjsToken below); useAuthToken() on the client may
+  // still be empty at POST time, so a blank token must not 400 the request.
+  token: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {

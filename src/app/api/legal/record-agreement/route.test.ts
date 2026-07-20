@@ -104,4 +104,18 @@ describe("POST /api/legal/record-agreement", () => {
     const res = await POST(makeReq({ "x-real-ip": "198.51.100.9" }, validBody));
     expect(res.status).toBe(502);
   });
+
+  it("accepts an empty client token (useAuthToken not yet hydrated) and relies on the server-resolved token", async () => {
+    mockTokenFromServer.mockResolvedValue(undefined);
+    mockMutation.mockResolvedValue({ id: "legal-5" });
+    const res = await POST(
+      makeReq({ "x-real-ip": "198.51.100.9" }, { ...validBody, token: "" }),
+    );
+    expect(res.status).toBe(200);
+    // With no server token and a blank client token, the client is built with
+    // undefined auth (cookie JWT is read by the http client instead).
+    expect(mockGetClient).toHaveBeenCalledWith(
+      expect.objectContaining({ auth: "" }),
+    );
+  });
 });
