@@ -15,7 +15,8 @@ export function RequireAuth({
   children: ReactNode;
   redirectTo?: string;
 }) {
-  const { isLoading, isAuthenticated } = useConvexAuth();
+  const auth = useConvexAuth();
+  const { isLoading, isAuthenticated } = auth ?? { isLoading: true, isAuthenticated: false };
   const router = useRouter();
 
   useEffect(() => {
