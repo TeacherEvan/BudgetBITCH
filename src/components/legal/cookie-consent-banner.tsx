@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore, useState } from "react";
 import { useAuthToken } from "@convex-dev/auth/react";
 import { useLocale } from "next-intl";
 import { shortLocale, COOKIE_POLICY_VERSION } from "@/lib/legal/versions";
@@ -41,12 +41,15 @@ function readStored(): StoredChoice | null {
   }
 }
 
-function initialVisible(): boolean {
-  if (typeof window === "undefined") return false;
+function isBannerVisible(): boolean {
   const stored = readStored();
   // Show only when no choice exists, or the policy version changed.
   return !stored || stored.version !== COOKIE_POLICY_VERSION;
 }
+
+// Noop subscribe: banner visibility is derived from localStorage in the client
+// snapshot and toggled locally via `hidden` once the user makes a choice.
+const noopSubscribe = () => () => {};
 
 export function CookieConsentBanner() {
   const localeRaw = useLocale();
@@ -58,13 +61,16 @@ export function CookieConsentBanner() {
 
   // Server and first client render both show nothing (no banner) so the HTML
   // matches; the real visibility is decided after mount from localStorage.
-  // Reading localStorage in the useState initializer would diverge server vs
-  // client and trigger a React #418 hydration mismatch.
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    setVisible(initialVisible());
-  }, []);
+  // useSyncExternalStore reads localStorage in the client snapshot and returns
+  // false on the server snapshot, avoiding a React #418 hydration mismatch
+  // without calling setState synchronously inside an effect.
+  const [hidden, setHidden] = useState(false);
+  const needsConsent = useSyncExternalStore(
+    noopSubscribe,
+    isBannerVisible,
+    () => false,
+  );
+  const visible = needsConsent && !hidden;
 
   function persist(accepted: boolean, optionalAccepted: boolean) {
     const choice: StoredChoice = {
@@ -77,7 +83,7 @@ export function CookieConsentBanner() {
     } catch {
       // Non-fatal: consent UX must not break if storage is unavailable.
     }
-    setVisible(false);
+    setHidden(true);
 
     // Fire-and-forget server record via the relay. The relay captures the real
     // client IP server-side (Convex mutations can't see the request). Never
