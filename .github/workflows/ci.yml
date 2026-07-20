@@ -102,6 +102,42 @@ jobs:
       - name: Build
         run: npm run build
 
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    # Runs even if prior jobs are skipped; gates merges only when it fails.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright E2E
+        # No E2E_BASE_URL => config boots the local dev server (Convex env from
+        # secrets). Authed tests use E2E_TEST_EMAIL/PASSWORD; if those secrets
+        # are unset the authed specs skip and only the unauthenticated coverage
+        # runs (job stays green). Set the four secrets below to exercise real
+        # sign-in + webview flows in CI.
+        env:
+          NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
+          NEXT_PUBLIC_CONVEX_SITE_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_SITE_URL }}
+          CONVEX_SITE_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_SITE_URL }}
+          NEXT_PUBLIC_APP_URL: http://127.0.0.1:3100
+          SITE_URL: http://127.0.0.1:3100
+          E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
+          E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+        run: npx playwright test --reporter=line
+
   # Surfaced but non-blocking: next-pwa (the prior source of a transitive RCE
   # via workbox-build) has been removed in favor of a hand-written service
   # worker, so that specific advisory no longer applies. Any remaining
