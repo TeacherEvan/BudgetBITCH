@@ -2,24 +2,29 @@ import { test, expect } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
 
+// NOTE: This legacy dogfood audit flow assumes the old cookie-based E2E
+// signed-in override. On the webview-localStorage-auth branch auth is
+// client-only, so we perform a REAL sign-in. It skips cleanly when
+// E2E_TEST_EMAIL / E2E_TEST_PASSWORD are not set.
+const TEST_EMAIL = process.env.E2E_TEST_EMAIL;
+const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD;
+
 test.describe('BudgetBITCH Dogfood Audit E2E Flow', () => {
-  test.beforeEach(async ({ context }) => {
-    // Inject auth state cookie to bypass Convex authentication in middleware
-    // and set locale cookie to default to English
-    await context.addCookies([
-      {
-        name: 'budgetbitch:e2e-auth-state',
-        value: 'signed-in',
-        domain: '127.0.0.1',
-        path: '/',
-      },
-      {
-        name: 'bb-locale',
-        value: 'en',
-        domain: '127.0.0.1',
-        path: '/',
-      },
-    ]);
+  test.beforeEach(async ({ page }) => {
+    if (!TEST_EMAIL || !TEST_PASSWORD) {
+      test.skip(true, 'E2E_TEST_EMAIL / E2E_TEST_PASSWORD not set');
+    }
+    // Real sign-in (client-only auth).
+    await page.goto('/sign-in');
+    await page.getByLabel(/email address/i).fill(TEST_EMAIL);
+    await page.getByLabel(/password/i).fill(TEST_PASSWORD);
+    await page.getByRole('button', { name: /sign in$/i }).click();
+    await expect(page).toHaveURL(/\/(dashboard|wizard)/, { timeout: 20000 });
+    // Seed locale + manifesto-seen so the audit sees the dashboard directly.
+    await page.evaluate(() => {
+      localStorage.setItem('budgetbitch:locale', 'en');
+      localStorage.setItem('bb:manifesto-v1', '1');
+    });
   });
 
   test('walks through onboarding wizard and explores the dashboard', async ({ page }) => {
