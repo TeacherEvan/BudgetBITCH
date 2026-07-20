@@ -147,6 +147,35 @@ jobs:
   # via workbox-build) has been removed in favor of a hand-written service
   # worker, so that specific advisory no longer applies. Any remaining
   # high-severity advisories are reviewed but do not gate every merge.
+  # Fails on any PR/push if the *intended* prod Convex deployment is not the
+  # canonical one. Runs without a real Vercel build (uses the canonical slug
+  # directly), so it catches a stale NEXT_PUBLIC_CONVEX_URL env BEFORE Vercel
+  # auto-deploys. The authoritative hard-fail still lives in scripts/
+  # check-convex-deployment.mjs as a `prebuild` on the Vercel production build,
+  # where the real NEXT_PUBLIC_CONVEX_URL env is present.
+  deploy-guard:
+    name: Prod Convex Deployment Guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Verify prod Convex URL matches canonical deployment
+        env:
+          EXPECTED_SLUG: steady-ox-280
+          NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
+        run: |
+          if [ -z "$NEXT_PUBLIC_CONVEX_URL" ]; then
+            echo "NEXT_PUBLIC_CONVEX_URL secret not set — skipping (guard runs authoritatively in Vercel prod prebuild)."
+            exit 0
+          fi
+          slug=$(echo "$NEXT_PUBLIC_CONVEX_URL" | sed -E 's#https://([a-z0-9-]+)\.convex\.(cloud|site).*#\1#I')
+          if [ "$slug" != "$EXPECTED_SLUG" ]; then
+            echo "::error::NEXT_PUBLIC_CONVEX_URL points at '$slug' but prod deployment is '$EXPECTED_SLUG'. Fix the Vercel prod env before deploy."
+            exit 1
+          fi
+          echo "OK: Vercel prod NEXT_PUBLIC_CONVEX_URL targets canonical deployment '$EXPECTED_SLUG'."
+
   security-audit:
     name: Security Audit
     runs-on: ubuntu-latest

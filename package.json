@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "node ./scripts/run-with-sanitized-env.mjs next dev",
     "build": "node ./scripts/run-with-sanitized-env.mjs next build",
+    "prebuild": "node ./scripts/check-convex-deployment.mjs",
     "start": "node ./scripts/run-with-sanitized-env.mjs next start",
     "lint": "eslint .",
     "test": "vitest run",
