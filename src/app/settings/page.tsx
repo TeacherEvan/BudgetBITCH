@@ -18,12 +18,30 @@ import { Toggle } from '@/components/ui/toggle';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { Modal } from '@/components/ui/modal';
 import { LocaleSwitcher } from '@/components/i18n/locale-switcher';
+import { useCurrencyOverride, type CurrencyOverride } from '@/hooks/use-currency-override';
 import { USER_DATA_STORES, type UserDataStore, clearAllUserData, getDB } from '@/lib/db/local-db';
+import { formatMoney } from '@/lib/utils/currency';
 import { format } from 'date-fns';
 
 type SettingsLocale = 'th' | 'en';
 
 type Status = 'idle' | 'success' | 'error';
+
+/** Manual currency options. `null` = AUTO (use resolved location). */
+const CURRENCY_OPTIONS: { code: CurrencyOverride; label: { th: string; en: string } }[] = [
+  { code: null,      label: { th: 'อัตโนมัติ (ตามตำแหน่ง)', en: 'Auto (from location)' } },
+  { code: 'THB',     label: { th: 'บาทไทย (THB)', en: 'Thai Baht (THB)' } },
+  { code: 'USD',     label: { th: 'ดอลลาร์สหรัฐ (USD)', en: 'US Dollar (USD)' } },
+  { code: 'GBP',     label: { th: 'ปอนด์อังกฤษ (GBP)', en: 'British Pound (GBP)' } },
+  { code: 'EUR',     label: { th: 'ยูโร (EUR)', en: 'Euro (EUR)' } },
+  { code: 'JPY',     label: { th: 'เยนญี่ปุ่น (JPY)', en: 'Japanese Yen (JPY)' } },
+  { code: 'SGD',     label: { th: 'ดอลลาร์สิงคโปร์ (SGD)', en: 'Singapore Dollar (SGD)' } },
+  { code: 'AUD',     label: { th: 'ดอลลาร์ออสเตรเลีย (AUD)', en: 'Australian Dollar (AUD)' } },
+  { code: 'MYR',     label: { th: 'ริงกิตมาเลเซีย (MYR)', en: 'Malaysian Ringgit (MYR)' } },
+  { code: 'CAD',     label: { th: 'ดอลลาร์แคนาดา (CAD)', en: 'Canadian Dollar (CAD)' } },
+  { code: 'INR',     label: { th: 'รูปีอินเดีย (INR)', en: 'Indian Rupee (INR)' } },
+  { code: 'CNY',     label: { th: 'หยวนจีน (CNY)', en: 'Chinese Yuan (CNY)' } },
+];
 
 const labels = {
   th: {
@@ -158,6 +176,7 @@ export default function SettingsPage() {
   const shared = useSharedBoard();
   const { graphType, setGraphType, accentColor, setAccentColor } = useDisplayPrefs();
   const { isGenreEnabled, toggleGenre } = useNewsPrefs();
+  const { override, setOverride } = useCurrencyOverride();
   const [code, setCode] = useState('');
   const [linkError, setLinkError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -336,6 +355,26 @@ export default function SettingsPage() {
               <label className="block text-sm font-medium text-white/70 mb-2">{l.locale} <Globe className="inline w-4 h-4 ml-1" /></label>
               <LocaleSwitcher />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-white/70 mb-2">{locale === 'th' ? 'สกุลเงิน' : 'Currency'} <span className="text-white/40 text-xs ml-1">{locale === 'th' ? '(คัดเลือกด้วยตนเอง)' : '(manual override)'}</span></label>
+              <p className="text-xs text-white/40 mb-3">{locale === 'th' ? 'คัดเลือกอัตโนมัติจะใช้ตำแหน่งของคุณ — หรือคัดเลือกสกุลเงินที่จะแสดง' : 'Auto uses your detected location — or pin a currency to display everywhere'}</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {CURRENCY_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.code ?? 'auto'}
+                    type="button"
+                    onClick={() => setOverride(opt.code)}
+                    className={`flex items-center justify-center rounded-xl border px-3 py-2 text-sm font-medium transition-all ${
+                      override === opt.code
+                        ? 'border-[#C9960C] bg-[rgba(201,150,12,0.15)] text-[#E8B020]'
+                        : 'border-white/10 bg-white/4 text-white/50 hover:border-white/20 hover:text-white/80'
+                    }`}
+                  >
+                    <span>{opt.label[locale]}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </Card>
         </section>
 
@@ -353,7 +392,7 @@ export default function SettingsPage() {
                   </div>
                   <div className="min-w-0">
                     <p className="font-semibold text-white truncate">
-                      {profile.answers.currency ?? 'THB'} {locale === 'th' ? 'โปรไฟล์' : 'Profile'}
+                      {override ?? profile.answers.currency ?? 'THB'} {locale === 'th' ? 'โปรไฟล์' : 'Profile'}
                     </p>
                     <p className="text-xs text-white/50 mt-0.5">
                       {locale === 'th' ? 'รายรับต่อเดือน: ' : 'Monthly income: '}
@@ -713,12 +752,12 @@ export default function SettingsPage() {
                   {commitment ? l.committed : l.notCommitted}
                 </span>
               </div>
-              {commitment && (
+              {commitment && profile && (
                 <div className="bg-black/30 rounded-xl p-3 text-sm">
                   <p className="text-white/70">
                     {locale === 'th'
-                      ? `คุณเลือกลด: ${commitment.expenseKey} | ประหยัดต่อเดือน: ${commitment.estimatedMonthlyCost.toLocaleString()} บาท`
-                      : `You chose: ${commitment.expenseKey} | Monthly savings: ${commitment.estimatedMonthlyCost.toLocaleString()} THB`}
+                      ? `คุณเลือกลด: ${commitment.expenseKey} | ประหยัดต่อเดือน: ${formatMoney(commitment.estimatedMonthlyCost, override ?? profile.answers.currency ?? 'THB', 'th')}`
+                      : `You chose: ${commitment.expenseKey} | Monthly savings: ${formatMoney(commitment.estimatedMonthlyCost, override ?? profile.answers.currency ?? 'THB', 'en')}`}
                   </p>
                 </div>
               )}
