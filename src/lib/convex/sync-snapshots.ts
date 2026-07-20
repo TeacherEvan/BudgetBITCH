@@ -139,7 +139,15 @@ export async function syncDailySnapshot(): Promise<{ success: boolean; date: str
 
 // Service Worker registration
 export function registerSyncWorker() {
-  if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  if (
+    typeof window !== 'undefined' &&
+    'serviceWorker' in navigator &&
+    // In-app webviews (LINE, WhatsApp, etc.) often break the SW + cookie auth;
+    // skip registration there to avoid hijacked fetches and stale shells.
+    !/Line\/|WhatsApp|FBAN|FBAV|Instagram|LinkedInApp|Telegram/i.test(
+      navigator.userAgent,
+    )
+  ) {
     navigator.serviceWorker.register('/sw.js').then((registration) => {
       console.log('SW registered:', registration.scope);
       

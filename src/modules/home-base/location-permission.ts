@@ -47,10 +47,18 @@ function isSecureGeolocationContext() {
   return window.isSecureContext;
 }
 
+function isInAppWebView() {
+  if (typeof navigator === "undefined") return false;
+  return /Line\/|WhatsApp|FBAN|FBAV|Instagram|LinkedInApp|Telegram/i.test(
+    navigator.userAgent,
+  );
+}
+
 export async function getGeolocationPermissionState(): Promise<GeolocationPermissionState> {
   if (
     typeof navigator === "undefined" ||
     !isSecureGeolocationContext() ||
+    isInAppWebView() ||
     !navigator.permissions?.query
   ) {
     return "unsupported";
@@ -70,6 +78,7 @@ export async function requestCurrentPosition(
   if (
     typeof navigator === "undefined" ||
     !isSecureGeolocationContext() ||
+    isInAppWebView() ||
     !navigator.geolocation?.getCurrentPosition
   ) {
     return { status: "unsupported" };
