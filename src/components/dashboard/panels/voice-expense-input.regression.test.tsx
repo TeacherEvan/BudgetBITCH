@@ -7,11 +7,16 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, act, waitFor, fireEvent, screen } from '@testing-library/react';
 import { VoiceExpenseInput } from './voice-expense-input';
 
+interface FakeSpeechEvent {
+  resultIndex: number;
+  results: ArrayLike<{ 0: { transcript: string }; isFinal: boolean; length: number }>;
+}
+
 class FakeRecognition {
   continuous = false; interimResults = true; lang = 'en-US'; maxAlternatives = 1;
   onstart: ((e: Event) => void) | null = null;
-  onresult: ((e: any) => void) | null = null;
-  onerror: ((e: any) => void) | null = null;
+  onresult: ((e: FakeSpeechEvent) => void) | null = null;
+  onerror: ((e: unknown) => void) | null = null;
   onend: ((e: Event) => void) | null = null;
   start() { this.onstart?.(new Event('start')); }
   // NOTE: stop() intentionally does NOT fire onend -> simulates stuck listening
@@ -28,13 +33,14 @@ vi.mock('@/hooks/use-currency', () => ({ useCurrency: () => (a: number) => `฿$
 
 describe('VoiceExpenseInput stuck-listening bug', () => {
   beforeEach(() => {
-    vi.stubGlobal('SpeechRecognition', FakeSR as any);
-    vi.stubGlobal('webkitSpeechRecognition', FakeSR as any);
-    (window as any).SpeechRecognition = FakeSR;
-    (window as any).webkitSpeechRecognition = FakeSR;
-    const synth = { speak: vi.fn(), cancel: vi.fn() };
-    (window as any).speechSynthesis = synth;
-    (window as any).SpeechSynthesisUtterance = class { constructor(public text: string) {} };
+    vi.stubGlobal('SpeechRecognition', FakeSR);
+    vi.stubGlobal('webkitSpeechRecognition', FakeSR);
+    Object.assign(window, {
+      SpeechRecognition: FakeSR,
+      webkitSpeechRecognition: FakeSR,
+      speechSynthesis: { speak: vi.fn(), cancel: vi.fn() },
+      SpeechSynthesisUtterance: class { constructor(public text: string) {} },
+    });
   });
   afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
