@@ -26,7 +26,7 @@ import {
   getCurrentAccountId,
   getLocalAccount,
 } from "@/lib/db/accountStorage";
-import { notifyBoardChanged, BOARD_CHANGED_EVENT } from "@/lib/types/budget";
+import { BOARD_CHANGED_EVENT } from "@/lib/types/budget";
 
 const BOARD_QUEUE_KEY = "budgetbitch:accountBoardQueue";
 const PUSH_DEBOUNCE_MS = 800;
@@ -68,6 +68,14 @@ export function useAccountSync(): UseAccountSync {
   const getBoard = useQuery(api.accounts.getAccountBoard, boardId ? { boardId } : "skip");
   const pushBoard = useMutation(api.accounts.pushAccountBoard);
 
+  // Guard so a reactive re-fire of getAccountBoard (e.g. our own push echoed
+  // back) doesn't re-apply an already-applied board and clobber local edits.
+  const lastAppliedAt = useRef<number>(0);
+  const applyingRemote = useRef<boolean>(false);
+  // Latest boardId in a ref so the push path always reads the current value
+  // (avoids stale closures when the edit listener fires before a re-render).
+  const boardIdRef = useRef<string | null>(null);
+
   // Resolve the active account's boardId from local storage.
   useEffect(() => {
     let cancelled = false;
@@ -75,6 +83,7 @@ export function useAccountSync(): UseAccountSync {
       const accountId = await getCurrentAccountId();
       const meta = await getLocalAccount(accountId);
       if (cancelled) return;
+      boardIdRef.current = meta?.boardId ?? null;
       setBoardId(meta?.boardId ?? null);
       setLoading(false);
     })();
@@ -88,17 +97,18 @@ export function useAccountSync(): UseAccountSync {
   const pendingRef = useRef(false);
 
   const doPush = async () => {
-    if (!boardId || !isOnline()) return;
+    const bid = boardIdRef.current;
+    if (!bid || !isOnline()) return;
     try {
       setSyncing(true);
       const data = await serializeBoardForSync();
-      await pushBoard({ boardId, data: data as never, updatedAt: Date.now() });
+      await pushBoard({ boardId: bid, data: data as never, updatedAt: Date.now() });
       setLastError(null);
     } catch (e) {
       setLastError(e instanceof Error ? e.message : "Push failed");
       // Queue for retry while offline / on error.
       const q = getQueue();
-      q.push({ boardId, at: Date.now() });
+      q.push({ boardId: bid, at: Date.now() });
       setQueue(q);
     } finally {
       setSyncing(false);
@@ -107,12 +117,13 @@ export function useAccountSync(): UseAccountSync {
   };
 
   const schedulePush = () => {
+    const bid = boardIdRef.current;
     pendingRef.current = true;
     setPushPending(true);
     // Offline: queue the edit; it replays on the 'online' event.
     if (!isOnline()) {
       const q = getQueue();
-      q.push({ boardId, at: Date.now() });
+      q.push({ boardId: bid, at: Date.now() });
       setQueue(q);
       return;
     }
@@ -122,20 +133,21 @@ export function useAccountSync(): UseAccountSync {
     }, PUSH_DEBOUNCE_MS);
   };
 
-  // Listen for local board edits → schedule a push (only for a shared board).
+  // Listen for local board edits → schedule a push. Attached unconditionally;
+  // doPush/schedulePush no-op until boardId resolves, so an edit made in the
+  // first tick after mount is still captured (no stale-closure loss).
   useEffect(() => {
-    if (!boardId) return;
     const onChanged = () => schedulePush();
     window.addEventListener(BOARD_CHANGED_EVENT, onChanged);
     return () => window.removeEventListener(BOARD_CHANGED_EVENT, onChanged);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [boardId]);
+  }, []);
 
   // Replay queued pushes when back online.
   useEffect(() => {
     const onOnline = () => {
       const q = getQueue();
-      if (q.length && isOnline() && boardId) {
+      if (q.length && isOnline() && boardIdRef.current) {
         setQueue([]);
         void doPush();
       }
@@ -143,7 +155,7 @@ export function useAccountSync(): UseAccountSync {
     window.addEventListener("online", onOnline);
     return () => window.removeEventListener("online", onOnline);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [boardId]);
+  }, []);
 
   // Pull: apply a newer remote board into local storage.
   useEffect(() => {
@@ -155,19 +167,27 @@ export function useAccountSync(): UseAccountSync {
       data: Record<string, { value: unknown; updatedAt: number }> | null;
     };
     if (!remote.data) return;
+    if (remote.updatedAt <= lastAppliedAt.current) return;
+    if (applyingRemote.current) return;
+
     (async () => {
+      applyingRemote.current = true;
       try {
         setSyncing(true);
         await applyRemoteBoard(remote.data as Record<string, { value: unknown; updatedAt: number }>);
-        notifyBoardChanged();
+        lastAppliedAt.current = remote.updatedAt;
+        // NOTE: intentionally do NOT call notifyBoardChanged() here. A remote
+        // pull must not re-trigger the local push listener (that would echo
+        // push → server → pull → push … forever). UI reads local data on its
+        // own queries and refreshes on the next render.
         setLastError(null);
       } catch (e) {
         setLastError(e instanceof Error ? e.message : "Pull failed");
       } finally {
+        applyingRemote.current = false;
         setSyncing(false);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boardId, getBoard]);
 
   return { boardId, loading, syncing, pushPending, lastError };

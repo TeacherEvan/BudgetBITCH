@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/components/providers/theme-provider';
 import { ConvexAuthNextjsServerProvider } from '@convex-dev/auth/nextjs/server';
 import { ConvexClientProvider } from '@/components/providers/convex-client-provider';
 import { SharedBoardSync } from '@/components/shared-board/shared-board-sync';
+import { AccountSyncMount } from '@/components/accounts/account-sync-mount';
 import { PWARegister } from '@/components/pwa/pwa-register';
 import { SiteFooter } from '@/components/legal/site-footer';
 import { CookieConsentBanner } from '@/components/legal/cookie-consent-banner';
@@ -53,6 +54,7 @@ export default async function RootLayout({
             <ThemeProvider>
               <ConvexClientProvider>
                 <SharedBoardSync />
+                <AccountSyncMount />
                 <PWARegister />
                 {children}
                 <SiteFooter />

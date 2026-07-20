@@ -1,7 +1,7 @@
 // hooks/use-account-sync.test.tsx
 import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, act, waitFor } from '@testing-library/react';
+import { render, act, waitFor, cleanup } from '@testing-library/react';
 import { BOARD_CHANGED_EVENT } from '@/lib/types/budget';
 import {
   saveWizardProfile,
@@ -9,7 +9,6 @@ import {
   clearAllData,
 } from '@/lib/db/local-db';
 import {
-  getCurrentAccountId,
   setCurrentAccountId,
   saveLocalAccount,
 } from '@/lib/db/accountStorage';
@@ -65,6 +64,7 @@ type FixtureBoard = {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 beforeEach(async () => {
+  cleanup();
   queryResults = { getBoard: null };
   pushBoard.mockClear();
   await clearAllData();
@@ -82,6 +82,10 @@ beforeEach(async () => {
   });
 });
 
+afterEach(() => {
+  cleanup();
+});
+
 describe('useAccountSync', () => {
   it('pulls a newer remote account board into local storage', async () => {
     await saveWizardProfile(makeProfile(50000));
@@ -93,11 +97,11 @@ describe('useAccountSync', () => {
       queryResults = {
         getBoard: {
           boardId: 'board_family',
-          updatedAt: 5000,
+          updatedAt: Date.now() + 5_000_000,
           data: {
             'wizardProfile:current': {
               value: { ...makeProfile(999999) },
-              updatedAt: 5000,
+              updatedAt: Date.now() + 5_000_000,
             },
           },
         } as FixtureBoard,
@@ -112,8 +116,43 @@ describe('useAccountSync', () => {
     });
   });
 
+  it('does not clobber a local edit when the remote board is older (lossless pull)', async () => {
+    await saveWizardProfile(makeProfile(50000));
+    expect((await getWizardProfile())?.answers.income).toBe(50000);
+
+    const result = render(<HookProbe />);
+
+    // Remote board is OLDER than the local write (updatedAt well in the past).
+    await act(async () => {
+      queryResults = {
+        getBoard: {
+          boardId: 'board_family',
+          updatedAt: 100, // older than the local write (Date.now())
+          data: {
+            'wizardProfile:current': {
+              value: { ...makeProfile(1) },
+              updatedAt: 100,
+            },
+          },
+        } as FixtureBoard,
+      };
+      result.rerender(<HookProbe />);
+      await sleep(50);
+    });
+
+    // Local edit must survive the stale pull.
+    await waitFor(async () => {
+      const local = await getWizardProfile();
+      expect(local?.answers.income).toBe(50000);
+    });
+  });
+
   it('debounces rapid local edits into a single push to the account board', async () => {
     render(<HookProbe />);
+    // Let the active account's boardId resolve + push listener attach.
+    await act(async () => {
+      await sleep(250);
+    });
     await act(async () => {
       window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT));
       window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT));

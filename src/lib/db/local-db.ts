@@ -92,15 +92,23 @@ interface BudgetBITCHDB extends DBSchema {
     };
   };
   // Misc cross-cutting string flags (e.g. bb:currentAccount). Untyped
-  // key/value store so it never conflicts with the strict settings schema.
+  // bbMeta (misc cross-cutting string flags) — Accounts feature
   bbMeta: {
     key: string;
     value: string;
   };
+  // Per-record local write timestamps (ms). Used by applyRemoteBoard to do a
+  // LOSSLESS pull: a remote record is only applied when it is strictly newer
+  // than the local write, so an unpushed local edit is never clobbered by a
+  // stale server blob. Key format: "<store>:<recordKey>".
+  localWrites: {
+    key: string;
+    value: number;
+  };
 }
 
 const DB_NAME = 'budgetbitch';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 let dbInstance: IDBPDatabase<BudgetBITCHDB> | null = null;
 
 export async function getDB(): Promise<IDBPDatabase<BudgetBITCHDB>> {
@@ -222,17 +230,61 @@ export async function getDB(): Promise<IDBPDatabase<BudgetBITCHDB>> {
       if (!db.objectStoreNames.contains('bbMeta')) {
         db.createObjectStore('bbMeta');
       }
+
+      // localWrites (per-record write timestamps for lossless remote merge)
+      if (!db.objectStoreNames.contains('localWrites')) {
+        db.createObjectStore('localWrites');
+      }
     },
   });
 
   return dbInstance;
 }
 
+// ── lossless-sync write bookkeeping ────────────────────────────────────────
+// Every board-data mutation stamps a per-record write timestamp so that
+// applyRemoteBoard can do a LOSSLESS pull: a remote record only overwrites a
+// local one when it is strictly newer. Without this, an auto-pull that lands
+// in the debounce window between a local edit and its push would clobber the
+// local edit (the "I edited it and it vanished" bug).
+
+function writeKey(store: string, key: string): string {
+  return `${store}:${key}`;
+}
+
+export async function recordLocalWrite(store: string, key: string): Promise<void> {
+  try {
+    const db = await getDB();
+    await db.put('localWrites', Date.now(), writeKey(store, key));
+  } catch {
+    // Non-fatal; worst case a rare pull races an unpushed edit.
+  }
+}
+
+export async function getLocalWrite(store: string, key: string): Promise<number> {
+  try {
+    const db = await getDB();
+    return (await db.get('localWrites', writeKey(store, key))) ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Call at the end of every board-data mutation. Records the local write time
+ * (for lossless merges) AND emits BOARD_CHANGED_EVENT so the sync hooks
+ * (useSharedBoard / useAccountSync) auto-push the change to Convex.
+ */
+export async function afterBoardMutation(store: string, key: string): Promise<void> {
+  await recordLocalWrite(store, key);
+  notifyBoardChanged();
+}
+
 // Wizard Profile
 export async function saveWizardProfile(profile: WizardProfile): Promise<void> {
   const db = await getDB();
   await db.put('wizardProfile', profile, 'current');
-  notifyBoardChanged();
+  await afterBoardMutation('wizardProfile', 'current');
 }
 
 export async function getWizardProfile(): Promise<WizardProfile | undefined> {
@@ -249,19 +301,19 @@ export async function clearWizardProfile(): Promise<void> {
 export async function addExpense(expense: ExpenseEntry): Promise<void> {
   const db = await getDB();
   await db.add('expenses', expense);
-  notifyBoardChanged();
+  await afterBoardMutation('expenses', expense.id);
 }
 
 export async function updateExpense(expense: ExpenseEntry): Promise<void> {
   const db = await getDB();
   await db.put('expenses', expense);
-  notifyBoardChanged();
+  await afterBoardMutation('expenses', expense.id);
 }
 
 export async function deleteExpense(id: string): Promise<void> {
   const db = await getDB();
   await db.delete('expenses', id);
-  notifyBoardChanged();
+  await afterBoardMutation('expenses', id);
 }
 
 export async function getExpenses(): Promise<ExpenseEntry[]> {
@@ -284,7 +336,7 @@ export async function getExpensesByCategory(category: ExpenseCategory): Promise<
 export async function saveBudgetCategory(budget: BudgetCategory): Promise<void> {
   const db = await getDB();
   await db.put('budgets', budget);
-  notifyBoardChanged();
+  await afterBoardMutation('budgets', budget.category);
 }
 
 export async function getBudgetCategory(category: ExpenseCategory): Promise<BudgetCategory | undefined> {
@@ -301,19 +353,19 @@ export async function getAllBudgets(): Promise<BudgetCategory[]> {
 export async function addBill(bill: Bill): Promise<void> {
   const db = await getDB();
   await db.add('bills', bill);
-  notifyBoardChanged();
+  await afterBoardMutation('bills', bill.id);
 }
 
 export async function updateBill(bill: Bill): Promise<void> {
   const db = await getDB();
   await db.put('bills', bill);
-  notifyBoardChanged();
+  await afterBoardMutation('bills', bill.id);
 }
 
 export async function deleteBill(id: string): Promise<void> {
   const db = await getDB();
   await db.delete('bills', id);
-  notifyBoardChanged();
+  await afterBoardMutation('bills', id);
 }
 
 export async function getAllBills(): Promise<Bill[]> {
@@ -325,19 +377,19 @@ export async function getAllBills(): Promise<Bill[]> {
 export async function addSavingsGoal(goal: SavingsGoal): Promise<void> {
   const db = await getDB();
   await db.add('savingsGoals', goal);
-  notifyBoardChanged();
+  await afterBoardMutation('savingsGoals', goal.id);
 }
 
 export async function updateSavingsGoal(goal: SavingsGoal): Promise<void> {
   const db = await getDB();
   await db.put('savingsGoals', goal);
-  notifyBoardChanged();
+  await afterBoardMutation('savingsGoals', goal.id);
 }
 
 export async function deleteSavingsGoal(id: string): Promise<void> {
   const db = await getDB();
   await db.delete('savingsGoals', id);
-  notifyBoardChanged();
+  await afterBoardMutation('savingsGoals', id);
 }
 
 export async function getAllSavingsGoals(): Promise<SavingsGoal[]> {
@@ -349,7 +401,7 @@ export async function getAllSavingsGoals(): Promise<SavingsGoal[]> {
 export async function saveNetWorthSnapshot(snapshot: NetWorthSnapshot): Promise<void> {
   const db = await getDB();
   await db.put('netWorthSnapshots', snapshot);
-  notifyBoardChanged();
+  await afterBoardMutation('netWorthSnapshots', snapshot.date);
 }
 
 export async function getLatestNetWorthSnapshot(): Promise<NetWorthSnapshot | undefined> {
@@ -362,19 +414,19 @@ export async function getLatestNetWorthSnapshot(): Promise<NetWorthSnapshot | un
 export async function addDebt(debt: Debt): Promise<void> {
   const db = await getDB();
   await db.add('debts', debt);
-  notifyBoardChanged();
+  await afterBoardMutation('debts', debt.id);
 }
 
 export async function updateDebt(debt: Debt): Promise<void> {
   const db = await getDB();
   await db.put('debts', debt);
-  notifyBoardChanged();
+  await afterBoardMutation('debts', debt.id);
 }
 
 export async function deleteDebt(id: string): Promise<void> {
   const db = await getDB();
   await db.delete('debts', id);
-  notifyBoardChanged();
+  await afterBoardMutation('debts', id);
 }
 
 export async function getAllDebts(): Promise<Debt[]> {
@@ -386,7 +438,7 @@ export async function getAllDebts(): Promise<Debt[]> {
 export async function saveCriticalExpenseCommitment(commitment: CriticalExpenseCommitment): Promise<void> {
   const db = await getDB();
   await db.put('criticalExpenseCommitments', commitment);
-  notifyBoardChanged();
+  await afterBoardMutation('criticalExpenseCommitments', commitment.month);
 }
 
 export async function getCriticalExpenseCommitment(month: string): Promise<CriticalExpenseCommitment | undefined> {
@@ -665,20 +717,33 @@ export async function applyRemoteBoard(map: Record<string, { value: unknown; upd
     'netWorthSnapshots', 'debts', 'criticalExpenseCommitments',
   ] as const;
 
-  const stage: { store: typeof stores[number]; value: unknown; explicitKey?: string | number }[] = [];
+  const stage: { store: typeof stores[number]; value: unknown; explicitKey?: string | number; updatedAt: number }[] = [];
   for (const [key, rec] of Object.entries(map)) {
     const [store, ...rest] = key.split(':');
     const recordKey = rest.join(':');
     if (!stores.includes(store as typeof stores[number])) continue;
     if (store === 'wizardProfile') {
-      stage.push({ store: 'wizardProfile', value: rec.value, explicitKey: 'current' });
+      stage.push({ store: 'wizardProfile', value: rec.value, explicitKey: 'current', updatedAt: rec.updatedAt });
     } else {
-      stage.push({ store: store as typeof stores[number], value: rec.value, explicitKey: recordKey });
+      stage.push({ store: store as typeof stores[number], value: rec.value, explicitKey: recordKey, updatedAt: rec.updatedAt });
     }
   }
 
+  // LOSSLESS merge: only write a remote record when it is strictly newer than
+  // the local write. Pre-read all local write timestamps FIRST (IDB forbids
+  // async reads inside an open transaction).
+  const localTsMap = new Map<string, number>();
+  await Promise.all(
+    stage.map(async (item) => {
+      const ts = await getLocalWrite(item.store, String(item.explicitKey));
+      localTsMap.set(`${item.store}:${item.explicitKey}`, ts);
+    }),
+  );
+
   const tx = db.transaction(stores, 'readwrite');
   for (const item of stage) {
+    const localTs = localTsMap.get(`${item.store}:${item.explicitKey}`) ?? 0;
+    if (item.updatedAt <= localTs) continue;
     if (item.explicitKey !== undefined) {
       tx.objectStore(item.store).put(item.value as never, item.explicitKey as never);
     } else {

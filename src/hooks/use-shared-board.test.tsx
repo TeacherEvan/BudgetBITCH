@@ -106,10 +106,10 @@ describe('useSharedBoard', () => {
             ...makeProfile(),
             answers: { ...makeProfile().answers, income: 999999 },
           },
-          updatedAt: 5000,
+          updatedAt: Date.now() + 5_000_000,
         },
       },
-      updatedAt: 5000,
+      updatedAt: Date.now() + 5_000_000,
       updatedBy: 'u2',
     };
 
