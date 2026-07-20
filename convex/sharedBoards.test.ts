@@ -126,3 +126,37 @@ describe("getPartner", () => {
     expect(partner).toBeNull();
   });
 });
+
+describe("linkByCode re-link guards", () => {
+  test("cannot link when already linked to a partner", async () => {
+    const aliceId = await seedUser(t, "alice");
+    const bobId = await seedUser(t, "bob");
+    const carolId = await seedUser(t, "carol");
+    await makeProfile(aliceId, "ALICE123");
+    await makeProfile(bobId, "BOB1234");
+    await makeProfile(carolId, "CAROL12");
+
+    // Alice links to Bob first.
+    await asUser(aliceId).mutation(api.sharedBoards.linkByCode, { code: "BOB1234" });
+    // Alice tries to re-link to Carol — must be rejected (F3).
+    await expect(
+      asUser(aliceId).mutation(api.sharedBoards.linkByCode, { code: "CAROL12" }),
+    ).rejects.toThrow(/already linked/);
+  });
+
+  test("cannot link into a partner who is already linked to someone else", async () => {
+    const aliceId = await seedUser(t, "alice");
+    const bobId = await seedUser(t, "bob");
+    const carolId = await seedUser(t, "carol");
+    await makeProfile(aliceId, "ALICE123");
+    await makeProfile(bobId, "BOB1234");
+    await makeProfile(carolId, "CAROL12");
+
+    // Bob links to Carol.
+    await asUser(bobId).mutation(api.sharedBoards.linkByCode, { code: "CAROL12" });
+    // Alice tries to link to Bob (now taken) — must be rejected (F3).
+    await expect(
+      asUser(aliceId).mutation(api.sharedBoards.linkByCode, { code: "BOB1234" }),
+    ).rejects.toThrow(/already linked to someone else/);
+  });
+});

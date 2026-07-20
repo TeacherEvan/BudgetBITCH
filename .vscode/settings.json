@@ -4,11 +4,9 @@
   "typescript.tsdk": "node_modules/typescript/lib",
   "typescript.tsserver.maxTsServerMemory": 4096,
   "files.watcherExclude": {
-    "**/budgetbitch/**": true,
     "**/WelcomeWindow-startup/**": true
   },
   "search.exclude": {
-    "**/budgetbitch/**": true,
     "**/WelcomeWindow-startup/**": true
   },
   "todo-tree.tree.showBadges": false,

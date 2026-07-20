@@ -7,7 +7,6 @@ const eslintConfig = [
   {
     ignores: [
      ".next/**",
-      "budgetbitch/.next/**",
       ".worktrees/**",
       ".vercel/**",
       "out/**",
@@ -16,7 +15,6 @@ const eslintConfig = [
       "playwright-report/**",
       "test-results/**",
       "next-env.d.ts",
-      "budgetbitch/convex/_generated/**",
       "convex/_generated/**",
       "node_modules/**",
     ],

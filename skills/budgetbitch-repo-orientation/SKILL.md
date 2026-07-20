@@ -1,34 +1,30 @@
 ---
 name: budgetbitch-repo-orientation
-description: Use when working in the BudgetBITCH repo and needing to choose the right starting files, trust the right docs, or distinguish the root app from the nested `budgetbitch/` prototype.
+description: Use when working in the BudgetBITCH repo and needing to choose the right starting files or trust the right docs. The app is a single root code tree (a prior nested budgetbitch/ prototype was removed on 2026-07-20).
 ---
 
 # BudgetBITCH Repo Orientation
 
 ## Overview
 
-This repo has two separate app trees. The root BudgetBITCH app is the primary codebase; `budgetbitch/` is a separate prototype/reference subtree. Start from repo docs first, then move into the smallest relevant surface.
+This repo is a single Next.js + Convex codebase rooted at the repository root. (A prior nested `budgetbitch/` WorkOS AuthKit prototype subtree existed but was removed on 2026-07-20; do not look for it.) Start from repo docs first, then move into the smallest relevant surface.
 
 ## Quick Reference
 
 | Task | Start here | Avoid |
-|---|---|---|
-| Root app route/UI change | `README.md` → `docs/CODEBASE_INDEX.md` → `src/app/**` | Jumping straight into components or the nested prototype |
+| --- | --- | --- |
+| Root app route/UI change | `README.md` → `docs/CODEBASE_INDEX.md` → `src/app/**` | Jumping straight into components |
 | Root app business logic | `src/modules/**` after the route/API entry point | Editing UI before finding the domain boundary |
 | Root Convex work | `convex/_generated/ai/guidelines.md` → `convex/README.md` → `convex/**` | Using memory instead of the Convex repo guidance |
-| Nested prototype change | `budgetbitch/README.md` → files inside `budgetbitch/` | Mixing root docs or root app code into the prototype |
 
 ## Rules
 
-1. Treat the root app and `budgetbitch/` as separate systems.
-2. If a task does not explicitly mention the prototype, assume the root app.
-3. Prefer repo docs over memory when deciding where to start.
-4. For Convex code, read the Convex guidelines file before changing functions, schema, or auth.
+1. There is one codebase: the root app. Work there by default.
+2. Prefer repo docs over memory when deciding where to start.
+3. For Convex code, read the Convex guidelines file before changing functions, schema, or auth.
 
 ## Common Mistakes
 
 - Starting in `src/components/**` before checking `src/app/**` or `src/modules/**`
-- Using root navigation docs for `budgetbitch/` work
-- Assuming a fix in one tree applies to the other
+- Looking for the removed nested `budgetbitch/` prototype subtree
 - Skipping the Convex guidelines and relying on general Convex knowledge
-

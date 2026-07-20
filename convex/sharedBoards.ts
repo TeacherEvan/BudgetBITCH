@@ -150,6 +150,16 @@ export const linkByCode = mutation({
 
     const myProfile = await ensureProfileDoc(ctx, userId);
 
+    // 1:1 couple semantics: neither side may already be linked. Re-linking or
+    // linking into a partner who is already in another couple would corrupt the
+    // previous partner's linkedBoardId (review finding F3).
+    if (myProfile.linkedBoardId) {
+      throw new Error("You are already linked to a partner; unlink first");
+    }
+    if (partner.linkedBoardId) {
+      throw new Error("That share code is already linked to someone else");
+    }
+
     // Reuse an existing board if either party is already linked (1:1 couple, single board).
     const existingBoardId =
       myProfile.linkedBoardId ?? partner.linkedBoardId ?? null;

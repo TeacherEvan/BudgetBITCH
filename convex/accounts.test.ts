@@ -463,4 +463,36 @@ describe("invite token (QR / link)", () => {
       asUser(aliceId).mutation(api.accounts.createInviteToken, { accountId }),
     ).rejects.toThrow(/at most 8/);
   });
+
+  test("redeemInviteToken keeps accountBoards.members in sync with boardMembers", async () => {
+    const aliceId = await seedUser(t, "alice");
+    const bobId = await seedUser(t, "bob");
+    const { accountId, boardId } = await createAccount(
+      aliceId,
+      "family",
+      "Our Family",
+    );
+
+    const { token } = await asUser(aliceId).mutation(
+      api.accounts.createInviteToken,
+      { accountId },
+    );
+    await asUser(bobId).mutation(api.accounts.redeemInviteToken, { token });
+
+    // boardMembers is the source of truth.
+    const memberRows = await t.run(async (ctx: any) =>
+      ctx.db
+        .query("boardMembers")
+        .withIndex("by_board", (q: any) => q.eq("boardId", boardId))
+        .collect(),
+    );
+    expect(memberRows.length).toBe(2);
+
+    // The redundant members array must not drift (review finding F2).
+    const board = await asUser(bobId).query(api.accounts.getAccountBoard, {
+      boardId,
+    });
+    expect((board as any).members.length).toBe(2);
+    expect((board as any).members).toContain(bobId);
+  });
 });

@@ -1,8 +1,8 @@
 # Copilot Instructions
 
 ## Scope
-- Work from the repository root app unless a task explicitly targets the nested `budgetbitch/` prototype subtree.
-- Prefer surgical edits that keep the current Next.js App Router, Prisma, and Clerk wiring intact.
+- Work from the repository root app. (The prior nested `budgetbitch/` prototype subtree was removed on 2026-07-20.)
+- Prefer surgical edits that keep the current Next.js App Router, Convex backend, and `@convex-dev/auth` auth wiring intact.
 
 ## Validation
 - Run `npm run lint`, `npm test`, and `npm run build` after code changes.

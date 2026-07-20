@@ -53,7 +53,6 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 - `src/lib/**`: `auth/`, `convex/` (HTTP client, snapshot sync), `db/` (IndexedDB wrapper), `http/`, `legal/`, `news/` (RSS fetcher), `types/`, `utils/`, `animation/`, `colors/`
 - `src/lib/convex/sync-snapshots.ts` handles the local→Convex daily snapshot sync and offline queue flush
 - `tests/e2e/**` currently holds `dogfood.spec.ts`, which exercises the signed-in root gate path.
-- `budgetbitch/` is a separate nested Convex prototype/reference subtree and is **not** the primary app being built from the repo root
 
 ## Auth-first root flow
 

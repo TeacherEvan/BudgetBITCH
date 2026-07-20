@@ -258,9 +258,9 @@ public/manifest.json.map
   (warning only). `@convex-dev/auth@0.0.92` does **not** yet export a `proxy`
   variant of `convexAuthNextjsMiddleware`, so do not rename the file/export until
   the auth library adds proxy support. Tracked, not a code change.
-- **Multiple lockfiles warning**: `budgetbitch/package-lock.json` (nested
-  prototype subtree) triggers Next's "additional lockfiles" build warning.
-  Benign — leave the prototype untouched; do not hoist its lockfile.
+- **Multiple lockfiles warning**: previously the nested `budgetbitch/`
+  prototype subtree triggered Next's "additional lockfiles" build warning.
+  That subtree was removed on 2026-07-20, so the warning no longer applies.
 
 ---
 

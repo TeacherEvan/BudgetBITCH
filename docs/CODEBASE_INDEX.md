@@ -109,7 +109,6 @@ flowchart TD
 │   └── e2e/
 ├── public/
 │   └── sw.js
-└── budgetbitch/
 ```
 
 ## 1. High-value entry points
@@ -351,7 +350,6 @@ Useful anchors (representative files that exist):
 
 | Path                     | Status                                                                                |
 | ------------------------ | ------------------------------------------------------------------------------------- |
-| `budgetbitch/`           | Separate nested Convex prototype/reference app; excluded from root TypeScript project |
 | `WelcomeWindow-startup/` | Legacy visual reference folder; not part of the active root auth-first flow          |
 
 ## 9. Suggested navigation recipes

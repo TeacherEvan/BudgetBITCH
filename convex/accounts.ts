@@ -572,9 +572,11 @@ export const redeemInviteToken = mutation({
     await ensureProfileDoc(ctx, userId);
 
     const token = args.token.trim();
-    // Find the invite by token (filter, since token is optional-indexed).
-    const allInvites = await ctx.db.query("invites").collect();
-    const invite = allInvites.find((r) => r.token === token);
+    // Token is indexed (by_token); resolve directly without a table scan.
+    const invite = await ctx.db
+      .query("invites")
+      .withIndex("by_token", (q) => q.eq("token", token))
+      .unique();
     if (!invite) {
       throw new Error("Invite link is invalid or expired");
     }
@@ -614,6 +616,15 @@ export const redeemInviteToken = mutation({
       role: "member",
       joinedAt: Date.now(),
     });
+    // Keep the board's members array in sync with boardMembers — acceptInvite
+    // relies on it for the cap check, so drift here silently under-counts.
+    const board = await ctx.db
+      .query("accountBoards")
+      .withIndex("by_boardId", (q) => q.eq("boardId", acc.boardId!))
+      .unique();
+    if (board && !board.members.includes(userId)) {
+      await ctx.db.patch(board._id, { members: [...board.members, userId] });
+    }
     await ctx.db.patch(invite._id, { status: "accepted", toUserId: userId });
     return { accountId: acc.accountId, boardId: acc.boardId, alreadyMember: false };
   },

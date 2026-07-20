@@ -2,12 +2,7 @@
 
 ## Purpose
 
-This repository contains two separate Next.js + Convex codebases:
-
-1. The **root BudgetBITCH app** in the repository root, which is the primary product.
-2. The **nested `budgetbitch/` subtree**, which is a separate Convex prototype/reference app.
-
-Treat them as distinct systems. The root app is the one to extend unless a task explicitly says otherwise.
+This repository is a single Next.js + Convex codebase: the **BudgetBITCH app** at the repository root. Extend the root app unless a task explicitly says otherwise. (A prior nested `budgetbitch/` AuthKit prototype subtree was removed on 2026-07-20.)
 
 ## 1) Root App Architecture
 
@@ -99,36 +94,7 @@ The root app is auth-first, local-first PWA:
 - Local-first: write to IndexedDB immediately, sync to Convex asynchronously.
 - Use Convex realtime for live updates where needed (auth state, snapshots).
 
-## 2) Nested `budgetbitch/` Prototype Architecture
-
-### Stack
-
-- Next.js
-- React
-- Convex
-- WorkOS AuthKit
-- Tailwind CSS
-
-### Shape
-
-The prototype uses a simpler app-router layout:
-
-- `budgetbitch/app/**` — route entries, callback route, root page, server pages
-- `budgetbitch/convex/**` — Convex functions, auth config, schema, generated artifacts
-- `budgetbitch/components/**` — shared client UI
-- `budgetbitch/proxy.ts` — route protection
-
-### Purpose
-
-This subtree is a separate starter/prototype environment. It is useful as a reference, but it is not part of the root app build, test, or import graph.
-
-## 3) Cross-System Boundaries
-
-- Do not import code from `budgetbitch/` into the root app.
-- Do not assume a route or module name in one tree exists in the other.
-- When documenting or changing behavior, always specify which tree you mean.
-
-## 4) Testing and Verification
+## 2) Testing and Verification
 
 ### Root App
 
@@ -136,16 +102,11 @@ This subtree is a separate starter/prototype environment. It is useful as a refe
 - E2E tests live under `tests/e2e/`.
 - Validation scripts: `npm run lint`, `npm test`, `npm run build`.
 
-### Prototype
+## 3) Practical Navigation Rule
 
-- Verify it with its own app-local commands and Convex workflow.
-- Treat its auth, routes, and backend as isolated from the root app.
+Work in the root app by default.
 
-## 5) Practical Navigation Rule
-
-If a task does not explicitly mention the nested prototype, work in the root app.
-
-## 6) Key Convex Patterns (from guidelines)
+## 4) Key Convex Patterns (from guidelines)
 
 - **Auth:** `ctx.auth.getUserIdentity()` in queries/mutations/actions; never accept `userId` as argument.
 - **Schema:** Define in `convex/schema.ts`; use `defineTable`, `v.*` validators; index naming `by_field1_and_field2`.
