@@ -119,4 +119,24 @@ describe('useAccounts', () => {
     const current = await getCurrentAccountId();
     expect(current).toBe('personal');
   });
+
+  it('deleteAccount delegates to delete mutation + clears local + falls back to personal', async () => {
+    // Make the deleted account the active one to exercise the personal fallback.
+    await act(async () => {
+      await (await import('@/lib/db/accountStorage')).setCurrentAccountId('acc-own');
+    });
+    let api!: ReturnType<typeof useAccounts>;
+    render(<HookProbe onReady={(a) => (api = a)} />);
+    await waitFor(() => expect(api?.ready).toBe(true));
+    await act(async () => {
+      await api.deleteAccount('acc-own');
+    });
+    expect(spy).toHaveBeenCalledWith({ accountId: 'acc-own' });
+    const current = await getCurrentAccountId();
+    expect(current).toBe('personal');
+    // Local meta + stash cleared.
+    const { getLocalAccount, getStashedAccount } = await import('@/lib/db/accountStorage');
+    expect(await getLocalAccount('acc-own')).toBeUndefined();
+    expect(await getStashedAccount('acc-own')).toBeUndefined();
+  });
 });

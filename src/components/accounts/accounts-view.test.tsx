@@ -1,11 +1,12 @@
 // components/accounts/accounts-view.test.tsx
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 
 const createAccount = vi.fn(async () => ({ accountId: 'acc-new', boardId: 'board-new' }));
 const switchTo = vi.fn(async () => {});
 const createInviteToken = vi.fn(async () => 'TOKENXYZ');
 const leaveAccount = vi.fn(async () => {});
+const deleteAccount = vi.fn(async () => {});
 
 vi.mock('@/hooks/use-accounts', () => ({
   useAccounts: () => ({
@@ -24,6 +25,7 @@ vi.mock('@/hooks/use-accounts', () => ({
     leaveAccount,
     removeMember: vi.fn(),
     renameAccount: vi.fn(),
+    deleteAccount,
     refresh: vi.fn(),
   }),
 }));
@@ -60,5 +62,15 @@ describe('AccountsView', () => {
     expect(await screen.findByText('TOKENXYZ')).toBeTruthy();
     // A QR code (svg) should be rendered.
     expect(document.querySelector('svg')).toBeTruthy();
+  });
+
+  it('owner delete button opens a confirm dialog that calls deleteAccount', async () => {
+    render(<AccountsView locale="en" />);
+    fireEvent.click(screen.getByRole('button', { name: /delete/i }));
+    const dialog = document.body.querySelector('[role="dialog"]');
+    expect(dialog).toBeTruthy();
+    // Confirm delete.
+    fireEvent.click(within(dialog as HTMLElement).getByRole('button', { name: /delete/i }));
+    expect(deleteAccount).toHaveBeenCalledWith('acc-1');
   });
 });

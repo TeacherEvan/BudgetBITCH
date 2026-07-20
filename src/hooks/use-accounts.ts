@@ -2,7 +2,7 @@
 //
 // Client-side orchestration for the Accounts feature: lists the user's accounts
 // (owned + joined + legacy couple board), and exposes create / invite / accept /
-// decline / leave / remove / rename / switch actions. Built on the Convex
+// decline / leave / remove / rename / delete / switch actions. Built on the Convex
 // `api.accounts.*` functions and the local multi-board swap (accountStorage).
 //
 // "Switch" stashes the outgoing board and adopts the target's remote snapshot
@@ -23,6 +23,7 @@ import {
   getLocalAccounts,
   saveLocalAccount,
   removeLocalAccount,
+  removeStashedAccount,
   getCurrentAccountId,
 } from "@/lib/db/accountStorage";
 
@@ -51,6 +52,7 @@ export interface UseAccounts {
   leaveAccount: (accountId: string) => Promise<void>;
   removeMember: (accountId: string, userId: string) => Promise<void>;
   renameAccount: (accountId: string, name: string) => Promise<void>;
+  deleteAccount: (accountId: string) => Promise<void>;
   switchTo: (accountId: string) => Promise<void>;
   refresh: () => void;
 }
@@ -80,6 +82,7 @@ export function useAccounts(): UseAccounts {
   const leaveMut = useMutation(api.accounts.leaveAccount);
   const removeMut = useMutation(api.accounts.removeMember);
   const renameMut = useMutation(api.accounts.renameAccount);
+  const deleteMut = useMutation(api.accounts.deleteAccount);
   const convex = useConvex();
 
   const refresh = useCallback(() => setNonce((n) => n + 1), []);
@@ -258,6 +261,23 @@ export function useAccounts(): UseAccounts {
     [renameMut, refresh],
   );
 
+  const deleteAccount = useCallback(
+    async (accountId: string) => {
+      // If the deleted account was active, fall back to Personal locally
+      // (this stashes the outgoing board first, then we drop the deleted stash).
+      const current = await getCurrentAccountId();
+      await deleteMut({ accountId });
+      if (current === accountId) {
+        await localSwitch(PERSONAL_ACCOUNT_ID);
+      }
+      await removeLocalAccount(accountId);
+      await removeStashedAccount(accountId);
+      setCurrentAccountId(current === accountId ? PERSONAL_ACCOUNT_ID : current);
+      refresh();
+    },
+    [deleteMut, refresh],
+  );
+
   const switchTo = useCallback(
     async (accountId: string) => {
       const local = await getLocalAccounts();
@@ -296,6 +316,7 @@ export function useAccounts(): UseAccounts {
     leaveAccount,
     removeMember,
     renameAccount,
+    deleteAccount,
     switchTo,
     refresh,
   };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuthToken } from "@convex-dev/auth/react";
 import { useLocale } from "next-intl";
 import { shortLocale, COOKIE_POLICY_VERSION } from "@/lib/legal/versions";
@@ -56,7 +56,15 @@ export function CookieConsentBanner() {
   // visitors stay anonymous (the relay leaves userId undefined).
   const authToken = useAuthToken();
 
-  const [visible, setVisible] = useState(initialVisible);
+  // Server and first client render both show nothing (no banner) so the HTML
+  // matches; the real visibility is decided after mount from localStorage.
+  // Reading localStorage in the useState initializer would diverge server vs
+  // client and trigger a React #418 hydration mismatch.
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    setVisible(initialVisible());
+  }, []);
 
   function persist(accepted: boolean, optionalAccepted: boolean) {
     const choice: StoredChoice = {

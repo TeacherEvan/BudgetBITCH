@@ -88,6 +88,12 @@ export async function removeLocalAccount(accountId: string): Promise<void> {
   await database.delete(LOCAL_ACCOUNTS_STORE, accountId);
 }
 
+/** Drop a board's stashed snapshot (used when an account is deleted). */
+export async function removeStashedAccount(accountId: string): Promise<void> {
+  const database = await db();
+  await database.delete(ACCOUNTS_DATA_STORE, accountId);
+}
+
 // ── stash / restore ──────────────────────────────────────────────────────────
 
 /**

@@ -1,6 +1,6 @@
 // components/accounts/accounts-view.tsx
 // Full Accounts management screen: list owned + joined accounts, create new,
-// invite members (QR + code), switch active board, and leave/remove.
+// invite members (QR + code), switch active board, leave/remove, and delete.
 'use client';
 
 import { useState } from 'react';
@@ -39,6 +39,7 @@ export function AccountsView({ locale, onLocaleChange, voiceEnabled, onVoiceTogg
     leaveAccount,
     removeMember,
     renameAccount,
+    deleteAccount,
   } = useAccounts();
   // Drive sync for the active board while this screen is mounted.
   useAccountSync();
@@ -51,6 +52,8 @@ export function AccountsView({ locale, onLocaleChange, voiceEnabled, onVoiceTogg
   const [expandedInvite, setExpandedInvite] = useState<string | null>(null);
   const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [generatingInvite, setGeneratingInvite] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const ownedCount = accounts.filter((a) => a.role === 'owner' && a.accountId !== 'personal').length;
   const canCreate = ownedCount < MAX_OWNED_ACCOUNTS;
@@ -90,6 +93,20 @@ export function AccountsView({ locale, onLocaleChange, voiceEnabled, onVoiceTogg
       /* clipboard unavailable */
     }
   };
+
+  const handleDelete = async (accountId: string) => {
+    setDeleting(true);
+    try {
+      await deleteAccount(accountId);
+      setDeleteTarget(null);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const deleteName = deleteTarget
+    ? accounts.find((a) => a.accountId === deleteTarget)?.name
+    : undefined;
 
   const inviteUrl = (code: string) =>
     typeof window !== 'undefined' ? `${window.location.origin}/join?code=${code}` : `/join?code=${code}`;
@@ -189,7 +206,7 @@ export function AccountsView({ locale, onLocaleChange, voiceEnabled, onVoiceTogg
                       </Button>
                     )}
                     {a.role === 'owner' && a.accountId !== 'personal' && (
-                      <Button variant="ghost" onClick={() => leaveAccount(a.accountId)}>
+                      <Button variant="ghost" onClick={() => setDeleteTarget(a.accountId)}>
                         <Trash2 className="mr-1.5 h-4 w-4" />
                         {t('Delete', 'ลบ')}
                       </Button>
@@ -271,6 +288,35 @@ export function AccountsView({ locale, onLocaleChange, voiceEnabled, onVoiceTogg
               {busy ? t('Creating…', 'กำลังสร้าง…') : t('Create', 'สร้าง')}
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      {/* Delete confirmation modal */}
+      <Modal
+        isOpen={deleteTarget !== null}
+        onClose={() => !deleting && setDeleteTarget(null)}
+        title={t('Delete account', 'ลบบัญชี')}
+        size="sm"
+        closeOnOverlayClick={!deleting}
+        closeOnEscape={!deleting}
+      >
+        <p className="text-sm text-[var(--text-2)]">
+          {t(
+            `This permanently deletes "${deleteName ?? ''}" and its shared board, members, and invites. This cannot be undone.`,
+            `การลบ "${deleteName ?? ''}" จะลบบอร์ดที่แชร์ สมาชิก และคำเชิญอย่างถาวร ไม่สามารถกู้คืนได้`,
+          )}
+        </p>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="secondary" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+            {t('Cancel', 'ยกเลิก')}
+          </Button>
+          <Button
+            variant="danger"
+            onClick={() => deleteTarget && handleDelete(deleteTarget)}
+            disabled={deleting}
+          >
+            {deleting ? t('Deleting…', 'กำลังลบ…') : t('Delete', 'ลบ')}
+          </Button>
         </div>
       </Modal>
     </div>
