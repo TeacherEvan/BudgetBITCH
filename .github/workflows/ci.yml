@@ -105,7 +105,7 @@ jobs:
   e2e:
     name: E2E (Playwright)
     runs-on: ubuntu-latest
-    # Runs even if prior jobs are skipped; gates merges only when it fails.
+    # Runs even if prior jobs are skipped; gates merges only when it runs and fails.
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -123,11 +123,12 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run Playwright E2E
-        # No E2E_BASE_URL => config boots the local dev server (Convex env from
-        # secrets). Authed tests use E2E_TEST_EMAIL/PASSWORD; if those secrets
-        # are unset the authed specs skip and only the unauthenticated coverage
-        # runs (job stays green). Set the four secrets below to exercise real
-        # sign-in + webview flows in CI.
+        # Only run when Convex env is configured (repo secrets set). Without it
+        # the dev server can't boot (empty NEXT_PUBLIC_CONVEX_URL), so we skip
+        # cleanly and stay green until secrets are added. When configured,
+        # authed specs use E2E_TEST_EMAIL/PASSWORD; if those are unset the
+        # authed specs skip and only the unauthenticated coverage runs.
+        if: ${{ secrets.NEXT_PUBLIC_CONVEX_URL != '' }}
         env:
           NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
           NEXT_PUBLIC_CONVEX_SITE_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_SITE_URL }}
@@ -137,6 +138,10 @@ jobs:
           E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
           E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
         run: npx playwright test --reporter=line
+
+      - name: E2E skipped (Convex secret not configured)
+        if: ${{ secrets.NEXT_PUBLIC_CONVEX_URL == '' }}
+        run: echo 'Skipping E2E - set repo secret NEXT_PUBLIC_CONVEX_URL (and E2E_TEST_EMAIL / E2E_TEST_PASSWORD) to enable real-auth Playwright runs.'
 
   # Surfaced but non-blocking: next-pwa (the prior source of a transitive RCE
   # via workbox-build) has been removed in favor of a hand-written service
