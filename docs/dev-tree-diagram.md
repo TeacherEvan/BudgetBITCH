@@ -39,88 +39,111 @@ BudgetBITCH/
 │   │   ├── (app)/
 │   │   │   ├── dashboard/page.tsx   # DashboardShell (protected, post-auth landing)
 │   │   │   └── wizard/page.tsx      # WizardShell (protected)
-│   ├── components/                  # React components
-│   │   ├── onboarding/
-│   │   │   └── language-select-modal.tsx    # 🎯 FIRST SCREEN — Thai/English
-│   │   ├── pwa/
-│   │   │   └── install-prompt.tsx           # Pre-wizard PWA install
-│   │   ├── wizard/
-│   │   │   ├── wizard-shell.tsx              # 10-step voice-guided wizard
-│   │   │   ├── wizard-progress.tsx           # Progress indicator
-│   │   │   ├── voice-toggle.tsx              # Voice ON/OFF
-│   │   │   └── steps/                        # 10 step components
-│   │   │       ├── step-income.tsx           # Q1: Monthly income
-│   │   │       ├── step-rent.tsx             # Q2: Rent/Mortgage
-│   │   │       ├── step-transport.tsx        # Q3: Transport (Grab, BTS, fuel)
-│   │   │       ├── step-phone-internet.tsx   # Q4: Phone/Internet
-│   │   │       ├── step-subscriptions.tsx    # Q5: Subscriptions
-│   │   │       ├── step-entertainment.tsx    # Q6: Entertainment
-│   │   │       ├── step-healthcare.tsx       # Q7: Healthcare
-│   │   │       ├── step-savings-rate.tsx     # Q8: Savings % (slider)
-│   │   │       ├── step-risk-tolerance.tsx   # Q9: Low/Med/High
-│   │   │       └── step-location-consent.tsx # Q10: Location + privacy disclaimer
-│   │   ├── dashboard/
-│   │   │   ├── dashboard-shell.tsx           # Main dashboard layout
-│   │   │   ├── daily-disposable-hero.tsx     # 🎯 ONE BIG NUMBER: Daily disposable
-│   │   │   ├── critical-expenses-modal.tsx   # 8 items + compound calculator
-│   │   │   ├── alerts-sidebar.tsx            # Actionable RSS alerts (TH/EN)
-│   │   │   ├── bento-grid.tsx                # Responsive bento grid layout
-│   │   │   ├── mobile-panel-tabs.tsx         # Mobile panel tab switcher
-│   │   │   └── panels/                       # Accordion panels (not tabs)
-│   │   │       ├── expense-tracker.tsx       # Category tracking + budgets
-│   │   │       ├── budget-visual.tsx         # Bar chart: Income vs Expense
-│   │   │       ├── budget-alerts.tsx         # Budget alert generation
-│   │   │       ├── budget-ring.tsx           # Savings-rate progress ring
-│   │   │       ├── bills.tsx                 # Due-soon + Thai holidays
-│   │   │       ├── savings-goals.tsx         # Progress rings
-│   │   │       ├── net-worth.tsx             # Assets - Liabilities (+ section/header/form/items/types/skeleton)
-│   │   │       ├── subscriptions.tsx         # Detected recurring (TrueWallet, GrabPay) (+ skeleton)
-│   │   │       ├── emergency-fund.tsx        # Target + progress (+ skeleton)
-│   │   │       ├── debt-payoff.tsx           # Avalanche/Snowball
-│   │   │       ├── cash-flow-forecast.tsx    # 30/60/90 day projection
-│   │   │       ├── voice-expense-input.tsx   # Voice-driven expense entry
-│   │   │       └── empty-state.tsx           # Empty panel fallback
-│   │   ├── layout/
-│   │   │   └── header-bar.tsx                # 🎯 Globe🌐 + Wrench🔧 (persistent)
-│   │   ├── auth/                             # Account recovery, entry panel, password form
-│   │   ├── dashboard/                        # Dashboard shell, panels, alerts sidebar, modals
-│   │   ├── launch/                           # Splash, manifesto interstitial/notification
-│   │   ├── layout/                           # Header bar
-│   │   ├── legal/                            # Cookie consent, site footer, legal pages
-│   │   ├── mobile/                           # Mobile panel frame
-│   │   ├── onboarding/                       # Language select modal (first screen)
-│   │   ├── pwa/                              # Install prompt
-│   │   ├── shared-board/                     # Shared couple-board UI
-│   │   ├── welcome/                          # Welcome window
-│   │   ├── wizard/                           # Onboarding wizard (shell, steps, voice toggle)
-│   │   └── ui/                               # Shared primitives
-│   │       ├── button.tsx
-│   │       ├── card.tsx
-│   │       ├── modal.tsx
-│   │       ├── accordion.tsx
-│   │       ├── input.tsx
-│   │       ├── slider.tsx
-│   │       ├── select.tsx
-│   │       ├── toggle.tsx
-│   │       └── progress-ring.tsx
+│   │   ├── components/                  # React components
+│   │   │   ├── onboarding/
+│   │   │   │   └── language-select-modal.tsx    # 🎯 FIRST SCREEN — Thai/English
+│   │   │   ├── pwa/
+│   │   │   │   └── install-prompt.tsx           # Pre-wizard PWA install
+│   │   │   ├── wizard/
+│   │   │   │   ├── wizard-shell.tsx              # 10-step voice-guided wizard
+│   │   │   │   ├── wizard-progress.tsx           # Progress indicator
+│   │   │   │   ├── voice-toggle.tsx              # Voice ON/OFF
+│   │   │   │   └── steps/                        # 10 step components
+│   │   │   │       ├── step-income.tsx           # Q1: Monthly income
+│   │   │   │       ├── step-rent.tsx             # Q2: Rent/Mortgage
+│   │   │   │       ├── step-transport.tsx        # Q3: Transport (Grab, BTS, fuel)
+│   │   │   │       ├── step-phone-internet.tsx   # Q4: Phone/Internet
+│   │   │   │       ├── step-subscriptions.tsx    # Q5: Subscriptions
+│   │   │   │       ├── step-entertainment.tsx    # Q6: Entertainment
+│   │   │   │       ├── step-healthcare.tsx       # Q7: Healthcare
+│   │   │   │       ├── step-savings-rate.tsx     # Q8: Savings % (slider)
+│   │   │   │       ├── step-risk-tolerance.tsx   # Q9: Low/Med/High
+│   │   │   │       └── step-location-consent.tsx # Q10: Location + privacy disclaimer
+│   │   │   ├── dashboard/
+│   │   │   │   ├── dashboard-shell.tsx           # Main dashboard layout
+│   │   │   │   ├── daily-disposable-hero.tsx     # 🎯 ONE BIG NUMBER: Daily disposable
+│   │   │   │   ├── critical-expenses-modal.tsx   # 8 items + compound calculator
+│   │   │   │   ├── alerts-sidebar.tsx            # Actionable RSS alerts / Market Watch (TH/EN)
+│   │   │   │   ├── bento-grid.tsx                # Responsive bento grid layout
+│   │   │   │   ├── mobile-panel-tabs.tsx         # Mobile panel tab switcher
+│   │   │   │   ├── import-csv-modal.tsx          # CSV transaction import
+│   │   │   │   └── panels/                       # Accordion panels
+│   │   │   │       ├── expense-tracker.tsx       # Category tracking + budgets
+│   │   │   │       ├── budget-visual.tsx         # Bar chart: Income vs Expense
+│   │   │   │       ├── budget-alerts.tsx         # Budget alert generation
+│   │   │   │       ├── budget-ring.tsx           # Savings-rate progress ring
+│   │   │   │       ├── bills.tsx                 # Due-soon + Thai holidays
+│   │   │   │       ├── savings-goals.tsx         # Progress rings
+│   │   │   │       ├── net-worth.tsx             # Assets - Liabilities (+ section/header/form/items/types/skeleton)
+│   │   │   │       ├── subscriptions.tsx         # Detected recurring (TrueWallet, GrabPay) (+ skeleton)
+│   │   │   │       ├── emergency-fund.tsx        # Target + progress (+ skeleton)
+│   │   │   │       ├── debt-payoff.tsx           # Avalanche/Snowball
+│   │   │   │       ├── cash-flow-forecast.tsx    # 30/60/90 day projection
+│   │   │   │       ├── voice-expense-input.tsx   # Voice-driven expense entry
+│   │   │   │       └── empty-state.tsx           # Empty panel fallback
+│   │   │   ├── accounts/                        # Multi-board shared budgeting + cross-account sync
+│   │   │   │   ├── accounts-view.tsx
+│   │   │   │   ├── account-switcher.tsx
+│   │   │   │   └── account-sync-mount.tsx
+│   │   │   ├── shared-board/                    # Shared couple-board UI (keyed-merge sync)
+│   │   │   │   └── shared-board-sync.tsx
+│   │   │   ├── launch/                          # Cinematic splash, manifesto interstitial/notification
+│   │   │   │   ├── golden-splash.tsx
+│   │   │   │   ├── manifesto-interstitial.tsx
+│   │   │   │   └── manifesto-notification.tsx
+│   │   │   ├── layout/                          # Header bar (nav, globe, wrench)
+│   │   │   │   └── header-bar.tsx
+│   │   │   ├── legal/                           # Cookie consent, site footer, legal pages
+│   │   │   │   ├── cookie-consent-banner.tsx
+│   │   │   │   ├── site-footer.tsx
+│   │   │   │   └── legal-page.tsx
+│   │   │   ├── mobile/                          # Mobile panel frame
+│   │   │   ├── start-smart/                     # Money Survival Blueprint panels
+│   │   │   │   └── panels/home-base-panel.tsx
+│   │   │   ├── auth/                             # Account recovery, entry panel, password form
+│   │   │   ├── i18n/                             # Locale switcher
+│   │   │   ├── onboarding/                      # Language select modal (first screen)
+│   │   │   ├── pwa/                             # Install prompt
+│   │   │   ├── providers/                       # App-level React context providers
+│   │   │   ├── welcome/                         # Welcome window
+│   │   │   ├── wizard/                          # Onboarding wizard (shell, steps, voice toggle)
+│   │   │   └── ui/                              # Shared primitives
+│   │   │       ├── accordion.tsx
+│   │   │       ├── button.tsx
+│   │   │       ├── card.tsx
+│   │   │       ├── confetti.tsx
+│   │   │       ├── input.tsx
+│   │   │       ├── modal.tsx
+│   │   │       ├── progress-ring.tsx
+│   │   │       ├── select.tsx
+│   │   │       ├── slider.tsx
+│   │   │       ├── theme-toggle.tsx
+│   │   │       └── toggle.tsx
 │   ├── hooks/                               # Custom React hooks
 │   │   ├── use-voice.ts                 # 🎯 Web Speech API (STT/TTS)
 │   │   ├── use-local-db.ts              # IndexedDB reactor (idb)
 │   │   ├── use-critical-expense.ts      # Critical expense state
 │   │   ├── use-haptic.ts                # Haptic feedback (mobile)
-│   │   └── use-shared-board.ts          # Shared couple-board sync state
-│   │
+│   │   ├── use-shared-board.ts          # Shared couple-board sync state
+│   │   ├── use-accounts.ts              # Accounts (boards/umbrellas) state
+│   │   ├── use-account-sync.ts          # Automatic cross-account sync
+│   │   ├── use-currency.ts              # Location-driven currency formatting
+│   │   ├── use-display-prefs.ts         # Display preferences (theme, numerals)
+│   │   ├── use-news-prefs.ts            # Market Watch news preferences
+│   │   │
 │   │   # Daily Convex snapshot sync lives in src/lib/convex/sync-snapshots.ts
 │   │   # + convex/snapshots.ts (no use-daily-snapshot.ts hook).
 │   ├── lib/                               # Core libraries
 │   │   ├── auth/                          # Auth utilities (e2e-auth-override, route-guard, routes)
 │   │   ├── convex/                        # Convex HTTP client, sync snapshots
 │   │   ├── db/                            # Local IndexedDB wrapper (local-db.ts)
-│   │   ├── location/                      # Location helpers (city suggestions)
-│   │   ├── news/                          # RSS fetcher (rss-parser)
+│   │   ├── http/                          # Client IP / geolocation (location-driven currency)
+│   │   ├── legal/                         # Legal versions + content (TOS/privacy/cookie)
+│   │   ├── news/                          # RSS fetcher (rss-parser) — Market Watch
 │   │   ├── types/                         # Budget types
 │   │   ├── utils/                         # cn, compound-calculator, currency, thai-category-mapper
-│   │   └── url.ts                         # URL utilities
+│   │   ├── animation/                     # Animation presets
+│   │   └── colors/                        # Theme color tokens
 │   └── middleware.ts                    # Auth middleware (minimal)
 ├── .cache/                              # 🚫 GITIGNORED — Agent token cache
 ├── .gitignore                           # 📝 .cache/, *.idb, local-db-*
@@ -205,6 +228,9 @@ User Action
 | Change locale behavior | `src/components/onboarding/language-select-modal.tsx`, `src/i18n/*` (request/server/messages) |
 | Update Convex schema | `convex/schema.ts`, `convex/snapshots.ts` |
 | Add PWA feature | `public/manifest.json`, `public/sw.js`, `next.config.ts` |
+| Add accounts / board / umbrella | `src/components/accounts/`, `src/hooks/use-accounts.ts`, `src/hooks/use-account-sync.ts`, `convex/schema.ts` |
+| Change location-driven currency | `src/hooks/use-currency.ts`, `src/lib/http/client-ip.ts` |
+| Add legal page / consent | `src/components/legal/`, `src/lib/legal/*`, `src/app/api/legal/*` |
 
 ---
 

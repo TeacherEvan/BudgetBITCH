@@ -10,10 +10,16 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 
 - Start Smart onboarding that generates a Money Survival Blueprint (10-question wizard, Q10 = location consent)
 - Auth-first root entry: signed-out visitors stay on the welcome window; signed-in users without a completed launch profile move to the launch wizard; signed-in users with a profile land on the dashboard
-- Protected dashboard with scan-first panels (Daily Disposable hero, bills/due-soon priority guide, expenses, subscriptions, savings goals, net worth, critical-expense cut-one flow)
+- Accounts — multi-board shared budgeting: up to 5 boards, 7 umbrellas, QR/link invite, plus automatic lossless cross-account sync (no manual button)
+- Protected dashboard with scan-first panels (Daily Disposable hero, bills/due-soon priority guide, expenses, subscriptions, savings goals, net worth, critical-expense cut-one flow, CSV import)
+- Market Watch: localized financial news/RSS alerts surfaced in the dashboard
+- Location-driven currency: symbol derived from geolocation; numerals-only formatting when location is declined
 - Local-first storage in IndexedDB with offline queue that flushes to Convex on reconnect
 - Daily snapshot sync to Convex (`upsertDailySnapshot`) via the Service Worker / online event
-- privacy shield disclosures and consent helpers
+- CSV transaction import
+- Password reset via email (Resend) for Convex Auth accounts
+- Legal pages (Terms, Privacy, Cookie Policy) with a server-recorded consent audit trail
+- Privacy shield disclosures and consent helpers
 - i18n (English + Thai) via next-intl
 
 > Not in this slice (no routes or components exist): Learn!, Jobs hub, Connected Finance integrations, provider connection hub, workspace roles, audit log, notification fanout, email templates. The i18n catalog and a middleware test still reference legacy `/api/v1/learn` and `/api/v1/jobs` paths; those API routes are not implemented.
@@ -38,11 +44,13 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 ## Codebase shape
 
 - `src/app/**` contains routes, route groups, layouts, and API handlers
-- `src/app/page.tsx` (auth-first root gate), `src/app/sign-in/`, `src/app/sign-up/`, `src/app/forgot-password/`, `src/app/reset/`, and the `(app)` route group (`dashboard`, `wizard`) are the live routes. `src/lib/auth/routes.ts` defines `AUTH_ROUTES.continue = "/auth/continue"`, but no page implements that route; post-auth users land on `/dashboard`.
+- Live routes: `src/app/page.tsx` (auth-first root gate), `src/app/sign-in/`, `src/app/sign-up/`, `src/app/forgot-password/`, `src/app/reset/`, `src/app/accounts/`, `src/app/join/`, `src/app/settings/`, `src/app/privacy/`, `src/app/terms/`, `src/app/cookie-policy/`, and the `(app)` route group (`dashboard`, `wizard`). `src/lib/auth/routes.ts` defines `AUTH_ROUTES.continue = "/auth/continue"`, but no page implements that route; post-auth users land on `/dashboard`.
+- API routes: `src/app/api/news/route.ts` (Market Watch RSS), `src/app/api/legal/record-agreement/route.ts`, `src/app/api/legal/record-cookie-consent/route.ts`
 - `src/lib/auth/routes.ts` centralizes protected path prefixes and auth route constants used by route protection
 - `src/modules/**` contains business/domain logic grouped by capability; currently `src/modules/budgeting/` (budget math) and `src/modules/home-base/` (root board orchestration)
-- `src/components/start-smart/**` contains reusable UI for the Money Survival Blueprint flow
-- `src/components/dashboard/`, `src/components/wizard/`, `src/components/welcome/`, `src/components/auth/`, `src/components/shared-board/`, and `src/components/mobile/` hold the primary UI surfaces
+- `src/components/**` holds the primary UI surfaces: `accounts/` (multi-board + sync), `auth/`, `dashboard/`, `i18n/`, `launch/` (splash, manifesto gate), `layout/` (header bar), `legal/` (consent banner, footer, legal pages), `mobile/`, `onboarding/` (language select), `pwa/` (install prompt), `providers/`, `shared-board/`, `start-smart/` (Money Survival Blueprint panels), `ui/`, `welcome/`, `wizard/`
+- `src/hooks/**` holds custom hooks: `use-accounts`, `use-account-sync`, `use-critical-expense`, `use-currency`, `use-display-prefs`, `use-haptic`, `use-local-db`, `use-news-prefs`, `use-shared-board`, `use-voice`
+- `src/lib/**`: `auth/`, `convex/` (HTTP client, snapshot sync), `db/` (IndexedDB wrapper), `http/`, `legal/`, `news/` (RSS fetcher), `types/`, `utils/`, `animation/`, `colors/`
 - `src/lib/convex/sync-snapshots.ts` handles the local→Convex daily snapshot sync and offline queue flush
 - `tests/e2e/**` currently holds `dogfood.spec.ts`, which exercises the signed-in root gate path.
 - `budgetbitch/` is a separate nested Convex prototype/reference subtree and is **not** the primary app being built from the repo root

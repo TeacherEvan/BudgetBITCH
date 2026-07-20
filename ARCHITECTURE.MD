@@ -32,32 +32,41 @@ Treat them as distinct systems. The root app is the one to extend unless a task 
 - `src/app/**` — routes, route groups, layouts, API handlers (Convex HTTP via `/api/convex-auth`)
 - `src/components/**` — reusable UI
   - `auth/` — Account recovery, entry panel, password form
-  - `dashboard/` — Dashboard shell, panels (8), alerts sidebar, critical expenses modal, daily disposable hero
+  - `accounts/` — Multi-board shared budgeting (board/umbrella management, QR/link invite) + automatic cross-account sync
+  - `dashboard/` — Dashboard shell, panels, alerts sidebar, critical expenses modal, daily disposable hero
   - `i18n/` — Locale switcher
   - `layout/` — Header bar
+  - `legal/` — Cookie consent banner, site footer, legal pages
+  - `launch/` — Cinematic splash, manifesto interstitial/notification
   - `mobile/` — Mobile panel frame
   - `onboarding/` — Language select modal
   - `pwa/` — Install prompt
+  - `providers/` — App-level React context providers
+  - `shared-board/` — Shared couple-board UI (keyed-merge sync)
+  - `start-smart/` — Money Survival Blueprint panels
   - `ui/` — Primitive components (accordion, button, card, input, modal, progress-ring, select, slider, toggle)
   - `welcome/` — Welcome window
   - `wizard/` — Onboarding wizard (shell, progress, voice toggle, 10 steps)
-- `src/hooks/` — Custom hooks (`use-critical-expense`, `use-local-db`, `use-voice`)
+- `src/hooks/` — Custom hooks (`use-accounts`, `use-account-sync`, `use-critical-expense`, `use-currency`, `use-display-prefs`, `use-haptic`, `use-local-db`, `use-news-prefs`, `use-shared-board`, `use-voice`)
 - `src/i18n/` — Internationalization (messages, request, server)
 - `src/lib/`
   - `auth/` — Auth utilities (`e2e-auth-override`, `route-guard`, `routes`)
   - `convex/` — Convex HTTP client, sync snapshots
   - `db/` — Local IndexedDB wrapper (`local-db.ts`)
+  - `http/` — HTTP utilities
+  - `legal/` — Legal agreement / consent recording helpers
   - `news/` — RSS fetcher
   - `types/` — Budget types
-  - `url.ts` — URL utilities
   - `utils/` — `cn`, `compound-calculator`, `currency`, `thai-category-mapper`
+  - `animation/` — Animation presets
+  - `colors/` — Theme color tokens
 - `src/middleware.ts` — Convex Auth Next.js middleware (protects `/dashboard`, `/settings`, `/wizard`, `/api/v1/auth/bootstrap`). Note: `src/lib/auth/routes.ts` defines `AUTH_ROUTES.continue = "/auth/continue"`, but no page implements that route and it is not in the protected prefixes; post-auth users land on `/dashboard`.
 - `src/test/` — Test setup, smoke test
 - `src/types/` — TypeScript declarations (Next PWA, Speech API)
 - `convex/` — Convex backend
   - `auth.ts` — Convex Auth config (Password provider)
   - `http.ts` — HTTP router (auth routes)
-  - `schema.ts` — Convex schema (`dailySnapshots` + `authTables`)
+  - `schema.ts` — Convex schema (`authTables`, `userProfiles`, `sharedBoards`, `accounts`, `boardMembers`, `accountBoards`, `invites`, `dailySnapshots`, `legalAgreements`, `cookieConsents`)
   - `snapshots.ts` — `upsertDailySnapshot` mutation (daily backup from SW)
   - `lib/auth.ts` — Auth helpers (`requireIdentity`, `getAuthUserId`)
   - `_generated/` — Convex generated types
@@ -71,8 +80,9 @@ The root app is auth-first, local-first PWA:
 3. PWA install prompt shown after language selection.
 4. Signed-in users → redirect to `/wizard` (if not complete) or `/dashboard` (if complete).
 5. Protected surfaces: `/dashboard`, `/settings`, `/wizard`, `/api/v1/auth/bootstrap`. (`/auth/continue` is a route constant in `src/lib/auth/routes.ts` but has no page implementation and is not protected.)
-6. Convex handles auth, realtime data, and daily snapshot persistence.
+6. Convex handles auth, realtime data, and daily snapshot persistence; Accounts/Invites tables power multi-board shared budgeting with automatic lossless cross-account sync.
 7. IndexedDB + Service Worker provide offline-first UX; data syncs to Convex daily.
+8. Market Watch surfaces localized finance news (RSS via `/api/news`) inside the dashboard; legal pages record consent server-side (`legalAgreements`, `cookieConsents`).
 
 ### Data Ownership
 

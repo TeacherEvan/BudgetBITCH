@@ -28,6 +28,12 @@ flowchart TD
     C --> C8[ui/]
     C --> C9[welcome/]
     C --> C10[wizard/]
+    C --> C11[accounts/]
+    C --> C12[launch/]
+    C --> C13[legal/]
+    C --> C14[shared-board/]
+    C --> C15[start-smart/]
+    C --> C16[providers/]
 
     D --> D1[auth/]
     D --> D2[convex/]
@@ -59,10 +65,13 @@ flowchart TD
 │   │   ├── reset/page.tsx
 │   │   └── settings/page.tsx
 │   ├── components/
+│   │   ├── accounts/
 │   │   ├── auth/
 │   │   ├── dashboard/
 │   │   ├── i18n/
 │   │   ├── layout/
+│   │   ├── launch/
+│   │   ├── legal/
 │   │   ├── mobile/
 │   │   ├── onboarding/
 │   │   ├── pwa/
@@ -77,7 +86,8 @@ flowchart TD
 │   │   ├── auth/
 │   │   ├── convex/
 │   │   ├── db/
-│   │   ├── location/
+│   │   ├── http/
+│   │   ├── legal/
 │   │   ├── news/
 │   │   ├── types/
 │   │   └── utils/
@@ -126,10 +136,18 @@ flowchart TD
 | `/sign-up`                   | `src/app/sign-up/page.tsx`                               | Convex Auth sign-up entry (email/password)                  |
 | `/forgot-password`           | `src/app/forgot-password/page.tsx`                       | Password reset request entry                                |
 | `/reset`                     | `src/app/reset/page.tsx`                                 | Password reset completion (token from email)                |
+| `/join`                      | `src/app/join/page.tsx`                                  | Join a shared board via invite link/QR                      |
+| `/accounts`                  | `src/app/accounts/page.tsx`                              | Accounts — multi-board shared budgeting (boards, umbrellas, invites) |
 | `/dashboard`                 | `src/app/(app)/dashboard/page.tsx`                       | Protected dashboard (post-auth landing target)              |
 | `/wizard`                    | `src/app/(app)/wizard/page.tsx`                          | Protected launch wizard                                     |
-| `/settings`                  | `src/app/settings/page.tsx`                               | Settings page (theme, sync status)                          |
+| `/settings`                  | `src/app/settings/page.tsx`                             | Settings page (theme, sync status, Market Watch toggle)     |
+| `/privacy`                   | `src/app/privacy/page.tsx`                              | Privacy policy page                                          |
+| `/terms`                     | `src/app/terms/page.tsx`                                | Terms of service page                                       |
+| `/cookie-policy`             | `src/app/cookie-policy/page.tsx`                        | Cookie policy page                                          |
 | `/settings/integrations`     | Not yet implemented                                       | Provider connection hub (planned)                           |
+| `/api/news`                  | `src/app/api/news/route.ts`                             | Market Watch RSS feed (localized finance news)              |
+| `/api/legal/record-agreement` | `src/app/api/legal/record-agreement/route.ts`          | Records a signed legal-agreement (TOS/privacy/cookie)       |
+| `/api/legal/record-cookie-consent` | `src/app/api/legal/record-cookie-consent/route.ts`  | Records a cookie-consent choice (server-recorded audit trail) |
 
 ## 3. Component index
 
@@ -152,6 +170,7 @@ flowchart TD
 | --------------------------------------------------- | -------------------------------------------------------------- |
 | `src/components/launch/golden-splash.tsx`           | Brand splash overlay on the auth-first root gate (`src/app/page.tsx`) |
 | `src/components/launch/manifesto-notification.tsx`  | Manifesto notification card rendered on the dashboard shell   |
+| `src/components/launch/manifesto-interstitial.tsx`   | Manifesto interstitial gate shown before auth                 |
 
 ### Wizard components
 
@@ -160,17 +179,40 @@ flowchart TD
 | `src/components/wizard/wizard-shell.tsx`                 | Wizard shell with progress, voice toggle, steps      |
 | `src/components/wizard/*`                                | Individual wizard step components                    |
 
+### Accounts & shared-board components
+
+| File / Folder                                       | Purpose                                                        |
+| --------------------------------------------------- | -------------------------------------------------------------- |
+| `src/components/accounts/accounts-view.tsx`         | Accounts overview (boards, umbrellas, invites)                 |
+| `src/components/accounts/account-switcher.tsx`      | Board/account switcher                                         |
+| `src/components/accounts/account-sync-mount.tsx`    | Mounts automatic cross-account sync                            |
+| `src/components/shared-board/shared-board-sync.tsx` | Shared couple-board keyed-merge sync UI                        |
+
 ### Welcome components
 
 | File                                                     | Purpose                                              |
 | -------------------------------------------------------- | ---------------------------------------------------- |
 | `src/components/welcome/welcome-window.tsx`              | Welcome window for signed-out visitors               |
 
+### Legal & layout components
+
+| File / Folder                       | Purpose                                              |
+| ----------------------------------- | ---------------------------------------------------- |
+| `src/components/legal/cookie-consent-banner.tsx` | Cookie consent banner                          |
+| `src/components/legal/site-footer.tsx`           | Site footer (legal links)                      |
+| `src/components/legal/legal-page.tsx`           | Reusable legal-page renderer                      |
+| `src/components/layout/header-bar.tsx`          | Persistent header bar (nav, globe, wrench)       |
+
+### Start Smart components
+
+| File / Folder                       | Purpose                                              |
+| ----------------------------------- | ---------------------------------------------------- |
+| `src/components/start-smart/panels/home-base-panel.tsx` | Money Survival Blueprint home-base panel   |
+
 ### Shared board & providers
 
 | File / Folder                       | Purpose                                              |
 | ----------------------------------- | ---------------------------------------------------- |
-| `src/components/shared-board/`      | Shared couple boards (sync, snapshots) UI            |
 | `src/components/providers/`         | App-level React context providers                    |
 
 ### UI primitives
@@ -196,6 +238,13 @@ flowchart TD
 | `src/hooks/use-local-db.ts` | IndexedDB wrapper for local-first data |
 | `src/hooks/use-critical-expense.ts` | Critical expense tracking hook       |
 | `src/hooks/use-voice.ts` | Voice input/output hook              |
+| `src/hooks/use-accounts.ts` | Accounts (boards/umbrellas) state    |
+| `src/hooks/use-account-sync.ts` | Automatic cross-account sync hook    |
+| `src/hooks/use-currency.ts` | Location-driven currency formatting  |
+| `src/hooks/use-display-prefs.ts` | Display preferences (theme, numerals) |
+| `src/hooks/use-haptic.ts` | Haptic feedback (mobile)             |
+| `src/hooks/use-news-prefs.ts` | Market Watch news preferences        |
+| `src/hooks/use-shared-board.ts` | Shared couple-board sync state       |
 
 ## 5. Library index
 
@@ -214,11 +263,30 @@ flowchart TD
 | `src/lib/convex/http-client.ts`   | Convex HTTP client for server-side calls   |
 | `src/lib/convex/sync-snapshots.ts` | Snapshot sync utilities                    |
 
+### HTTP
+
+| File                      | Purpose                              |
+| ------------------------- | ------------------------------------ |
+| `src/lib/http/client-ip.ts` | Client IP / geolocation resolution (used for location-driven currency) |
+
 ### Database (IndexedDB)
 
 | File                      | Purpose                              |
 | ------------------------- | ------------------------------------ |
 | `src/lib/db/local-db.ts`  | IndexedDB wrapper for local-first data |
+
+### Legal
+
+| File                      | Purpose                              |
+| ------------------------- | ------------------------------------ |
+| `src/lib/legal/versions.ts` | Legal document version registry    |
+| `src/lib/legal/content.ts`   | Legal page content (TOS/privacy/cookie) |
+
+### News (Market Watch)
+
+| File                      | Purpose                              |
+| ------------------------- | ------------------------------------ |
+| `src/lib/news/rss-fetcher.ts` | RSS fetcher for localized finance news |
 
 ### Utils
 
@@ -243,7 +311,15 @@ flowchart TD
 ### Database schema
 
 - **authTables** — Provided by `@convex-dev/auth` (users, sessions, etc.)
+- **userProfiles** — Per-user launch profile, share code, linked/joined boards
+- **sharedBoards** — Two-member shared couple boards (memberA/memberB, board data, updatedAt/By)
+- **accounts** — Budgeting accounts (umbrella, name, inviteCode, owner, optional boardId)
+- **boardMembers** — Board membership (boardId, userId, role owner/member)
+- **accountBoards** — Shared multi-board state (up to 5 boards, 7 umbrellas, members, data)
+- **invites** — Board/account invites (pending/accepted/declined, token)
 - **dailySnapshots** — User daily financial snapshots with wizard profile, totals, critical expense commitment
+- **legalAgreements** — Signed legal-agreement records (TOS/privacy/cookie)
+- **cookieConsents** — Cookie-consent choices (server-recorded audit trail)
 
 ## 7. Testing map
 
