@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/components/providers/theme-provider';
-import { ConvexAuthNextjsServerProvider } from '@convex-dev/auth/nextjs/server';
 import { ConvexClientProvider } from '@/components/providers/convex-client-provider';
 import { SharedBoardSync } from '@/components/shared-board/shared-board-sync';
 import { AccountSyncMount } from '@/components/accounts/account-sync-mount';
@@ -50,21 +49,19 @@ export default async function RootLayout({
         <meta name="theme-color" content="#f5d742" media="(prefers-color-scheme: light)" />
       </head>
       <body className="flex min-h-screen flex-col bg-black text-white">
-        <ConvexAuthNextjsServerProvider apiRoute="/api/convex-auth">
+        <ConvexClientProvider>
           <NextIntlClientProvider messages={messages} locale={locale}>
             <ThemeProvider>
-              <ConvexClientProvider>
-                <SharedBoardSync />
-                <AccountSyncMount />
-                <PWARegister />
-                <WebViewBanner />
-                {children}
-                <SiteFooter />
-                <CookieConsentBanner />
-              </ConvexClientProvider>
+              <SharedBoardSync />
+              <AccountSyncMount />
+              <PWARegister />
+              <WebViewBanner />
+              {children}
+              <SiteFooter />
+              <CookieConsentBanner />
             </ThemeProvider>
           </NextIntlClientProvider>
-        </ConvexAuthNextjsServerProvider>
+        </ConvexClientProvider>
       </body>
     </html>
   );

@@ -111,6 +111,20 @@ const DB_NAME = 'budgetbitch';
 const DB_VERSION = 3;
 let dbInstance: IDBPDatabase<BudgetBITCHDB> | null = null;
 
+// Test-only hook: drop the cached connection so the next getDB() re-opens the
+// SAME persisted IndexedDB. Simulates an app relaunch (close + reopen) without
+// clearing data — used to verify multi-account stashes survive a reload.
+export function __closeDbForTest(): void {
+  if (dbInstance) {
+    try {
+      dbInstance.close();
+    } catch {
+      // ignore close errors
+    }
+    dbInstance = null;
+  }
+}
+
 export async function getDB(): Promise<IDBPDatabase<BudgetBITCHDB>> {
   if (typeof window === 'undefined') {
     // Return a dummy DB proxy to prevent SSR crashes.
@@ -525,13 +539,18 @@ export const USER_DATA_STORES = [
 
 export type UserDataStore = (typeof USER_DATA_STORES)[number];
 
-// Utility: Clear all data (for full wipe, e.g. dev/test)
+// Utility: Clear all data (for full wipe, e.g. dev/test).
+// Includes the Accounts-feature local state (accountsData, localAccounts,
+// bbMeta) so a "full wipe" actually removes every account, not just the
+// active board's 8 stores.
 export async function clearAllData(): Promise<void> {
   const db = await getDB();
   const stores = [
     'wizardProfile', 'expenses', 'budgets', 'bills', 'savingsGoals',
     'netWorthSnapshots', 'debts', 'criticalExpenseCommitments', 'newsCache',
-    'locationCache', 'settings'
+    'locationCache', 'settings',
+    // Accounts feature: per-account stashes, account meta cache, current pointer.
+    'accountsData', 'localAccounts', 'bbMeta',
   ] as const;
   const tx = db.transaction(stores, 'readwrite');
   for (const store of stores) {
