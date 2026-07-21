@@ -22,20 +22,26 @@ function subscribeToMount() {
 export default function Home() {
   const auth = useConvexAuth();
   const { isLoading, isAuthenticated } = auth ?? { isLoading: true, isAuthenticated: false };
-  const [splashDismissed, setSplashDismissed] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return sessionStorage.getItem("bb:splash-seen") === "true";
-  });
-
-  const [locale, setLocale] = useState<'th' | 'en'>(() => {
-    if (typeof window === "undefined") return 'en';
-    const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-    return stored === 'th' || stored === 'en' ? stored : 'en';
-  });
+  const [splashDismissed, setSplashDismissed] = useState(true);
+  const [locale, setLocale] = useState<'th' | 'en'>('en');
 
   const mounted = useSyncExternalStore(subscribeToMount, () => true, () => false);
 
-  const showLanguageModal = mounted && !localStorage.getItem(LANGUAGE_STORAGE_KEY);
+  useEffect(() => {
+    if (mounted) {
+      const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+      if (stored === 'th' || stored === 'en') {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setLocale(stored);
+      }
+      const seen = sessionStorage.getItem("bb:splash-seen") === "true";
+      if (!seen) {
+        setSplashDismissed(false);
+      }
+    }
+  }, [mounted]);
+
+  const showLanguageModal = mounted && typeof window !== "undefined" && !localStorage.getItem(LANGUAGE_STORAGE_KEY);
 
   const finishLocaleSelect = (selectedLocale: 'th' | 'en') => {
     try {

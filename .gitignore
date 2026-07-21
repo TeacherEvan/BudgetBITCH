@@ -60,3 +60,5 @@ local-db-*
 # agent skills (auto-installed, regenerable via `npx convex ai-files install`)
 .claude/skills/convex-*
 .claude/skills/convex/
+
+.hermes-cache/

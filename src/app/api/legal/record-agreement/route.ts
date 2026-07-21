@@ -46,9 +46,8 @@ export async function POST(req: NextRequest) {
   // Client-forwarded JWT only (no server cookie in localStorage auth mode).
   const authToken = token || undefined;
 
-  const client = getConvexHttpClient({ auth: authToken });
-
   try {
+    const client = getConvexHttpClient({ auth: authToken });
     const { id } = await client.mutation(api.legal.recordAgreement, {
       termsVersion,
       privacyVersion,

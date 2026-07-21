@@ -112,8 +112,8 @@ export function BudgetVisual({ locale = 'en' }: BudgetVisualProps) {
         </div>
 
         {budgetData.length > 0 && (
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-64" style={{ minWidth: 0 }}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
               {(graphType === 'pie' || graphType === 'donut') ? (
                 <PieChart>
                   <Pie
