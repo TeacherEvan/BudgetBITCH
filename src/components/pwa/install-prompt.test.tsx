@@ -9,6 +9,9 @@ describe('PWAInstallPrompt', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockOnDismiss.mockClear();
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.clear();
+    }
     
     // Mock matchMedia
     Object.defineProperty(window, 'matchMedia', {
@@ -222,17 +225,17 @@ describe('PWAInstallPrompt', () => {
     expect(screen.queryByText('Install BudgetBITCH')).not.toBeInTheDocument();
   });
 
-  it('does not show if no beforeinstallprompt event after timeout', async () => {
+  it('shows universal fallback prompt if no beforeinstallprompt event fires after timeout', async () => {
     vi.useFakeTimers();
     
     render(<PWAInstallPrompt onDismiss={mockOnDismiss} locale="en" />);
     
-    // Fast-forward past the 2s delay
+    // Fast-forward past the 3s delay
     await act(async () => {
-      vi.advanceTimersByTime(3000);
+      vi.advanceTimersByTime(4000);
     });
     
-    expect(screen.queryByText('Install BudgetBITCH')).not.toBeInTheDocument();
+    expect(screen.queryByText('Install BudgetBITCH')).toBeInTheDocument();
     
     vi.useRealTimers();
   });
