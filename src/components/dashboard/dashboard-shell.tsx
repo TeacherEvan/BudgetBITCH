@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import Link from 'next/link';
 import { X, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { HeaderBar } from '@/components/layout/header-bar';
@@ -140,6 +141,20 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
         {/* Desktop Sidebar - only on lg+ */}
         <aside className="hidden w-80 flex-shrink-0 overflow-y-auto border-r border-[var(--gold-border-soft)] bg-[var(--bg-surface-1)] p-4 lg:block">
           <AccountSwitcher locale={locale} />
+          <Link
+            href="/accounts"
+            className="flex w-full items-center gap-3 rounded-xl border border-sky-400/30 bg-sky-400/10 p-3 text-left transition-colors hover:bg-sky-400/20 mt-3"
+          >
+            <span className="text-2xl">🏦</span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-white">
+                {locale === 'th' ? 'จัดการบัญชีร่วมกัน' : 'Manage Accounts'}
+              </p>
+              <p className="text-[10px] text-white/50 leading-tight">
+                {locale === 'th' ? 'แชร์บอร์ดกับครอบครัว เพื่อน หรือที่ทำงาน' : 'Share budget with family, friends, or work'}
+              </p>
+            </div>
+          </Link>
           <div className="mb-6 mt-4 space-y-3">
             <h3 className="bb-kicker">
               {locale === 'th' ? 'ค่าใช้จ่ายที่ต้องลด' : 'Cut One Expense'}
@@ -279,6 +294,21 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
           <div className="pt-1">
             <AccountSwitcher locale={locale} />
           </div>
+          <Link
+            href="/accounts"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex w-full items-center gap-3 rounded-xl border border-sky-400/30 bg-sky-400/10 p-3 text-left transition-colors hover:bg-sky-400/20"
+          >
+            <span className="text-2xl">🏦</span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-white">
+                {locale === 'th' ? 'จัดการบัญชีร่วมกัน' : 'Manage Accounts'}
+              </p>
+              <p className="text-[10px] text-white/50 leading-tight">
+                {locale === 'th' ? 'แชร์บอร์ดกับครอบครัว เพื่อน หรือที่ทำงาน' : 'Share budget with family, friends, or work'}
+              </p>
+            </div>
+          </Link>
           {PANEL_ORDER.map(panel => {
             const config = PANEL_CONFIG[panel];
             const isActive = mobileActivePanel === panel;
