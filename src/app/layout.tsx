@@ -13,6 +13,7 @@ import { CookieConsentBanner } from '@/components/legal/cookie-consent-banner';
 import { NextIntlClientProvider } from 'next-intl';
 import { cookies } from 'next/headers';
 import { resolveLocale, localeMessages, localeCookieName } from '@/i18n/messages';
+import { Analytics } from '@vercel/analytics/next';
 
 const inter = Inter({
   variable: '--font-inter',
@@ -64,6 +65,7 @@ export default async function RootLayout({
             </ThemeProvider>
           </NextIntlClientProvider>
         </ConvexClientProvider>
+        <Analytics />
       </body>
     </html>
   );
