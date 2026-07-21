@@ -10,6 +10,11 @@ import {
   applyRemoteBoard,
 } from '@/lib/db/local-db';
 import { BOARD_CHANGED_EVENT } from '@/lib/types/budget';
+import {
+  getCurrentAccountId,
+  getLocalAccount,
+  getLocalAccounts,
+} from '@/lib/db/accountStorage';
 
 const PUSH_DEBOUNCE_MS = 800;
 const BOARD_QUEUE_KEY = 'budgetbitch:boardQueue';
@@ -55,6 +60,7 @@ export function useSharedBoard(): UseSharedBoard {
 
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
   const [resolving, setResolving] = useState(false);
+  const [isActive, setIsActive] = useState(true);
 
   const lastAppliedAt = useRef<number>(0);
   const applyingRemote = useRef<boolean>(false);
@@ -81,6 +87,45 @@ export function useSharedBoard(): UseSharedBoard {
   const unlinkMut = useMutation(api.sharedBoards.unlink);
   const convex = useConvex();
 
+  // Resolve whether the couple board is the currently active board.
+  const checkActiveStatus = useCallback(async () => {
+    const activeId = await getCurrentAccountId();
+    const activeMeta = await getLocalAccount(activeId);
+    const local = await getLocalAccounts();
+    if (local.length === 0) {
+      setIsActive(true);
+      return;
+    }
+    setIsActive(activeMeta?.boardId === boardId && boardId !== null);
+  }, [boardId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      await checkActiveStatus();
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [checkActiveStatus]);
+
+  // Listen for account changes/switches to update active status.
+  useEffect(() => {
+    const handleSwitch = (e: Event) => {
+      const customEvent = e as CustomEvent<{ source?: string }>;
+      if (customEvent.detail?.source === "switch") {
+        void checkActiveStatus();
+      }
+    };
+    window.addEventListener(BOARD_CHANGED_EVENT, handleSwitch);
+    return () => window.removeEventListener(BOARD_CHANGED_EVENT, handleSwitch);
+  }, [checkActiveStatus]);
+
+  // Reset lastAppliedAt when boardId changes to avoid using stale pull guards from other boards.
+  useEffect(() => {
+    lastAppliedAt.current = 0;
+  }, [boardId]);
+
   // Ensure a profile (shareCode) exists once authenticated.
   useEffect(() => {
     if (isAuthenticated && (myProfile === null || (myProfile && !myProfile.shareCode))) {
@@ -90,7 +135,7 @@ export function useSharedBoard(): UseSharedBoard {
 
   // PULL: apply remote board when newer than what we last applied.
   useEffect(() => {
-    if (!board) return;
+    if (!isActive || !board) return;
     if (board.updatedAt <= lastAppliedAt.current) return;
     if (applyingRemote.current) return;
 
@@ -107,7 +152,7 @@ export function useSharedBoard(): UseSharedBoard {
       }
     };
     void apply();
-  }, [board]);
+  }, [isActive, board]);
 
   const flushQueue = useCallback(async () => {
     const queue = readQueue();
@@ -135,7 +180,7 @@ export function useSharedBoard(): UseSharedBoard {
 
   // PUSH: debounce local edits, then push (or queue if offline).
   useEffect(() => {
-    if (!boardId) return;
+    if (!isActive || !boardId) return;
     if (typeof window === 'undefined') return;
 
     const doPush = async () => {
@@ -172,12 +217,14 @@ export function useSharedBoard(): UseSharedBoard {
 
     window.addEventListener(BOARD_CHANGED_EVENT, onChanged);
     window.addEventListener('online', flushQueue);
+    window.addEventListener('budgetbitch:flushQueues', flushQueue);
     return () => {
       window.removeEventListener(BOARD_CHANGED_EVENT, onChanged);
       window.removeEventListener('online', flushQueue);
+      window.removeEventListener('budgetbitch:flushQueues', flushQueue);
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
     };
-  }, [boardId, pushBoard, flushQueue]);
+  }, [isActive, boardId, pushBoard, flushQueue]);
 
   const linkByCode = useCallback(
     async (code: string) => {

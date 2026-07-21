@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, act, waitFor } from '@testing-library/react';
 import { BOARD_CHANGED_EVENT } from '@/lib/types/budget';
 import { saveWizardProfile, getWizardProfile, clearAllData, addExpense, getExpenses } from '@/lib/db/local-db';
+import { saveLocalAccount, setCurrentAccountId } from '@/lib/db/accountStorage';
 import type { WizardProfile, ExpenseEntry } from '@/lib/types/budget';
 
 // Control the values the hook reads from useQuery.
@@ -178,6 +179,68 @@ describe('useSharedBoard', () => {
     Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
     await act(async () => {
       window.dispatchEvent(new Event('online'));
+      await sleep(50);
+    });
+    expect(pushBoard).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT push edits when active account board does not match the couple board', async () => {
+    // Seed a different active board in local accounts
+    await saveLocalAccount({
+      accountId: 'another_account',
+      umbrella: 'family',
+      name: 'Family',
+      boardId: 'board_different',
+      inviteCode: null,
+      role: 'owner',
+      hasLocalData: true,
+    });
+    await setCurrentAccountId('another_account');
+
+    queryResults = {
+      getMyProfile: { shareCode: 'ABCD1234', displayName: null, linkedBoardId: 'board_1' },
+      getBoard: { boardId: 'board_1', updatedAt: 100, data: null } as FixtureBoard,
+    };
+    render(<HookProbe />);
+
+    // Let the active account checks complete
+    await act(async () => {
+      await sleep(50);
+    });
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT));
+      await sleep(1000);
+    });
+
+    // Should NOT push since active board ('board_different') !== couple board ('board_1')
+    expect(pushBoard).not.toHaveBeenCalled();
+  });
+
+  it('replays queued pushes on custom budgetbitch:flushQueues event', async () => {
+    queryResults = {
+      getMyProfile: { shareCode: 'ABCD1234', displayName: null, linkedBoardId: 'board_1' },
+      getBoard: { boardId: 'board_1', updatedAt: 100, data: null } as FixtureBoard,
+    };
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+
+    render(<HookProbe />);
+    await act(async () => {
+      await sleep(50);
+    });
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT));
+      await sleep(1000);
+    });
+
+    expect(pushBoard).not.toHaveBeenCalled();
+    const queue = JSON.parse(localStorage.getItem('budgetbitch:boardQueue') || '[]');
+    expect(queue).toHaveLength(1);
+
+    Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+    await act(async () => {
+      window.dispatchEvent(new Event('budgetbitch:flushQueues'));
       await sleep(50);
     });
     expect(pushBoard).toHaveBeenCalledTimes(1);

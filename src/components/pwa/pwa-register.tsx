@@ -10,6 +10,9 @@ function handleServiceWorkerMessage(event: MessageEvent) {
   const data = event.data;
   if (data?.type === 'TRIGGER_FLUSH') {
     void flushOfflineQueue();
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('budgetbitch:flushQueues'));
+    }
   }
 }
 

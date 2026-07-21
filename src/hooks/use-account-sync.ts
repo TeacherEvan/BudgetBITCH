@@ -84,20 +84,29 @@ export function useAccountSync(): UseAccountSync {
   const boardIdRef = useRef<string | null>(null);
 
   // Resolve the active account's boardId from local storage.
+  const resolveActiveBoard = useCallback(async () => {
+    const accountId = await getCurrentAccountId();
+    const meta = await getLocalAccount(accountId);
+    boardIdRef.current = meta?.boardId ?? null;
+    setBoardId(meta?.boardId ?? null);
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const accountId = await getCurrentAccountId();
-      const meta = await getLocalAccount(accountId);
+      await resolveActiveBoard();
       if (cancelled) return;
-      boardIdRef.current = meta?.boardId ?? null;
-      setBoardId(meta?.boardId ?? null);
       setLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [resolveActiveBoard]);
+
+  // Reset lastAppliedAt when boardId switches to avoid using stale pull guards from other boards.
+  useEffect(() => {
+    lastAppliedAt.current = 0;
+  }, [boardId]);
 
   // Push timer (debounce local edits).
   const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -178,10 +187,11 @@ export function useAccountSync(): UseAccountSync {
   useEffect(() => {
     const onChanged = (e: Event) => {
       const customEvent = e as CustomEvent<{ source?: string }>;
-      if (
-        customEvent.detail?.source === "remote" ||
-        customEvent.detail?.source === "switch"
-      ) {
+      if (customEvent.detail?.source === "switch") {
+        void resolveActiveBoard();
+        return;
+      }
+      if (customEvent.detail?.source === "remote") {
         return;
       }
       schedulePush();
@@ -189,9 +199,9 @@ export function useAccountSync(): UseAccountSync {
     window.addEventListener(BOARD_CHANGED_EVENT, onChanged);
     return () => window.removeEventListener(BOARD_CHANGED_EVENT, onChanged);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [resolveActiveBoard]);
 
-  // Replay queued pushes when back online.
+  // Replay queued pushes when back online or requested by SW.
   useEffect(() => {
     const onOnline = () => {
       if (isOnline()) {
@@ -199,8 +209,11 @@ export function useAccountSync(): UseAccountSync {
       }
     };
     window.addEventListener("online", onOnline);
-    return () => window.removeEventListener("online", onOnline);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    window.addEventListener("budgetbitch:flushQueues", onOnline);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("budgetbitch:flushQueues", onOnline);
+    };
   }, [flushQueue]);
 
   // Pull: apply a newer remote board into local storage.

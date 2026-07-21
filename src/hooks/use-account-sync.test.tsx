@@ -218,4 +218,64 @@ describe('useAccountSync', () => {
     });
     expect(pushBoard).toHaveBeenCalledTimes(1);
   });
+
+  it('replays queued pushes on custom budgetbitch:flushQueues event', async () => {
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+    render(<HookProbe />);
+
+    // Let the active account's boardId resolve before editing.
+    await act(async () => {
+      await sleep(50);
+    });
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT));
+      await sleep(1000);
+    });
+
+    expect(pushBoard).not.toHaveBeenCalled();
+    const queue = JSON.parse(localStorage.getItem('budgetbitch:accountBoardQueue') || '[]');
+    expect(queue).toHaveLength(1);
+    
+    await act(async () => {
+      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+      window.dispatchEvent(new Event('budgetbitch:flushQueues'));
+      await sleep(200);
+    });
+    expect(pushBoard).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-resolves boardId and triggers push/pull on active account switch event', async () => {
+    render(<HookProbe />);
+    // Let initial load resolve (family board)
+    await act(async () => {
+      await sleep(50);
+    });
+
+    // Switch account to one with board_another
+    await act(async () => {
+      await saveLocalAccount({
+        accountId: 'another_account',
+        umbrella: 'family',
+        name: 'Another Family',
+        boardId: 'board_another',
+        inviteCode: null,
+        role: 'owner',
+        hasLocalData: true,
+      });
+      await setCurrentAccountId('another_account');
+      window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT, { detail: { source: 'switch' } }));
+      await sleep(50);
+    });
+
+    // Verify it schedules a push under the new boardId on subsequent board edits
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT));
+      await sleep(1000);
+    });
+
+    expect(pushBoard).toHaveBeenCalledTimes(1);
+    const lastCall = (pushBoard.mock.calls[0] as unknown[])[0] as { boardId: string };
+    expect(lastCall.boardId).toBe('board_another');
+  });
 });

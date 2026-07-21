@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/modal';
 import { Toggle } from '@/components/ui/toggle';
 import { useDisplayPrefs, type GraphType } from '@/hooks/use-display-prefs';
 import { useNewsPrefs, ALL_GENRES, type NewsGenre } from '@/hooks/use-news-prefs';
+import { SyncStatusIndicator } from '@/components/ui/sync-status-indicator';
 
 interface HeaderBarProps {
   locale: 'th' | 'en';
@@ -81,8 +82,9 @@ export function HeaderBar({ locale, onLocaleChange, voiceEnabled, onVoiceToggle 
         </h1>
       </Link>
 
-      {/* Right: Voice pill + Settings wrench */}
+      {/* Right: Sync Status + Voice pill + Settings wrench */}
       <div className="flex items-center gap-3">
+        <SyncStatusIndicator locale={locale} />
         <div className="hidden items-center gap-2 md:flex">
           <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[rgba(248,243,232,0.5)]">Voice</span>
           <Toggle
