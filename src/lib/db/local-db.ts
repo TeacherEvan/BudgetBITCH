@@ -14,7 +14,7 @@ import type {
   Debt,
   BoardSnapshot,
 } from '@/lib/types/budget';
-import { notifyBoardChanged } from '@/lib/types/budget';
+import { notifyBoardChanged, type BoardChangedSource } from '@/lib/types/budget';
 
 export type { BoardSnapshot } from '@/lib/types/budget';
 
@@ -291,7 +291,7 @@ export async function getLocalWrite(store: string, key: string): Promise<number>
  */
 export async function afterBoardMutation(store: string, key: string): Promise<void> {
   await recordLocalWrite(store, key);
-  notifyBoardChanged();
+  notifyBoardChanged('local');
 }
 
 // Wizard Profile
@@ -698,6 +698,7 @@ export async function replaceBoardData(board: BoardSnapshot): Promise<void> {
   }
 
   await tx.done;
+  notifyBoardChanged('switch');
 }
 
 /**
@@ -710,9 +711,6 @@ export async function serializeBoardForSync(): Promise<Record<string, { value: u
   const now = Date.now();
   const out: Record<string, { value: unknown; updatedAt: number }> = {};
 
-  if (board.wizardProfile) {
-    out['wizardProfile:current'] = { value: board.wizardProfile, updatedAt: now };
-  }
   for (const e of board.expenses ?? []) out[`expenses:${e.id}`] = { value: e, updatedAt: now };
   for (const b of board.budgets ?? []) out[`budgets:${b.category}`] = { value: b, updatedAt: now };
   for (const b of board.bills ?? []) out[`bills:${b.id}`] = { value: b, updatedAt: now };
@@ -720,6 +718,22 @@ export async function serializeBoardForSync(): Promise<Record<string, { value: u
   for (const s of board.netWorthSnapshots ?? []) out[`netWorthSnapshots:${s.date}`] = { value: s, updatedAt: now };
   for (const d of board.debts ?? []) out[`debts:${d.id}`] = { value: d, updatedAt: now };
   for (const c of board.criticalExpenseCommitments ?? []) out[`criticalExpenseCommitments:${c.month}`] = { value: c, updatedAt: now };
+
+  return out;
+}
+
+export function serializeSnapshotForSync(snapshot: BoardSnapshot): Record<string, { value: unknown; updatedAt: number }> {
+  const now = Date.now();
+  const out: Record<string, { value: unknown; updatedAt: number }> = {};
+  
+  // Note: wizardProfile is intentionally omitted from shared sync to prevent overwrite conflicts
+  for (const e of snapshot.expenses ?? []) out[`expenses:${e.id}`] = { value: e, updatedAt: now };
+  for (const b of snapshot.budgets ?? []) out[`budgets:${b.category}`] = { value: b, updatedAt: now };
+  for (const b of snapshot.bills ?? []) out[`bills:${b.id}`] = { value: b, updatedAt: now };
+  for (const g of snapshot.savingsGoals ?? []) out[`savingsGoals:${g.id}`] = { value: g, updatedAt: now };
+  for (const s of snapshot.netWorthSnapshots ?? []) out[`netWorthSnapshots:${s.date}`] = { value: s, updatedAt: now };
+  for (const d of snapshot.debts ?? []) out[`debts:${d.id}`] = { value: d, updatedAt: now };
+  for (const c of snapshot.criticalExpenseCommitments ?? []) out[`criticalExpenseCommitments:${c.month}`] = { value: c, updatedAt: now };
 
   return out;
 }
@@ -742,7 +756,8 @@ export async function applyRemoteBoard(map: Record<string, { value: unknown; upd
     const recordKey = rest.join(':');
     if (!stores.includes(store as typeof stores[number])) continue;
     if (store === 'wizardProfile') {
-      stage.push({ store: 'wizardProfile', value: rec.value, explicitKey: 'current', updatedAt: rec.updatedAt });
+      // Exclude wizardProfile from remote board sync to avoid overwrite conflict on shared boards
+      continue;
     } else {
       stage.push({ store: store as typeof stores[number], value: rec.value, explicitKey: recordKey, updatedAt: rec.updatedAt });
     }
@@ -763,11 +778,14 @@ export async function applyRemoteBoard(map: Record<string, { value: unknown; upd
   for (const item of stage) {
     const localTs = localTsMap.get(`${item.store}:${item.explicitKey}`) ?? 0;
     if (item.updatedAt <= localTs) continue;
-    if (item.explicitKey !== undefined) {
+    // In IndexedDB, calling put() with an explicit key on a store that has a keyPath throws a DataError.
+    // Only pass the explicit key for the non-keyPath 'wizardProfile' store.
+    if (item.store === 'wizardProfile' && item.explicitKey !== undefined) {
       tx.objectStore(item.store).put(item.value as never, item.explicitKey as never);
     } else {
       tx.objectStore(item.store).put(item.value as never);
     }
   }
   await tx.done;
+  notifyBoardChanged('remote');
 }

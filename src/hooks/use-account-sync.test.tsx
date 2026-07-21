@@ -7,12 +7,15 @@ import {
   saveWizardProfile,
   getWizardProfile,
   clearAllData,
+  addExpense,
+  getExpenses,
+  recordLocalWrite,
 } from '@/lib/db/local-db';
 import {
   setCurrentAccountId,
   saveLocalAccount,
 } from '@/lib/db/accountStorage';
-import type { WizardProfile } from '@/lib/types/budget';
+import type { WizardProfile, ExpenseEntry } from '@/lib/types/budget';
 
 let queryResults: Record<string, unknown> = {};
 const pushBoard = vi.fn(async () => ({ success: true, applied: true }));
@@ -55,6 +58,17 @@ function makeProfile(income = 50000): WizardProfile {
   };
 }
 
+function makeExpense(id: string, amount = 100): ExpenseEntry {
+  return {
+    id,
+    date: '2026-07-21',
+    category: 'food',
+    merchant: 'Starbucks',
+    amount,
+    source: 'manual',
+  };
+}
+
 type FixtureBoard = {
   boardId: string;
   updatedAt: number;
@@ -88,8 +102,10 @@ afterEach(() => {
 
 describe('useAccountSync', () => {
   it('pulls a newer remote account board into local storage', async () => {
-    await saveWizardProfile(makeProfile(50000));
-    expect((await getWizardProfile())?.answers.income).toBe(50000);
+    const localExp = makeExpense('exp-1', 100);
+    await addExpense(localExp);
+    const expenses = await getExpenses();
+    expect(expenses.find(e => e.id === 'exp-1')?.amount).toBe(100);
 
     const result = render(<HookProbe />);
 
@@ -99,8 +115,8 @@ describe('useAccountSync', () => {
           boardId: 'board_family',
           updatedAt: Date.now() + 5_000_000,
           data: {
-            'wizardProfile:current': {
-              value: { ...makeProfile(999999) },
+            'expenses:exp-1': {
+              value: { ...makeExpense('exp-1', 999) },
               updatedAt: Date.now() + 5_000_000,
             },
           },
@@ -111,14 +127,15 @@ describe('useAccountSync', () => {
     });
 
     await waitFor(async () => {
-      const local = await getWizardProfile();
-      expect(local?.answers.income).toBe(999999);
+      const local = await getExpenses();
+      expect(local.find(e => e.id === 'exp-1')?.amount).toBe(999);
     });
   });
 
   it('does not clobber a local edit when the remote board is older (lossless pull)', async () => {
-    await saveWizardProfile(makeProfile(50000));
-    expect((await getWizardProfile())?.answers.income).toBe(50000);
+    const localExp = makeExpense('exp-1', 100);
+    await addExpense(localExp);
+    await recordLocalWrite('expenses', 'exp-1');
 
     const result = render(<HookProbe />);
 
@@ -129,8 +146,8 @@ describe('useAccountSync', () => {
           boardId: 'board_family',
           updatedAt: 100, // older than the local write (Date.now())
           data: {
-            'wizardProfile:current': {
-              value: { ...makeProfile(1) },
+            'expenses:exp-1': {
+              value: { ...makeExpense('exp-1', 999) },
               updatedAt: 100,
             },
           },
@@ -142,8 +159,8 @@ describe('useAccountSync', () => {
 
     // Local edit must survive the stale pull.
     await waitFor(async () => {
-      const local = await getWizardProfile();
-      expect(local?.answers.income).toBe(50000);
+      const local = await getExpenses();
+      expect(local.find(e => e.id === 'exp-1')?.amount).toBe(100);
     });
   });
 

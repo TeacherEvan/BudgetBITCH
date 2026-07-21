@@ -282,20 +282,25 @@ export function useAccounts(): UseAccounts {
     async (accountId: string) => {
       const local = await getLocalAccounts();
       const meta = local.find((l) => l.accountId === accountId);
-      if (meta?.boardId) {
-        const board = (await convex.query(api.accounts.getAccountBoard, {
-          boardId: meta.boardId,
-        })) as {
-          boardId: string;
-          updatedAt: number;
-          data: Record<string, { value: unknown; updatedAt: number }> | null;
-        } | null;
-        if (board?.data) {
-          await adoptRemoteAccount(meta, board.data);
+      try {
+        if (meta?.boardId) {
+          const board = (await convex.query(api.accounts.getAccountBoard, {
+            boardId: meta.boardId,
+          })) as {
+            boardId: string;
+            updatedAt: number;
+            data: Record<string, { value: unknown; updatedAt: number }> | null;
+          } | null;
+          if (board?.data) {
+            await adoptRemoteAccount(meta, board.data);
+          } else {
+            await localSwitch(accountId);
+          }
         } else {
           await localSwitch(accountId);
         }
-      } else {
+      } catch (e) {
+        console.error("Convex board fetch failed, falling back to local switch:", e);
         await localSwitch(accountId);
       }
       setCurrentAccountId(accountId);

@@ -3,13 +3,13 @@ import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, act, waitFor } from '@testing-library/react';
 import { BOARD_CHANGED_EVENT } from '@/lib/types/budget';
-import { saveWizardProfile, getWizardProfile, clearAllData } from '@/lib/db/local-db';
-import type { WizardProfile } from '@/lib/types/budget';
+import { saveWizardProfile, getWizardProfile, clearAllData, addExpense, getExpenses } from '@/lib/db/local-db';
+import type { WizardProfile, ExpenseEntry } from '@/lib/types/budget';
 
 // Control the values the hook reads from useQuery.
 let queryResults: Record<string, unknown> = {};
 const pushBoard = vi.fn(async () => ({ success: true, applied: true }));
-const resolveShareCode = vi.fn(async () => ({ exists: true, displayName: null }));
+const resolveShareCode = vi.fn(async (_args?: Record<string, unknown>) => ({ exists: true, displayName: null }));
 
 vi.mock('@convex-dev/auth/react', () => ({
   useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
@@ -65,6 +65,17 @@ function makeProfile(): WizardProfile {
   };
 }
 
+function makeExpense(id: string, amount = 100): ExpenseEntry {
+  return {
+    id,
+    date: '2026-07-21',
+    category: 'food',
+    merchant: 'Starbucks',
+    amount,
+    source: 'manual',
+  };
+}
+
 type FixtureBoard = {
   boardId: string;
   updatedAt: number;
@@ -90,8 +101,10 @@ beforeEach(async () => {
 
 describe('useSharedBoard', () => {
   it('pulls a newer remote board into local storage', async () => {
-    await saveWizardProfile(makeProfile());
-    expect((await getWizardProfile())?.answers.income).toBe(50000);
+    const localExp = makeExpense('exp-1', 100);
+    await addExpense(localExp);
+    const expenses = await getExpenses();
+    expect(expenses.find(e => e.id === 'exp-1')?.amount).toBe(100);
 
     const result = render(<HookProbe />);
 
@@ -101,11 +114,8 @@ describe('useSharedBoard', () => {
       memberA: 'u1',
       memberB: 'u2',
       data: {
-        'wizardProfile:current': {
-          value: {
-            ...makeProfile(),
-            answers: { ...makeProfile().answers, income: 999999 },
-          },
+        'expenses:exp-1': {
+          value: { ...makeExpense('exp-1', 999) },
           updatedAt: Date.now() + 5_000_000,
         },
       },
@@ -123,8 +133,8 @@ describe('useSharedBoard', () => {
     });
 
     await waitFor(async () => {
-      const local = await getWizardProfile();
-      expect(local?.answers.income).toBe(999999);
+      const local = await getExpenses();
+      expect(local.find(e => e.id === 'exp-1')?.amount).toBe(999);
     });
   });
 

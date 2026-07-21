@@ -149,14 +149,16 @@ describe('shared board serialize/replace', () => {
     expect(after.map(e => e.id).sort()).toEqual(['exp-3', 'exp-old']);
   });
 
-  it('replaceBoardData does NOT emit a board-changed event', async () => {
+  it('replaceBoardData emits a board-changed event with source switch', async () => {
     const handler = vi.fn();
     window.addEventListener(BOARD_CHANGED_EVENT, handler);
 
     const board = await serializeBoard();
     await replaceBoardData(board);
 
-    expect(handler).not.toHaveBeenCalled();
+    expect(handler).toHaveBeenCalledTimes(1);
+    const event = handler.mock.calls[0][0] as CustomEvent;
+    expect(event.detail?.source).toBe('switch');
     window.removeEventListener(BOARD_CHANGED_EVENT, handler);
   });
 

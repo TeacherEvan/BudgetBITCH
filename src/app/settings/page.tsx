@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
-import { Globe, Volume2, Palette, Trash2, AlertCircle, Shield, Download, Upload, BarChart2, TrendingUp, PieChart, Circle, User, Newspaper, Users, Settings, ArrowLeft } from 'lucide-react';
+import { Globe, Volume2, Palette, Trash2, AlertCircle, Shield, Download, Upload, BarChart2, TrendingUp, PieChart, Circle, User, Newspaper, Users, Settings, ArrowLeft, KeyRound } from 'lucide-react';
 import { useWizardProfile } from '@/hooks/use-local-db';
 import { useVoice } from '@/hooks/use-voice';
 import { useCriticalExpense } from '@/hooks/use-critical-expense';
@@ -761,6 +761,27 @@ export default function SettingsPage() {
                   </p>
                 </div>
               )}
+            </div>
+
+            <div className="pt-4 border-t border-white/10">
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <KeyRound className="w-4 h-4 text-amber-400" />
+                  <p className="text-sm font-medium text-white">{locale === 'th' ? 'รหัสผ่าน' : 'Password'}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => router.push('/reset')}
+                  className="text-xs font-semibold text-amber-400 hover:text-amber-300"
+                >
+                  {locale === 'th' ? 'เปลี่ยนรหัสผ่าน' : 'Change password'}
+                </button>
+              </div>
+              <p className="text-xs text-white/50">
+                {locale === 'th'
+                  ? 'รีเซ็ตรหัสผ่านด้วยลิงก์ในหน้าสign-in หรือใช้ฟอร์มด้านล่าง'
+                  : 'Reset via the sign-in reset flow, or use the form below.'}
+              </p>
             </div>
           </Card>
         </section>

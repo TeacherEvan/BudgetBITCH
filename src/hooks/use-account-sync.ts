@@ -15,7 +15,7 @@
 
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import {
@@ -25,11 +25,18 @@ import {
 import {
   getCurrentAccountId,
   getLocalAccount,
+  getStashedAccount,
 } from "@/lib/db/accountStorage";
 import { BOARD_CHANGED_EVENT } from "@/lib/types/budget";
 
 const BOARD_QUEUE_KEY = "budgetbitch:accountBoardQueue";
 const PUSH_DEBOUNCE_MS = 800;
+
+export interface QueuedPush {
+  boardId: string;
+  data: Record<string, { value: unknown; updatedAt: number }>;
+  updatedAt: number;
+}
 
 export interface UseAccountSync {
   boardId: string | null;
@@ -39,7 +46,7 @@ export interface UseAccountSync {
   lastError: string | null;
 }
 
-function getQueue(): unknown[] {
+function getQueue(): QueuedPush[] {
   if (typeof window === "undefined") return [];
   try {
     return JSON.parse(localStorage.getItem(BOARD_QUEUE_KEY) || "[]");
@@ -48,7 +55,7 @@ function getQueue(): unknown[] {
   }
 }
 
-function setQueue(q: unknown[]): void {
+function setQueue(q: QueuedPush[]): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(BOARD_QUEUE_KEY, JSON.stringify(q));
 }
@@ -96,37 +103,69 @@ export function useAccountSync(): UseAccountSync {
   const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingRef = useRef(false);
 
+  const flushQueue = useCallback(async () => {
+    if (!isOnline()) return;
+    const q = getQueue();
+    if (q.length === 0) return;
+
+    const remaining: QueuedPush[] = [];
+    setSyncing(true);
+    for (const item of q) {
+      try {
+        await pushBoard({
+          boardId: item.boardId,
+          data: item.data as never,
+          updatedAt: item.updatedAt,
+        });
+      } catch (e) {
+        console.error("Failed to push queued board:", item.boardId, e);
+        remaining.push(item);
+      }
+    }
+    setQueue(remaining);
+    setSyncing(false);
+    setPushPending(remaining.length > 0);
+  }, [pushBoard]);
+
   const doPush = async () => {
     const bid = boardIdRef.current;
-    if (!bid || !isOnline()) return;
-    try {
-      setSyncing(true);
-      const data = await serializeBoardForSync();
-      await pushBoard({ boardId: bid, data: data as never, updatedAt: Date.now() });
-      setLastError(null);
-    } catch (e) {
-      setLastError(e instanceof Error ? e.message : "Push failed");
-      // Queue for retry while offline / on error.
+    if (!bid) return;
+
+    if (isOnline()) {
+      await flushQueue();
+    }
+
+    const updatedAt = Date.now();
+    const data = await serializeBoardForSync();
+
+    if (isOnline()) {
+      try {
+        setSyncing(true);
+        await pushBoard({ boardId: bid, data: data as never, updatedAt });
+        setLastError(null);
+      } catch (e) {
+        setLastError(e instanceof Error ? e.message : "Push failed");
+        // Queue for retry
+        const q = getQueue();
+        q.push({ boardId: bid, data, updatedAt });
+        setQueue(q);
+      } finally {
+        setSyncing(false);
+        setPushPending(false);
+      }
+    } else {
       const q = getQueue();
-      q.push({ boardId: bid, at: Date.now() });
-      setQueue(q);
-    } finally {
-      setSyncing(false);
-      setPushPending(false);
+      const filtered = q.filter((item) => item.boardId !== bid);
+      filtered.push({ boardId: bid, data, updatedAt });
+      setQueue(filtered);
+      setPushPending(true);
     }
   };
 
   const schedulePush = () => {
-    const bid = boardIdRef.current;
     pendingRef.current = true;
     setPushPending(true);
-    // Offline: queue the edit; it replays on the 'online' event.
-    if (!isOnline()) {
-      const q = getQueue();
-      q.push({ boardId: bid, at: Date.now() });
-      setQueue(q);
-      return;
-    }
+    
     if (pushTimer.current) clearTimeout(pushTimer.current);
     pushTimer.current = setTimeout(() => {
       void doPush();
@@ -137,7 +176,16 @@ export function useAccountSync(): UseAccountSync {
   // doPush/schedulePush no-op until boardId resolves, so an edit made in the
   // first tick after mount is still captured (no stale-closure loss).
   useEffect(() => {
-    const onChanged = () => schedulePush();
+    const onChanged = (e: Event) => {
+      const customEvent = e as CustomEvent<{ source?: string }>;
+      if (
+        customEvent.detail?.source === "remote" ||
+        customEvent.detail?.source === "switch"
+      ) {
+        return;
+      }
+      schedulePush();
+    };
     window.addEventListener(BOARD_CHANGED_EVENT, onChanged);
     return () => window.removeEventListener(BOARD_CHANGED_EVENT, onChanged);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -146,16 +194,14 @@ export function useAccountSync(): UseAccountSync {
   // Replay queued pushes when back online.
   useEffect(() => {
     const onOnline = () => {
-      const q = getQueue();
-      if (q.length && isOnline() && boardIdRef.current) {
-        setQueue([]);
-        void doPush();
+      if (isOnline()) {
+        void flushQueue();
       }
     };
     window.addEventListener("online", onOnline);
     return () => window.removeEventListener("online", onOnline);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [flushQueue]);
 
   // Pull: apply a newer remote board into local storage.
   useEffect(() => {
@@ -176,10 +222,6 @@ export function useAccountSync(): UseAccountSync {
         setSyncing(true);
         await applyRemoteBoard(remote.data as Record<string, { value: unknown; updatedAt: number }>);
         lastAppliedAt.current = remote.updatedAt;
-        // NOTE: intentionally do NOT call notifyBoardChanged() here. A remote
-        // pull must not re-trigger the local push listener (that would echo
-        // push → server → pull → push … forever). UI reads local data on its
-        // own queries and refreshes on the next render.
         setLastError(null);
       } catch (e) {
         setLastError(e instanceof Error ? e.message : "Pull failed");

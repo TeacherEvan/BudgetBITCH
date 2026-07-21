@@ -48,25 +48,30 @@ import {
   getCriticalExpenseCommitment,
   generateId,
 } from '@/lib/db/local-db';
+import { BOARD_CHANGED_EVENT } from '@/lib/types/budget';
 
 /**
- * Hook for local IndexedDB operations with React state sync
+ * Helper hook to register a window event listener that re-fetches local DB state
+ * whenever the local board data changes (e.g. from partner sync pulls or account switches).
  */
+function useDatabaseListener(callback: () => void) {
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.addEventListener(BOARD_CHANGED_EVENT, callback);
+    return () => window.removeEventListener(BOARD_CHANGED_EVENT, callback);
+  }, [callback]);
+}
 
 // Wizard Profile
 export function useWizardProfile() {
   const [profile, setProfile] = useState<WizardProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     let mounted = true;
     getWizardProfile().then(p => {
       if (mounted) {
-        if (p) {
-          setProfile(p);
-        } else {
-          setProfile(null);
-        }
+        setProfile(p || null);
         setLoading(false);
       }
     }).catch(() => {
@@ -74,6 +79,12 @@ export function useWizardProfile() {
     });
     return () => { mounted = false; };
   }, []);
+
+  useEffect(() => {
+    return load();
+  }, [load]);
+
+  useDatabaseListener(load);
 
   const save = useCallback(async (newProfile: WizardProfile) => {
     await saveWizardProfile(newProfile);
@@ -93,7 +104,7 @@ export function useExpenses() {
   const [expenses, setExpenses] = useState<ExpenseEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     let mounted = true;
     getExpenses().then(e => {
       if (mounted) {
@@ -105,6 +116,12 @@ export function useExpenses() {
     });
     return () => { mounted = false; };
   }, []);
+
+  useEffect(() => {
+    return load();
+  }, [load]);
+
+  useDatabaseListener(load);
 
   const add = useCallback(async (expense: Omit<ExpenseEntry, 'id'>) => {
     const newExpense = { ...expense, id: generateId() };
@@ -135,7 +152,7 @@ export function useBudgets() {
   const [budgets, setBudgets] = useState<BudgetCategory[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     let mounted = true;
     getAllBudgets().then(b => {
       if (mounted) {
@@ -147,6 +164,12 @@ export function useBudgets() {
     });
     return () => { mounted = false; };
   }, []);
+
+  useEffect(() => {
+    return load();
+  }, [load]);
+
+  useDatabaseListener(load);
 
   const save = useCallback(async (budget: BudgetCategory) => {
     await saveBudgetCategory(budget);
@@ -171,7 +194,7 @@ export function useBills() {
   const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     let mounted = true;
     getAllBills().then(b => {
       if (mounted) {
@@ -183,6 +206,12 @@ export function useBills() {
     });
     return () => { mounted = false; };
   }, []);
+
+  useEffect(() => {
+    return load();
+  }, [load]);
+
+  useDatabaseListener(load);
 
   const add = useCallback(async (bill: Bill) => {
     await addBill(bill);
@@ -207,7 +236,7 @@ export function useSavingsGoals() {
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     let mounted = true;
     getAllSavingsGoals().then(g => {
       if (mounted) {
@@ -219,6 +248,12 @@ export function useSavingsGoals() {
     });
     return () => { mounted = false; };
   }, []);
+
+  useEffect(() => {
+    return load();
+  }, [load]);
+
+  useDatabaseListener(load);
 
   const add = useCallback(async (goal: SavingsGoal) => {
     await addSavingsGoal(goal);
@@ -245,7 +280,7 @@ export function useCriticalExpenseCommitment(month?: string) {
 
   const targetMonth = month || new Date().toISOString().slice(0, 7);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     let mounted = true;
     getCriticalExpenseCommitment(targetMonth).then(c => {
       if (mounted) {
@@ -257,6 +292,12 @@ export function useCriticalExpenseCommitment(month?: string) {
     });
     return () => { mounted = false; };
   }, [targetMonth]);
+
+  useEffect(() => {
+    return load();
+  }, [load]);
+
+  useDatabaseListener(load);
 
   const save = useCallback(async (newCommitment: CriticalExpenseCommitment) => {
     await saveCriticalExpenseCommitment(newCommitment);
@@ -271,7 +312,7 @@ export function useNetWorth() {
   const [snapshot, setSnapshot] = useState<NetWorthSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     let mounted = true;
     getLatestNetWorthSnapshot().then(s => {
       if (mounted) {
@@ -283,6 +324,12 @@ export function useNetWorth() {
     });
     return () => { mounted = false; };
   }, []);
+
+  useEffect(() => {
+    return load();
+  }, [load]);
+
+  useDatabaseListener(load);
 
   const addAsset = useCallback(async (asset: Asset) => {
     if (!snapshot) return;
@@ -356,7 +403,7 @@ export function useSubscriptions() {
   const [subscriptions, setSubscriptions] = useState<ExpenseEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     let mounted = true;
     const loadSubscriptions = async () => {
       const allExpenses = await getExpenses();
@@ -369,6 +416,12 @@ export function useSubscriptions() {
     loadSubscriptions();
     return () => { mounted = false; };
   }, []);
+
+  useEffect(() => {
+    return load();
+  }, [load]);
+
+  useDatabaseListener(load);
 
   const add = useCallback(async (sub: Omit<ExpenseEntry, 'id'>) => {
     const newSub = { ...sub, id: generateId(), category: 'subscriptions' as const, isRecurring: true };
@@ -394,7 +447,7 @@ export function useEmergencyFund() {
   const [fund, setFund] = useState<{ targetAmount: number; currentAmount: number }>({ targetAmount: 0, currentAmount: 0 });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     let mounted = true;
     const loadFund = async () => {
       const goals = await getAllSavingsGoals();
@@ -411,6 +464,12 @@ export function useEmergencyFund() {
     loadFund();
     return () => { mounted = false; };
   }, []);
+
+  useEffect(() => {
+    return load();
+  }, [load]);
+
+  useDatabaseListener(load);
 
   const update = useCallback(async (updates: { targetAmount?: number; currentAmount?: number }) => {
     const goals = await getAllSavingsGoals();
@@ -446,7 +505,7 @@ export function useDebtPayoff() {
   const [debts, setDebts] = useState<Debt[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     let mounted = true;
     getAllDebts().then(d => {
       if (mounted) {
@@ -458,6 +517,12 @@ export function useDebtPayoff() {
     });
     return () => { mounted = false; };
   }, []);
+
+  useEffect(() => {
+    return load();
+  }, [load]);
+
+  useDatabaseListener(load);
 
   const add = useCallback(async (debt: Debt) => {
     await addDebt(debt);
@@ -482,7 +547,7 @@ export function useCashFlowForecast() {
   const [forecast, setForecast] = useState<{ thirtyDays: number; sixtyDays: number; ninetyDays: number }>({ thirtyDays: 0, sixtyDays: 0, ninetyDays: 0 });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     let mounted = true;
     const loadForecast = async () => {
       const [budgets] = await Promise.all([getAllBudgets()]);
@@ -503,6 +568,12 @@ export function useCashFlowForecast() {
     loadForecast();
     return () => { mounted = false; };
   }, []);
+
+  useEffect(() => {
+    return load();
+  }, [load]);
+
+  useDatabaseListener(load);
 
   return { forecast, loading };
 }

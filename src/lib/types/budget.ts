@@ -221,7 +221,9 @@ export interface BoardSnapshot {
 /** Fired on window whenever a shared-store mutation changes the local board. */
 export const BOARD_CHANGED_EVENT = 'budgetbitch:localBoardChanged';
 
-export function notifyBoardChanged(): void {
+export type BoardChangedSource = 'local' | 'remote' | 'switch';
+
+export function notifyBoardChanged(source: BoardChangedSource = 'local'): void {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT));
+  window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT, { detail: { source } }));
 }

@@ -157,7 +157,14 @@ export function useSharedBoard(): UseSharedBoard {
       }
     };
 
-    const onChanged = () => {
+    const onChanged = (e: Event) => {
+      const customEvent = e as CustomEvent<{ source?: string }>;
+      if (
+        customEvent.detail?.source === "remote" ||
+        customEvent.detail?.source === "switch"
+      ) {
+        return;
+      }
       if (applyingRemote.current) return; // don't echo a remote pull back
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
       debounceTimer.current = setTimeout(doPush, PUSH_DEBOUNCE_MS);

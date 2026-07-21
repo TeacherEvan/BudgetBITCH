@@ -18,6 +18,7 @@ import {
   replaceBoardData,
   clearAllUserData,
   getDB,
+  getWizardProfile,
 } from "./local-db";
 import {
   PERSONAL_ACCOUNT_ID,
@@ -164,9 +165,12 @@ export async function switchAccount(
     return;
   } else {
     // New account never opened locally: start from an empty board so the
-    // server copy (when pulled) fills in. Clear the 8 stores to a blank slate.
+    // server copy (when pulled) fills in. Inherit the personal wizard profile
+    // if available so the user doesn't have to repeatedly do onboarding.
+    const personalStash = await getStashedAccount(PERSONAL_ACCOUNT_ID);
+    const personalProfile = personalStash?.snapshot?.wizardProfile || (await getWizardProfile());
     const blank = {
-      wizardProfile: null,
+      wizardProfile: personalProfile ?? null,
       expenses: [],
       budgets: [],
       bills: [],

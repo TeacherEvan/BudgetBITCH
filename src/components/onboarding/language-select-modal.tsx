@@ -1,7 +1,7 @@
 // components/onboarding/language-select-modal.tsx
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 
@@ -11,12 +11,38 @@ interface LanguageSelectModalProps {
 }
 
 export function LanguageSelectModal({ isOpen, onComplete }: LanguageSelectModalProps) {
+  const previousOverflowRef = useRef<string | null>(null);
+
   useEffect(() => {
+    if (typeof document === 'undefined') return;
+
     if (isOpen) {
+      previousOverflowRef.current = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
     }
-    return () => { document.body.style.overflow = 'unset'; };
+
+    return () => {
+      if (typeof document !== 'undefined') {
+        document.body.style.overflow = previousOverflowRef.current ?? 'unset';
+      }
+    };
   }, [isOpen]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const restore = () => {
+      document.body.style.overflow = previousOverflowRef.current ?? 'unset';
+    };
+
+    window.addEventListener('pagehide', restore);
+    document.addEventListener('visibilitychange', restore);
+
+    return () => {
+      window.removeEventListener('pagehide', restore);
+      document.removeEventListener('visibilitychange', restore);
+    };
+  }, []);
 
   if (!isOpen) return null;
 

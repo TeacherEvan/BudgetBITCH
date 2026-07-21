@@ -11,8 +11,11 @@ import { useVoice } from '@/hooks/use-voice';
 import { useWizardProfile } from '@/hooks/use-local-db';
 import { useAccountSync } from '@/hooks/use-account-sync';
 import { initializeBudgetsFromWizard } from '@/lib/utils/budget-calculator';
-import { getWizardProfile } from '@/lib/db/local-db';
+import { getWizardProfile, saveWizardProfile, saveCriticalExpenseCommitment } from '@/lib/db/local-db';
 import { Loader2 } from 'lucide-react';
+import { useQuery } from 'convex/react';
+import { api } from '../../../../convex/_generated/api';
+import type { CriticalExpenseCommitment, CriticalExpenseKey } from '@/lib/types/budget';
 
 interface DashboardClientProps {
   wizardCompleted: boolean;
@@ -29,6 +32,8 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
   const [isLoading, setIsLoading] = useState(false);
   const [budgetsInitialized, setBudgetsInitialized] = useState(false);
   const [wizardForced, setWizardForced] = useState(false);
+
+  const latestSnapshot = useQuery(api.snapshots.getLatestSnapshot);
 
   // Manifesto gate — shown once per account, before the dashboard is interactive
   const [showManifesto, setShowManifesto] = useState(false);
@@ -100,6 +105,45 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
       return () => clearTimeout(timer);
     }
   }, [initialWizardCompleted, checkWizardStatus]);
+
+  // Restore session snapshot upon login if local profile is uncompleted
+  useEffect(() => {
+    if (profileLoading) return;
+    if (profile && profile.completed) return; // already completed locally
+    if (latestSnapshot === undefined || latestSnapshot === null) return; // loading or no snapshot
+
+    (async () => {
+      try {
+        console.log('Restoring wizard profile and settings from Convex snapshot...');
+        setIsLoading(true);
+        
+        // Restore wizard profile
+        if (latestSnapshot.wizardProfile) {
+          await saveWizardProfile(latestSnapshot.wizardProfile);
+        }
+        
+        // Restore critical expense commitment if present
+        if (latestSnapshot.criticalExpenseCommitment) {
+          const currentMonth = new Date().toISOString().slice(0, 7);
+          await saveCriticalExpenseCommitment({
+            ...latestSnapshot.criticalExpenseCommitment,
+            expenseKey: latestSnapshot.criticalExpenseCommitment.expenseKey as CriticalExpenseKey,
+            status: latestSnapshot.criticalExpenseCommitment.status as 'active' | 'completed' | 'failed',
+            month: currentMonth,
+            committedAt: new Date(latestSnapshot.createdAt || Date.now()).toISOString(),
+          });
+        }
+
+        // Trigger local recheck
+        await checkWizardStatus();
+        router.refresh();
+      } catch (e) {
+        console.error('Failed to restore Convex snapshot:', e);
+      } finally {
+        setIsLoading(false);
+      }
+    })();
+  }, [profile, profileLoading, latestSnapshot, checkWizardStatus, router]);
 
   const handleWizardComplete = useCallback(async () => {
     setWizardCompleted(true);

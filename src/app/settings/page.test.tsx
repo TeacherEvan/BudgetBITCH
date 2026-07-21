@@ -219,4 +219,12 @@ describe('SettingsPage', () => {
       expect(tab).not.toBeNull();
     }
   });
+
+  it('exposes a password management entry point in the privacy section', () => {
+    renderWithProviders(<SettingsPage />);
+
+    expect(screen.getByText(/change password/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByText(/change password/i));
+    expect(mockRouter.push).toHaveBeenCalledWith('/reset');
+  });
 });

@@ -23,9 +23,11 @@ vi.mock('@convex-dev/auth/react', () => ({
   useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
 }));
 
+const mockConvexQuery = vi.fn(async () => null);
+
 vi.mock('convex/react', () => ({
   useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
-  useConvex: () => ({ query: async () => null }),
+  useConvex: () => ({ query: mockConvexQuery }),
   useQuery: (_ref: unknown, _args: unknown) => listMyAccounts(),
   useMutation: () => spy,
 }));
@@ -138,5 +140,21 @@ describe('useAccounts', () => {
     const { getLocalAccount, getStashedAccount } = await import('@/lib/db/accountStorage');
     expect(await getLocalAccount('acc-own')).toBeUndefined();
     expect(await getStashedAccount('acc-own')).toBeUndefined();
+  });
+
+  it('switchTo falls back to localSwitch when convex query throws error', async () => {
+    // Force convex query to throw error
+    mockConvexQuery.mockRejectedValueOnce(new Error('Network error'));
+
+    let api!: ReturnType<typeof useAccounts>;
+    render(<HookProbe onReady={(a) => (api = a)} />);
+    await waitFor(() => expect(api?.ready).toBe(true));
+
+    await act(async () => {
+      await api.switchTo('acc-join');
+    });
+
+    const current = await getCurrentAccountId();
+    expect(current).toBe('acc-join');
   });
 });

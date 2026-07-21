@@ -1,6 +1,6 @@
 // convex/snapshots.ts
 import { v } from "convex/values";
-import { mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
 /**
@@ -63,5 +63,21 @@ export const upsertDailySnapshot = mutation({
       });
       return { success: true, created: true, date: today };
     }
+  },
+});
+
+/**
+ * Retrieves the latest daily snapshot for the authenticated user.
+ */
+export const getLatestSnapshot = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    return await ctx.db
+      .query("dailySnapshots")
+      .withIndex("by_user_and_date", (q) => q.eq("userId", userId))
+      .order("desc")
+      .first();
   },
 });

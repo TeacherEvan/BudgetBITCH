@@ -12,21 +12,9 @@ export const dynamic = 'force-dynamic';
 
 const LANGUAGE_STORAGE_KEY = "budgetbitch:locale";
 
-function getStoredLocale(): 'th' | 'en' | null {
-  if (typeof window === 'undefined') return null;
-  const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-  return (stored === 'th' || stored === 'en') ? stored : null;
-}
-
-// SSR/test snapshot returns null; real client returns the stored value.
-function subscribeToLocale() {
-  return () => {};
-}
-
 // Hydration-safe "mounted" store: false on the server and during the first
 // client render, true afterward. Gating localStorage-only UI behind this keeps
-// server and client HTML identical, avoiding a React #418 hydration mismatch
-// (which previously fired for returning visitors with a stored locale).
+// server and client HTML identical, avoiding a React #418 hydration mismatch.
 function subscribeToMount() {
   return () => {};
 }
@@ -34,16 +22,30 @@ function subscribeToMount() {
 export default function Home() {
   const auth = useConvexAuth();
   const { isLoading, isAuthenticated } = auth ?? { isLoading: true, isAuthenticated: false };
-  const storedLocale = useSyncExternalStore(subscribeToLocale, getStoredLocale, () => null);
-  const locale = storedLocale || 'en';
-  const mounted = useSyncExternalStore(subscribeToMount, () => true, () => false);
-
   const [splashDismissed, setSplashDismissed] = useState(() => {
     if (typeof window === "undefined") return true;
     return sessionStorage.getItem("bb:splash-seen") === "true";
   });
 
-  const showLanguageModal = mounted && !storedLocale;
+  const [locale, setLocale] = useState<'th' | 'en'>(() => {
+    if (typeof window === "undefined") return 'en';
+    const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    return stored === 'th' || stored === 'en' ? stored : 'en';
+  });
+
+  const mounted = useSyncExternalStore(subscribeToMount, () => true, () => false);
+
+  const showLanguageModal = mounted && !localStorage.getItem(LANGUAGE_STORAGE_KEY);
+
+  const finishLocaleSelect = (selectedLocale: 'th' | 'en') => {
+    try {
+      localStorage.setItem(LANGUAGE_STORAGE_KEY, selectedLocale);
+    } catch {
+      // noop
+    }
+    setLocale(selectedLocale);
+    setSplashDismissed(true);
+  };
 
   // Once authenticated, go straight to dashboard (wizard popup happens there if not done)
   useEffect(() => {
@@ -81,13 +83,9 @@ export default function Home() {
       <CleanAuthCard initialFlow="signIn" redirectTo="/dashboard" />
       <LanguageSelectModal
         isOpen={showLanguageModal}
-        onComplete={(selectedLocale) => {
-          localStorage.setItem(LANGUAGE_STORAGE_KEY, selectedLocale);
-          // Re-read so the modal closes on the next server/client render.
-          window.location.reload();
-        }}
+        onComplete={finishLocaleSelect}
       />
-      <PWAInstallPrompt locale={locale as 'th' | 'en'} />
+      <PWAInstallPrompt locale={locale} />
     </div>
   );
 }

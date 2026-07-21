@@ -1,6 +1,6 @@
 // src/hooks/use-local-db.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import { useBudgets, useBills, useSavingsGoals, useNetWorth, useSubscriptions, useEmergencyFund, useDebtPayoff, useCashFlowForecast, useWizardProfile, useCriticalExpenseCommitment } from './use-local-db';
 
 // Mock the local-db functions
@@ -154,5 +154,34 @@ describe('use-local-db hooks', () => {
       expect(result.current.loading).toBe(false);
     });
     expect(result.current.commitment).toBeNull();
+  });
+
+  it('useBudgets updates reactively when BOARD_CHANGED_EVENT is dispatched', async () => {
+    const { getAllBudgets } = await import('@/lib/db/local-db');
+    const { BOARD_CHANGED_EVENT } = await import('@/lib/types/budget');
+    
+    // First call returns rent budget. Second call returns rent + food budget.
+    vi.mocked(getAllBudgets)
+      .mockResolvedValueOnce([{ category: 'rent', monthlyLimit: 1000 }])
+      .mockResolvedValueOnce([
+        { category: 'rent', monthlyLimit: 1000 },
+        { category: 'food', monthlyLimit: 500 }
+      ]);
+
+    const { result } = renderHook(() => useBudgets());
+    
+    await waitFor(() => {
+      expect(result.current.budgets).toHaveLength(1);
+    });
+
+    // Dispatch the BOARD_CHANGED_EVENT
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT));
+    });
+
+    await waitFor(() => {
+      expect(result.current.budgets).toHaveLength(2);
+      expect(result.current.budgets[1].category).toBe('food');
+    });
   });
 });
