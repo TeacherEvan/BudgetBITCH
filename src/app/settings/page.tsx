@@ -4,7 +4,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
-import { Globe, Volume2, Palette, Trash2, AlertCircle, Shield, Download, Upload, BarChart2, TrendingUp, PieChart, Circle, User, Newspaper, Users, Settings, ArrowLeft, KeyRound } from 'lucide-react';
+import { Globe, Volume2, Palette, Trash2, AlertCircle, Shield, Download, Upload, BarChart2, TrendingUp, PieChart, Circle, User, Newspaper, Users, Settings, ArrowLeft, KeyRound, LogOut } from 'lucide-react';
+import { useAuthActions } from '@convex-dev/auth/react';
 import { useWizardProfile } from '@/hooks/use-local-db';
 import { useVoice } from '@/hooks/use-voice';
 import { useCriticalExpense } from '@/hooks/use-critical-expense';
@@ -167,6 +168,16 @@ export default function SettingsPage() {
   const localeRaw = useLocale();
   const locale: SettingsLocale = localeRaw === 'th' ? 'th' : 'en';
   const router = useRouter();
+  const { signOut } = useAuthActions();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      router.replace('/');
+    } catch (e) {
+      console.error('Sign out failed:', e);
+    }
+  };
 
   const { profile, clear: clearProfile } = useWizardProfile();
   const { settings: voiceSettings, updateSettings: updateVoiceSettings, toggleVoice, isSupported } = useVoice(
@@ -321,6 +332,15 @@ export default function SettingsPage() {
             </button>
             <h1 className="text-xl font-bold text-white">{l.title}</h1>
           </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleSignOut}
+            className="flex items-center gap-1.5 border-rose-500/30 text-rose-400 hover:bg-rose-500/10 hover:text-rose-300"
+          >
+            <LogOut className="h-4 w-4" />
+            <span>{locale === 'th' ? 'ออกจากระบบ' : 'Sign Out'}</span>
+          </Button>
         </div>
         {/* Section nav tabs */}
         <nav aria-label="Settings sections" className="max-w-4xl mx-auto px-4 pb-3 flex gap-1 overflow-x-auto scrollbar-none">

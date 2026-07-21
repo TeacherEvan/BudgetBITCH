@@ -24,6 +24,9 @@ vi.mock('@convex-dev/auth/react', () => ({
     isAuthenticated: true,
     isLoading: false,
   }),
+  useAuthActions: () => ({
+    signOut: vi.fn().mockResolvedValue(undefined),
+  }),
 }));
 
 vi.mock('@/hooks/use-local-db', () => ({
