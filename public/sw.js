@@ -77,12 +77,24 @@ async function networkFirst(request) {
   const cache = await caches.open(APP_SHELL_CACHE);
 
   try {
-    const networkResponse = await fetch(request);
+    // Race the fetch request against a 3-second timeout to prevent mobile network hangs
+    const networkResponse = await Promise.race([
+      fetch(request),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Navigation fetch timeout")), 3000)
+      )
+    ]);
 
     if (networkResponse.ok) {
       await cache.put(request, networkResponse.clone());
+      return networkResponse;
     }
 
+    // If server returns an error (e.g. 502/504 gateway timeout), fallback to cache if available
+    const cachedResponse = await cache.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
     return networkResponse;
   } catch {
     const cachedResponse = await cache.match(request);
