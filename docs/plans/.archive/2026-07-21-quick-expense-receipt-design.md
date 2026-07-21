@@ -1,7 +1,7 @@
 # Design Document: Quick Expense Widget & Gemini Camera Receipt Scraper
 
 **Date:** July 21, 2026  
-**Status:** Pending Review  
+**Status:** ✅ **Archived — Design Complete & Implemented**  
 
 ---
 

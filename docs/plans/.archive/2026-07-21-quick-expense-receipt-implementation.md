@@ -1,6 +1,7 @@
 # Implementation Plan: Quick Expense Widget & Gemini Camera Scraper
 
 **Date:** July 21, 2026  
+**Status:** ✅ **Archived — Implemented & Verified** (July 2026)  
 **Feature:** Standalone `/quick-add` PWA page, +/- toggle, camera capture, Gemini API OCR, and success toast logging.
 
 ---
