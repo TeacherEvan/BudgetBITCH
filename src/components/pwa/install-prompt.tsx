@@ -23,10 +23,16 @@ export function PWAInstallPrompt({
   const [isStandalone, setIsStandalone] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [supportsInstallEvent, setSupportsInstallEvent] = useState(false);
+  const [waitingForPrompt, setWaitingForPrompt] = useState(false);
+  const installRequestedRef = useRef(false);
   const mountedRef = useRef(false);
 
   useEffect(() => {
     mountedRef.current = true;
+    
+    // Check if the browser supports the beforeinstallprompt event
+    setSupportsInstallEvent(typeof window !== 'undefined' && ('beforeinstallprompt' in window || 'BeforeInstallPromptEvent' in window));
 
     // Check if running in standalone mode (already installed)
     const checkStandalone = () => {
@@ -57,6 +63,14 @@ export function PWAInstallPrompt({
       promptEvent.preventDefault();
       setDeferredPrompt(promptEvent);
       setShowPrompt(true);
+      setWaitingForPrompt(false);
+      
+      // If the user already clicked "Install" before the event fired,
+      // trigger the native browser install request immediately!
+      if (installRequestedRef.current) {
+        promptEvent.prompt();
+        installRequestedRef.current = false;
+      }
     };
 
     window.addEventListener('beforeinstallprompt', handler);
@@ -76,9 +90,12 @@ export function PWAInstallPrompt({
         setDeferredPrompt(null);
         onDismiss?.();
       }
+    } else if (supportsInstallEvent) {
+      // Browser supports native install prompt but event hasn't fired yet
+      installRequestedRef.current = true;
+      setWaitingForPrompt(true);
     } else {
-      // Browser doesn't support programmatic install (e.g. iOS Safari or deferred)
-      // Show manual instructions modal
+      // Browser doesn't support programmatic install (e.g. iOS Safari or Firefox desktop)
       setShowHelpModal(true);
     }
   };
@@ -97,6 +114,7 @@ export function PWAInstallPrompt({
       title: 'ติดตั้ง BudgetBITCH',
       description: 'เพิ่มลงหน้าจอหลักเพื่อเข้าถึงง่ายขึ้น ทำงานออฟไลน์ได้',
       install: 'ติดตั้ง',
+      preparing: 'กำลังเตรียมการ...',
       later: 'ภายหลัง',
       helpTitle: 'วิธีติดตั้งแอป',
       close: 'ปิด',
@@ -119,6 +137,7 @@ export function PWAInstallPrompt({
       title: 'Install BudgetBITCH',
       description: 'Add to home screen for quick access. Works offline.',
       install: 'Install',
+      preparing: 'Preparing...',
       later: 'Later',
       helpTitle: 'How to Install PWA',
       close: 'Close',
@@ -167,9 +186,10 @@ export function PWAInstallPrompt({
             <Button 
               variant="primary" 
               onClick={handleInstall}
+              isLoading={waitingForPrompt}
               className="flex-1 text-xs py-2 h-auto"
             >
-              {l.install}
+              {waitingForPrompt ? l.preparing : l.install}
             </Button>
             <Button 
               variant="ghost" 
