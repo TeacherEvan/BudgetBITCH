@@ -37,8 +37,9 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const cookieStore = await cookies();
-  const locale = resolveLocale(cookieStore.get(localeCookieName)?.value);
-  const messages = localeMessages[locale];
+  const rawLocale = resolveLocale(cookieStore.get(localeCookieName)?.value);
+  const locale = rawLocale === 'th' ? 'th' : 'en';
+  const messages = localeMessages[rawLocale];
 
   return (
     <html lang={locale} suppressHydrationWarning className={`${inter.variable} ${spaceGrotesk.variable} antialiased`}>
