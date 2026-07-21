@@ -4,7 +4,6 @@
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { LanguageSelectModal } from "@/components/onboarding/language-select-modal";
-import { PWAInstallPrompt } from "@/components/pwa/install-prompt";
 import { CleanAuthCard } from "@/components/auth/clean-auth-card";
 import { GoldenSplash } from "@/components/launch/golden-splash";
 
@@ -65,7 +64,6 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="animate-pulse text-amber-400">Loading...</div>
-        <PWAInstallPrompt locale={locale as 'th' | 'en'} />
       </div>
     );
   }
@@ -91,7 +89,6 @@ export default function Home() {
         isOpen={showLanguageModal}
         onComplete={finishLocaleSelect}
       />
-      <PWAInstallPrompt locale={locale} />
     </div>
   );
 }

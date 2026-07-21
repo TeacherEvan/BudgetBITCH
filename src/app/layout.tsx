@@ -6,6 +6,7 @@ import { ConvexClientProvider } from '@/components/providers/convex-client-provi
 import { SharedBoardSync } from '@/components/shared-board/shared-board-sync';
 import { AccountSyncMount } from '@/components/accounts/account-sync-mount';
 import { PWARegister } from '@/components/pwa/pwa-register';
+import { PWAInstallPrompt } from '@/components/pwa/install-prompt';
 import { WebViewBanner } from '@/components/webview/webview-banner';
 import { SiteFooter } from '@/components/legal/site-footer';
 import { CookieConsentBanner } from '@/components/legal/cookie-consent-banner';
@@ -54,6 +55,7 @@ export default async function RootLayout({
               <SharedBoardSync />
               <AccountSyncMount />
               <PWARegister />
+              <PWAInstallPrompt locale={locale} />
               <WebViewBanner />
               {children}
               <SiteFooter />

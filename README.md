@@ -10,7 +10,9 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 
 - Start Smart onboarding that generates a Money Survival Blueprint (10-question wizard, Q10 = location consent)
 - Auth-first root entry: signed-out visitors stay on the welcome window; signed-in users without a completed launch profile move to the launch wizard; signed-in users with a profile land on the dashboard
-- Accounts — multi-board shared budgeting: up to 5 boards, 7 umbrellas, QR/link invite, plus automatic lossless cross-account sync (no manual button)
+- Accounts & Sharing Guidance — multi-board shared budgeting: up to 5 boards, 7 umbrellas, QR/link invite, plus automatic lossless cross-account sync (no manual button). Includes clear in-app collaboration guidance in accounts and settings screens to help family, friends, or work cohorts create or switch to a Shared Account (Family, Friends, Business) and invite members.
+- Global PWA Install Prompt: Mounted globally in [layout.tsx](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/src/app/layout.tsx) so the PWA install option is available on every page.
+- Sync Detail Popover: The sync indicator ([sync-status-indicator.tsx](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/src/components/ui/sync-status-indicator.tsx)) contains an interactive status popover showing connection status and sizes of active queues (accounts, couple, offline).
 - Protected dashboard with scan-first panels (Daily Disposable hero, bills/due-soon priority guide, expenses, subscriptions, savings goals, net worth, critical-expense cut-one flow, CSV import)
 - Market Watch: localized financial news/RSS alerts surfaced in the dashboard
 - Location-driven currency: symbol derived from geolocation; numerals-only formatting when location is declined
@@ -113,6 +115,12 @@ For deeper orientation, start with `docs/CODEBASE_INDEX.md`.
 - The Service Worker (`public/sw.js`) registers and requests periodic sync for the daily snapshot.
 - `vercel.json` still declares a legacy cron path (`/api/cron/projections/check-ins/replay`) that has no matching route handler in this slice; the daily snapshot is pushed client-side, not via the cron. Remove or wire that cron before relying on it.
 - Convex Auth email/password accounts are created by users through `/sign-up`; end users do not add environment files or OAuth credentials.
+
+## Security & Vercel Headers
+
+Deployment policies and security headers are configured in [vercel.json](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/vercel.json):
+- **Cross-Origin-Embedder-Policy (COEP)**: The `require-corp` header was removed to resolve launching/rendering failures inside restricted mobile webviews (in-app browsers).
+- **Content-Security-Policy (CSP)**: The `connect-src` directive has been updated to include wildcard patterns for Convex backends (`https://*.convex.cloud wss://*.convex.cloud https://*.convex.site wss://*.convex.site`) to facilitate direct, real-time client-to-backend socket and HTTP requests.
 
 ## Environment variables
 

@@ -636,7 +636,7 @@ export default function SettingsPage() {
                     : l.neverSynced}
                 </span>
               </div>
-              <p className="text-sm text-white/50 mb-4">{locale === 'th' ? 'ซิงค์โปรไฟล์และสแนปช็อตของคุณไปยัง Convex (ไม่ใช่บอร์ดคู่)' : 'Sync your profile & daily snapshot to Convex (not the couple board)'}</p>
+              <p className="text-sm text-white/50 mb-4">{locale === 'th' ? 'ซิงค์โปรไฟล์และสแนปช็อตของคุณไปยังระบบคลาวด์ (ไม่ใช่บอร์ดคู่)' : 'Sync your profile & daily snapshot to the cloud (not the couple board)'}</p>
               <Button variant="primary" onClick={handleSyncNow} disabled={syncing} className="w-full">
                 {syncing ? l.syncing : l.syncNow}
               </Button>
@@ -742,6 +742,31 @@ export default function SettingsPage() {
                 </div>
               </div>
             )}
+          </Card>
+
+          <Card className="p-4 border-amber-400/20 bg-amber-400/5">
+            <div className="flex items-start gap-3">
+              <Users className="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0" />
+              <div className="flex-1 space-y-3">
+                <div>
+                  <h3 className="font-semibold text-white">
+                    {locale === 'th' ? 'เชื่อมโยงกับครอบครัว เพื่อน หรือที่ทำงาน' : 'Link with Family, Friends, or Work'}
+                  </h3>
+                  <p className="text-xs text-white/60 leading-relaxed mt-1">
+                    {locale === 'th'
+                      ? 'ระบบบอร์ดคู่รัก (Couple Board) ซิงค์ข้อมูลกับคู่รักได้ 1 คนเท่านั้น หากต้องการแชร์งบประมาณกับคนหลายคนในกลุ่มครอบครัว กลุ่มเพื่อน หรือที่ทำงาน ให้ไปที่เมนูจัดการบัญชีเพื่อสร้าง "บัญชีร่วมกัน" (Shared Account)'
+                      : 'The Couple Board syncs with exactly one partner. To collaborate with multiple family members, friends, or co-workers, create a Shared Account under the Accounts manager.'}
+                  </p>
+                </div>
+                <Button 
+                  variant="secondary" 
+                  onClick={() => router.push('/accounts')}
+                  className="w-full sm:w-auto bg-amber-400/10 hover:bg-amber-400/20 border-amber-400/30 text-amber-300 text-xs py-1.5 h-auto"
+                >
+                  {locale === 'th' ? 'จัดการบัญชีแชร์' : 'Manage Shared Accounts'}
+                </Button>
+              </div>
+            </div>
           </Card>
         </section>
 

@@ -27,7 +27,7 @@ This repository is a single Next.js + Convex codebase: the **BudgetBITCH app** a
 - `src/app/**` — routes, route groups, layouts, API handlers (Convex HTTP via `/api/convex-auth`)
 - `src/components/**` — reusable UI
   - `auth/` — Account recovery, entry panel, password form
-  - `accounts/` — Multi-board shared budgeting (board/umbrella management, QR/link invite) + automatic cross-account sync
+  - `accounts/` — Multi-board shared budgeting (board/umbrella management, QR/link invite) + automatic cross-account sync. Includes in-app "Sharing & Collaboration Guidance" to explain how users can invite others and set up shared budgets for family, friends, or work.
   - `dashboard/` — Dashboard shell, panels, alerts sidebar, critical expenses modal, daily disposable hero
   - `i18n/` — Locale switcher
   - `layout/` — Header bar
@@ -35,11 +35,11 @@ This repository is a single Next.js + Convex codebase: the **BudgetBITCH app** a
   - `launch/` — Cinematic splash, manifesto interstitial/notification
   - `mobile/` — Mobile panel frame
   - `onboarding/` — Language select modal
-  - `pwa/` — Install prompt
+  - `pwa/` — Install prompt (globally mounted in [layout.tsx](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/src/app/layout.tsx))
   - `providers/` — App-level React context providers
   - `shared-board/` — Shared couple-board UI (keyed-merge sync)
   - `start-smart/` — Money Survival Blueprint panels
-  - `ui/` — Primitive components (accordion, button, card, input, modal, progress-ring, select, slider, toggle)
+  - `ui/` — Primitive components (accordion, button, card, input, modal, progress-ring, select, slider, toggle) and interactive tools like the `SyncStatusIndicator` popover.
   - `welcome/` — Welcome window
   - `wizard/` — Onboarding wizard (shell, progress, voice toggle, 10 steps)
 - `src/hooks/` — Custom hooks (`use-accounts`, `use-account-sync`, `use-critical-expense`, `use-currency`, `use-display-prefs`, `use-haptic`, `use-local-db`, `use-news-prefs`, `use-shared-board`, `use-voice`)
@@ -72,7 +72,7 @@ The root app is auth-first, local-first PWA:
 
 1. `/` decides whether the visitor stays on the welcome window, enters the launch wizard, or lands on the main board.
 2. Language selection → stored in `localStorage` (`budgetbitch:locale`).
-3. PWA install prompt shown after language selection.
+3. PWA install prompt is mounted globally in [layout.tsx](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/src/app/layout.tsx), making the installation action available on all pages rather than only after the initial language selection.
 4. Signed-in users → redirect to `/wizard` (if not complete) or `/dashboard` (if complete).
 5. Protected surfaces: `/dashboard`, `/settings`, `/wizard`, `/api/v1/auth/bootstrap`. (`/auth/continue` is a route constant in `src/lib/auth/routes.ts` but has no page implementation and is not protected.)
 6. Convex handles auth, realtime data, and daily snapshot persistence; Accounts/Invites tables power multi-board shared budgeting with automatic lossless cross-account sync.
@@ -85,6 +85,13 @@ The root app is auth-first, local-first PWA:
 - **IndexedDB** — Local cache for offline reads/writes; budget wizard profile, transactions, settings.
 - **Service Worker** — Background sync: posts daily snapshots to Convex via `upsertDailySnapshot`.
 - **Server-side secrets** — Convex Auth config, environment variables.
+
+### Security, Web App & Sync Settings
+
+- **Cross-Origin-Embedder-Policy (COEP)**: The `require-corp` header was removed from [vercel.json](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/vercel.json) to ensure third-party resources and script files load successfully inside restricted mobile webviews (in-app browsers).
+- **Content-Security-Policy (CSP)**: The `connect-src` directive in [vercel.json](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/vercel.json) is updated with wildcard patterns for Convex backends (`https://*.convex.cloud wss://*.convex.cloud https://*.convex.site wss://*.convex.site`) to facilitate direct, real-time client-to-backend socket and HTTP requests.
+- **Global PWA Prompt**: The `PWAInstallPrompt` (from [install-prompt.tsx](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/src/components/pwa/install-prompt.tsx)) is globally mounted inside [layout.tsx](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/src/app/layout.tsx)) to ensure the app-install option remains available across all views.
+- **Interactive Sync Status Popover**: The [sync-status-indicator.tsx](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/src/components/ui/sync-status-indicator.tsx) provides an interactive popover detailing active queues (Shared Accounts queue, Couple Board queue, and Offline/Security Snapshots queue) to keep the user informed of local-first sync progress.
 
 ### Root App Rules
 

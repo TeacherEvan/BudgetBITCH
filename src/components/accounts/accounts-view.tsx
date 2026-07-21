@@ -133,6 +133,23 @@ export function AccountsView({ locale, onLocaleChange, voiceEnabled, onVoiceTogg
           </Button>
         </div>
 
+        <div className="mb-6 rounded-2xl border border-sky-400/20 bg-sky-400/5 p-4 text-xs">
+          <div className="flex items-start gap-3">
+            <Users className="h-5 w-5 text-sky-400 mt-0.5 flex-shrink-0" />
+            <div className="flex-1 space-y-1">
+              <h3 className="font-semibold text-white">
+                {t('Sharing & Collaboration Guidance', 'คำแนะนำในการแชร์และการทำงานร่วมกัน')}
+              </h3>
+              <p className="text-white/60 leading-relaxed">
+                {t(
+                  'Your default "Personal" board is fully private. To share a budget with family, friends, or co-workers, click "New account" above to create a shared board, open it, and then click "Invite" to generate an invitation link or QR code.',
+                  'บอร์ด "ส่วนตัว" (Personal) จะเป็นบอร์ดส่วนตัวของคุณเท่านั้น หากต้องการใช้งานร่วมกันกับครอบครัว เพื่อน หรือเพื่อร่วมงาน ให้คลิก "บัญชีใหม่" ด้านบนเพื่อสร้างบอร์ดร่วมกัน จากนั้นสลับไปใช้งานบอร์ดนั้นและกด "เชิญ" เพื่อส่งลิงก์คำเชิญหรือ QR Code'
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
+
         {!ready || loading ? (
           <p className="py-10 text-center text-sm text-[var(--text-2)]">{t('Loading…', 'กำลังโหลด…')}</p>
         ) : (

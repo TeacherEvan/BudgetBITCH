@@ -12,19 +12,15 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://steady-ox-280.convex.cloud wss://steady-ox-280.convex.cloud; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; trusted-types 'allow-duplicates' default;"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://*.convex.site wss://*.convex.site; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; trusted-types 'allow-duplicates' default;"
         },
         {
           "key": "Cross-Origin-Opener-Policy",
-          "value": "same-origin"
+          "value": "same-origin-allow-popups"
         },
         {
           "key": "X-Frame-Options",
           "value": "SAMEORIGIN"
-        },
-        {
-          "key": "Cross-Origin-Embedder-Policy",
-          "value": "require-corp"
         },
         {
           "key": "Strict-Transport-Security",
