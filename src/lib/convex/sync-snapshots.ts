@@ -125,7 +125,12 @@ export async function syncDailySnapshot(): Promise<{ success: boolean; date: str
       return { success: false, date: today };
     }
   } catch (error) {
-    console.error('Sync failed:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage.includes("Authentication required")) {
+      console.log('User is not authenticated yet. Queueing snapshot offline.');
+    } else {
+      console.error('Sync failed:', error);
+    }
     // Queue the snapshot offline so it can retry once connectivity returns.
     try {
       await queueOfflineSnapshot(await gatherSnapshotData());
@@ -204,7 +209,12 @@ export async function flushOfflineQueue() {
       console.log('Flushed offline snapshot:', item.timestamp);
       remaining.shift(); // Remove successfully flushed item
     } catch (error) {
-      console.error('Failed to flush offline snapshot:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes("Authentication required")) {
+        console.log('User is not authenticated yet. Postponing offline queue flush.');
+      } else {
+        console.error('Failed to flush offline snapshot:', error);
+      }
       break;
     }
   }

@@ -1,5 +1,5 @@
 // convex/snapshots.ts
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
@@ -30,7 +30,7 @@ export const upsertDailySnapshot = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error("Authentication required");
+      throw new ConvexError("Authentication required");
     }
 
     const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
