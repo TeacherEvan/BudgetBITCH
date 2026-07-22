@@ -26,21 +26,21 @@ export const createAccount = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Authentication required");
+    if (!userId) throw new ConvexError("Authentication required");
 
     const umbrella = args.umbrella;
     if (!UMBRELLA_KEYS.includes(umbrella as UmbrellaKey)) {
-      throw new Error("Invalid umbrella type");
+      throw new ConvexError("Invalid umbrella type");
     }
     const name = args.name.trim();
     if (name.length < 1 || name.length > 40) {
-      throw new Error("Account name must be 1–40 characters");
+      throw new ConvexError("Account name must be 1–40 characters");
     }
 
     const profile = await ensureProfileDoc(ctx, userId);
     const owned = profile.accountIds ?? [];
     if (owned.length >= MAX_OWNED_ACCOUNTS) {
-      throw new Error(
+      throw new ConvexError(
         `You can create at most ${MAX_OWNED_ACCOUNTS} accounts`,
       );
     }
@@ -60,7 +60,7 @@ export const createAccount = mutation({
         break;
       }
     }
-    if (!inviteCode) throw new Error("Failed to allocate an invite code");
+    if (!inviteCode) throw new ConvexError("Failed to allocate an invite code");
 
     const accountId = crypto.randomUUID();
     const boardId = crypto.randomUUID();
@@ -733,18 +733,24 @@ export const pushAccountBoard = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new ConvexError("Authentication required");
+    if (!userId) {
+      return { success: false, reason: "Authentication required" };
+    }
     const board = await ctx.db
       .query("accountBoards")
       .withIndex("by_boardId", (q) => q.eq("boardId", args.boardId))
       .unique();
-    if (!board) throw new ConvexError("Board not found");
+    if (!board) {
+      return { success: false, reason: "Board not found" };
+    }
     const memberRows = await ctx.db
       .query("boardMembers")
       .withIndex("by_board", (q) => q.eq("boardId", args.boardId))
       .collect();
     const isMember = memberRows.some((r) => r.userId === userId);
-    if (!isMember) throw new ConvexError("Not a member of this board");
+    if (!isMember) {
+      return { success: false, reason: "Not a member of this board" };
+    }
 
     const incoming = (args.data ?? {}) as Record<string, StoredRecord>;
     const { merged, changed } = mergeRecords(

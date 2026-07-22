@@ -120,14 +120,22 @@ export function useAccountSync(): UseAccountSync {
     setSyncing(true);
     for (const item of q) {
       try {
-        await pushBoard({
+        const res = (await pushBoard({
           boardId: item.boardId,
           data: item.data as never,
           updatedAt: item.updatedAt,
-        });
+        })) as { success?: boolean; reason?: string } | undefined;
+
+        if (res && res.success === false) {
+          console.warn("Skipping unpushable queued board:", item.boardId, res.reason);
+          continue;
+        }
       } catch (e) {
         console.error("Failed to push queued board:", item.boardId, e);
-        remaining.push(item);
+        const errStr = e instanceof Error ? e.message : String(e);
+        if (!errStr.includes("Board not found") && !errStr.includes("Not a member")) {
+          remaining.push(item);
+        }
       }
     }
     setQueue(remaining);
