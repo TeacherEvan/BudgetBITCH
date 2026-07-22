@@ -9,6 +9,8 @@ import { Plus, Check, Copy, Users, ArrowRightLeft, LogOut, Trash2 } from 'lucide
 import { useConvexAuth } from '@convex-dev/auth/react';
 import { useAccounts } from '@/hooks/use-accounts';
 import { useAccountSync } from '@/hooks/use-account-sync';
+import { useExpenses, useIncomes } from '@/hooks/use-local-db';
+import { SyncedAccountDashboard } from './synced-account-dashboard';
 import {
   UMBRELLA_KEYS,
   UMBRELLAS,
@@ -124,6 +126,11 @@ export function AccountsView({ locale, onLocaleChange, voiceEnabled, onVoiceTogg
   const inviteUrl = (code: string) =>
     typeof window !== 'undefined' ? `${window.location.origin}/join?code=${code}` : `/join?code=${code}`;
 
+  const { expenses } = useExpenses();
+  const { incomes } = useIncomes();
+
+  const activeAccount = accounts.find((a) => a.accountId === currentAccountId);
+
   return (
     <div className="bb-viewport-fill bg-[var(--bg-base)]">
       <HeaderBar
@@ -132,8 +139,8 @@ export function AccountsView({ locale, onLocaleChange, voiceEnabled, onVoiceTogg
         voiceEnabled={voiceEnabled ?? false}
         onVoiceToggle={() => onVoiceToggle?.()}
       />
-      <main className="bb-scroll-zone mx-auto w-full max-w-3xl px-4 py-6">
-        <div className="mb-6 flex items-center justify-between">
+      <main className="bb-scroll-zone mx-auto w-full max-w-3xl px-4 py-6 space-y-6">
+        <div className="flex items-center justify-between">
           <div>
             <h1 className="font-display text-2xl font-bold text-[var(--text-1)]">{t('Accounts', 'บัญชี')}</h1>
             <p className="mt-1 text-sm text-[var(--text-2)]">
@@ -147,9 +154,19 @@ export function AccountsView({ locale, onLocaleChange, voiceEnabled, onVoiceTogg
         </div>
 
         {errorMsg && (
-          <div className="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-400">
+          <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-400">
             {errorMsg}
           </div>
+        )}
+
+        {/* Synced Contributor Dashboard for active shared account */}
+        {currentAccountId !== 'personal' && activeAccount && (
+          <SyncedAccountDashboard
+            expenses={expenses}
+            incomes={incomes}
+            locale={locale}
+            membersCount={activeAccount.memberCount ?? 2}
+          />
         )}
 
         <div className="mb-6 rounded-2xl border border-sky-400/20 bg-sky-400/5 p-4 text-xs">

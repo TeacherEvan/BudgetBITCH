@@ -113,6 +113,8 @@ export interface ExpenseEntry {
   recurringId?: string; // for subscription detection
   source: 'manual' | 'voice' | 'import';
   cycle?: 'monthly' | 'yearly'; // for subscriptions
+  createdBy?: string; // shared-account: creator user id
+  createdByName?: string; // shared-account: creator display name
 }
 
 export type ExpenseCategory =
@@ -141,6 +143,8 @@ export interface IncomeEntry {
   taxDeducted?: number; // Optional gross vs net calculation
   note?: string;
   entrySource?: 'manual' | 'voice' | 'import';
+  createdBy?: string; // shared-account: creator user id
+  createdByName?: string; // shared-account: creator display name
   createdAt: string;
 }
 

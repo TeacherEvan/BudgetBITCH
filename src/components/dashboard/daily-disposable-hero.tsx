@@ -151,18 +151,29 @@ export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProp
         {/* Header strip */}
         <div className="flex items-center justify-between w-full mb-4">
           <span className="text-[10px] md:text-[11px] font-bold text-[var(--gold-muted)] uppercase tracking-wider">
-            {locale === 'th' ? 'เงินใช้จ่ายประจำวันคงเหลือ' : 'Daily Budget Remaining'}
+            {locale === 'th' ? 'งบประมาณรายวัน' : 'Daily Budget'}
           </span>
           <LiveClock locale={locale} />
         </div>
         
         {/* Main large figure with CountUp */}
-        <div 
-          className={`text-5xl md:text-7xl font-bold font-mono tracking-tight leading-none mb-6 bb-mono ${
-            dailyDisposable === 0 ? "text-[var(--danger)] bb-shake" : "text-[var(--gold-bright)]"
-          }`}
-        >
-          <CountUp value={dailyDisposable} formatter={(val) => formatCurrency(Math.round(val), locale)} />
+        <div className="flex flex-col md:flex-row md:items-baseline justify-between gap-4 mb-6">
+          <div 
+            className={`text-5xl md:text-7xl font-bold font-mono tracking-tight leading-none bb-mono ${
+              dailyDisposable === 0 ? "text-[var(--danger)] bb-shake" : "text-[var(--gold-bright)]"
+            }`}
+          >
+            <CountUp value={dailyDisposable} formatter={(val) => formatCurrency(Math.round(val), locale)} />
+          </div>
+
+          <div className="flex flex-col md:items-end rounded-xl border border-[var(--gold-border-soft)] bg-black/30 px-3 py-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--gold-muted)]">
+              {locale === 'th' ? 'เงินคงเหลือใช้ได้' : 'Funds Available'}
+            </span>
+            <span className="text-lg md:text-xl font-bold font-mono text-emerald-400">
+              {formatCurrency(remainingDisposable, locale)}
+            </span>
+          </div>
         </div>
 
         {/* Usage bar */}
@@ -189,7 +200,15 @@ export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProp
         </div>
 
         {/* Supporting metrics */}
-        <div className="grid grid-cols-3 gap-2 border-t border-[var(--gold-border-soft)] pt-4 text-xs font-medium">
+        <div className="grid grid-cols-4 gap-2 border-t border-[var(--gold-border-soft)] pt-4 text-xs font-medium">
+          <div>
+            <span className="block text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-0.5">
+              {locale === 'th' ? 'ใช้ได้ทั้งหมด' : 'Funds Avail.'}
+            </span>
+            <span className="text-emerald-400 font-semibold font-mono">
+              {formatCurrency(remainingDisposable, locale)}
+            </span>
+          </div>
           <div>
             <div className="flex items-center gap-1 mb-0.5">
               <span className="block text-[10px] text-[var(--text-muted)] uppercase tracking-wider">

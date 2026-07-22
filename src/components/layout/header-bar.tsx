@@ -82,9 +82,17 @@ export function HeaderBar({ locale, onLocaleChange, voiceEnabled = false, onVoic
         </h1>
       </Link>
 
-      {/* Right: Sync Status + Voice pill + Settings wrench */}
-      <div className="flex items-center gap-3">
+      {/* Right: Sync Status + Quick Add + Voice pill + Settings wrench */}
+      <div className="flex items-center gap-2.5">
         <SyncStatusIndicator locale={locale} />
+        <Link
+          href="/quick-add"
+          aria-label={locale === 'th' ? 'บันทึกด่วน' : 'Quick Add'}
+          className="flex h-9 items-center gap-1.5 rounded-xl border border-[rgba(201,150,12,0.4)] bg-[rgba(201,150,12,0.15)] px-3 text-xs font-bold text-[#F5D742] transition-colors hover:bg-[rgba(201,150,12,0.3)]"
+        >
+          <span className="text-sm font-black">+</span>
+          <span className="hidden sm:inline">{locale === 'th' ? 'บันทึกด่วน' : 'Quick Add'}</span>
+        </Link>
         <div className="hidden items-center gap-2 md:flex">
           <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[rgba(248,243,232,0.5)]">Voice</span>
           <Toggle

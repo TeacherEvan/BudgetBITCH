@@ -436,6 +436,17 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
       >
         <AlertsSidebar locale={locale} isModal={true} />
       </Modal>
+
+      {/* Mobile Floating Action Button (FAB) for Quick Add Widget */}
+      <div className="fixed bottom-20 right-4 z-40 lg:hidden">
+        <Link
+          href="/quick-add"
+          aria-label={locale === 'th' ? 'เพิ่มรายการด่วน' : 'Quick Add Widget'}
+          className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black shadow-[0_0_24px_rgba(245,215,66,0.5)] transition-all hover:scale-105 active:scale-95"
+        >
+          <span className="text-2xl font-black">+</span>
+        </Link>
+      </div>
     </div>
   );
 }
