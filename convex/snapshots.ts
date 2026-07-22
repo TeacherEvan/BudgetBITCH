@@ -72,12 +72,17 @@ export const upsertDailySnapshot = mutation({
 export const getLatestSnapshot = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return null;
-    return await ctx.db
-      .query("dailySnapshots")
-      .withIndex("by_user_and_date", (q) => q.eq("userId", userId))
-      .order("desc")
-      .first();
+    try {
+      const userId = await getAuthUserId(ctx);
+      if (!userId) return null;
+      return await ctx.db
+        .query("dailySnapshots")
+        .withIndex("by_user_and_date", (q) => q.eq("userId", userId))
+        .order("desc")
+        .first();
+    } catch (error) {
+      console.error("Error fetching latest snapshot:", error);
+      return null;
+    }
   },
 });

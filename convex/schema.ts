@@ -105,7 +105,9 @@ export default defineSchema({
       }),
     })),
     createdAt: v.number(),
-  }).index("by_user_and_date", ["userId", "date"]),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_and_date", ["userId", "date"]),
 
   // Versioned, timestamped acceptance record of Terms + Privacy Policy at sign-up.
   // One record per acceptance event (re-recording on version bump is expected).
