@@ -30,6 +30,7 @@ export async function serializeBoard(): Promise<BoardSnapshot> {
     netWorthSnapshots,
     debts,
     criticalExpenseCommitments,
+    incomes,
   ] = await Promise.all([
     db.get('wizardProfile', 'current'),
     db.getAll('expenses'),
@@ -39,6 +40,7 @@ export async function serializeBoard(): Promise<BoardSnapshot> {
     db.getAll('netWorthSnapshots'),
     db.getAll('debts'),
     db.getAll('criticalExpenseCommitments'),
+    db.getAll('incomes'),
   ]);
 
   return {
@@ -50,6 +52,7 @@ export async function serializeBoard(): Promise<BoardSnapshot> {
     netWorthSnapshots,
     debts,
     criticalExpenseCommitments,
+    incomes: incomes ?? [],
   };
 }
 
@@ -67,7 +70,7 @@ export async function replaceBoardData(board: BoardSnapshot): Promise<void> {
   const db = await getDB();
   const stores = [
     'wizardProfile', 'expenses', 'budgets', 'bills', 'savingsGoals',
-    'netWorthSnapshots', 'debts', 'criticalExpenseCommitments',
+    'netWorthSnapshots', 'debts', 'criticalExpenseCommitments', 'incomes',
   ] as const;
   const tx = db.transaction(stores, 'readwrite');
 
@@ -105,6 +108,10 @@ export async function replaceBoardData(board: BoardSnapshot): Promise<void> {
   for (const c of board.criticalExpenseCommitments ?? []) {
     incomingKeys.add(`criticalExpenseCommitments:${c.month}`);
     stage.push({ store: 'criticalExpenseCommitments', value: c });
+  }
+  for (const i of board.incomes ?? []) {
+    incomingKeys.add(`incomes:${i.id}`);
+    stage.push({ store: 'incomes', value: i });
   }
 
   for (const store of stores) {

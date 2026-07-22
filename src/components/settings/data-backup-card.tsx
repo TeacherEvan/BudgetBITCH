@@ -121,35 +121,31 @@ export function DataBackupCard({
 
   const executeDataImport = async (data: BackupData) => {
     // 1. Create a failsafe local checkpoint before modifying anything
-    const executeDataImport = async (data: BackupData) => {
-      // 1. Create a failsafe local checkpoint before modifying anything
-      await createLocalCheckpoint('Pre-Import Backup');
-      const db = await getDB();
-      // Note: We are going to use a single transaction for clearing and writing.
-      const allStores = [...USER_DATA_STORES, 'settings'] as const;
-      const tx = db.transaction(allStores, 'readwrite');
-      // Clear existing stores
-      for (const store of allStores) {
-        await tx.objectStore(store).clear();
-      }
-      // Write new data
-      for (const [store, items] of Object.entries(data)) {
-        const storeObj = tx.objectStore(store);
-        if (store === 'wizardProfile' || store === 'settings') {
-          if (items.length > 0) {
-            // We expect only one item, but we take the first one.
-            await storeObj.put(items[0], 'current');
-          }
-        } else {
-          for (const item of items) {
-            await storeObj.put(item);
-          }
+    await createLocalCheckpoint('Pre-Import Backup');
+    const db = await getDB();
+    // Note: We are going to use a single transaction for clearing and writing.
+    const allStores = [...USER_DATA_STORES, 'settings'] as const;
+    const tx = db.transaction(allStores, 'readwrite');
+    // Clear existing stores
+    for (const store of allStores) {
+      await tx.objectStore(store).clear();
+    }
+    // Write new data
+    for (const [store, items] of Object.entries(data)) {
+      const storeObj = tx.objectStore(store as (typeof allStores)[number]);
+      if (store === 'wizardProfile' || store === 'settings') {
+        if (items.length > 0) {
+          // We expect only one item, but we take the first one.
+          await storeObj.put(items[0] as never, 'current' as never);
+        }
+      } else {
+        for (const item of items) {
+          await storeObj.put(item as never);
         }
       }
-      await tx.done;
-      setImportStatus('success');
-      window.location.reload();
-    };
+    }
+    await tx.done;
+    setImportStatus('success');
     window.location.reload();
   };
 
@@ -206,7 +202,7 @@ export function DataBackupCard({
       setPendingFileString(null);
       setImportPassword('');
       await executeDataImport(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Decryption/Import failed:', err);
       setImportErrorMessage(locale === 'th' ? 'รหัสผ่านไม่ถูกต้อง หรือไฟล์เสียหาย' : 'Incorrect password or corrupted file');
       setImportStatus('error');

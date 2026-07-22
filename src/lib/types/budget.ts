@@ -120,6 +120,30 @@ export type ExpenseCategory =
   | 'phone_internet' | 'subscriptions' | 'entertainment'
   | 'healthcare' | 'insurance' | 'debt' | 'savings' | 'other';
 
+export type IncomeCategory =
+  | 'salary'
+  | 'freelance'
+  | 'business'
+  | 'investments'
+  | 'gift'
+  | 'refund'
+  | 'other';
+
+export type IncomeFrequency = 'one_time' | 'weekly' | 'biweekly' | 'monthly' | 'yearly';
+
+export interface IncomeEntry {
+  id: string; // uuid
+  date: string; // YYYY-MM-DD
+  source: string; // Payer / Description
+  amount: number; // positive
+  category: IncomeCategory;
+  frequency: IncomeFrequency;
+  taxDeducted?: number; // Optional gross vs net calculation
+  note?: string;
+  entrySource?: 'manual' | 'voice' | 'import';
+  createdAt: string;
+}
+
 /** Thai-specific category aliases for voice/input */
 export const THAI_CATEGORY_ALIASES: Record<string, ExpenseCategory> = {
   'ค่าเช่า': 'housing', 'ค่าคอนโด': 'housing', 'บ้าน': 'housing',
@@ -210,6 +234,7 @@ export interface LocationCache {
 export interface BoardSnapshot {
   wizardProfile: WizardProfile | null;
   expenses: ExpenseEntry[];
+  incomes: IncomeEntry[];
   budgets: BudgetCategory[];
   bills: Bill[];
   savingsGoals: SavingsGoal[];

@@ -15,10 +15,11 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 - Global PWA Install Prompt: Mounted globally in [layout.tsx](src/app/layout.tsx) so the PWA install option is available on every page.
 - Sync Detail Popover: The sync indicator ([sync-status-indicator.tsx](src/components/ui/sync-status-indicator.tsx)) contains an interactive status popover showing connection status and sizes of active queues (accounts, couple, offline).
 - PWA Quick Add Widget: A standalone widget view located at [/quick-add](src/app/quick-add/page.tsx) that users can save directly to their device's home screen.
-- Flexible Transaction Logging: Offers a +/- sign toggle flow in the Quick Add interface, allowing users to choose between recording negative expenses (saving to the local IndexedDB) or adding positive values directly to monthly income.
+- Flexible Transaction Logging: Offers a +/- sign toggle flow in the Quick Add interface, allowing users to choose between recording negative expenses or logging detailed positive income entries with category, source, and notes.
+- Income & Inflow Management: Dedicated "Add Income" modal accessible from the Hero metric bar and a detailed "Inflow" dashboard panel. Supports tracking inflow categories (Salary, Freelance, Business, Investments, Gift, Refund, Other), frequencies (One-Time, Weekly, Bi-weekly, Monthly, Yearly), date received, tax deductions, notes, and automatically syncing to profile monthly income estimates.
 - Smart Receipt Scanner: Features an internal camera capture scanning interface that photographs physical receipts and uses the Gemini 2.5 Flash API (executed via the Convex Action [receipts.ts](convex/receipts.ts)) to parse out transaction amounts, merchant names, and categories automatically.
 - PWA App Shortcuts: Integrated as app shortcuts in [manifest.json](public/manifest.json) for instant, one-tap launching into the Quick Add interface from the device home screen.
-- Protected dashboard with scan-first panels (Daily Disposable hero, bills/due-soon priority guide, expenses, subscriptions, savings goals, net worth, critical-expense cut-one flow, CSV import)
+- Protected dashboard with scan-first panels (Daily Disposable hero, inflow/income tracker, bills/due-soon priority guide, expenses, subscriptions, savings goals, net worth, critical-expense cut-one flow, CSV import)
 - Market Watch: localized financial news/RSS alerts surfaced in the dashboard
 - Location-driven currency: symbol derived from geolocation; numerals-only formatting when location is declined
 - Local-first storage in IndexedDB with offline queue that flushes to Convex on reconnect

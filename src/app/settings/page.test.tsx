@@ -18,11 +18,23 @@ vi.mock('next/navigation', () => ({
   useRouter: () => mockRouter,
 }));
 
-vi.mock('convex/react', () => ({
-  useMutation: () => vi.fn().mockResolvedValue({ success: true }),
-  useAction: () => vi.fn().mockResolvedValue({ success: true }),
-  useQuery: () => null,
-}));
+vi.mock('convex/react', () => {
+  return {
+    useMutation: () => vi.fn().mockResolvedValue({ success: true }),
+    useAction: () => vi.fn().mockResolvedValue({ success: true }),
+    useQuery: (queryRef: any) => {
+      // Mock cloud snapshots list for diagnostic modal
+      if (queryRef && typeof queryRef === 'object' && queryRef.name === 'listCloudSnapshots') {
+        return [];
+      }
+      return null;
+    },
+    ConvexReactClient: class {
+      mutation = vi.fn().mockResolvedValue({ success: true });
+      query = vi.fn().mockResolvedValue(null);
+    },
+  };
+});
 
 // Mock the hooks used in SettingsPage
 vi.mock('@convex-dev/auth/react', () => ({

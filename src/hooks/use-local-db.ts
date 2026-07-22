@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { 
   WizardProfile, 
   ExpenseEntry, 
+  IncomeEntry,
   BudgetCategory, 
   Bill, 
   SavingsGoal, 
@@ -27,6 +28,10 @@ import {
   deleteExpense,
   getExpenses,
   getExpensesByCategory,
+  addIncome,
+  updateIncome,
+  deleteIncome,
+  getIncomes,
   saveBudgetCategory,
   getBudgetCategory,
   getAllBudgets,
@@ -145,6 +150,54 @@ export function useExpenses() {
   }, []);
 
   return { expenses, loading, add, update, remove, getByCategory };
+}
+
+// Incomes
+export function useIncomes() {
+  const [incomes, setIncomes] = useState<IncomeEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(() => {
+    let mounted = true;
+    getIncomes().then(inc => {
+      if (mounted) {
+        setIncomes([...inc].sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0)));
+        setLoading(false);
+      }
+    }).catch(() => {
+      if (mounted) setLoading(false);
+    });
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    return load();
+  }, [load]);
+
+  useDatabaseListener(load);
+
+  const add = useCallback(async (income: Omit<IncomeEntry, 'id' | 'createdAt'>) => {
+    const newIncome = {
+      ...income,
+      id: generateId(),
+      createdAt: new Date().toISOString()
+    };
+    await addIncome(newIncome);
+    setIncomes(prev => [...prev, newIncome].sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0)));
+  }, []);
+
+  const update = useCallback(async (income: IncomeEntry) => {
+    await updateIncome(income);
+    setIncomes(prev => prev.map(i => i.id === income.id ? income : i)
+      .sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0)));
+  }, []);
+
+  const remove = useCallback(async (id: string) => {
+    await deleteIncome(id);
+    setIncomes(prev => prev.filter(i => i.id !== id));
+  }, []);
+
+  return { incomes, loading, add, update, remove };
 }
 
 // Budgets

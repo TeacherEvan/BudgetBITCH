@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { registerSyncWorker, flushOfflineQueue } from '@/lib/convex/sync-snapshots';
+import { requestPersistentStorage } from '@/lib/db/local-db';
 
 // The Service Worker owns connectivity but the page owns the authenticated
 // Convex client, so background `sync` / `periodicsync` events message this
@@ -19,6 +20,7 @@ function handleServiceWorkerMessage(event: MessageEvent) {
 export function PWARegister() {
   useEffect(() => {
     registerSyncWorker();
+    void requestPersistentStorage();
     navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
     return () => {
       navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);

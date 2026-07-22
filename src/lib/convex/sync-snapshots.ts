@@ -8,6 +8,8 @@ import {
   getAllBudgets,
   getLatestNetWorthSnapshot,
   getCriticalExpenseCommitment,
+  getDB,
+  USER_DATA_STORES,
 } from '@/lib/db/local-db';
 import { calculateNetWorthBaseline } from '@/lib/utils/budget-calculator';
 import type { WizardProfile } from '@/lib/types/budget';
@@ -57,12 +59,21 @@ interface SyncSnapshotArgs {
       tenYears: number;
     };
   };
+  fullBackupData?: Record<string, unknown[]>;
+  storeCounts?: Record<string, number>;
 }
 
 export interface GatherResult {
   wizardProfile: WizardProfile | null;
   totals: SyncSnapshotTotals;
   criticalExpenseCommitment?: SyncSnapshotArgs['criticalExpenseCommitment'];
+  fullBackupData?: Record<string, unknown[]>;
+  storeCounts?: Record<string, number>;
+}
+
+/** Shape accepted by restoreFromCloudSnapshot; only the backup payload is needed. */
+export interface CloudSnapshot {
+  fullBackupData?: Record<string, unknown[]>;
 }
 
 // Single source of truth for the daily snapshot payload. Previously duplicated
@@ -112,7 +123,31 @@ export async function gatherSnapshotData(): Promise<GatherResult> {
       }
     : undefined;
 
-  return { wizardProfile: profile || null, totals, criticalExpenseCommitment };
+  // Gather full backup data from all local IndexedDB stores
+  const fullBackupData: Record<string, unknown[]> = {};
+  const storeCounts: Record<string, number> = {};
+  
+  try {
+    const db = await getDB();
+    for (const storeName of USER_DATA_STORES) {
+      const list = await db.getAll(storeName);
+      fullBackupData[storeName] = list;
+      storeCounts[storeName] = list.length;
+    }
+    const settingsList = await db.getAll('settings');
+    fullBackupData['settings'] = settingsList;
+    storeCounts['settings'] = settingsList.length;
+  } catch (err) {
+    console.error('Failed to gather full stores for backup snapshot:', err);
+  }
+
+  return {
+    wizardProfile: profile || null,
+    totals,
+    criticalExpenseCommitment,
+    fullBackupData,
+    storeCounts,
+  };
 }
 
 export async function syncDailySnapshot(): Promise<{ success: boolean; date: string }> {
@@ -242,4 +277,40 @@ export async function flushOfflineQueue() {
 // Listen for online/offline events
 if (typeof window !== 'undefined') {
   window.addEventListener('online', flushOfflineQueue);
+}
+
+/**
+ * Restores local IndexedDB stores from a Convex cloud snapshot payload.
+ */
+export async function restoreFromCloudSnapshot(snapshot: CloudSnapshot): Promise<boolean> {
+  if (!snapshot || !snapshot.fullBackupData) {
+    console.warn('[Sync] Cannot restore: Snapshot contains no backup data');
+    return false;
+  }
+  try {
+    const db = await getDB();
+    const backup = snapshot.fullBackupData;
+
+    // Clear and restore each store
+    const allStores = [...USER_DATA_STORES, 'settings'] as const;
+    const tx = db.transaction([...allStores], 'readwrite');
+    for (const store of allStores) {
+      await tx.objectStore(store).clear();
+    }
+    await tx.done;
+
+    for (const store of allStores) {
+      const items = backup[store];
+      if (Array.isArray(items)) {
+        for (const item of items) {
+          await db.put(store, item as never);
+        }
+      }
+    }
+    console.log('[Sync] Database restored successfully from cloud snapshot');
+    return true;
+  } catch (err) {
+    console.error('Failed to restore from cloud snapshot:', err);
+    return false;
+  }
 }

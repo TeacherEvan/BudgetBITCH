@@ -6,10 +6,10 @@ import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { Plus, Minus, Camera, Save, ArrowLeft, Loader2, Check, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useExpenses, useWizardProfile } from '@/hooks/use-local-db';
+import { useExpenses, useWizardProfile, useIncomes } from '@/hooks/use-local-db';
 import { useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { type ExpenseCategory } from '@/lib/types/budget';
+import { type ExpenseCategory, type IncomeCategory } from '@/lib/types/budget';
 
 const labels = {
   th: {
@@ -64,6 +64,7 @@ export default function QuickAddPage() {
   const l = labels[locale];
 
   const { add: addExpense } = useExpenses();
+  const { add: addIncome } = useIncomes();
   const { profile, save: saveProfile } = useWizardProfile();
   
   // useAction must be called unconditionally to satisfy the Rules of Hooks.
@@ -76,6 +77,7 @@ export default function QuickAddPage() {
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
   const [detectedCategory, setDetectedCategory] = useState<ExpenseCategory>('other');
+  const [incomeCategory, setIncomeCategory] = useState<IncomeCategory>('salary');
   
   const [toast, setToast] = useState<{
     show: boolean;
@@ -127,21 +129,29 @@ export default function QuickAddPage() {
         });
         setToast({ show: true, message: l.successAdded, type: 'success' });
       } else {
-        // Record Income
+        // Record Income Log
+        await addIncome({
+          amount: amountVal,
+          source: noteVal || (locale === 'th' ? 'รายได้ด่วน' : 'Quick Income'),
+          category: incomeCategory,
+          frequency: 'one_time',
+          date: new Date().toISOString().split('T')[0],
+          note: noteVal || undefined,
+          entrySource: 'manual'
+        });
+
+        // Also update profile baseline monthly income
         if (profile) {
           const currentIncome = profile.answers?.income || 0;
-          const updatedProfile = {
+          await saveProfile({
             ...profile,
             answers: {
               ...profile.answers,
               income: currentIncome + amountVal
             }
-          };
-          await saveProfile(updatedProfile);
-          setToast({ show: true, message: l.successIncome, type: 'success' });
-        } else {
-          throw new Error("Wizard profile not initialized");
+          });
         }
+        setToast({ show: true, message: l.successIncome, type: 'success' });
       }
 
       // Reset form
@@ -288,6 +298,28 @@ export default function QuickAddPage() {
             )}
           </div>
         </div>
+
+        {/* Category Pickers for Income */}
+        {!isExpense && (
+          <div className="mb-6 space-y-1.5">
+            <label className="text-[10px] uppercase font-bold text-white/50 tracking-wider">
+              {locale === 'th' ? 'ประเภทรายรับ' : 'Income Category'}
+            </label>
+            <select
+              value={incomeCategory}
+              onChange={(e) => setIncomeCategory(e.target.value as IncomeCategory)}
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-2xl text-sm focus:outline-none focus:border-emerald-500/50 text-white outline-none"
+            >
+              <option value="salary" className="bg-[#0a0a0a]">💵 {locale === 'th' ? 'เงินเดือน' : 'Salary'}</option>
+              <option value="freelance" className="bg-[#0a0a0a]">💻 {locale === 'th' ? 'งานอิสระ' : 'Freelance'}</option>
+              <option value="business" className="bg-[#0a0a0a]">🏢 {locale === 'th' ? 'ธุรกิจ' : 'Business'}</option>
+              <option value="investments" className="bg-[#0a0a0a]">📈 {locale === 'th' ? 'การลงทุน' : 'Investments'}</option>
+              <option value="gift" className="bg-[#0a0a0a]">🎁 {locale === 'th' ? 'ของขวัญ' : 'Gift'}</option>
+              <option value="refund" className="bg-[#0a0a0a]">🔄 {locale === 'th' ? 'คืนเงิน' : 'Refund'}</option>
+              <option value="other" className="bg-[#0a0a0a]">✨ {locale === 'th' ? 'อื่นๆ' : 'Other'}</option>
+            </select>
+          </div>
+        )}
 
         {/* Action Buttons Row */}
         <div className="grid grid-cols-2 gap-4">

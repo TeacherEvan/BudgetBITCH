@@ -8,6 +8,20 @@ vi.mock('@/lib/db/local-db', () => ({
   getAllBudgets: vi.fn(),
   getLatestNetWorthSnapshot: vi.fn(),
   getCriticalExpenseCommitment: vi.fn(),
+  getDB: vi.fn().mockResolvedValue({
+    getAll: vi.fn().mockResolvedValue([]),
+  }),
+  USER_DATA_STORES: [
+    'wizardProfile',
+    'expenses',
+    'incomes',
+    'budgets',
+    'bills',
+    'savingsGoals',
+    'netWorthSnapshots',
+    'debts',
+    'criticalExpenseCommitments',
+  ],
 }));
 
 // We cannot easily mock the private getConvexClient, so for the success-path

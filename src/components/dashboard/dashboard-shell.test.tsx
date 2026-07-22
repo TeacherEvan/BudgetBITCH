@@ -78,9 +78,9 @@ vi.mock('@/components/dashboard/panels/budget-alerts', () => ({
     return React.createElement('div', null, 'Budget Alerts');
   }
 }));
-vi.mock('@/components/dashboard/alerts-sidebar', () => ({
-  AlertsSidebar: () => {
-    return React.createElement('div', null, 'Alerts Sidebar');
+vi.mock('@/components/dashboard/panels/income-inflow-panel', () => ({
+  IncomeInflowPanel: () => {
+    return React.createElement('div', null, 'Income Inflow');
   }
 }));
 
@@ -145,9 +145,9 @@ describe('DashboardShell (mobile)', () => {
     const sheet = screen.getByTestId('mobile-sheet');
     // Cut One Expense lives in the mobile sheet (primary mobile access point).
     expect(within(sheet).getByRole('button', { name: /pick 1 to cut this month/i })).toBeInTheDocument();
-    // All 10 panels are reachable from the sheet, plus the account switcher.
-    // 14 = close(X) + Cut One + Market Watch + AccountSwitcher + 10 panels.
-    expect(within(sheet).getAllByRole('button')).toHaveLength(14);
+    // All 11 panels are reachable from the sheet, plus the account switcher.
+    // 15 = close(X) + Cut One + Market Watch + AccountSwitcher + 11 panels.
+    expect(within(sheet).getAllByRole('button')).toHaveLength(15);
   });
 
   it('does not render the floating FAB', () => {

@@ -26,6 +26,8 @@ export const upsertDailySnapshot = mutation({
         tenYears: v.number(),
       }),
     })),
+    fullBackupData: v.optional(v.any()),
+    storeCounts: v.optional(v.record(v.string(), v.number())),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -48,6 +50,8 @@ export const upsertDailySnapshot = mutation({
         wizardProfile: args.wizardProfile,
         totals: args.totals,
         criticalExpenseCommitment: args.criticalExpenseCommitment,
+        fullBackupData: args.fullBackupData,
+        storeCounts: args.storeCounts,
         createdAt,
       });
       return { success: true, updated: true, date: today };
@@ -59,6 +63,8 @@ export const upsertDailySnapshot = mutation({
         wizardProfile: args.wizardProfile,
         totals: args.totals,
         criticalExpenseCommitment: args.criticalExpenseCommitment,
+        fullBackupData: args.fullBackupData,
+        storeCounts: args.storeCounts,
         createdAt,
       });
       return { success: true, created: true, date: today };
@@ -84,5 +90,37 @@ export const getLatestSnapshot = query({
       console.error("Error fetching latest snapshot:", error);
       return null;
     }
+  },
+});
+
+/**
+ * Lists the last 7 snapshots for the user with metadata.
+ */
+export const listCloudSnapshots = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+    return await ctx.db
+      .query("dailySnapshots")
+      .withIndex("by_user_and_date", (q) => q.eq("userId", userId))
+      .order("desc")
+      .take(7);
+  },
+});
+
+/**
+ * Retrieves a specific snapshot by ID.
+ */
+export const getSnapshotById = query({
+  args: { snapshotId: v.id("dailySnapshots") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const snapshot = await ctx.db.get(args.snapshotId);
+    if (!snapshot || snapshot.userId !== userId) {
+      return null;
+    }
+    return snapshot;
   },
 });

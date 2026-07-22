@@ -104,6 +104,8 @@ export default defineSchema({
         tenYears: v.number(),
       }),
     })),
+    fullBackupData: v.optional(v.any()), // Serialized complete local IndexedDB data for recovery
+    storeCounts: v.optional(v.record(v.string(), v.number())), // Metadata summary of stored items
     createdAt: v.number(),
   })
     .index("by_user", ["userId"])

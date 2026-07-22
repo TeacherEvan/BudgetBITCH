@@ -5,6 +5,7 @@ import QuickAddPage from './page';
 
 // Mock DB Hooks
 const mockAddExpense = vi.fn();
+const mockAddIncome = vi.fn();
 const mockSaveProfile = vi.fn();
 const mockProfile = {
   completed: true,
@@ -17,6 +18,9 @@ const mockProfile = {
 vi.mock('@/hooks/use-local-db', () => ({
   useExpenses: () => ({
     add: mockAddExpense,
+  }),
+  useIncomes: () => ({
+    add: mockAddIncome,
   }),
   useWizardProfile: () => ({
     profile: mockProfile,

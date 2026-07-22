@@ -6,6 +6,7 @@ import { useWizardProfile } from '@/hooks/use-local-db';
 import { useCurrency } from '@/hooks/use-currency';
 import { calculateBudgetFromWizard } from '@/lib/utils/budget-calculator';
 import { motion } from 'framer-motion';
+import { AddIncomeModal } from './add-income-modal';
 
 interface DailyDisposableHeroProps {
   locale: 'th' | 'en';
@@ -68,6 +69,7 @@ function LiveClock({ locale }: { locale: 'th' | 'en' }) {
 export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProps) {
   const formatCurrency = useCurrency();
   const { profile } = useWizardProfile();
+  const [isAddIncomeOpen, setIsAddIncomeOpen] = useState(false);
 
   const calculation = useMemo(() => {
     if (!profile || !profile.completed) return null;
@@ -189,9 +191,18 @@ export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProp
         {/* Supporting metrics */}
         <div className="grid grid-cols-3 gap-2 border-t border-[var(--gold-border-soft)] pt-4 text-xs font-medium">
           <div>
-            <span className="block text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-0.5">
-              {locale === 'th' ? 'รายได้' : 'Income'}
-            </span>
+            <div className="flex items-center gap-1 mb-0.5">
+              <span className="block text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+                {locale === 'th' ? 'รายได้' : 'Income'}
+              </span>
+              <button 
+                onClick={() => setIsAddIncomeOpen(true)}
+                className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors px-1"
+                title={locale === 'th' ? 'เพิ่มรายได้' : 'Add Income'}
+              >
+                +
+              </button>
+            </div>
             <span className="text-[var(--text-1)] font-semibold font-mono">
               {formatCurrency(income, locale)}/mo
             </span>
@@ -224,6 +235,11 @@ export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProp
           </span>
         </div>
       </div>
+      <AddIncomeModal
+        isOpen={isAddIncomeOpen}
+        onClose={() => setIsAddIncomeOpen(false)}
+        locale={locale}
+      />
     </div>
   );
 }

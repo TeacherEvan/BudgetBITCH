@@ -1,7 +1,7 @@
 {
   "name": "BudgetBITCH",
   "short_name": "BudgetBITCH",
-  "description": "Plan first. Panic less. Local-first budget app with Thai/English support.",
+  "description": "Plan first. Panic less. A privacy-first budgeting app with multi-currency and offline support.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",

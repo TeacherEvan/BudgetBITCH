@@ -21,6 +21,7 @@ import { Subscriptions } from '@/components/dashboard/panels/subscriptions';
 import { EmergencyFund } from '@/components/dashboard/panels/emergency-fund';
 import { DebtPayoff } from '@/components/dashboard/panels/debt-payoff';
 import { CashFlowForecast } from '@/components/dashboard/panels/cash-flow-forecast';
+import { IncomeInflowPanel } from '@/components/dashboard/panels/income-inflow-panel';
 import { Modal } from '@/components/ui/modal';
 import { useCriticalExpense } from '@/hooks/use-critical-expense';
 import { useWizardProfile, useBudgets, useBills } from '@/hooks/use-local-db';
@@ -31,10 +32,11 @@ import { CashFlowProjectionCard } from '@/components/dashboard/cash-flow-project
 import { CategoryPivotCard } from '@/components/dashboard/category-pivot-card';
 import { BudgetVarianceGrid } from '@/components/dashboard/budget-variance-grid';
 
-export type PanelKey = 'expenses' | 'budget' | 'budgetAlerts' | 'bills' | 'goals' | 'netWorth' | 'subscriptions' | 'emergency' | 'debt' | 'forecast';
+export type PanelKey = 'expenses' | 'inflow' | 'budget' | 'budgetAlerts' | 'bills' | 'goals' | 'netWorth' | 'subscriptions' | 'emergency' | 'debt' | 'forecast';
 
 export const PANEL_CONFIG: Record<PanelKey, { label: { th: string; en: string }; icon: string }> = {
   expenses: { label: { th: 'ค่าใช้จ่าย', en: 'Expenses' }, icon: '💸' },
+  inflow: { label: { th: 'รายรับ', en: 'Inflow / Income' }, icon: '💵' },
   budget: { label: { th: 'งบประมาณ', en: 'Budget' }, icon: '📊' },
   budgetAlerts: { label: { th: 'การแจ้งเตือน', en: 'Budget Alerts' }, icon: '🔔' },
   bills: { label: { th: 'บิล/บิลล์', en: 'Bills' }, icon: '📋' },
@@ -46,10 +48,11 @@ export const PANEL_CONFIG: Record<PanelKey, { label: { th: string; en: string };
   forecast: { label: { th: 'พยากรณ์', en: 'Forecast' }, icon: '🔮' },
 };
 
-const PANEL_ORDER: PanelKey[] = ['expenses', 'budget', 'budgetAlerts', 'bills', 'goals', 'netWorth', 'subscriptions', 'emergency', 'debt', 'forecast'];
+const PANEL_ORDER: PanelKey[] = ['expenses', 'inflow', 'budget', 'budgetAlerts', 'bills', 'goals', 'netWorth', 'subscriptions', 'emergency', 'debt', 'forecast'];
 
 const PANELS: PanelConfig[] = [
   { id: 'expenses', title: 'Expenses', children: <ExpenseTracker /> },
+  { id: 'inflow', title: 'Income Inflow', children: <IncomeInflowPanel /> },
   { id: 'budget', title: 'Budget', children: <BudgetVisual /> },
   { id: 'budgetAlerts', title: 'Budget Alerts', children: <BudgetAlerts /> },
   { id: 'bills', title: 'Bills', children: <Bills /> },
