@@ -4,19 +4,20 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 
 ## Navigation docs
 
-- `docs/CODEBASE_INDEX.md` — consolidated orientation map, route/module index, and practical filesystem tree
+- [docs/README.md](docs/README.md) — Central documentation hub & navigation map
+- [docs/CODEBASE_INDEX.md](docs/CODEBASE_INDEX.md) — Consolidated orientation map, route/module index, and practical filesystem tree
 
 ## Features
 
 - Start Smart onboarding that generates a Money Survival Blueprint (10-question wizard, Q10 = location consent)
 - Auth-first root entry: signed-out visitors stay on the welcome window; signed-in users without a completed launch profile move to the launch wizard; signed-in users with a profile land on the dashboard
 - Accounts & Sharing Guidance — multi-board shared budgeting: up to 5 boards, 7 umbrellas, QR/link invite, plus automatic lossless cross-account sync (no manual button). Includes clear in-app collaboration guidance in accounts and settings screens to help family, friends, or work cohorts create or switch to a Shared Account (Family, Friends, Business) and invite members.
-- Global PWA Install Prompt: Mounted globally in [layout.tsx](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/src/app/layout.tsx) so the PWA install option is available on every page.
-- Sync Detail Popover: The sync indicator ([sync-status-indicator.tsx](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/src/components/ui/sync-status-indicator.tsx)) contains an interactive status popover showing connection status and sizes of active queues (accounts, couple, offline).
-- PWA Quick Add Widget: A standalone widget view located at [/quick-add](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/src/app/quick-add/page.tsx) that users can save directly to their device's home screen.
+- Global PWA Install Prompt: Mounted globally in [layout.tsx](src/app/layout.tsx) so the PWA install option is available on every page.
+- Sync Detail Popover: The sync indicator ([sync-status-indicator.tsx](src/components/ui/sync-status-indicator.tsx)) contains an interactive status popover showing connection status and sizes of active queues (accounts, couple, offline).
+- PWA Quick Add Widget: A standalone widget view located at [/quick-add](src/app/quick-add/page.tsx) that users can save directly to their device's home screen.
 - Flexible Transaction Logging: Offers a +/- sign toggle flow in the Quick Add interface, allowing users to choose between recording negative expenses (saving to the local IndexedDB) or adding positive values directly to monthly income.
-- Smart Receipt Scanner: Features an internal camera capture scanning interface that photographs physical receipts and uses the Gemini 2.5 Flash API (executed via the Convex Action [receipts.ts](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/convex/receipts.ts)) to parse out transaction amounts, merchant names, and categories automatically.
-- PWA App Shortcuts: Integrated as app shortcuts in [manifest.json](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/public/manifest.json) for instant, one-tap launching into the Quick Add interface from the device home screen.
+- Smart Receipt Scanner: Features an internal camera capture scanning interface that photographs physical receipts and uses the Gemini 2.5 Flash API (executed via the Convex Action [receipts.ts](convex/receipts.ts)) to parse out transaction amounts, merchant names, and categories automatically.
+- PWA App Shortcuts: Integrated as app shortcuts in [manifest.json](public/manifest.json) for instant, one-tap launching into the Quick Add interface from the device home screen.
 - Protected dashboard with scan-first panels (Daily Disposable hero, bills/due-soon priority guide, expenses, subscriptions, savings goals, net worth, critical-expense cut-one flow, CSV import)
 - Market Watch: localized financial news/RSS alerts surfaced in the dashboard
 - Location-driven currency: symbol derived from geolocation; numerals-only formatting when location is declined
@@ -122,7 +123,7 @@ For deeper orientation, start with `docs/CODEBASE_INDEX.md`.
 
 ## Security & Vercel Headers
 
-Deployment policies and security headers are configured in [vercel.json](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/vercel.json):
+Deployment policies and security headers are configured in [vercel.json](vercel.json):
 - **Cross-Origin-Embedder-Policy (COEP)**: The `require-corp` header was removed to resolve launching/rendering failures inside restricted mobile webviews (in-app browsers).
 - **Content-Security-Policy (CSP)**: The `connect-src` directive has been updated to include wildcard patterns for Convex backends (`https://*.convex.cloud wss://*.convex.cloud https://*.convex.site wss://*.convex.site`) to facilitate direct, real-time client-to-backend socket and HTTP requests.
 
@@ -137,7 +138,7 @@ See `.env.example` for the authoritative list. Required for this slice:
 - `SITE_URL` — the app origin accepted by Convex Auth redirects (e.g. `http://localhost:3000` locally).
 - `NEXT_PUBLIC_APP_URL` — the public app origin used in reset/verification email links (Convex Auth reads it at runtime; falls back to `SITE_URL` locally).
 - `CONVEX_SYNC_SECRET` — shared secret for trusted server-side Convex sync (auth bootstrap + projection replay). Must match between the Vercel build env and the Convex deployment env.
-- `GEMINI_API_KEY` — API key for Google Gemini API, required for receipt image OCR and auto-categorization within the Convex action ([receipts.ts](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/convex/receipts.ts)). Set in the Convex dashboard environment settings.
+- `GEMINI_API_KEY` — API key for Google Gemini API, required for receipt image OCR and auto-categorization within the Convex action ([receipts.ts](convex/receipts.ts)). Set in the Convex dashboard environment settings.
 
 > Reserved but not consumed in this slice: `PROVIDER_SECRET_ENCRYPTION_KEY` / `CRON_SECRET` for the unbuilt integration/provider-vault work. `RESEND_API_KEY` and `AUTH_EMAIL_FROM` are listed in `.env.example` as commented secrets (optional) — Convex Auth reads `RESEND_API_KEY` at runtime to deliver password-reset emails once an account-recovery flow is wired; they are not yet actively used by the app code in this slice. See `.env.example` for the authoritative, current list.
 

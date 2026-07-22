@@ -6,19 +6,20 @@
 
 ## Validation
 - Run `npm run lint`, `npm test`, and `npm run build` after code changes.
-- Run targeted Playwright coverage for UI copy or navigation changes, especially under `tests/e2e/jobs.spec.ts` and `tests/e2e/integrations-*.spec.ts`.
+- Run targeted Playwright coverage for UI copy or navigation changes, especially under `tests/e2e/wizard.spec.ts` and `tests/e2e/dashboard.spec.ts`.
 - Vitest discovers tests under `src/**/*.{test,spec}.{ts,tsx}`; colocate new unit and component tests there.
 
 ## UI conventions
-- Use explicit action copy over vague CTAs. Prefer labels like `Open job details`, `Open setup wizard`, `Open official login`, and `Open official docs`.
+- Use explicit action copy over vague CTAs. Prefer labels like `Open setup wizard`, `Open official login`, and `Open official docs`.
 - Keep scan-first cards dense but readable: headline, key facts, one clear fit cue, then the primary action.
 - Preserve heading order inside reusable card components; avoid introducing nested heading levels that break the page outline.
 
-## Jobs surfaces
-- `src/components/jobs/job-card.tsx` should stay scan-friendly and expose practical metadata users can compare quickly.
-- When changing jobs UI, update both `src/components/jobs/job-card.test.tsx` and `src/app/(app)/jobs/page.test.tsx`, plus the relevant Playwright flow.
+## Dashboard & Wizard surfaces
+- `src/components/wizard/wizard-shell.tsx` governs the 10-step money survival blueprint onboarding flow.
+- `src/components/dashboard/dashboard-shell.tsx` coordinates bento grid panels. Ensure mobile responsive layouts are verified using Playwright.
+- Multi-board account switcher and shared couple boards should follow keyed-merge sync and offline queues.
 
-## Integrations surfaces
-- Keep provider secrets server-side only.
-- Integration mutations must remain authorized through authenticated workspace membership and server-owned connection lookup.
-- Shared CTA generation belongs in the integrations modules/components layer rather than duplicated per page.
+## Integrations & Receipts surfaces
+- Keep receipt parser provider secrets server-side only.
+- Receipts mutations and Gemini OCR parsing (`convex/receipts.ts`) must remain authorized.
+- Local-first offline sync writes to IndexedDB wrapper (`src/lib/db/local-db.ts`) and synchronizes daily.
