@@ -267,13 +267,12 @@ describe("invites + membership", () => {
 });
 
 describe("authz + deletion", () => {
-  test("getAccountBoard rejects non-member", async () => {
+  test("getAccountBoard returns null for non-member", async () => {
     const aliceId = await seedUser(t, "alice");
     const carolId = await seedUser(t, "carol");
     const { boardId } = await createAccount(aliceId, "family", "Fam");
-    await expect(
-      asUser(carolId).query(api.accounts.getAccountBoard, { boardId }),
-    ).rejects.toThrow(/Not a member/);
+    const res = await asUser(carolId).query(api.accounts.getAccountBoard, { boardId });
+    expect(res).toBeNull();
   });
 
   test("non-owner cannot rename / invite / remove", async () => {

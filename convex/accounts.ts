@@ -772,13 +772,13 @@ export const getAccountBoard = query({
       .query("accountBoards")
       .withIndex("by_boardId", (q) => q.eq("boardId", args.boardId))
       .unique();
-    if (!board) throw new ConvexError("Board not found");
+    if (!board) return null;
     const members = await ctx.db
       .query("boardMembers")
       .withIndex("by_board", (q) => q.eq("boardId", args.boardId))
       .collect();
     const isMember = members.some((r) => r.userId === userId);
-    if (!isMember) throw new ConvexError("Not a member of this board");
+    if (!isMember) return null;
     return board;
   },
 });
