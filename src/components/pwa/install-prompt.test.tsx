@@ -239,4 +239,24 @@ describe('PWAInstallPrompt', () => {
     
     vi.useRealTimers();
   });
+
+  it('shows help modal instructions when install is clicked and programmatic install is unsupported', async () => {
+    vi.useFakeTimers();
+
+    render(<PWAInstallPrompt onDismiss={mockOnDismiss} locale="en" />);
+    
+    await act(async () => {
+      vi.advanceTimersByTime(4000);
+    });
+    
+    expect(screen.getByText('Install BudgetBITCH')).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /install/i }));
+    });
+
+    expect(screen.getByText('How to Install PWA')).toBeInTheDocument();
+    
+    vi.useRealTimers();
+  });
 });

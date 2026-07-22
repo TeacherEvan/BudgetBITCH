@@ -13,8 +13,8 @@ import { SyncStatusIndicator } from '@/components/ui/sync-status-indicator';
 interface HeaderBarProps {
   locale: 'th' | 'en';
   onLocaleChange: (locale: 'th' | 'en') => void;
-  voiceEnabled: boolean;
-  onVoiceToggle: () => void;
+  voiceEnabled?: boolean;
+  onVoiceToggle?: () => void;
 }
 
 const GRAPH_OPTIONS: { type: GraphType; icon: React.ReactNode; label: { th: string; en: string } }[] = [
@@ -33,7 +33,7 @@ const GENRE_LABELS: Record<NewsGenre, { th: string; en: string; emoji: string }>
   deals:    { th: 'โปรโมชั่น',   en: 'Deals',    emoji: '🛍️' },
 };
 
-export function HeaderBar({ locale, onLocaleChange, voiceEnabled, onVoiceToggle }: HeaderBarProps) {
+export function HeaderBar({ locale, onLocaleChange, voiceEnabled = false, onVoiceToggle }: HeaderBarProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { graphType, setGraphType } = useDisplayPrefs();
   const { isGenreEnabled, toggleGenre } = useNewsPrefs();

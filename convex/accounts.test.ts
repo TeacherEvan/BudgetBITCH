@@ -279,7 +279,7 @@ describe("authz + deletion", () => {
   test("non-owner cannot rename / invite / remove", async () => {
     const aliceId = await seedUser(t, "alice");
     const bobId = await seedUser(t, "bob");
-    const { accountId, boardId } = await createAccount(
+    const { accountId } = await createAccount(
       aliceId,
       "family",
       "Fam",

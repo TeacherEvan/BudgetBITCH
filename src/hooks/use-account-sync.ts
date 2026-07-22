@@ -25,7 +25,6 @@ import {
 import {
   getCurrentAccountId,
   getLocalAccount,
-  getStashedAccount,
 } from "@/lib/db/accountStorage";
 import { BOARD_CHANGED_EVENT } from "@/lib/types/budget";
 

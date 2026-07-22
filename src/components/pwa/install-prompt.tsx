@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Download, X, Share2, Plus, Info } from 'lucide-react';
+import { Download, X, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 
@@ -31,16 +31,16 @@ export function PWAInstallPrompt({
   useEffect(() => {
     mountedRef.current = true;
     
-    // Check if the browser supports the beforeinstallprompt event
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSupportsInstallEvent(typeof window !== 'undefined' && ('beforeinstallprompt' in window || 'BeforeInstallPromptEvent' in window));
 
     // Check if running in standalone mode (already installed)
     const checkStandalone = () => {
       const isStandaloneMode = 
         window.matchMedia('(display-mode: standalone)').matches || 
-        (window.navigator as any).standalone === true;
+        (window.navigator as unknown as { standalone?: boolean }).standalone === true;
       setIsStandalone(isStandaloneMode);
-      setIsIOS(/iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream);
+      setIsIOS(/iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as unknown as { MSStream?: unknown }).MSStream);
       
       // If not installed, trigger banner after 3 seconds
       if (!isStandaloneMode) {
@@ -83,12 +83,17 @@ export function PWAInstallPrompt({
 
   const handleInstall = async () => {
     if (deferredPrompt) {
-      await deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        setShowPrompt(false);
+      try {
+        await deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          setShowPrompt(false);
+          onDismiss?.();
+        }
+      } catch (error) {
+        console.error('Error triggering install prompt:', error);
+      } finally {
         setDeferredPrompt(null);
-        onDismiss?.();
       }
     } else if (supportsInstallEvent) {
       // Browser supports native install prompt but event hasn't fired yet

@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 
 // Mock the Convex server client so the test never touches a real deployment.
 const mockMutation = vi.fn();
-const mockGetClient = vi.fn((_opts?: { auth?: string }) => ({
+const mockGetClient = vi.fn(() => ({
   mutation: (...args: unknown[]) => mockMutation(...args),
 }));
 vi.mock("@/lib/convex/http-client", () => ({

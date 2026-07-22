@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Plus, Check, Copy, Users, ArrowRightLeft, LogOut, Trash2, X } from 'lucide-react';
+import { Plus, Check, Copy, Users, ArrowRightLeft, LogOut, Trash2 } from 'lucide-react';
 import { useAccounts } from '@/hooks/use-accounts';
 import { useAccountSync } from '@/hooks/use-account-sync';
 import {
@@ -37,8 +37,6 @@ export function AccountsView({ locale, onLocaleChange, voiceEnabled, onVoiceTogg
     switchTo,
     createInviteToken,
     leaveAccount,
-    removeMember,
-    renameAccount,
     deleteAccount,
   } = useAccounts();
   // Drive sync for the active board while this screen is mounted.
@@ -295,6 +293,7 @@ export function AccountsView({ locale, onLocaleChange, voiceEnabled, onVoiceTogg
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder={t('Account name', 'ชื่อบัญชี')}
+            aria-label={t('Account name', 'ชื่อบัญชี')}
             className="w-full rounded-xl border border-[var(--gold-border-soft)] bg-[var(--bg-surface-2)] px-4 py-3 text-sm text-[var(--text-1)] outline-none placeholder:text-[var(--text-muted)]"
           />
           <div className="flex justify-end gap-2">

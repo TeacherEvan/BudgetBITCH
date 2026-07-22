@@ -52,6 +52,7 @@ export function SyncStatusIndicator({ locale }: SyncStatusIndicatorProps) {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     checkStatus();
 
     const handleEvent = () => checkStatus();

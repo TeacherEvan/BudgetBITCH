@@ -3,14 +3,14 @@ import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, act, waitFor } from '@testing-library/react';
 import { BOARD_CHANGED_EVENT } from '@/lib/types/budget';
-import { saveWizardProfile, getWizardProfile, clearAllData, addExpense, getExpenses } from '@/lib/db/local-db';
+import { clearAllData, addExpense, getExpenses } from '@/lib/db/local-db';
 import { saveLocalAccount, setCurrentAccountId } from '@/lib/db/accountStorage';
-import type { WizardProfile, ExpenseEntry } from '@/lib/types/budget';
+import type { ExpenseEntry } from '@/lib/types/budget';
 
 // Control the values the hook reads from useQuery.
 let queryResults: Record<string, unknown> = {};
 const pushBoard = vi.fn(async () => ({ success: true, applied: true }));
-const resolveShareCode = vi.fn(async (_args?: Record<string, unknown>) => ({ exists: true, displayName: null }));
+const resolveShareCode = vi.fn(async () => ({ exists: true, displayName: null }));
 
 vi.mock('@convex-dev/auth/react', () => ({
   useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
@@ -44,27 +44,7 @@ function HookProbe() {
   return null;
 }
 
-function makeProfile(): WizardProfile {
-  return {
-    completed: true,
-    completedAt: new Date().toISOString(),
-    version: 1,
-    locale: 'en',
-    answers: {
-      income: 50000,
-      rent: 8000,
-      transport: 2000,
-      phoneInternet: 1000,
-      subscriptions: 500,
-      entertainment: 1500,
-      healthcare: 1000,
-      savingsRatePct: 10,
-      riskTolerance: 'medium',
-      locationConsent: false,
-      currency: 'THB',
-    },
-  };
-}
+
 
 function makeExpense(id: string, amount = 100): ExpenseEntry {
   return {

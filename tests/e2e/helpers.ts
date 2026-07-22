@@ -12,7 +12,7 @@
 // secrets). The unauthenticated flows (sign-in page, route guard, password
 // reset pages) run without credentials.
 
-import { test as base, expect, type Page, type BrowserContext } from "@playwright/test";
+import { test as base, expect, type Page } from "@playwright/test";
 
 export const BASE_URL = process.env.E2E_BASE_URL ?? "http://127.0.0.1:3100";
 

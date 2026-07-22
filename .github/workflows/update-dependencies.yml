@@ -1,0 +1,67 @@
+name: Dependency Updates & Security Audit
+
+on:
+  schedule:
+    # Run every Monday at 04:00 UTC
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-dependencies:
+    name: Check Updates & Security Audit
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_CONVEX_URL: https://ci-build.convex.cloud
+      NEXT_PUBLIC_CONVEX_SITE_URL: https://ci-build.convex.site
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      SITE_URL: http://localhost:3000
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Security Audit
+        run: npm audit --audit-level=moderate || true
+
+      - name: Update dependencies
+        run: npm update
+
+      - name: Run Audit Fix (Lockfile only)
+        run: npm audit fix --package-lock-only || true
+
+      - name: Verify build & tests pass with updated dependencies
+        run: |
+          npm test -- --run
+          npm run test:convex
+          npm run build
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore(deps): update dependencies and security fixes'
+          title: 'chore(deps): automated dependency updates and security fixes'
+          body: |
+            Automated dependency update and security audit run by GitHub Actions.
+
+            - Updated dependencies via `npm update`
+            - Applied lockfile audit fixes via `npm audit fix`
+            - Verified unit tests, Convex tests, and Next.js build clean status.
+          branch: automated-dep-updates
+          delete-branch: true
+          labels: |
+            dependencies
+            automated

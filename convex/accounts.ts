@@ -1,77 +1,23 @@
 // convex/accounts.ts
 import { v } from "convex/values";
-import { query, mutation, MutationCtx, QueryCtx } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { Doc, Id } from "./_generated/dataModel";
+import { Id } from "./_generated/dataModel";
 import { mergeRecords, StoredRecord } from "./boardMerge";
+import {
+  UMBRELLA_KEYS,
+  type UmbrellaKey,
+  MAX_OWNED_ACCOUNTS,
+  MAX_MEMBERS,
+  type AccountSummary,
+} from "./accounts/types";
+import {
+  generateInviteCode,
+  ensureProfileDoc,
+  getBoardMemberIds,
+} from "./accounts/helpers";
 
-const INVITE_CODE_LEN = 8;
-const MAX_OWNED_ACCOUNTS = 5;
-const MAX_MEMBERS = 8;
-
-/** Umbrella keys supported by the Accounts feature. */
-export const UMBRELLA_KEYS = [
-  "family",
-  "couple",
-  "business",
-  "school",
-  "friends",
-  "charity",
-  "shopping",
-] as const;
-export type UmbrellaKey = (typeof UMBRELLA_KEYS)[number];
-
-function generateInviteCode(): string {
-  return Math.random()
-    .toString(36)
-    .slice(2, 2 + INVITE_CODE_LEN)
-    .toUpperCase()
-    .padEnd(INVITE_CODE_LEN, "0");
-}
-
-async function ensureProfileDoc(
-  ctx: MutationCtx,
-  userId: Id<"users">,
-): Promise<Doc<"userProfiles">> {
-  const existing = await ctx.db
-    .query("userProfiles")
-    .withIndex("by_user", (q) => q.eq("userId", userId))
-    .unique();
-  if (existing) return existing;
-  for (let attempt = 0; attempt < 10; attempt++) {
-    const shareCode = Math.random()
-      .toString(36)
-      .slice(2, 2 + INVITE_CODE_LEN)
-      .toUpperCase()
-      .padEnd(INVITE_CODE_LEN, "0");
-    try {
-      const id = await ctx.db.insert("userProfiles", {
-        userId,
-        shareCode,
-        accountIds: [],
-        joinedBoardIds: [],
-      });
-      const created = await ctx.db.get(id);
-      if (created) return created;
-    } catch {
-      continue;
-    }
-  }
-  throw new Error("Failed to allocate a user sharing profile");
-}
-
-async function getBoardMemberIds(
-  ctx: QueryCtx,
-  boardId: string,
-): Promise<Id<"users">[]> {
-  const rows = await ctx.db
-    .query("boardMembers")
-    .withIndex("by_board", (q) => q.eq("boardId", boardId))
-    .collect();
-  return rows
-    .map((r) => r.userId)
-    .filter((id): id is Id<"users"> => id !== undefined);
-}
+export { UMBRELLA_KEYS, type UmbrellaKey };
 
 export const createAccount = mutation({
   args: {
@@ -167,7 +113,6 @@ export const listMyAccounts = query({
     if (!profile) return [];
 
     const ownedIds = profile.accountIds ?? [];
-    const joinedIds = profile.joinedBoardIds ?? [];
 
     const owned = (
       await Promise.all(
@@ -239,15 +184,7 @@ export const listMyAccounts = query({
     ).filter((x): x is NonNullable<typeof x> => x !== null);
 
     // Legacy couple board (backward compat) — surfaces as a 'couple' umbrella.
-    let couple: {
-      accountId: string;
-      umbrella: "couple";
-      name: string;
-      role: "owner";
-      boardId: string;
-      memberCount: number;
-      inviteCode: null;
-    } | null = null;
+    let couple: AccountSummary | null = null;
     if (profile.linkedBoardId) {
       const board = await ctx.db
         .query("sharedBoards")
@@ -270,11 +207,6 @@ export const listMyAccounts = query({
       }
     }
 
-    // De-dupe joined (joinedIds not strictly needed; boardMembers is source of truth).
-    type AccountSummary =
-      | (typeof owned)[number]
-      | (typeof joined)[number]
-      | NonNullable<typeof couple>;
     const byId = new Map<string, AccountSummary>();
     for (const a of [...owned, ...joined]) byId.set(a.accountId, a);
     const result = [...byId.values()];
@@ -411,7 +343,6 @@ export const deleteAccount = mutation({
         .collect();
       for (const m of memberRows) {
         await ctx.db.delete(m._id);
-        // Clean joinedBoardIds for non-owner members.
         if (m.userId !== userId) {
           const mp = await ctx.db
             .query("userProfiles")
@@ -426,7 +357,6 @@ export const deleteAccount = mutation({
           }
         }
       }
-      // members array unused after deletion; no-op.
       void members;
     }
     await ctx.db.delete(acc._id);
@@ -461,7 +391,6 @@ export const inviteByCode = mutation({
     const pendingInvites = pendingInviteRows.filter(
       (r) => r.status === "pending",
     ).length;
-    // Cap counts accepted members + outstanding pending invites (can't invite a 9th).
     const totalOccupied = memberRows.length + pendingInvites;
     if (totalOccupied >= MAX_MEMBERS) {
       throw new Error(`An account can have at most ${MAX_MEMBERS} members`);
@@ -477,7 +406,6 @@ export const inviteByCode = mutation({
       throw new Error("Cannot invite yourself");
     }
 
-    // Idempotent: don't double-invite someone already a member.
     const existingMember = await ctx.db
       .query("boardMembers")
       .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
@@ -486,7 +414,6 @@ export const inviteByCode = mutation({
       return { alreadyMember: true };
     }
 
-    // De-dupe pending invites.
     const pending = await ctx.db
       .query("invites")
       .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
@@ -511,8 +438,6 @@ export const inviteByCode = mutation({
   },
 });
 
-// Generate a shareable board-invite TOKEN (for QR code / link joins).
-// Creates an open pending invite (no specific invitee) the joiner redeems.
 export const createInviteToken = mutation({
   args: { accountId: v.string() },
   handler: async (ctx, args) => {
@@ -527,7 +452,6 @@ export const createInviteToken = mutation({
     if (acc.ownerId !== userId) throw new Error("Only the owner can invite");
     if (!acc.boardId) throw new Error("Account has no shared board");
 
-    // Respect the member cap (count accepted members + outstanding tokens).
     const memberRows = await ctx.db
       .query("boardMembers")
       .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
@@ -543,11 +467,10 @@ export const createInviteToken = mutation({
       throw new Error(`An account can have at most ${MAX_MEMBERS} members`);
     }
 
-    // Short, URL-friendly, collision-resistant token.
     const token =
-      (typeof crypto !== "undefined" && "randomUUID" in crypto
+      typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID().replace(/-/g, "").slice(0, 16)
-        : Math.random().toString(36).slice(2, 18));
+        : Math.random().toString(36).slice(2, 18);
 
     await ctx.db.insert("invites", {
       boardId: acc.boardId,
@@ -562,17 +485,14 @@ export const createInviteToken = mutation({
   },
 });
 
-// Redeem a board-invite TOKEN (join via QR / link). Idempotent for the user.
 export const redeemInviteToken = mutation({
   args: { token: v.string() },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Authentication required");
-    // Ensure the joiner has a sharing profile doc (so listMyAccounts works).
     await ensureProfileDoc(ctx, userId);
 
     const token = args.token.trim();
-    // Token is indexed (by_token); resolve directly without a table scan.
     const invite = await ctx.db
       .query("invites")
       .withIndex("by_token", (q) => q.eq("token", token))
@@ -587,7 +507,6 @@ export const redeemInviteToken = mutation({
       .unique();
     if (!acc || !acc.boardId) throw new Error("Account not found");
 
-    // Already a member? (supports idempotent re-redeem)
     const boardRows = await ctx.db
       .query("boardMembers")
       .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
@@ -601,7 +520,6 @@ export const redeemInviteToken = mutation({
       throw new Error("Invite link has already been used");
     }
 
-    // Cap check (don't exceed MAX_MEMBERS).
     const members = await ctx.db
       .query("boardMembers")
       .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
@@ -616,8 +534,6 @@ export const redeemInviteToken = mutation({
       role: "member",
       joinedAt: Date.now(),
     });
-    // Keep the board's members array in sync with boardMembers — acceptInvite
-    // relies on it for the cap check, so drift here silently under-counts.
     const board = await ctx.db
       .query("accountBoards")
       .withIndex("by_boardId", (q) => q.eq("boardId", acc.boardId!))

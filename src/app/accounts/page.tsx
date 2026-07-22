@@ -3,8 +3,14 @@
 
 import { useLocale } from 'next-intl';
 import { AccountsView } from '@/components/accounts/accounts-view';
+import { RequireAuth } from '@/components/auth/require-auth';
 
 export default function AccountsPage() {
   const locale = useLocale() as 'th' | 'en';
-  return <AccountsView locale={locale} />;
+  return (
+    <RequireAuth>
+      <AccountsView locale={locale} />
+    </RequireAuth>
+  );
 }
+

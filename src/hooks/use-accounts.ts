@@ -26,13 +26,215 @@ import {
   removeStashedAccount,
   getCurrentAccountId,
 } from "@/lib/db/accountStorage";
+import type { 
+  WizardProfile, 
+  NetWorthSnapshot,
+  Debt 
+} from "@/lib/types/budget";
+import { 
+  saveWizardProfile, 
+  getWizardProfile, 
+  clearWizardProfile,
+  saveNetWorthSnapshot,
+  getLatestNetWorthSnapshot,
+  addDebt,
+  updateDebt,
+  deleteDebt,
+  getAllDebts,
+  generateId,
+} from "@/lib/db/local-db";
+import { BOARD_CHANGED_EVENT } from "@/lib/types/budget";
+
+type Asset = NetWorthSnapshot['assets'][number];
+type Liability = NetWorthSnapshot['liabilities'][number];
+
+export type { Asset, Liability };
+
+/**
+ * Helper hook to register a window event listener that re-fetches local DB state
+ * whenever the local board data changes (e.g. from partner sync pulls or account switches).
+ */
+export function useDatabaseListener(callback: () => void) {
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.addEventListener(BOARD_CHANGED_EVENT, callback);
+    return () => window.removeEventListener(BOARD_CHANGED_EVENT, callback);
+  }, [callback]);
+}
+
+// Wizard Profile
+export function useWizardProfile() {
+  const [profile, setProfile] = useState<WizardProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(() => {
+    let mounted = true;
+    getWizardProfile().then(p => {
+      if (mounted) {
+        setProfile(p || null);
+        setLoading(false);
+      }
+    }).catch(() => {
+      if (mounted) setLoading(false);
+    });
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    return load();
+  }, [load]);
+
+  useDatabaseListener(load);
+
+  const save = useCallback(async (newProfile: WizardProfile) => {
+    await saveWizardProfile(newProfile);
+    setProfile(newProfile);
+  }, []);
+
+  const clear = useCallback(async () => {
+    await clearWizardProfile();
+    setProfile(null);
+  }, []);
+
+  return { profile, loading, save, clear };
+}
+
+// Net Worth
+export function useNetWorth() {
+  const [snapshot, setSnapshot] = useState<NetWorthSnapshot | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(() => {
+    let mounted = true;
+    getLatestNetWorthSnapshot().then(s => {
+      if (mounted) {
+        setSnapshot(s ?? null);
+        setLoading(false);
+      }
+    }).catch(() => {
+      if (mounted) setLoading(false);
+    });
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    return load();
+  }, [load]);
+
+  useDatabaseListener(load);
+
+  const addAsset = useCallback(async (asset: Asset) => {
+    if (!snapshot) return;
+    const newAssets = [...snapshot.assets, { ...asset, id: generateId() }];
+    const newSnapshot = { ...snapshot, assets: newAssets };
+    await saveNetWorthSnapshot(newSnapshot);
+    setSnapshot(newSnapshot);
+  }, [snapshot]);
+
+  const updateAsset = useCallback(async (asset: Asset) => {
+    if (!snapshot) return;
+    const newAssets = snapshot.assets.map(a => a.id === asset.id ? asset : a);
+    const newSnapshot = { ...snapshot, assets: newAssets };
+    await saveNetWorthSnapshot(newSnapshot);
+    setSnapshot(newSnapshot);
+  }, [snapshot]);
+
+  const removeAsset = useCallback(async (id: string) => {
+    if (!snapshot) return;
+    const newAssets = snapshot.assets.filter(a => a.id !== id);
+    const newSnapshot = { ...snapshot, assets: newAssets };
+    await saveNetWorthSnapshot(newSnapshot);
+    setSnapshot(newSnapshot);
+  }, [snapshot]);
+
+  const addLiability = useCallback(async (liability: Liability) => {
+    if (!snapshot) return;
+    const newLiabilities = [...snapshot.liabilities, { ...liability, id: generateId() }];
+    const newSnapshot = { ...snapshot, liabilities: newLiabilities };
+    await saveNetWorthSnapshot(newSnapshot);
+    setSnapshot(newSnapshot);
+  }, [snapshot]);
+
+  const updateLiability = useCallback(async (liability: Liability) => {
+    if (!snapshot) return;
+    const newLiabilities = snapshot.liabilities.map(l => l.id === liability.id ? liability : l);
+    const newSnapshot = { ...snapshot, liabilities: newLiabilities };
+    await saveNetWorthSnapshot(newSnapshot);
+    setSnapshot(newSnapshot);
+  }, [snapshot]);
+
+  const removeLiability = useCallback(async (id: string) => {
+    if (!snapshot) return;
+    const newLiabilities = snapshot.liabilities.filter(l => l.id !== id);
+    const newSnapshot = { ...snapshot, liabilities: newLiabilities };
+    await saveNetWorthSnapshot(newSnapshot);
+    setSnapshot(newSnapshot);
+  }, [snapshot]);
+
+  const totalAssets = snapshot?.assets.reduce((sum, a) => sum + a.value, 0) || 0;
+  const totalLiabilities = snapshot?.liabilities.reduce((sum, l) => sum + l.value, 0) || 0;
+  const netWorth = totalAssets - totalLiabilities;
+
+  return { 
+    snapshot, 
+    loading, 
+    addAsset, 
+    updateAsset, 
+    removeAsset, 
+    addLiability, 
+    updateLiability, 
+    removeLiability,
+    totalAssets,
+    totalLiabilities,
+    netWorth
+  };
+}
+
+// Debt Payoff
+export function useDebtPayoff() {
+  const [debts, setDebts] = useState<Debt[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(() => {
+    let mounted = true;
+    getAllDebts().then(d => {
+      if (mounted) {
+        setDebts(d);
+        setLoading(false);
+      }
+    }).catch(() => {
+      if (mounted) setLoading(false);
+    });
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    return load();
+  }, [load]);
+
+  useDatabaseListener(load);
+
+  const add = useCallback(async (debt: Debt) => {
+    await addDebt(debt);
+    setDebts(prev => [...prev, debt]);
+  }, []);
+
+  const update = useCallback(async (debt: Debt) => {
+    await updateDebt(debt);
+    setDebts(prev => prev.map(d => d.id === debt.id ? debt : d));
+  }, []);
+
+  const remove = useCallback(async (id: string) => {
+    await deleteDebt(id);
+    setDebts(prev => prev.filter(d => d.id !== id));
+  }, []);
+
+  return { debts, loading, add, update, remove };
+}
 
 export interface AccountView extends LocalAccountMeta {
-  // True when this account's board data is already on this device.
   hasLocalData: boolean;
-  // Member count (owner included).
   memberCount: number;
-  // Legacy couple board surfaces with this flag for UI labelling.
   isLegacyCouple?: boolean;
 }
 
@@ -122,7 +324,6 @@ export function useAccounts(): UseAccounts {
     if (server === undefined) return;
     (async () => {
       const local = await getLocalAccounts();
-      // Seed personal if absent (idempotent across effects).
       if (!local.find((a) => a.accountId === PERSONAL_ACCOUNT_ID)) {
         const personal: LocalAccountMeta = {
           accountId: PERSONAL_ACCOUNT_ID,
@@ -198,7 +399,6 @@ export function useAccounts(): UseAccounts {
   const acceptInvite = useCallback(
     async (inviteId: string) => {
       await acceptMut({ inviteId });
-      // The joined board is pulled + made active by useAccountSync on next switch.
       refresh();
     },
     [acceptMut, refresh],
@@ -210,7 +410,6 @@ export function useAccounts(): UseAccounts {
         accountId: string;
         boardId: string;
       };
-      // Make the joined board active immediately.
       await localSwitch(res.accountId);
       refresh();
       return { accountId: res.accountId, boardId: res.boardId };
@@ -263,8 +462,6 @@ export function useAccounts(): UseAccounts {
 
   const deleteAccount = useCallback(
     async (accountId: string) => {
-      // If the deleted account was active, fall back to Personal locally
-      // (this stashes the outgoing board first, then we drop the deleted stash).
       const current = await getCurrentAccountId();
       await deleteMut({ accountId });
       if (current === accountId) {
@@ -305,7 +502,7 @@ export function useAccounts(): UseAccounts {
       }
       setCurrentAccountId(accountId);
     },
-    [leaveMut, refresh],
+    [convex],
   );
 
   return {

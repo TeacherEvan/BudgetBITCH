@@ -6,13 +6,11 @@ import {
   saveWizardProfile,
   addExpense,
   getExpenses,
-  serializeBoard,
 } from './local-db';
 import {
   switchAccount,
   getCurrentAccountId,
   getLocalAccounts,
-  saveLocalAccount,
   getStashedAccount,
   adoptRemoteAccount,
   ensurePersonalAccount,

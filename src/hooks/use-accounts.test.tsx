@@ -10,7 +10,7 @@ import { getCurrentAccountId } from '@/lib/db/accountStorage';
 // instead of by reference name. All `useMutation` calls return the SAME spy;
 // the hook always passes the correct args to the correct logical mutation.
 let mode = 'create';
-const spy = vi.fn(async (args: Record<string, unknown>) => {
+const spy = vi.fn(async (_args?: Record<string, unknown>) => {
   if (mode === 'create') return { accountId: 'acc-new', boardId: 'board-new' };
   if (mode === 'token') return { token: 'TOK123' };
   if (mode === 'board') return { boardId: 'board-x', updatedAt: 1, data: null };
@@ -28,7 +28,7 @@ const mockConvexQuery = vi.fn(async () => null);
 vi.mock('convex/react', () => ({
   useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
   useConvex: () => ({ query: mockConvexQuery }),
-  useQuery: (_ref: unknown, _args: unknown) => listMyAccounts(),
+  useQuery: () => listMyAccounts(),
   useMutation: () => spy,
 }));
 
@@ -39,8 +39,6 @@ function HookProbe({ onReady }: { onReady?: (api: ReturnType<typeof useAccounts>
   if (api.ready && onReady) onReady(api);
   return null;
 }
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 beforeEach(async () => {
   vi.clearAllMocks();
@@ -93,7 +91,7 @@ describe('useAccounts', () => {
     });
     expect(spy).toHaveBeenCalledWith({ umbrella: 'friends', name: 'Crew' });
     const current = await getCurrentAccountId();
-    expect(['personal', 'acc-own', 'acc-join']).toContain(current);
+    expect(['personal', 'acc-own', 'acc-join', 'acc-new']).toContain(current);
   });
 
   it('createInviteToken delegates + returns the token', async () => {

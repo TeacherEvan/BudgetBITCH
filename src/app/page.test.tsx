@@ -1,6 +1,6 @@
 // app/page.test.tsx
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useEffect } from 'react';
+
 import { render, screen, act } from '@testing-library/react';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import Home from './page';

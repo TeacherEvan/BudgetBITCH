@@ -12,14 +12,6 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-function getInitialTheme(defaultTheme: Theme): Theme {
-  if (typeof window === 'undefined') return defaultTheme;
-  const stored = localStorage.getItem('budgetbitch:theme') as Theme | null;
-  if (stored) return stored;
-  if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) return 'dark';
-  return defaultTheme;
-}
-
 export function ThemeProvider({ children, defaultTheme = 'amber' }: { children: ReactNode; defaultTheme?: Theme }) {
   const [theme, setTheme] = useState<Theme>(defaultTheme);
   const [resolvedTheme, setResolvedTheme] = useState<Theme>(defaultTheme);

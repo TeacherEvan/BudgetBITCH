@@ -5,7 +5,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { WizardShell } from '@/components/wizard/wizard-shell';
-import { useVoice } from '@/hooks/use-voice';
 import { getWizardProfile } from '@/lib/db/local-db';
 import { Loader2 } from 'lucide-react';
 
@@ -19,9 +18,6 @@ export function WizardClient({ wizardCompleted: initialWizardCompleted }: Wizard
   
   const [wizardCompleted, setWizardCompleted] = useState(initialWizardCompleted);
   const [isLoading, setIsLoading] = useState(false);
-  const [voiceEnabled] = useState(false);
-  
-  const { speak } = useVoice(locale === 'th' ? 'th-TH' : 'en-US');
 
   const checkWizardStatus = useCallback(async () => {
     try {
@@ -71,8 +67,6 @@ export function WizardClient({ wizardCompleted: initialWizardCompleted }: Wizard
     <WizardShell
       locale={locale}
       onComplete={handleWizardComplete}
-      voiceEnabled={voiceEnabled}
-      speak={speak}
     />
   );
 }

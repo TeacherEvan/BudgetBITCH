@@ -100,13 +100,8 @@ export function useSharedBoard(): UseSharedBoard {
   }, [boardId]);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      await checkActiveStatus();
-    })();
-    return () => {
-      cancelled = true;
-    };
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    checkActiveStatus();
   }, [checkActiveStatus]);
 
   // Listen for account changes/switches to update active status.

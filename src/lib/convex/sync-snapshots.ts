@@ -13,21 +13,25 @@ import { calculateNetWorthBaseline } from '@/lib/utils/budget-calculator';
 import type { WizardProfile } from '@/lib/types/budget';
 import { api } from '../../../convex/_generated/api';
 
-let clientInstance: ConvexReactClient | null = null;
+import { convex as sharedConvexClient } from '@/components/providers/convex-client-provider';
 
 function getConvexClient(): ConvexReactClient | null {
-  if (clientInstance) return clientInstance;
   const url = process.env.NEXT_PUBLIC_CONVEX_URL;
   if (!url || (!url.startsWith('http:') && !url.startsWith('https:'))) {
     return null;
   }
-  try {
-    clientInstance = new ConvexReactClient(url);
-    return clientInstance;
-  } catch (error) {
-    console.error('Failed to initialize Convex client:', error);
-    return null;
+  return sharedConvexClient;
+}
+
+function hasAuthToken(): boolean {
+  if (typeof window === 'undefined') return false;
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.includes('convexAuthJWT') && localStorage.getItem(k)) {
+      return true;
+    }
   }
+  return false;
 }
 
 interface SyncSnapshotTotals {
@@ -114,16 +118,21 @@ export async function syncDailySnapshot(): Promise<{ success: boolean; date: str
   try {
     const syncArgs = await gatherSnapshotData();
 
-    // Call the Convex mutation
     const convex = getConvexClient();
-    if (convex) {
-      await convex.mutation(api.snapshots.upsertDailySnapshot, syncArgs);
-      return { success: true, date: today };
-    } else {
+    if (!convex) {
       console.warn('Convex is not configured. Queueing snapshot offline.');
       await queueOfflineSnapshot(syncArgs);
       return { success: false, date: today };
     }
+
+    if (!hasAuthToken()) {
+      console.log('User is not authenticated yet. Queueing snapshot offline.');
+      await queueOfflineSnapshot(syncArgs);
+      return { success: false, date: today };
+    }
+
+    await convex.mutation(api.snapshots.upsertDailySnapshot, syncArgs);
+    return { success: true, date: today };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     if (errorMessage.includes("Authentication required")) {
@@ -191,15 +200,20 @@ export async function queueOfflineSnapshot(data: SyncSnapshotArgs) {
 }
 
 export async function flushOfflineQueue() {
-  if (typeof window === 'undefined') return;
-  
+  if (typeof window === "undefined") return;
+
   const convex = getConvexClient();
   if (!convex) {
-    console.log('Convex is not configured. Cannot flush offline queue.');
+    console.log("Convex is not configured. Cannot flush offline queue.");
     return;
   }
 
-  const queue = JSON.parse(localStorage.getItem('budgetbitch:offlineQueue') || '[]');
+  if (!hasAuthToken()) {
+    console.log("User is not authenticated yet. Postponing offline queue flush.");
+    return;
+  }
+
+  const queue = JSON.parse(localStorage.getItem("budgetbitch:offlineQueue") || "[]");
   if (queue.length === 0) return;
   
   const remaining = [...queue];

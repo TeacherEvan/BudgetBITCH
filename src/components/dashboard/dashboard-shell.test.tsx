@@ -55,37 +55,31 @@ vi.mock('@/hooks/use-accounts', () => ({
 // not the panels' internal data hooks. Factories must be self-contained (vi.mock is hoisted).
 vi.mock('@/components/dashboard/panels/expense-tracker', () => ({
   ExpenseTracker: () => {
-    \n
     return React.createElement('div', null, 'Expenses');
   }
 }));
 vi.mock('@/components/dashboard/panels/budget-visual', () => ({
   BudgetVisual: () => {
-    \n
     return React.createElement('div', null, 'Budget');
   }
 }));
 vi.mock('@/components/dashboard/panels/savings-goals', () => ({
   SavingsGoals: () => {
-    \n
     return React.createElement('div', null, 'Goals');
   }
 }));
 vi.mock('@/components/dashboard/panels/net-worth', () => ({
   NetWorth: () => {
-    \n
     return React.createElement('div', null, 'Net Worth');
   }
 }));
 vi.mock('@/components/dashboard/panels/budget-alerts', () => ({
   BudgetAlerts: () => {
-    \n
     return React.createElement('div', null, 'Budget Alerts');
   }
 }));
 vi.mock('@/components/dashboard/alerts-sidebar', () => ({
   AlertsSidebar: () => {
-    \n
     return React.createElement('div', null, 'Alerts Sidebar');
   }
 }));

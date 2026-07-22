@@ -22,17 +22,11 @@ export default function Home() {
   const auth = useConvexAuth();
   const { isLoading, isAuthenticated } = auth ?? { isLoading: true, isAuthenticated: false };
   const [splashDismissed, setSplashDismissed] = useState(true);
-  const [locale, setLocale] = useState<'th' | 'en'>('en');
 
   const mounted = useSyncExternalStore(subscribeToMount, () => true, () => false);
 
   useEffect(() => {
     if (mounted) {
-      const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-      if (stored === 'th' || stored === 'en') {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setLocale(stored);
-      }
       const seen = sessionStorage.getItem("bb:splash-seen") === "true";
       if (!seen) {
         setSplashDismissed(false);
@@ -48,7 +42,6 @@ export default function Home() {
     } catch {
       // noop
     }
-    setLocale(selectedLocale);
     setSplashDismissed(true);
   };
 

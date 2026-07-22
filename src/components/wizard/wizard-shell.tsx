@@ -84,12 +84,12 @@ const STEP_VOICE_PROMPTS: Record<WizardStepId, { th: string; en: string }> = {
 interface WizardShellProps {
   locale: 'th' | 'en';
   onComplete: () => void;
-  voiceEnabled: boolean;
-  speak: (text: string) => void;
+  voiceEnabled?: boolean;
+  speak?: (text: string) => void;
   isModal?: boolean;
 }
 
-export function WizardShell({ locale, onComplete, voiceEnabled, speak, isModal = false }: WizardShellProps) {
+export function WizardShell({ locale, onComplete, voiceEnabled = false, speak = () => {}, isModal = false }: WizardShellProps) {
   const t = useTranslations('wizard');
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [stepValues, setStepValues] = useState<Partial<WizardProfile['answers']>>({});

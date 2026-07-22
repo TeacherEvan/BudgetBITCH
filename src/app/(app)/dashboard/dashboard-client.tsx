@@ -7,7 +7,6 @@ import { useLocale } from 'next-intl';
 import { DashboardShell } from '@/components/dashboard/dashboard-shell';
 import { WizardShell } from '@/components/wizard/wizard-shell';
 import { ManifestoInterstitial } from '@/components/launch/manifesto-interstitial';
-import { useVoice } from '@/hooks/use-voice';
 import { useWizardProfile } from '@/hooks/use-local-db';
 import { useAccountSync } from '@/hooks/use-account-sync';
 import { initializeBudgetsFromWizard } from '@/lib/utils/budget-calculator';
@@ -15,7 +14,7 @@ import { getWizardProfile, saveWizardProfile, saveCriticalExpenseCommitment } fr
 import { Loader2 } from 'lucide-react';
 import { useQuery } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
-import type { CriticalExpenseCommitment, CriticalExpenseKey } from '@/lib/types/budget';
+import type { CriticalExpenseKey } from '@/lib/types/budget';
 
 interface DashboardClientProps {
   wizardCompleted: boolean;
@@ -51,8 +50,6 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
     setShowManifesto(false);
   };
 
-  const voice = useVoice(locale === 'th' ? 'th-TH' : 'en-US');
-  const voiceEnabled = voice.settings.enabled;
   // Keep the active account's shared board in sync with Convex.
   useAccountSync();
 
@@ -169,8 +166,6 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
       <DashboardShell
         locale={locale}
         onLocaleChange={handleLocaleChange}
-        onVoiceToggle={voice.toggleVoice}
-        voiceEnabled={voiceEnabled}
         onSetup={() => setWizardForced(true)}
       />
       
@@ -179,8 +174,6 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
           <WizardShell
             locale={locale}
             onComplete={handleWizardComplete}
-            voiceEnabled={voiceEnabled}
-            speak={voice.speak}
             isModal={true}
           />
         </div>

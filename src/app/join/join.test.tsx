@@ -1,7 +1,6 @@
 // app/join/join.test.tsx
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import { useSearchParams } from 'next/navigation';
+import { render, waitFor } from '@testing-library/react';
 
 const redeemInviteToken = vi.fn(async () => ({ accountId: 'acc-1', boardId: 'board-1' }));
 const push = vi.fn();

@@ -6,7 +6,6 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { Check, X, QrCode } from 'lucide-react';
 import { useAccounts } from '@/hooks/use-accounts';
-import { useVoice } from '@/hooks/use-voice';
 import { HeaderBar } from '@/components/layout/header-bar';
 
 type Status = 'idle' | 'working' | 'done' | 'error';
@@ -16,7 +15,6 @@ export default function JoinPage() {
   const params = useSearchParams();
   const router = useRouter();
   const { redeemInviteToken } = useAccounts();
-  const voice = useVoice(locale === 'th' ? 'th-TH' : 'en-US');
 
   const handleLocaleChange = (nextLocale: 'th' | 'en') => {
     document.cookie = `bb-locale=${nextLocale}; path=/; max-age=31536000; samesite=lax`;
@@ -55,8 +53,6 @@ export default function JoinPage() {
       <HeaderBar
         locale={locale}
         onLocaleChange={handleLocaleChange}
-        voiceEnabled={voice.settings.enabled}
-        onVoiceToggle={() => voice.toggleVoice()}
       />
       <main className="mx-auto flex min-h-[60vh] w-full max-w-md flex-col items-center justify-center px-4 text-center">
         <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-[var(--gold-border-strong)] bg-[var(--gold-base)]/10 text-[var(--gold-bright)]">

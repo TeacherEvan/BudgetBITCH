@@ -178,6 +178,16 @@ export default function QuickAddPage() {
     setToast({ show: true, message: l.scanning, type: 'success' });
 
     const reader = new FileReader();
+    reader.onerror = () => {
+      setLoading(false);
+      setToast({
+        show: true,
+        message: 'Failed to read image file. Please try again or enter manually.',
+        type: 'error'
+      });
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
     reader.onloadend = async () => {
       const base64String = reader.result as string;
       try {
@@ -189,16 +199,16 @@ export default function QuickAddPage() {
         
         // Auto populate values
         setIsExpense(true); // Receipts are always expenses
-        setDetectedCategory(mapCategory(parsed.category));
+        setDetectedCategory(mapCategory(parsed?.category || 'other'));
         
         // Construct visual text: amount + merchant
-        const amountStr = parsed.amount.toString();
-        const merchantStr = parsed.merchant || '';
+        const amountStr = (parsed?.amount ?? 0).toString();
+        const merchantStr = parsed?.merchant || '';
         setInputText(`${amountStr} ${merchantStr}`.trim());
 
         setToast({
           show: true,
-          message: locale === 'th' ? `สแกนใบเสร็จสำเร็จ! ${parsed.amount} บาท` : `Successfully scanned! ${parsed.amount}`,
+          message: locale === 'th' ? `สแกนใบเสร็จสำเร็จ! ${parsed?.amount ?? 0} บาท` : `Successfully scanned! ${parsed?.amount ?? 0}`,
           type: 'success'
         });
       } catch (err: any) {

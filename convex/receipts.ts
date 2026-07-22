@@ -77,11 +77,16 @@ Do not include any formatting, markdown wrappers, or extra text. Output ONLY the
         throw new Error("No parsing response candidates returned from Gemini API");
       }
 
-      const parsed = JSON.parse(text.trim());
+      let cleanText = text.trim();
+      if (cleanText.startsWith("```")) {
+        cleanText = cleanText.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
+      }
+
+      const parsed = JSON.parse(cleanText);
 
       // Validate schema format manually
       return {
-        amount: typeof parsed.amount === "number" ? parsed.amount : 0,
+        amount: typeof parsed.amount === "number" ? parsed.amount : (parseFloat(parsed.amount) || 0),
         merchant: typeof parsed.merchant === "string" ? parsed.merchant : "Unknown Merchant",
         category: typeof parsed.category === "string" ? parsed.category : "other",
         date: typeof parsed.date === "string" ? parsed.date : null,

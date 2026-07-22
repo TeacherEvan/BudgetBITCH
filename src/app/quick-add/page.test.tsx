@@ -1,6 +1,6 @@
 // app/quick-add/page.test.tsx
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import QuickAddPage from './page';
 
 // Mock DB Hooks
@@ -144,7 +144,7 @@ describe('QuickAddPage', () => {
     render(<QuickAddPage />);
     
     const file = new File(['mock-img-data'], 'receipt.jpg', { type: 'image/jpeg' });
-    const fileInput = screen.getByTestId('camera-file-input', { suggest: false }) || document.querySelector('input[type="file"]');
+    const fileInput = screen.getByTestId('camera-file-input') || document.querySelector('input[type="file"]');
     
     if (fileInput) {
       fireEvent.change(fileInput, { target: { files: [file] } });
@@ -154,6 +154,23 @@ describe('QuickAddPage', () => {
       expect(mockParseReceipt).toHaveBeenCalledTimes(1);
       const input = screen.getByPlaceholderText('Type amount then note, e.g. 120 lunch') as HTMLInputElement;
       expect(input.value).toBe('450 Supermarket');
+    });
+  });
+
+  it('handles receipt parsing errors gracefully and prompts for manual entry', async () => {
+    mockParseReceipt.mockRejectedValue(new Error('AI parsing unavailable'));
+
+    render(<QuickAddPage />);
+    
+    const file = new File(['mock-img-data'], 'receipt.jpg', { type: 'image/jpeg' });
+    const fileInput = screen.getByTestId('camera-file-input') || document.querySelector('input[type="file"]');
+    
+    if (fileInput) {
+      fireEvent.change(fileInput, { target: { files: [file] } });
+    }
+
+    await waitFor(() => {
+      expect(screen.getByText('AI parsing unavailable')).toBeInTheDocument();
     });
   });
 });

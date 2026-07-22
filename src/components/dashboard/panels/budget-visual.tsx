@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { useCurrency } from '@/hooks/use-currency';
 import { format } from 'date-fns';
 import { useDisplayPrefs } from '@/hooks/use-display-prefs';
+import { useState, useEffect } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
   LineChart, Line,
@@ -45,6 +46,12 @@ interface Budget {
 }
 
 export function BudgetVisual({ locale = 'en' }: BudgetVisualProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
+
   const formatCurrency = useCurrency();
   const { graphType } = useDisplayPrefs();
 
@@ -111,9 +118,11 @@ export function BudgetVisual({ locale = 'en' }: BudgetVisualProps) {
           </div>
         </div>
 
-        {budgetData.length > 0 && (
+        {!mounted ? (
+          <div className="h-64 bg-white/5 animate-pulse rounded-2xl" />
+        ) : budgetData.length > 0 ? (
           <div className="h-64" style={{ minWidth: 0 }}>
-            <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
+            <ResponsiveContainer width="100%" height={256}>
               {(graphType === 'pie' || graphType === 'donut') ? (
                 <PieChart>
                   <Pie
@@ -159,7 +168,7 @@ export function BudgetVisual({ locale = 'en' }: BudgetVisualProps) {
               )}
             </ResponsiveContainer>
           </div>
-        )}
+        ) : null}
 
         <div className="space-y-2 mt-4">
           {budgetData.map((item: { category: string; spent: number; budget: number; pct: number }, index: number) => (

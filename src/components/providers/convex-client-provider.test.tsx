@@ -61,18 +61,18 @@ describe('ConvexClientProvider', () => {
     expect(storage).toBeDefined();
 
     window.localStorage.setItem('__convexAuthRefreshToken', 'dummy');
+    window.localStorage.setItem('__convexAuthRefreshToken_httpsquietllama123convexcloud', 'dummy');
     window.localStorage.setItem('budgetbitch:theme', 'dark');
 
     expect(storage.getItem('__convexAuthRefreshToken')).toBeNull();
+    expect(storage.getItem('__convexAuthRefreshToken_httpsquietllama123convexcloud')).toBeNull();
     expect(storage.getItem('budgetbitch:theme')).toBe('dark');
 
     expect(reads).toContain('__convexAuthRefreshToken');
-    expect(writes).toContain('__convexAuthRefreshToken');
-    expect(originalLocalStorage.getItem('__convexAuthRefreshToken')).toBe('dummy');
+    expect(reads).toContain('__convexAuthRefreshToken_httpsquietllama123convexcloud');
 
-    storage.setItem('__convexAuthRefreshToken', 'dummy');
-    expect(reads).toContain('__convexAuthRefreshToken');
-    expect(writes).toContain('__convexAuthRefreshToken');
-    expect(originalLocalStorage.getItem('__convexAuthRefreshToken')).toBe('dummy');
+    storage.setItem('__convexAuthRefreshToken_httpsquietllama123convexcloud', 'dummy');
+    expect(storage.getItem('__convexAuthRefreshToken_httpsquietllama123convexcloud')).toBeNull();
   });
 });
+
