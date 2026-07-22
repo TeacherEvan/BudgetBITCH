@@ -15,6 +15,7 @@ import { Loader2 } from 'lucide-react';
 import { useQuery } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
 import type { CriticalExpenseKey } from '@/lib/types/budget';
+import { syncDailySnapshot } from '@/lib/convex/sync-snapshots';
 
 interface DashboardClientProps {
   wizardCompleted: boolean;
@@ -109,15 +110,16 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
     if (profile && profile.completed) return; // already completed locally
     if (latestSnapshot === undefined || latestSnapshot === null) return; // loading or no snapshot
 
+    // Only restore wizard profile if the snapshot itself has a completed wizard profile
+    if (!latestSnapshot.wizardProfile?.completed) return;
+
     (async () => {
       try {
-        console.log('Restoring wizard profile and settings from Convex snapshot...');
+        console.log('Restoring completed wizard profile and settings from Convex snapshot...');
         setIsLoading(true);
         
         // Restore wizard profile
-        if (latestSnapshot.wizardProfile) {
-          await saveWizardProfile(latestSnapshot.wizardProfile);
-        }
+        await saveWizardProfile(latestSnapshot.wizardProfile);
         
         // Restore critical expense commitment if present
         if (latestSnapshot.criticalExpenseCommitment) {
@@ -144,7 +146,10 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
 
   const handleWizardComplete = useCallback(async () => {
     setWizardCompleted(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
+    setWizardForced(false);
+    // Push the completed profile snapshot to Convex immediately
+    await syncDailySnapshot();
+    await new Promise(resolve => setTimeout(resolve, 300));
     router.refresh();
   }, [router]);
 

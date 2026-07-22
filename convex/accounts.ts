@@ -1,7 +1,7 @@
 // convex/accounts.ts
 import { v, ConvexError } from "convex/values";
 import { query, mutation } from "./_generated/server";
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { getAuthUserId, retrieveAccount, modifyAccountCredentials } from "@convex-dev/auth/server";
 import { Id } from "./_generated/dataModel";
 import { mergeRecords, StoredRecord } from "./boardMerge";
 import {
@@ -799,5 +799,39 @@ export const resolveInviteCode = query({
       .unique();
     if (!acc) return { exists: false, accountId: null, name: null };
     return { exists: true, accountId: acc.accountId, name: acc.name };
+  },
+});
+
+export const changePassword = mutation({
+  args: {
+    oldPassword: v.string(),
+    newPassword: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new ConvexError("Authentication required");
+
+    const user = await ctx.db.get(userId);
+    if (!user || !user.email) throw new ConvexError("User email not found");
+
+    if (!args.newPassword || args.newPassword.length < 8) {
+      throw new ConvexError("New password must be at least 8 characters");
+    }
+
+    const retrieved = await retrieveAccount(ctx, {
+      provider: "password",
+      account: { id: user.email, secret: args.oldPassword },
+    });
+
+    if (!retrieved) {
+      throw new ConvexError("Incorrect old password");
+    }
+
+    await modifyAccountCredentials(ctx, {
+      provider: "password",
+      account: { id: user.email, secret: args.newPassword },
+    });
+
+    return { success: true };
   },
 });

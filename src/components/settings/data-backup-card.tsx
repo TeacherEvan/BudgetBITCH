@@ -11,6 +11,7 @@ import { formatMoney } from '@/lib/utils/currency';
 import type { WizardProfile, CriticalExpenseCommitment } from '@/lib/types/budget';
 import type { CurrencyOverride } from '@/hooks/use-currency-override';
 import { format } from 'date-fns';
+import { ChangePasswordModal } from '@/components/settings/change-password-modal';
 
 type Status = 'idle' | 'success' | 'error';
 
@@ -48,6 +49,7 @@ export function DataBackupCard({
   const [exportStatus, setExportStatus] = useState<Status>('idle');
   const [importStatus, setImportStatus] = useState<Status>('idle');
   const [syncStatus, setSyncStatus] = useState<Status>('idle');
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   const handleResetConfirm = async () => {
     setResetOpen(false);
@@ -311,7 +313,7 @@ export function DataBackupCard({
               </div>
               <button
                 type="button"
-                onClick={() => router.push('/reset')}
+                onClick={() => setChangePasswordOpen(true)}
                 className="text-xs font-semibold text-amber-400 hover:text-amber-300"
               >
                 {l.changePassword}
@@ -321,6 +323,12 @@ export function DataBackupCard({
           </div>
         </Card>
       </section>
+
+      <ChangePasswordModal
+        isOpen={changePasswordOpen}
+        onClose={() => setChangePasswordOpen(false)}
+        locale={locale}
+      />
 
       <Modal
         isOpen={resetOpen}

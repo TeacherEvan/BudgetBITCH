@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 interface PartnerSharingCardProps {
   locale: 'th' | 'en';
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

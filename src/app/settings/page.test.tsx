@@ -18,6 +18,11 @@ vi.mock('next/navigation', () => ({
   useRouter: () => mockRouter,
 }));
 
+vi.mock('convex/react', () => ({
+  useMutation: () => vi.fn().mockResolvedValue({ success: true }),
+  useQuery: () => null,
+}));
+
 // Mock the hooks used in SettingsPage
 vi.mock('@convex-dev/auth/react', () => ({
   useConvexAuth: () => ({
@@ -228,6 +233,6 @@ describe('SettingsPage', () => {
 
     expect(screen.getByText(/change password/i)).toBeInTheDocument();
     fireEvent.click(screen.getByText(/change password/i));
-    expect(mockRouter.push).toHaveBeenCalledWith('/reset');
+    expect(screen.getByText('Current Password')).toBeInTheDocument();
   });
 });

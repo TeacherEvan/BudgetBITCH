@@ -91,9 +91,10 @@ Do not include any formatting, markdown wrappers, or extra text. Output ONLY the
         category: typeof parsed.category === "string" ? parsed.category : "other",
         date: typeof parsed.date === "string" ? parsed.date : null,
       };
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error in parseReceipt action:", error);
-      throw new Error(`Failed to parse receipt: ${error.message || error}`);
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to parse receipt: ${message}`);
     }
   },
 });

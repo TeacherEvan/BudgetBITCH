@@ -95,12 +95,8 @@ export function PWAInstallPrompt({
       } finally {
         setDeferredPrompt(null);
       }
-    } else if (supportsInstallEvent) {
-      // Browser supports native install prompt but event hasn't fired yet
-      installRequestedRef.current = true;
-      setWaitingForPrompt(true);
     } else {
-      // Browser doesn't support programmatic install (e.g. iOS Safari or Firefox desktop)
+      // Show manual instructions modal for browser installation
       setShowHelpModal(true);
     }
   };

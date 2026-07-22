@@ -316,7 +316,7 @@ export function useAccounts(): UseAccounts {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [nonce]);
 
   // Merge server accounts into the local listing view.
@@ -363,7 +363,7 @@ export function useAccounts(): UseAccounts {
       }
       setAccounts(merged);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [server, nonce]);
 
   const createAccount = useCallback(
