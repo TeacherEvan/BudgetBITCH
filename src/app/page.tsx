@@ -26,11 +26,11 @@ export default function Home() {
   const mounted = useSyncExternalStore(subscribeToMount, () => true, () => false);
 
   useEffect(() => {
-    if (mounted) {
-      const seen = sessionStorage.getItem("bb:splash-seen") === "true";
-      if (!seen) {
-        setSplashDismissed(false);
-      }
+    if (!mounted) return;
+    const seen = sessionStorage.getItem("bb:splash-seen") === "true";
+    if (!seen) {
+      // Defer to next tick to avoid synchronous setState in effect
+      setTimeout(() => setSplashDismissed(false), 0);
     }
   }, [mounted]);
 

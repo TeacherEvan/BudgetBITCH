@@ -87,15 +87,16 @@ describe('Landing Page Splash-First Flow', () => {
     mockSessionStorage.getItem.mockReturnValue(null);
   });
 
-  it('shows the golden splash before the login card on first visit', () => {
+  it('shows the golden splash before the login card on first visit', async () => {
     mockSessionStorage.getItem.mockReturnValue(null);
     renderWithProviders(<Home />);
-    expect(screen.getByTestId('golden-splash')).toBeInTheDocument();
+    expect(await screen.findByTestId('golden-splash')).toBeInTheDocument();
   });
 
-  it('does not show the language modal beneath the splash on first visit', () => {
+  it('does not show the language modal beneath the splash on first visit', async () => {
     mockSessionStorage.getItem.mockReturnValue(null);
     renderWithProviders(<Home />);
+    await screen.findByTestId('golden-splash');
     expect(screen.queryByTestId('language-modal')).not.toBeInTheDocument();
   });
 
