@@ -26,6 +26,10 @@ import { useCriticalExpense } from '@/hooks/use-critical-expense';
 import { useWizardProfile, useBudgets, useBills } from '@/hooks/use-local-db';
 import { BentoGrid, PanelConfig } from '@/components/dashboard/bento-grid';
 import { MobilePanelTabs } from '@/components/dashboard/mobile-panel-tabs';
+import { ScenarioSandboxModal } from '@/components/dashboard/scenario-sandbox-modal';
+import { CashFlowProjectionCard } from '@/components/dashboard/cash-flow-projection-card';
+import { CategoryPivotCard } from '@/components/dashboard/category-pivot-card';
+import { BudgetVarianceGrid } from '@/components/dashboard/budget-variance-grid';
 
 export type PanelKey = 'expenses' | 'budget' | 'budgetAlerts' | 'bills' | 'goals' | 'netWorth' | 'subscriptions' | 'emergency' | 'debt' | 'forecast';
 
@@ -76,6 +80,8 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [marketWatchOpen, setMarketWatchOpen] = useState(false);
   const [mobileActivePanel, setMobileActivePanel] = useState<PanelKey>('expenses');
+  const [scenarioModalOpen, setScenarioModalOpen] = useState(false);
+  const [excelTab, setExcelTab] = useState<'standard' | 'variance' | 'cashflow' | 'pivot'>('standard');
 
 
   // T5: direction-aware panel transitions. Direction is decided in the
@@ -233,26 +239,108 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
           {/* Daily Disposable Hero */}
           <DailyDisposableHero locale={locale} onSetup={onSetup} />
 
-          {/* Panels */}
-          <div className="mt-6">
-            {/* Mobile: one active panel at a time (direction-aware slide-in).
-                Keyed motion.div animates the enter transition on each swap;
-                no AnimatePresence so the panel swaps immediately (no lingering
-                exiting node) — important for instant state and tests. */}
-            <div className="lg:hidden" data-testid="mobile-panels">
-              <motion.div
-                key={mobileActivePanel}
-                initial={{ opacity: 0, x: direction * 32 }}
-                animate={{ opacity: 1, x: 0, transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] } }}
+          {/* Excel Power Budgeting Control Bar */}
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 p-3 bg-neutral-900/80 backdrop-blur-xl rounded-2xl border border-white/10">
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+              <button
+                type="button"
+                onClick={() => setExcelTab('standard')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+                  excelTab === 'standard'
+                    ? 'bg-amber-400 text-black shadow-lg shadow-amber-400/20'
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                }`}
               >
-                <BentoGrid panels={[mobilePanel]} />
-              </motion.div>
+                📊 Standard Dashboard
+              </button>
+              <button
+                type="button"
+                onClick={() => setExcelTab('variance')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+                  excelTab === 'variance'
+                    ? 'bg-emerald-400 text-black shadow-lg shadow-emerald-400/20'
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                ✨ Excel Variance Grid
+              </button>
+              <button
+                type="button"
+                onClick={() => setExcelTab('cashflow')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+                  excelTab === 'cashflow'
+                    ? 'bg-amber-400 text-black shadow-lg shadow-amber-400/20'
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                📅 30D Cash Flow
+              </button>
+              <button
+                type="button"
+                onClick={() => setExcelTab('pivot')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+                  excelTab === 'pivot'
+                    ? 'bg-cyan-400 text-black shadow-lg shadow-cyan-400/20'
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                🧩 50/30/20 Matrix
+              </button>
             </div>
-            {/* Desktop: toggled grid */}
-            <div className="hidden lg:block" data-testid="desktop-panels">
-              <BentoGrid panels={visiblePanels} />
-            </div>
+
+            <button
+              type="button"
+              onClick={() => setScenarioModalOpen(true)}
+              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-500 to-amber-500 text-white font-bold text-xs shadow-lg hover:brightness-110 transition-all flex items-center gap-1.5 shrink-0"
+            >
+              <span>⚙️</span>
+              <span>{locale === 'th' ? 'What-If Sandbox (Goal Seek)' : 'What-If Sandbox (Goal Seek)'}</span>
+            </button>
           </div>
+
+          {/* Panels or Excel Views */}
+          <div className="mt-4">
+            {excelTab === 'variance' && (
+              <BudgetVarianceGrid locale={locale} currency={profile?.answers?.currency ?? 'THB'} />
+            )}
+            {excelTab === 'cashflow' && (
+              <CashFlowProjectionCard
+                locale={locale}
+                currency={profile?.answers?.currency ?? 'THB'}
+                currentCashBalance={35000}
+                monthlyIncome={profile?.answers?.income ?? 45000}
+              />
+            )}
+            {excelTab === 'pivot' && (
+              <CategoryPivotCard locale={locale} currency={profile?.answers?.currency ?? 'THB'} profile={profile} />
+            )}
+            {excelTab === 'standard' && (
+              <>
+                {/* Mobile: one active panel at a time (direction-aware slide-in). */}
+                <div className="lg:hidden" data-testid="mobile-panels">
+                  <motion.div
+                    key={mobileActivePanel}
+                    initial={{ opacity: 0, x: direction * 32 }}
+                    animate={{ opacity: 1, x: 0, transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] } }}
+                  >
+                    <BentoGrid panels={[mobilePanel]} />
+                  </motion.div>
+                </div>
+                {/* Desktop: toggled grid */}
+                <div className="hidden lg:block" data-testid="desktop-panels">
+                  <BentoGrid panels={visiblePanels} />
+                </div>
+              </>
+            )}
+          </div>
+
+          <ScenarioSandboxModal
+            isOpen={scenarioModalOpen}
+            onClose={() => setScenarioModalOpen(false)}
+            profile={profile}
+            currency={profile?.answers?.currency ?? 'THB'}
+            locale={locale}
+          />
         </div>
 
         {/* Alerts Sidebar - Desktop (xl+) */}
