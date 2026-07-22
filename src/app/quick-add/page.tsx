@@ -66,13 +66,10 @@ export default function QuickAddPage() {
   const { add: addExpense } = useExpenses();
   const { profile, save: saveProfile } = useWizardProfile();
   
-  // Safe invocation of useAction (falls back gracefully if not authenticated/online)
-  let parseReceiptAction: any = null;
-  try {
-    parseReceiptAction = useAction(api.receipts.parseReceipt);
-  } catch (e) {
-    console.warn("Convex provider not active or offline:", e);
-  }
+  // useAction must be called unconditionally to satisfy the Rules of Hooks.
+  // The app is always wrapped in a ConvexProvider, so this is safe at render
+  // time; offline failures surface as rejected promises handled below.
+  const parseReceiptAction = useAction(api.receipts.parseReceipt);
 
   // UI States
   const [isExpense, setIsExpense] = useState(true);
@@ -150,9 +147,9 @@ export default function QuickAddPage() {
       // Reset form
       setInputText('');
       setDetectedCategory('other');
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setToast({ show: true, message: `${l.failed} ${err.message || ''}`, type: 'error' });
+      setToast({ show: true, message: `${l.failed} ${err instanceof Error ? err.message : String(err)}`, type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -191,10 +188,6 @@ export default function QuickAddPage() {
     reader.onloadend = async () => {
       const base64String = reader.result as string;
       try {
-        if (!parseReceiptAction) {
-          throw new Error("Backend connection offline. Please enter manually.");
-        }
-
         const parsed = await parseReceiptAction({ base64Image: base64String });
         
         // Auto populate values
@@ -211,11 +204,11 @@ export default function QuickAddPage() {
           message: locale === 'th' ? `สแกนใบเสร็จสำเร็จ! ${parsed?.amount ?? 0} บาท` : `Successfully scanned! ${parsed?.amount ?? 0}`,
           type: 'success'
         });
-      } catch (err: any) {
+      } catch (err) {
         console.error("Receipt scanning failed:", err);
         setToast({
           show: true,
-          message: err.message || "Failed to process receipt image. Please enter manually.",
+          message: (err instanceof Error ? err.message : String(err)) || "Failed to process receipt image. Please enter manually.",
           type: 'error'
         });
       } finally {

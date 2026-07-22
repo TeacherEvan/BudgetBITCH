@@ -360,9 +360,13 @@ describe("authz + deletion", () => {
 
     await asUser(aliceId).mutation(api.accounts.deleteAccount, { accountId });
 
-    await expect(
-      asUser(bobId).query(api.accounts.getAccountBoard, { boardId }),
-    ).rejects.toThrow(/Board not found/);
+    // After deletion the board is gone and bob is no longer a member, so
+    // getAccountBoard resolves to null (it never throws on missing boards).
+    const orphanBoard = await asUser(bobId).query(
+      api.accounts.getAccountBoard,
+      { boardId },
+    );
+    expect(orphanBoard).toBeNull();
     const listed = await asUser(aliceId).query(api.accounts.listMyAccounts, {});
     expect(listed.find((a: any) => a.boardId === boardId)).toBeUndefined();
   });
