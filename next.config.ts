@@ -6,7 +6,9 @@ const withNextIntl = createNextIntlPlugin();
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1"],
-  turbopack: {},
+  turbopack: {
+    root: __dirname,
+  },
 };
 
 // NOTE: PWA is handled by the hand-written public/sw.js (registered in

@@ -20,6 +20,7 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('convex/react', () => ({
   useMutation: () => vi.fn().mockResolvedValue({ success: true }),
+  useAction: () => vi.fn().mockResolvedValue({ success: true }),
   useQuery: () => null,
 }));
 

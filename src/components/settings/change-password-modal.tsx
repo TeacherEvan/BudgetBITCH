@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useMutation } from 'convex/react';
+import { useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
@@ -48,7 +48,7 @@ const COPY = {
 };
 
 export function ChangePasswordModal({ isOpen, onClose, locale = 'en' }: ChangePasswordModalProps) {
-  const changePassword = useMutation(api.accounts.changePassword);
+  const changePassword = useAction(api.accounts.changePassword);
   const copy = COPY[locale] || COPY.en;
 
   const [oldPassword, setOldPassword] = useState('');
