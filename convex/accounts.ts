@@ -1,5 +1,5 @@
 // convex/accounts.ts
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { Id } from "./_generated/dataModel";
@@ -733,18 +733,18 @@ export const pushAccountBoard = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Authentication required");
+    if (!userId) throw new ConvexError("Authentication required");
     const board = await ctx.db
       .query("accountBoards")
       .withIndex("by_boardId", (q) => q.eq("boardId", args.boardId))
       .unique();
-    if (!board) throw new Error("Board not found");
+    if (!board) throw new ConvexError("Board not found");
     const memberRows = await ctx.db
       .query("boardMembers")
       .withIndex("by_board", (q) => q.eq("boardId", args.boardId))
       .collect();
     const isMember = memberRows.some((r) => r.userId === userId);
-    if (!isMember) throw new Error("Not a member of this board");
+    if (!isMember) throw new ConvexError("Not a member of this board");
 
     const incoming = (args.data ?? {}) as Record<string, StoredRecord>;
     const { merged, changed } = mergeRecords(
@@ -767,18 +767,18 @@ export const getAccountBoard = query({
   args: { boardId: v.string() },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Authentication required");
+    if (!userId) return null;
     const board = await ctx.db
       .query("accountBoards")
       .withIndex("by_boardId", (q) => q.eq("boardId", args.boardId))
       .unique();
-    if (!board) throw new Error("Board not found");
+    if (!board) throw new ConvexError("Board not found");
     const members = await ctx.db
       .query("boardMembers")
       .withIndex("by_board", (q) => q.eq("boardId", args.boardId))
       .collect();
     const isMember = members.some((r) => r.userId === userId);
-    if (!isMember) throw new Error("Not a member of this board");
+    if (!isMember) throw new ConvexError("Not a member of this board");
     return board;
   },
 });
