@@ -14,6 +14,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useConvex, useMutation, useQuery } from "convex/react";
+import { useConvexAuth } from "@convex-dev/auth/react";
 import { api } from "../../convex/_generated/api";
 import { PERSONAL_ACCOUNT_ID } from "@/lib/types/accounts";
 import type { LocalAccountMeta } from "@/lib/types/accounts";
@@ -270,12 +271,15 @@ type ServerAccount = {
 };
 
 export function useAccounts(): UseAccounts {
+  const auth = useConvexAuth();
+  const isAuthenticated = auth?.isAuthenticated ?? false;
+
   const [accounts, setAccounts] = useState<AccountView[]>([]);
   const [currentAccountId, setCurrentAccountId] = useState<string>(PERSONAL_ACCOUNT_ID);
   const [loading, setLoading] = useState(true);
   const [nonce, setNonce] = useState(0);
 
-  const server = useQuery(api.accounts.listMyAccounts, {});
+  const server = useQuery(api.accounts.listMyAccounts, isAuthenticated ? {} : "skip");
   const createMut = useMutation(api.accounts.createAccount);
   const inviteMut = useMutation(api.accounts.createInviteToken);
   const acceptMut = useMutation(api.accounts.acceptInvite);
@@ -368,6 +372,9 @@ export function useAccounts(): UseAccounts {
 
   const createAccount = useCallback(
     async (input: { umbrella: LocalAccountMeta["umbrella"]; name: string }) => {
+      if (!isAuthenticated) {
+        throw new Error("Authentication required. Please sign in to create or share account boards.");
+      }
       const res = (await createMut({
         umbrella: input.umbrella as string,
         name: input.name,
@@ -384,16 +391,19 @@ export function useAccounts(): UseAccounts {
       refresh();
       return res;
     },
-    [createMut, refresh],
+    [createMut, refresh, isAuthenticated],
   );
 
   const createInviteToken = useCallback(
     async (accountId: string): Promise<string> => {
+      if (!isAuthenticated) {
+        throw new Error("Authentication required. Please sign in to generate invite tokens.");
+      }
       const res = await inviteMut({ accountId });
       refresh();
       return (res as { token: string }).token;
     },
-    [inviteMut, refresh],
+    [inviteMut, refresh, isAuthenticated],
   );
 
   const acceptInvite = useCallback(

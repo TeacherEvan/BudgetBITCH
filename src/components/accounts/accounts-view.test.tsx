@@ -29,6 +29,9 @@ vi.mock('@/hooks/use-accounts', () => ({
     refresh: vi.fn(),
   }),
 }));
+vi.mock('@convex-dev/auth/react', () => ({
+  useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
+}));
 vi.mock('@/hooks/use-account-sync', () => ({ useAccountSync: () => ({}) }));
 vi.mock('@/components/layout/header-bar', () => ({
   HeaderBar: () => <div data-testid="header" />,

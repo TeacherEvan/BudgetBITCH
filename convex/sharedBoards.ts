@@ -1,5 +1,5 @@
 // convex/sharedBoards.ts
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { query, mutation, MutationCtx } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { Doc, Id } from "./_generated/dataModel";
@@ -74,7 +74,7 @@ export const ensureProfile = mutation({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Authentication required");
+    if (!userId) throw new ConvexError("Authentication required");
     const profile = await ensureProfileDoc(ctx, userId);
     return {
       shareCode: profile.shareCode,
@@ -118,7 +118,7 @@ export const resolveShareCode = query({
   args: { code: v.string() },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Authentication required");
+    if (!userId) throw new ConvexError("Authentication required");
 
     const code = args.code.trim().toUpperCase();
     const partner = await ctx.db
@@ -137,7 +137,7 @@ export const linkByCode = mutation({
   args: { code: v.string() },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Authentication required");
+    if (!userId) throw new ConvexError("Authentication required");
 
     const code = args.code.trim().toUpperCase();
     const partner = await ctx.db
@@ -209,7 +209,7 @@ export const getBoard = query({
   args: { boardId: v.string() },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Authentication required");
+    if (!userId) throw new ConvexError("Authentication required");
 
     const board = await ctx.db
       .query("sharedBoards")
@@ -232,7 +232,7 @@ export const pushBoard = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Authentication required");
+    if (!userId) throw new ConvexError("Authentication required");
 
     const board = await ctx.db
       .query("sharedBoards")
@@ -306,7 +306,7 @@ export const unlink = mutation({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Authentication required");
+    if (!userId) throw new ConvexError("Authentication required");
 
     const myProfile = await ctx.db
       .query("userProfiles")

@@ -5,7 +5,8 @@
 
 import { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Plus, Check, Copy, Users, ArrowRightLeft, LogOut, Trash2 } from 'lucide-react';
+import { Plus, Check, Copy, Users, ArrowRightLeft, LogOut, Trash2, ShieldAlert } from 'lucide-react';
+import { useConvexAuth } from '@convex-dev/auth/react';
 import { useAccounts } from '@/hooks/use-accounts';
 import { useAccountSync } from '@/hooks/use-account-sync';
 import {
@@ -28,6 +29,9 @@ interface AccountsViewProps {
 }
 
 export function AccountsView({ locale, onLocaleChange, voiceEnabled, onVoiceToggle }: AccountsViewProps) {
+  const auth = useConvexAuth();
+  const isAuthenticated = auth?.isAuthenticated ?? false;
+
   const {
     accounts,
     currentAccountId,
@@ -52,6 +56,7 @@ export function AccountsView({ locale, onLocaleChange, voiceEnabled, onVoiceTogg
   const [generatingInvite, setGeneratingInvite] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const ownedCount = accounts.filter((a) => a.role === 'owner' && a.accountId !== 'personal').length;
   const canCreate = ownedCount < MAX_OWNED_ACCOUNTS;
@@ -60,12 +65,22 @@ export function AccountsView({ locale, onLocaleChange, voiceEnabled, onVoiceTogg
 
   const handleCreate = async () => {
     if (!newUmbrella || !newName.trim()) return;
+    setErrorMsg(null);
+    if (!isAuthenticated) {
+      setErrorMsg(t('กรุณาเข้าสู่ระบบก่อนสร้างบัญชีร่วม', 'Please sign in to create or share accounts.'));
+      return;
+    }
     setBusy(true);
     try {
       await createAccount({ umbrella: newUmbrella, name: newName.trim() });
       setCreating(false);
       setNewUmbrella(null);
       setNewName('');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMsg(msg.includes('Authentication required')
+        ? t('กรุณาเข้าสู่ระบบก่อนสร้างบัญชีร่วม', 'Please sign in to create or share accounts.')
+        : msg);
     } finally {
       setBusy(false);
     }

@@ -17,6 +17,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useMutation, useQuery } from "convex/react";
+import { useConvexAuth } from "@convex-dev/auth/react";
 import { api } from "../../convex/_generated/api";
 import {
   serializeBoardForSync,
@@ -65,13 +66,19 @@ function isOnline(): boolean {
 }
 
 export function useAccountSync(): UseAccountSync {
+  const auth = useConvexAuth();
+  const isAuthenticated = auth?.isAuthenticated ?? false;
+
   const [boardId, setBoardId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [pushPending, setPushPending] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
 
-  const getBoard = useQuery(api.accounts.getAccountBoard, boardId ? { boardId } : "skip");
+  const getBoard = useQuery(
+    api.accounts.getAccountBoard,
+    boardId && isAuthenticated ? { boardId } : "skip"
+  );
   const pushBoard = useMutation(api.accounts.pushAccountBoard);
 
   // Guard so a reactive re-fire of getAccountBoard (e.g. our own push echoed
@@ -112,7 +119,7 @@ export function useAccountSync(): UseAccountSync {
   const pendingRef = useRef(false);
 
   const flushQueue = useCallback(async () => {
-    if (!isOnline()) return;
+    if (!isAuthenticated || !isOnline()) return;
     const q = getQueue();
     if (q.length === 0) return;
 
@@ -141,9 +148,10 @@ export function useAccountSync(): UseAccountSync {
     setQueue(remaining);
     setSyncing(false);
     setPushPending(remaining.length > 0);
-  }, [pushBoard]);
+  }, [isAuthenticated, pushBoard]);
 
   const doPush = async () => {
+    if (!isAuthenticated) return;
     const bid = boardIdRef.current;
     if (!bid) return;
 

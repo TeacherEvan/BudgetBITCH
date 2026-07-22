@@ -27,8 +27,11 @@ function hasAuthToken(): boolean {
   if (typeof window === 'undefined') return false;
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
-    if (k && k.includes('convexAuthJWT') && localStorage.getItem(k)) {
-      return true;
+    if (k && k.includes('convexAuthJWT')) {
+      const val = localStorage.getItem(k);
+      if (val && val !== 'null' && val !== 'undefined' && val.trim().length > 10) {
+        return true;
+      }
     }
   }
   return false;

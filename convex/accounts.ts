@@ -248,7 +248,7 @@ export const renameAccount = mutation({
   args: { accountId: v.string(), name: v.string() },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Authentication required");
+    if (!userId) throw new ConvexError("Authentication required");
     const acc = await ctx.db
       .query("accounts")
       .withIndex("by_accountId", (q) =>
@@ -277,7 +277,7 @@ export const rotateInviteCode = mutation({
   args: { accountId: v.string() },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Authentication required");
+    if (!userId) throw new ConvexError("Authentication required");
     const acc = await ctx.db
       .query("accounts")
       .withIndex("by_accountId", (q) =>
@@ -310,7 +310,7 @@ export const deleteAccount = mutation({
   args: { accountId: v.string() },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Authentication required");
+    if (!userId) throw new ConvexError("Authentication required");
     const acc = await ctx.db
       .query("accounts")
       .withIndex("by_accountId", (q) =>
@@ -369,7 +369,7 @@ export const inviteByCode = mutation({
   args: { accountId: v.string(), code: v.string() },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Authentication required");
+    if (!userId) throw new ConvexError("Authentication required");
 
     const acc = await ctx.db
       .query("accounts")
@@ -443,7 +443,7 @@ export const createInviteToken = mutation({
   args: { accountId: v.string() },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Authentication required");
+    if (!userId) throw new ConvexError("Authentication required");
 
     const acc = await ctx.db
       .query("accounts")
@@ -490,7 +490,7 @@ export const redeemInviteToken = mutation({
   args: { token: v.string() },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Authentication required");
+    if (!userId) throw new ConvexError("Authentication required");
     await ensureProfileDoc(ctx, userId);
 
     const token = args.token.trim();
@@ -572,7 +572,7 @@ export const acceptInvite = mutation({
   args: { inviteId: v.string() },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Authentication required");
+    if (!userId) throw new ConvexError("Authentication required");
     const invite = await ctx.db.get(args.inviteId as Id<"invites">);
     if (!invite) throw new Error("Invite not found");
     if (invite.toUserId !== userId) {
@@ -616,7 +616,7 @@ export const declineInvite = mutation({
   args: { inviteId: v.string() },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Authentication required");
+    if (!userId) throw new ConvexError("Authentication required");
     const invite = await ctx.db.get(args.inviteId as Id<"invites">);
     if (!invite) throw new Error("Invite not found");
     if (invite.toUserId !== userId) {
@@ -631,7 +631,7 @@ export const removeMember = mutation({
   args: { accountId: v.string(), userId: v.string() },
   handler: async (ctx, args) => {
     const ownerId = await getAuthUserId(ctx);
-    if (!ownerId) throw new Error("Authentication required");
+    if (!ownerId) throw new ConvexError("Authentication required");
     const acc = await ctx.db
       .query("accounts")
       .withIndex("by_accountId", (q) =>
@@ -684,7 +684,7 @@ export const leaveAccount = mutation({
   args: { accountId: v.string() },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Authentication required");
+    if (!userId) throw new ConvexError("Authentication required");
     const acc = await ctx.db
       .query("accounts")
       .withIndex("by_accountId", (q) =>
