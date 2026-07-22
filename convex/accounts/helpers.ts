@@ -1,6 +1,7 @@
 // convex/accounts/helpers.ts
 import { MutationCtx, QueryCtx } from "../_generated/server";
 import { Doc, Id } from "../_generated/dataModel";
+import { ConvexError } from "convex/values";
 import { INVITE_CODE_LEN } from "./types";
 
 export function generateInviteCode(): string {
@@ -39,7 +40,7 @@ export async function ensureProfileDoc(
       continue;
     }
   }
-  throw new Error("Failed to allocate a user sharing profile");
+  throw new ConvexError("Failed to allocate a user sharing profile");
 }
 
 export async function getBoardMemberIds(

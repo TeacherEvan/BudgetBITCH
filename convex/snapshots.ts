@@ -2,6 +2,7 @@
 import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { Id } from "./_generated/dataModel";
 
 /**
  * Upserts a daily snapshot of the user's budget data.
@@ -9,6 +10,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
  */
 export const upsertDailySnapshot = mutation({
   args: {
+    accountId: v.optional(v.string()),
     wizardProfile: v.any(), // Full WizardProfile object
     totals: v.object({
       income: v.number(),
@@ -47,6 +49,7 @@ export const upsertDailySnapshot = mutation({
     if (existing) {
       // Update existing snapshot
       await ctx.db.patch(existing._id, {
+        accountId: args.accountId,
         wizardProfile: args.wizardProfile,
         totals: args.totals,
         criticalExpenseCommitment: args.criticalExpenseCommitment,
@@ -59,6 +62,7 @@ export const upsertDailySnapshot = mutation({
       // Insert new snapshot
       await ctx.db.insert("dailySnapshots", {
         userId,
+        accountId: args.accountId,
         date: today,
         wizardProfile: args.wizardProfile,
         totals: args.totals,
@@ -99,7 +103,14 @@ export const getLatestSnapshot = query({
 export const listCloudSnapshots = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
+    let userId: Id<"users"> | null;
+    try {
+      userId = await getAuthUserId(ctx);
+    } catch (e) {
+      throw new ConvexError(
+        `Auth failed in listCloudSnapshots: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
     if (!userId) return [];
     return await ctx.db
       .query("dailySnapshots")

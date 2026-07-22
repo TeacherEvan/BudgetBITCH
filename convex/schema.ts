@@ -86,6 +86,7 @@ export default defineSchema({
 
   dailySnapshots: defineTable({
     userId: v.id("users"),
+    accountId: v.optional(v.string()),
     date: v.string(),
     wizardProfile: v.any(),
     totals: v.object({

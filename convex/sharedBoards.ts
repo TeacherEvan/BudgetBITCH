@@ -66,14 +66,21 @@ async function ensureProfileDoc(
       continue;
     }
   }
-  throw new Error("Failed to allocate a unique share code");
+  throw new ConvexError("Failed to allocate a unique share code");
 }
 
 /** Create the caller's sharing profile (with a shareCode) if it doesn't exist yet. */
 export const ensureProfile = mutation({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
+    let userId: Id<"users"> | null;
+    try {
+      userId = await getAuthUserId(ctx);
+    } catch (e) {
+      throw new ConvexError(
+        `Auth failed in ensureProfile: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
     if (!userId) throw new ConvexError("Authentication required");
     const profile = await ensureProfileDoc(ctx, userId);
     return {
@@ -98,7 +105,16 @@ export const ensureProfile = mutation({
 export const getMyProfile = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
+    let userId: Id<"users"> | null;
+    try {
+      userId = await getAuthUserId(ctx);
+    } catch (e) {
+      // getUserIdentity can reject a malformed/expired/mismatched JWT. Surface
+      // the real reason instead of letting Convex redact it to "Server Error".
+      throw new ConvexError(
+        `Auth failed in getMyProfile: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
     if (!userId) return null;
     const profile = await ctx.db
       .query("userProfiles")

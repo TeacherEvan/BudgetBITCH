@@ -1,6 +1,6 @@
 import type { NetWorthSnapshot, BoardSnapshot } from '@/lib/types/budget';
 import { notifyBoardChanged } from '@/lib/types/budget';
-import { getDB, afterBoardMutation, getLocalWrite } from '../local-db';
+import { getDB, afterBoardMutation, getLocalWrite, recordLocalWriteAt } from '../local-db';
 
 // Net Worth Snapshots
 export async function saveNetWorthSnapshot(snapshot: NetWorthSnapshot): Promise<void> {
@@ -145,33 +145,48 @@ export async function replaceBoardData(board: BoardSnapshot): Promise<void> {
  * for per-record merge sync: `{ "<store>:<key>": { value, updatedAt } }`.
  * Key scheme matches `applyRemoteBoard` and the server merge.
  */
+/**
+ * Resolve the last-known truth timestamp for a single record. Driven by the
+ * `localWrites` store so each key carries ITS OWN timestamp instead of a
+ * single "now" for the whole board. This is what makes the server's per-key
+ * merge (boardMerge.ts) a real conflict-free sync: a record you didn't touch
+ * keeps its old timestamp and is NOT clobbered by your push.
+ */
+async function tsFor(store: string, key: string | number): Promise<number> {
+  try {
+    return await getLocalWrite(store, String(key));
+  } catch {
+    return 0;
+  }
+}
+
 export async function serializeBoardForSync(): Promise<Record<string, { value: unknown; updatedAt: number }>> {
   const board = await serializeBoard();
-  const now = Date.now();
   const out: Record<string, { value: unknown; updatedAt: number }> = {};
 
-  for (const e of board.expenses ?? []) out[`expenses:${e.id}`] = { value: e, updatedAt: now };
-  for (const b of board.budgets ?? []) out[`budgets:${b.category}`] = { value: b, updatedAt: now };
-  for (const b of board.bills ?? []) out[`bills:${b.id}`] = { value: b, updatedAt: now };
-  for (const g of board.savingsGoals ?? []) out[`savingsGoals:${g.id}`] = { value: g, updatedAt: now };
-  for (const s of board.netWorthSnapshots ?? []) out[`netWorthSnapshots:${s.date}`] = { value: s, updatedAt: now };
-  for (const d of board.debts ?? []) out[`debts:${d.id}`] = { value: d, updatedAt: now };
-  for (const c of board.criticalExpenseCommitments ?? []) out[`criticalExpenseCommitments:${c.month}`] = { value: c, updatedAt: now };
+  for (const e of board.expenses ?? []) out[`expenses:${e.id}`] = { value: e, updatedAt: await tsFor('expenses', e.id) };
+  for (const b of board.budgets ?? []) out[`budgets:${b.category}`] = { value: b, updatedAt: await tsFor('budgets', b.category) };
+  for (const i of board.incomes ?? []) out[`incomes:${i.id}`] = { value: i, updatedAt: await tsFor('incomes', i.id) };
+  for (const b of board.bills ?? []) out[`bills:${b.id}`] = { value: b, updatedAt: await tsFor('bills', b.id) };
+  for (const g of board.savingsGoals ?? []) out[`savingsGoals:${g.id}`] = { value: g, updatedAt: await tsFor('savingsGoals', g.id) };
+  for (const s of board.netWorthSnapshots ?? []) out[`netWorthSnapshots:${s.date}`] = { value: s, updatedAt: await tsFor('netWorthSnapshots', s.date) };
+  for (const d of board.debts ?? []) out[`debts:${d.id}`] = { value: d, updatedAt: await tsFor('debts', d.id) };
+  for (const c of board.criticalExpenseCommitments ?? []) out[`criticalExpenseCommitments:${c.month}`] = { value: c, updatedAt: await tsFor('criticalExpenseCommitments', c.month) };
 
   return out;
 }
 
 export function serializeSnapshotForSync(snapshot: BoardSnapshot): Record<string, { value: unknown; updatedAt: number }> {
-  const now = Date.now();
   const out: Record<string, { value: unknown; updatedAt: number }> = {};
 
-  for (const e of snapshot.expenses ?? []) out[`expenses:${e.id}`] = { value: e, updatedAt: now };
-  for (const b of snapshot.budgets ?? []) out[`budgets:${b.category}`] = { value: b, updatedAt: now };
-  for (const b of snapshot.bills ?? []) out[`bills:${b.id}`] = { value: b, updatedAt: now };
-  for (const g of snapshot.savingsGoals ?? []) out[`savingsGoals:${g.id}`] = { value: g, updatedAt: now };
-  for (const s of snapshot.netWorthSnapshots ?? []) out[`netWorthSnapshots:${s.date}`] = { value: s, updatedAt: now };
-  for (const d of snapshot.debts ?? []) out[`debts:${d.id}`] = { value: d, updatedAt: now };
-  for (const c of snapshot.criticalExpenseCommitments ?? []) out[`criticalExpenseCommitments:${c.month}`] = { value: c, updatedAt: now };
+  for (const e of snapshot.expenses ?? []) out[`expenses:${e.id}`] = { value: e, updatedAt: 0 };
+  for (const b of snapshot.budgets ?? []) out[`budgets:${b.category}`] = { value: b, updatedAt: 0 };
+  for (const i of snapshot.incomes ?? []) out[`incomes:${i.id}`] = { value: i, updatedAt: 0 };
+  for (const b of snapshot.bills ?? []) out[`bills:${b.id}`] = { value: b, updatedAt: 0 };
+  for (const g of snapshot.savingsGoals ?? []) out[`savingsGoals:${g.id}`] = { value: g, updatedAt: 0 };
+  for (const s of snapshot.netWorthSnapshots ?? []) out[`netWorthSnapshots:${s.date}`] = { value: s, updatedAt: 0 };
+  for (const d of snapshot.debts ?? []) out[`debts:${d.id}`] = { value: d, updatedAt: 0 };
+  for (const c of snapshot.criticalExpenseCommitments ?? []) out[`criticalExpenseCommitments:${c.month}`] = { value: c, updatedAt: 0 };
 
   return out;
 }
@@ -217,6 +232,9 @@ export async function applyRemoteBoard(map: Record<string, { value: unknown; upd
     } else {
       tx.objectStore(item.store).put(item.value as never);
     }
+    // Stamp the local-write clock with THIS record's true timestamp
+    // (not "now"), preserving the per-key merge on a later push.
+    await recordLocalWriteAt(item.store, String(item.explicitKey), item.updatedAt);
   }
   await tx.done;
   notifyBoardChanged('remote');

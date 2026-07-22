@@ -14,6 +14,7 @@ import {
 import { calculateNetWorthBaseline } from '@/lib/utils/budget-calculator';
 import type { WizardProfile } from '@/lib/types/budget';
 import { api } from '../../../convex/_generated/api';
+import { getCurrentAccountId } from '@/lib/db/accountStorage';
 
 import { convex as sharedConvexClient } from '@/components/providers/convex-client-provider';
 
@@ -64,6 +65,7 @@ interface SyncSnapshotArgs {
 }
 
 export interface GatherResult {
+  accountId: string;
   wizardProfile: WizardProfile | null;
   totals: SyncSnapshotTotals;
   criticalExpenseCommitment?: SyncSnapshotArgs['criticalExpenseCommitment'];
@@ -73,6 +75,7 @@ export interface GatherResult {
 
 /** Shape accepted by restoreFromCloudSnapshot; only the backup payload is needed. */
 export interface CloudSnapshot {
+  accountId?: string;
   fullBackupData?: Record<string, unknown[]>;
 }
 
@@ -142,6 +145,7 @@ export async function gatherSnapshotData(): Promise<GatherResult> {
   }
 
   return {
+    accountId: await getCurrentAccountId(),
     wizardProfile: profile || null,
     totals,
     criticalExpenseCommitment,
@@ -291,6 +295,26 @@ export async function restoreFromCloudSnapshot(snapshot: CloudSnapshot): Promise
     const db = await getDB();
     const backup = snapshot.fullBackupData;
 
+    // Account-aware restore: under the multi-board swap model the 8 flat
+    // stores ALWAYS hold the ACTIVE account. If we just overwrite them, the
+    // switch model would later stash this (possibly foreign) data over the
+    // real active account's stash and push it to other members.
+    // So: stash the currently-active board first, then point the active
+    // account at the snapshot's accountId (fall back to whatever is current).
+    if (snapshot.accountId) {
+      try {
+        const { getCurrentAccountId, stashCurrentAccount, setCurrentAccountId } =
+          await import('@/lib/db/accountStorage');
+        const activeId = await getCurrentAccountId();
+        if (activeId !== snapshot.accountId) {
+          await stashCurrentAccount(activeId);
+        }
+        await setCurrentAccountId(snapshot.accountId);
+      } catch (e) {
+        console.warn('[Sync] Account-aware restore bookkeeping failed; restoring into active stores only:', e);
+      }
+    }
+
     // Clear and restore each store
     const allStores = [...USER_DATA_STORES, 'settings'] as const;
     const tx = db.transaction([...allStores], 'readwrite');
@@ -303,7 +327,17 @@ export async function restoreFromCloudSnapshot(snapshot: CloudSnapshot): Promise
       const items = backup[store];
       if (Array.isArray(items)) {
         for (const item of items) {
-          await db.put(store, item as never);
+          // wizardProfile & settings have no keyPath; restore under their
+          // fixed 'current' key so the app (which only reads 'current') sees them.
+          if (
+            (store === 'wizardProfile' || store === 'settings') &&
+            item && typeof item === 'object' &&
+            !('id' in (item as Record<string, unknown>))
+          ) {
+            await db.put(store, item as never, 'current' as never);
+          } else {
+            await db.put(store, item as never);
+          }
         }
       }
     }

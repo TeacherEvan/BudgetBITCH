@@ -227,6 +227,17 @@ export async function recordLocalWrite(store: string, key: string): Promise<void
   }
 }
 
+// Record a specific timestamp (used when applying a remote record so the
+// local write-clock reflects the record's true last-modified time, not "now").
+export async function recordLocalWriteAt(store: string, key: string, ts: number): Promise<void> {
+  try {
+    const db = await getDB();
+    await db.put('localWrites', ts, writeKey(store, key));
+  } catch {
+    // Non-fatal
+  }
+}
+
 export async function getLocalWrite(store: string, key: string): Promise<number> {
   try {
     const db = await getDB();
@@ -540,7 +551,16 @@ export async function restoreCheckpoint(timestamp: number): Promise<boolean> {
       if (!USER_DATA_STORES.includes(store as any)) continue;
       if (Array.isArray(items)) {
         for (const item of items) {
-          await putDb.put(store, item);
+          // wizardProfile & settings have no keyPath; restore under their
+          // fixed 'current' key so the app (which only reads 'current') sees them.
+          if (
+            (store === 'wizardProfile' || store === 'settings') &&
+            item && typeof item === 'object'
+          ) {
+            await putDb.put(store, item, 'current');
+          } else {
+            await putDb.put(store, item);
+          }
         }
       }
     }
