@@ -2,16 +2,20 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Download, Upload, Shield, Trash2, AlertCircle, KeyRound } from 'lucide-react';
+import { Download, Upload, Shield, Trash2, AlertCircle, KeyRound, Lock, Eye, EyeOff, Database } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
-import { USER_DATA_STORES, type UserDataStore, clearAllUserData, getDB } from '@/lib/db/local-db';
+import { Input } from '@/components/ui/input';
+import { USER_DATA_STORES, type UserDataStore, clearAllUserData, getDB, createLocalCheckpoint } from '@/lib/db/local-db';
+import { createBackupPayload, parseAndValidateBackup, type BackupData } from '@/lib/db/backup-schema';
+import { encryptBackup, decryptBackup } from '@/lib/db/crypto-backup';
 import { formatMoney } from '@/lib/utils/currency';
 import type { WizardProfile, CriticalExpenseCommitment } from '@/lib/types/budget';
 import type { CurrencyOverride } from '@/hooks/use-currency-override';
 import { format } from 'date-fns';
 import { ChangePasswordModal } from '@/components/settings/change-password-modal';
+import { StorageDiagnosticsModal } from '@/components/settings/storage-diagnostics-modal';
 
 type Status = 'idle' | 'success' | 'error';
 
@@ -50,6 +54,17 @@ export function DataBackupCard({
   const [importStatus, setImportStatus] = useState<Status>('idle');
   const [syncStatus, setSyncStatus] = useState<Status>('idle');
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  
+  // Storage Diagnostics and Encryption states
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
+  const [encryptExport, setEncryptExport] = useState(false);
+  const [exportPassword, setExportPassword] = useState('');
+  const [showExportPassword, setShowExportPassword] = useState(false);
+  const [importPassword, setImportPassword] = useState('');
+  const [showImportPasswordInput, setShowImportPasswordInput] = useState(false);
+  const [showImportPassword, setShowImportPassword] = useState(false);
+  const [pendingFileString, setPendingFileString] = useState<string | null>(null);
+  const [importErrorMessage, setImportErrorMessage] = useState('');
 
   const handleResetConfirm = async () => {
     setResetOpen(false);
@@ -72,52 +87,124 @@ export function DataBackupCard({
       const allData: Record<string, unknown> = {};
 
       for (const store of USER_DATA_STORES) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        allData[store] = (await db.getAll(store)) as any;
+        allData[store] = await db.getAll(store);
+      }
+      // Include settings in export too
+      allData['settings'] = await db.getAll('settings');
+
+      const payload = await createBackupPayload(allData as BackupData);
+
+      if (encryptExport && exportPassword) {
+        const rawDataStr = JSON.stringify(payload.data);
+        const encrypted = await encryptBackup(rawDataStr, exportPassword);
+        payload.data = encrypted.ciphertext;
+        payload.cryptoSalt = encrypted.salt;
+        payload.cryptoIv = encrypted.iv;
+        payload.isEncrypted = true;
       }
 
-      const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `budgetbitch-backup-${format(new Date(), 'yyyy-MM-dd')}.json`;
+      a.download = `budgetbitch-backup-${format(new Date(), 'yyyy-MM-dd')}${payload.isEncrypted ? '.enc' : ''}.json`;
       a.click();
       URL.revokeObjectURL(url);
       setExportStatus('success');
-    } catch {
+    } catch (err: any) {
+      console.error('Export failed:', err);
       setExportStatus('error');
     } finally {
       setExporting(false);
     }
   };
 
+  const executeDataImport = async (data: BackupData) => {
+    // 1. Create a failsafe local checkpoint before modifying anything
+    await createLocalCheckpoint('Pre-Import Backup');
+
+    const db = await getDB();
+    
+    // Clear existing stores
+    const allStores = [...USER_DATA_STORES, 'settings'] as const;
+    const tx = db.transaction(allStores as any, 'readwrite');
+    for (const store of allStores) {
+      await tx.objectStore(store).clear();
+    }
+    await tx.done;
+
+    // Write new data
+    const putDb = db as any;
+    for (const [store, items] of Object.entries(data)) {
+      if (Array.isArray(items)) {
+        for (const item of items) {
+          await putDb.put(store, item);
+        }
+      }
+    }
+
+    setImportStatus('success');
+    window.location.reload();
+  };
+
   const handleImportData = (file: File) => {
     setImportStatus('idle');
+    setImportErrorMessage('');
     const reader = new FileReader();
     reader.onload = async (e) => {
+      const fileString = e.target?.result as string;
       try {
-        const data = JSON.parse(e.target?.result as string);
-        if (typeof data !== 'object' || data === null) throw new Error('invalid');
-
-        const db = await getDB();
-        const putAny = (
-          db as unknown as { put(store: string, value: unknown): Promise<IDBValidKey> }
-        ).put.bind(db);
-
-        for (const [store, items] of Object.entries(data)) {
-          if (!USER_DATA_STORES.includes(store as UserDataStore)) continue;
-          if (!Array.isArray(items)) continue;
-          for (const item of items) {
-            await putAny(store, item);
-          }
+        const rawPayload = JSON.parse(fileString);
+        
+        // Check if this is an encrypted backup payload
+        if (rawPayload && rawPayload.isEncrypted) {
+          setPendingFileString(fileString);
+          setShowImportPasswordInput(true);
+          return;
         }
-        setImportStatus('success');
-        window.location.reload();
-      } catch {
+
+        // Standard validation
+        const { data } = await parseAndValidateBackup(fileString);
+        await executeDataImport(data);
+      } catch (err: any) {
+        console.error('Import failed:', err);
+        setImportErrorMessage(err.message || 'Invalid file format');
         setImportStatus('error');
       }
     };
     reader.readAsText(file);
+  };
+
+  const handleDecryptAndImport = async () => {
+    if (!pendingFileString || !importPassword) return;
+    setImportStatus('idle');
+    setImportErrorMessage('');
+    try {
+      const rawPayload = JSON.parse(pendingFileString);
+      const decryptedString = await decryptBackup(
+        rawPayload.data,
+        importPassword,
+        rawPayload.cryptoSalt,
+        rawPayload.cryptoIv
+      );
+
+      // Reconstruct payload as unencrypted and validate
+      const unencryptedPayload = {
+        ...rawPayload,
+        isEncrypted: false,
+        data: JSON.parse(decryptedString)
+      };
+
+      const { data } = await parseAndValidateBackup(JSON.stringify(unencryptedPayload));
+      setShowImportPasswordInput(false);
+      setPendingFileString(null);
+      setImportPassword('');
+      await executeDataImport(data);
+    } catch (err: any) {
+      console.error('Decryption/Import failed:', err);
+      setImportErrorMessage(locale === 'th' ? 'รหัสผ่านไม่ถูกต้อง หรือไฟล์เสียหาย' : 'Incorrect password or corrupted file');
+      setImportStatus('error');
+    }
   };
 
   const handleSyncNow = async () => {
@@ -166,6 +253,14 @@ export function DataBackupCard({
       password: 'รหัสผ่าน',
       changePassword: 'เปลี่ยนรหัสผ่าน',
       passwordDesc: 'รีเซ็ตรหัสผ่านด้วยลิงก์ในหน้า sign-in หรือใช้ฟอร์มด้านล่าง',
+      encryptBackup: 'เข้ารหัสไฟล์สำรองข้อมูล',
+      enterPassword: 'ป้อนรหัสผ่านสำรองข้อมูล',
+      diagnosticsTitle: 'ความสมบูรณ์และวิเคราะห์หน่วยความจำ',
+      diagnosticsDesc: 'ตรวจสอบพื้นที่การจัดเก็บ สภาพระบบ และสแนปช็อตกู้คืนระบบ',
+      diagnosticsBtn: 'การวิเคราะห์และกู้คืน',
+      importPasswordTitle: 'ต้องการรหัสผ่านเพื่อนำเข้าข้อมูล',
+      importPasswordDesc: 'ข้อมูลสำรองนี้ถูกเข้ารหัส กรุณาป้อนรหัสผ่านที่ตั้งค่าไว้เพื่อถอดรหัสและนำเข้าข้อมูล',
+      submit: 'ตกลง',
     },
     en: {
       dataSection: 'Data',
@@ -196,6 +291,14 @@ export function DataBackupCard({
       password: 'Password',
       changePassword: 'Change password',
       passwordDesc: 'Reset via the sign-in reset flow, or use the form below.',
+      encryptBackup: 'Encrypt backup file',
+      enterPassword: 'Enter backup password',
+      diagnosticsTitle: 'Storage Integrity & Diagnostics',
+      diagnosticsDesc: 'Inspect storage quota, health diagnostics, and recovery points.',
+      diagnosticsBtn: 'Diagnostics & Recovery',
+      importPasswordTitle: 'Password Required to Import',
+      importPasswordDesc: 'This backup file is encrypted. Enter the backup password to decrypt and restore.',
+      submit: 'Submit',
     },
   }[locale];
 
@@ -205,34 +308,92 @@ export function DataBackupCard({
       <section id="settings-data" className="scroll-mt-24">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-amber-400 mb-4">{l.dataSection}</h2>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Card className="p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <Download className="w-5 h-5 text-amber-400" />
-              <h3 className="font-semibold text-white">{l.exportData}</h3>
+          <Card className="p-4 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                <Download className="w-5 h-5 text-amber-400" />
+                <h3 className="font-semibold text-white">{l.exportData}</h3>
+              </div>
+              <p className="text-sm text-white/50 mb-4">{l.exportDesc}</p>
+              
+              {/* Encryption UI */}
+              <div className="mb-4 bg-black/20 p-3 rounded-lg border border-white/5 space-y-3">
+                <label className="flex items-center gap-2 text-xs text-white/70 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={encryptExport}
+                    onChange={(e) => setEncryptExport(e.target.checked)}
+                    className="rounded border-white/20 bg-white/5 text-amber-400 focus:ring-amber-400/50"
+                  />
+                  <span>{l.encryptBackup}</span>
+                </label>
+
+                {encryptExport && (
+                  <div className="relative">
+                    <Input
+                      type={showExportPassword ? 'text' : 'password'}
+                      placeholder={l.enterPassword}
+                      value={exportPassword}
+                      onChange={(e) => setExportPassword(e.target.value)}
+                      className="w-full text-xs pr-8"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowExportPassword(!showExportPassword)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70"
+                    >
+                      {showExportPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-            <p className="text-sm text-white/50 mb-4">{l.exportDesc}</p>
-            <Button variant="secondary" onClick={handleExportData} className="w-full" disabled={exporting}>
-              {exporting ? l.syncing : l.exportData}
-            </Button>
-            {exportStatus === 'success' && <p className="mt-2 text-sm text-emerald-400">{l.exportSuccess}</p>}
-            {exportStatus === 'error' && <p className="mt-2 text-sm text-rose-400">{l.importError}</p>}
+            <div>
+              <Button variant="secondary" onClick={handleExportData} className="w-full" disabled={exporting || (encryptExport && !exportPassword)}>
+                {exporting ? l.syncing : l.exportData}
+              </Button>
+              {exportStatus === 'success' && <p className="mt-2 text-sm text-emerald-400">{l.exportSuccess}</p>}
+              {exportStatus === 'error' && <p className="mt-2 text-sm text-rose-400">{l.importError}</p>}
+            </div>
           </Card>
 
-          <Card className="p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <Upload className="w-5 h-5 text-amber-400" />
-              <h3 className="font-semibold text-white">{l.importData}</h3>
+          <Card className="p-4 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                <Upload className="w-5 h-5 text-amber-400" />
+                <h3 className="font-semibold text-white">{l.importData}</h3>
+              </div>
+              <p className="text-sm text-white/50 mb-4">{l.importDesc}</p>
             </div>
-            <p className="text-sm text-white/50 mb-4">{l.importDesc}</p>
-            <input
-              type="file"
-              accept=".json"
-              aria-label={l.importData}
-              onChange={(e) => e.target.files?.[0] && handleImportData(e.target.files[0])}
-              className="w-full text-sm text-white/50 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-amber-400/20 file:text-amber-400 hover:file:bg-amber-400/30 cursor-pointer"
-            />
-            {importStatus === 'success' && <p className="mt-2 text-sm text-emerald-400">{l.importSuccess}</p>}
-            {importStatus === 'error' && <p className="mt-2 text-sm text-rose-400">{l.importError}</p>}
+            <div>
+              <input
+                type="file"
+                accept=".json"
+                aria-label={l.importData}
+                onChange={(e) => e.target.files?.[0] && handleImportData(e.target.files[0])}
+                className="w-full text-sm text-white/50 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-amber-400/20 file:text-amber-400 hover:file:bg-amber-400/30 cursor-pointer"
+              />
+              {importStatus === 'success' && <p className="mt-2 text-sm text-emerald-400">{l.importSuccess}</p>}
+              {importStatus === 'error' && <p className="mt-2 text-sm text-rose-400">{importErrorMessage || l.importError}</p>}
+            </div>
+          </Card>
+
+          {/* New Diagnostics card */}
+          <Card className="p-4 sm:col-span-2 border-amber-400/30 bg-amber-400/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <div className="flex items-center gap-3 mb-1.5">
+                <Database className="w-5 h-5 text-amber-400" />
+                <h3 className="font-semibold text-white">{l.diagnosticsTitle}</h3>
+              </div>
+              <p className="text-sm text-white/60">{l.diagnosticsDesc}</p>
+            </div>
+            <Button
+              variant="secondary"
+              onClick={() => setDiagnosticsOpen(true)}
+              className="w-full sm:w-auto bg-amber-400/10 hover:bg-amber-400/20 border-amber-400/30 text-amber-400"
+            >
+              {l.diagnosticsBtn}
+            </Button>
           </Card>
 
           <Card className="p-4 sm:col-span-2">
@@ -329,6 +490,59 @@ export function DataBackupCard({
         onClose={() => setChangePasswordOpen(false)}
         locale={locale}
       />
+
+      <StorageDiagnosticsModal
+        isOpen={diagnosticsOpen}
+        onClose={() => setDiagnosticsOpen(false)}
+        locale={locale}
+      />
+
+      {/* Decrypt Password Prompt Modal */}
+      <Modal
+        isOpen={showImportPasswordInput}
+        onClose={() => {
+          setShowImportPasswordInput(false);
+          setPendingFileString(null);
+          setImportPassword('');
+        }}
+        title={l.importPasswordTitle}
+        description={l.importPasswordDesc}
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div className="relative">
+            <Input
+              type={showImportPassword ? 'text' : 'password'}
+              placeholder={l.enterPassword}
+              value={importPassword}
+              onChange={(e) => setImportPassword(e.target.value)}
+              className="w-full text-xs pr-8"
+            />
+            <button
+              type="button"
+              onClick={() => setShowImportPassword(!showImportPassword)}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70"
+            >
+              {showImportPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+          <div className="flex gap-3 justify-end mt-4">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setShowImportPasswordInput(false);
+                setPendingFileString(null);
+                setImportPassword('');
+              }}
+            >
+              {l.resetConfirmCancel}
+            </Button>
+            <Button variant="primary" onClick={handleDecryptAndImport} disabled={!importPassword}>
+              {l.submit}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         isOpen={resetOpen}

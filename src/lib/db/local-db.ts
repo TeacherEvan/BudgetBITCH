@@ -3,6 +3,7 @@ import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import type { 
   WizardProfile, 
   ExpenseEntry, 
+  IncomeEntry,
   BudgetCategory, 
   Bill, 
   SavingsGoal, 
@@ -26,6 +27,11 @@ export interface BudgetBITCHDB extends DBSchema {
     key: string;
     value: ExpenseEntry;
     indexes: { 'by-date': string; 'by-category': string; 'by-recurring': string };
+  };
+  incomes: {
+    key: string;
+    value: IncomeEntry;
+    indexes: { 'by-date': string; 'by-category': string; 'by-frequency': string };
   };
   budgets: {
     key: string;
@@ -164,13 +170,19 @@ export async function getDB(): Promise<IDBPDatabase<BudgetBITCHDB>> {
   if (dbInstance) return dbInstance;
 
   dbInstance = await openDB<BudgetBITCHDB>(DB_NAME, DB_VERSION, {
-    upgrade(db) {
+    upgrade(db, oldVersion, newVersion, transaction) {
       if (!db.objectStoreNames.contains('wizardProfile')) db.createObjectStore('wizardProfile');
       if (!db.objectStoreNames.contains('expenses')) {
         const expenseStore = db.createObjectStore('expenses', { keyPath: 'id' });
         expenseStore.createIndex('by-date', 'date');
         expenseStore.createIndex('by-category', 'category');
         expenseStore.createIndex('by-recurring', 'recurringId');
+      }
+      if (!db.objectStoreNames.contains('incomes')) {
+        const incomeStore = db.createObjectStore('incomes', { keyPath: 'id' });
+        incomeStore.createIndex('by-date', 'date');
+        incomeStore.createIndex('by-category', 'category');
+        incomeStore.createIndex('by-frequency', 'frequency');
       }
       if (!db.objectStoreNames.contains('budgets')) db.createObjectStore('budgets', { keyPath: 'category' });
       if (!db.objectStoreNames.contains('bills')) db.createObjectStore('bills', { keyPath: 'id' });
@@ -190,6 +202,11 @@ export async function getDB(): Promise<IDBPDatabase<BudgetBITCHDB>> {
       if (!db.objectStoreNames.contains('localAccounts')) db.createObjectStore('localAccounts');
       if (!db.objectStoreNames.contains('bbMeta')) db.createObjectStore('bbMeta');
       if (!db.objectStoreNames.contains('localWrites')) db.createObjectStore('localWrites');
+
+      // Version-specific migrations
+      if (oldVersion > 0 && oldVersion < 3) {
+        console.log(`[Storage] Migrating database from version ${oldVersion} to ${newVersion}`);
+      }
     },
   });
 
@@ -390,6 +407,7 @@ export async function getSettings(): Promise<{
 export const USER_DATA_STORES = [
   'wizardProfile',
   'expenses',
+  'incomes',
   'budgets',
   'bills',
   'savingsGoals',
@@ -403,7 +421,7 @@ export type UserDataStore = (typeof USER_DATA_STORES)[number];
 export async function clearAllData(): Promise<void> {
   const db = await getDB();
   const stores = [
-    'wizardProfile', 'expenses', 'budgets', 'bills', 'savingsGoals',
+    'wizardProfile', 'expenses', 'incomes', 'budgets', 'bills', 'savingsGoals',
     'netWorthSnapshots', 'debts', 'criticalExpenseCommitments', 'newsCache',
     'locationCache', 'settings',
     'accountsData', 'localAccounts', 'bbMeta',
@@ -428,7 +446,158 @@ export function generateId(): string {
   return crypto.randomUUID();
 }
 
+// Storage Quota and Persistence helpers
+export async function requestPersistentStorage(): Promise<boolean> {
+  if (typeof window !== 'undefined' && navigator.storage && navigator.storage.persist) {
+    try {
+      const isPersisted = await navigator.storage.persist();
+      console.log(`[Storage] Persisted storage status: ${isPersisted}`);
+      return isPersisted;
+    } catch (e) {
+      console.warn('Failed to request persistent storage:', e);
+    }
+  }
+  return false;
+}
+
+export async function getStorageEstimate(): Promise<{ persisted: boolean; usage: number; quota: number }> {
+  if (typeof window !== 'undefined' && navigator.storage) {
+    try {
+      const persisted = navigator.storage.persisted ? await navigator.storage.persisted() : false;
+      const estimate = navigator.storage.estimate ? await navigator.storage.estimate() : { usage: 0, quota: 0 };
+      return {
+        persisted,
+        usage: estimate.usage ?? 0,
+        quota: estimate.quota ?? 0,
+      };
+    } catch {
+      return { persisted: false, usage: 0, quota: 0 };
+    }
+  }
+  return { persisted: false, usage: 0, quota: 0 };
+}
+
+// Rolling local checkpoints
+export async function createLocalCheckpoint(label: string): Promise<void> {
+  try {
+    const db = await getDB();
+    const backup: Record<string, unknown> = {};
+    for (const store of USER_DATA_STORES) {
+      backup[store] = await db.getAll(store);
+    }
+    const checkpointData = {
+      label,
+      timestamp: Date.now(),
+      backup,
+    };
+    
+    const existingStr = await db.get('bbMeta', 'checkpoints');
+    const checkpointsList = existingStr ? JSON.parse(existingStr) : [];
+    checkpointsList.unshift(checkpointData);
+    
+    if (checkpointsList.length > 3) {
+      checkpointsList.pop();
+    }
+    
+    await db.put('bbMeta', JSON.stringify(checkpointsList), 'checkpoints');
+    console.log(`[Storage] Local checkpoint created: ${label}`);
+  } catch (err) {
+    console.error('Failed to create local checkpoint:', err);
+  }
+}
+
+export async function getLocalCheckpoints(): Promise<{ label: string; timestamp: number }[]> {
+  try {
+    const db = await getDB();
+    const existingStr = await db.get('bbMeta', 'checkpoints');
+    if (!existingStr) return [];
+    const checkpointsList = JSON.parse(existingStr);
+    return checkpointsList.map((c: any) => ({ label: c.label, timestamp: c.timestamp }));
+  } catch {
+    return [];
+  }
+}
+
+export async function restoreCheckpoint(timestamp: number): Promise<boolean> {
+  try {
+    const db = await getDB();
+    const existingStr = await db.get('bbMeta', 'checkpoints');
+    if (!existingStr) return false;
+    const checkpointsList = JSON.parse(existingStr);
+    const checkpoint = checkpointsList.find((c: any) => c.timestamp === timestamp);
+    if (!checkpoint) return false;
+
+    // Clear existing stores
+    const tx = db.transaction(USER_DATA_STORES, 'readwrite');
+    for (const store of USER_DATA_STORES) {
+      await tx.objectStore(store).clear();
+    }
+    await tx.done;
+
+    // Restore data from checkpoint
+    const putDb = db as any;
+    for (const [store, items] of Object.entries(checkpoint.backup)) {
+      if (!USER_DATA_STORES.includes(store as any)) continue;
+      if (Array.isArray(items)) {
+        for (const item of items) {
+          await putDb.put(store, item);
+        }
+      }
+    }
+    console.log(`[Storage] Local checkpoint restored: ${checkpoint.label}`);
+    return true;
+  } catch (err) {
+    console.error('Failed to restore checkpoint:', err);
+    return false;
+  }
+}
+
+// Database Health Audit & Repair
+export async function auditAndRepairDatabase(): Promise<{ status: 'healthy' | 'repaired' | 'failed'; logs: string[] }> {
+  const logs: string[] = [];
+  try {
+    const db = await getDB();
+    logs.push('Starting database health audit...');
+    
+    const budgets = await db.getAll('budgets');
+    logs.push(`Found ${budgets.length} budgets.`);
+    
+    const expenses = await db.getAll('expenses');
+    logs.push(`Found ${expenses.length} expenses.`);
+    
+    let repairedCount = 0;
+    for (const exp of expenses) {
+      let patched = false;
+      if (typeof exp.amount !== 'number' || isNaN(exp.amount)) {
+        exp.amount = Math.max(0, Number(exp.amount) || 0);
+        patched = true;
+      }
+      if (!exp.category) {
+        exp.category = 'other';
+        patched = true;
+      }
+      if (patched) {
+        await db.put('expenses', exp);
+        repairedCount++;
+      }
+    }
+    
+    if (repairedCount > 0) {
+      logs.push(`Repaired ${repairedCount} corrupted expense entries.`);
+      return { status: 'repaired', logs };
+    }
+    
+    logs.push('Database is healthy.');
+    return { status: 'healthy', logs };
+  } catch (err: any) {
+    logs.push(`Audit failed: ${err.message || err}`);
+    return { status: 'failed', logs };
+  }
+}
+
 // Re-export store modules
 export * from './stores/expenses-store';
 export * from './stores/snapshots-store';
 export * from './stores/accounts-store';
+export * from './stores/incomes-store';
+

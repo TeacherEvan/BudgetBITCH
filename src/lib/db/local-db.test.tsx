@@ -180,13 +180,14 @@ describe('clearAllUserData (focused reset)', () => {
     localStorage.clear();
   });
 
-  it('USER_DATA_STORES lists exactly the 8 user-data stores', () => {
+  it('USER_DATA_STORES lists exactly the 9 user-data stores', () => {
     expect([...USER_DATA_STORES].sort()).toEqual([
       'bills',
       'budgets',
       'criticalExpenseCommitments',
       'debts',
       'expenses',
+      'incomes',
       'netWorthSnapshots',
       'savingsGoals',
       'wizardProfile',
