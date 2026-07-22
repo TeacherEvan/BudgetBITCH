@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+import type { Id } from '../../../convex/_generated/dataModel';
 import { 
   getStorageEstimate, 
   getLocalCheckpoints, 
@@ -45,6 +46,7 @@ export function StorageDiagnosticsModal({ isOpen, onClose, locale }: StorageDiag
 
   useEffect(() => {
     if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       loadStorageInfo();
     }
   }, [isOpen]);
@@ -57,13 +59,12 @@ export function StorageDiagnosticsModal({ isOpen, onClose, locale }: StorageDiag
       setAuditLogs(result.logs);
       setAuditStatus(result.status === 'failed' ? 'failed' : 'success');
       loadStorageInfo();
-    } catch (err: any) {
-      setAuditLogs((prev) => [...prev, `Error: ${err.message || err}`]);
+    } catch (err: unknown) {
+      const errMessage = err instanceof Error ? err.message : String(err);
+      setAuditLogs((prev) => [...prev, `Error: ${errMessage}`]);
       setAuditStatus('failed');
     }
   };
- 
- 
 
   const handleRestoreCheckpoint = async (timestamp: number) => {
     if (!confirm(locale === 'th' ? 'กู้คืนข้อมูลจากสแนปช็อตนี้หรือไม่? ข้อมูลปัจจุบันจะถูกเขียนทับ' : 'Restore from this checkpoint? Current local data will be overwritten.')) return;
@@ -88,7 +89,7 @@ export function StorageDiagnosticsModal({ isOpen, onClose, locale }: StorageDiag
       
       // Dynamic import to fetch client
       const { convex } = await import('@/components/providers/convex-client-provider');
-      const snapshot = await convex.query(api.snapshots.getSnapshotById, { snapshotId: snapshotId as any });
+      const snapshot = await convex.query(api.snapshots.getSnapshotById, { snapshotId: snapshotId as Id<"dailySnapshots"> });
       
       if (snapshot) {
         const success = await restoreFromCloudSnapshot(snapshot);
@@ -101,8 +102,9 @@ export function StorageDiagnosticsModal({ isOpen, onClose, locale }: StorageDiag
       } else {
         throw new Error('Snapshot not found or unauthorized');
       }
-    } catch (err: any) {
-      alert((locale === 'th' ? 'กู้คืนจากคลาวด์ล้มเหลว: ' : 'Cloud restore failed: ') + (err.message || err));
+    } catch (err: unknown) {
+      const errMessage = err instanceof Error ? err.message : String(err);
+      alert((locale === 'th' ? 'กู้คืนจากคลาวด์ล้มเหลว: ' : 'Cloud restore failed: ') + errMessage);
     } finally {
       setRestoringCloud(null);
     }

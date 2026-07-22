@@ -1,13 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Download, Upload, Shield, Trash2, AlertCircle, KeyRound, Lock, Eye, EyeOff, Database } from 'lucide-react';
+import { Download, Upload, Shield, Trash2, AlertCircle, KeyRound, Eye, EyeOff, Database } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
-import { USER_DATA_STORES, type UserDataStore, clearAllUserData, getDB, createLocalCheckpoint, type BudgetBITCHDB } from '@/lib/db/local-db';
+import { USER_DATA_STORES, clearAllUserData, getDB, createLocalCheckpoint } from '@/lib/db/local-db';
 import { createBackupPayload, parseAndValidateBackup, type BackupData } from '@/lib/db/backup-schema';
 import { encryptBackup, decryptBackup } from '@/lib/db/crypto-backup';
 import { formatMoney } from '@/lib/utils/currency';
@@ -46,7 +45,6 @@ export function DataBackupCard({
   profile,
   override,
 }: DataBackupCardProps) {
-  const router = useRouter();
   const [syncing, setSyncing] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);

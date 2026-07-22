@@ -207,12 +207,11 @@ describe('clearAllUserData (focused reset)', () => {
       title: 'Hobby',
       source: 'test',
       locale: 'en',
-      category: 'hobby',
+      category: 'finance',
       pubDate: new Date().toISOString(),
-      description: 'd',
     };
     await addNewsItem(news);
-    await saveLocationCache({ lat: 13.7, lng: 100.5, updatedAt: Date.now() });
+    await saveLocationCache({ lat: 13.7, lon: 100.5, city: 'Bangkok', province: 'Bangkok', country: 'TH', timestamp: Date.now(), timezone: 'Asia/Bangkok' });
 
     await clearAllUserData();
 

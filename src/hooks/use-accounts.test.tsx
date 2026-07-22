@@ -10,7 +10,7 @@ import { getCurrentAccountId } from '@/lib/db/accountStorage';
 // instead of by reference name. All `useMutation` calls return the SAME spy;
 // the hook always passes the correct args to the correct logical mutation.
 let mode = 'create';
-const spy = vi.fn(async (_args?: Record<string, unknown>) => {
+const spy = vi.fn(async () => {
   if (mode === 'create') return { accountId: 'acc-new', boardId: 'board-new' };
   if (mode === 'token') return { token: 'TOK123' };
   if (mode === 'board') return { boardId: 'board-x', updatedAt: 1, data: null };

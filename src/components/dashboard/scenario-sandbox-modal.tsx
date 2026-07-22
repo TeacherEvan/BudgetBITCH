@@ -88,7 +88,7 @@ export function ScenarioSandboxModal({
   const [income, setIncome] = useState(baseIncome);
   const [fixedExpenses, setFixedExpenses] = useState(baseFixed);
   const [variableExpenses, setVariableExpenses] = useState(baseVariable);
-  const [savingsGoalTarget, setSavingsGoalTarget] = useState(100000);
+  const [savingsGoalTarget] = useState(100000);
   const [activePreset, setActivePreset] = useState<string | null>(null);
 
   const applyPreset = (preset: typeof PRESETS[number]) => {

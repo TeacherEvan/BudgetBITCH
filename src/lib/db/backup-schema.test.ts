@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { createBackupPayload, parseAndValidateBackup, calculateSHA256 } from './backup-schema';
+import { createBackupPayload, parseAndValidateBackup } from './backup-schema';
+import webCrypto from 'node:crypto';
 
 describe('Backup Schema and Integrity Engine', () => {
   beforeAll(() => {
     if (typeof window === 'undefined') {
-      global.window = global as any;
+      global.window = globalThis as unknown as Window & typeof globalThis;
     }
     if (!global.window.crypto) {
-      const crypto = require('crypto');
-      global.window.crypto = crypto.webcrypto;
+      global.window.crypto = webCrypto.webcrypto as unknown as Crypto;
     }
   });
 
@@ -84,7 +84,7 @@ describe('Backup Schema and Integrity Engine', () => {
       ],
     };
 
-    const payload = await createBackupPayload(invalidData as any);
+    const payload = await createBackupPayload(invalidData as unknown as Parameters<typeof createBackupPayload>[0]);
     await expect(
       parseAndValidateBackup(JSON.stringify(payload))
     ).rejects.toThrow();

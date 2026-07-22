@@ -19,8 +19,8 @@ vi.mock('@convex-dev/auth/react', () => ({
 vi.mock('convex/react', () => ({
   useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
   useConvex: () => ({
-    query: async (_ref: unknown, args: Record<string, unknown>) =>
-      resolveShareCode(args),
+    query: async () =>
+      resolveShareCode(),
   }),
   useMutation: () => {
     // Convex returns stable references across renders; return a stable mock.

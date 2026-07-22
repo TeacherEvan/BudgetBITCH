@@ -2,15 +2,13 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { 
   requestPersistentStorage, 
   getStorageEstimate, 
-  createLocalCheckpoint, 
-  getLocalCheckpoints,
   auditAndRepairDatabase
 } from './local-db';
 
 describe('Local DB Advanced Data Protection', () => {
   beforeAll(() => {
     if (typeof window === 'undefined') {
-      global.window = global as any;
+      global.window = globalThis as unknown as Window & typeof globalThis;
     }
   });
 

@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Plus, Check, Copy, Users, ArrowRightLeft, LogOut, Trash2, ShieldAlert } from 'lucide-react';
+import { Plus, Check, Copy, Users, ArrowRightLeft, LogOut, Trash2 } from 'lucide-react';
 import { useConvexAuth } from '@convex-dev/auth/react';
 import { useAccounts } from '@/hooks/use-accounts';
 import { useAccountSync } from '@/hooks/use-account-sync';
@@ -145,6 +145,12 @@ export function AccountsView({ locale, onLocaleChange, voiceEnabled, onVoiceTogg
             {t('New account', 'บัญชีใหม่')}
           </Button>
         </div>
+
+        {errorMsg && (
+          <div className="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-400">
+            {errorMsg}
+          </div>
+        )}
 
         <div className="mb-6 rounded-2xl border border-sky-400/20 bg-sky-400/5 p-4 text-xs">
           <div className="flex items-start gap-3">

@@ -23,16 +23,12 @@ export function PWAInstallPrompt({
   const [isStandalone, setIsStandalone] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
-  const [supportsInstallEvent, setSupportsInstallEvent] = useState(false);
   const [waitingForPrompt, setWaitingForPrompt] = useState(false);
   const installRequestedRef = useRef(false);
   const mountedRef = useRef(false);
 
   useEffect(() => {
     mountedRef.current = true;
-    
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSupportsInstallEvent(typeof window !== 'undefined' && ('beforeinstallprompt' in window || 'BeforeInstallPromptEvent' in window));
 
     // Check if running in standalone mode (already installed)
     const checkStandalone = () => {

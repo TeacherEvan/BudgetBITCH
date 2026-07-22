@@ -170,7 +170,7 @@ export async function getDB(): Promise<IDBPDatabase<BudgetBITCHDB>> {
   if (dbInstance) return dbInstance;
 
   dbInstance = await openDB<BudgetBITCHDB>(DB_NAME, DB_VERSION, {
-    upgrade(db, oldVersion, newVersion, transaction) {
+    upgrade(db, oldVersion, newVersion) {
       if (!db.objectStoreNames.contains('wizardProfile')) db.createObjectStore('wizardProfile');
       if (!db.objectStoreNames.contains('expenses')) {
         const expenseStore = db.createObjectStore('expenses', { keyPath: 'id' });
@@ -517,13 +517,19 @@ export async function createLocalCheckpoint(label: string): Promise<void> {
   }
 }
 
+interface CheckpointItem {
+  label: string;
+  timestamp: number;
+  backup: Record<string, unknown>;
+}
+
 export async function getLocalCheckpoints(): Promise<{ label: string; timestamp: number }[]> {
   try {
     const db = await getDB();
     const existingStr = await db.get('bbMeta', 'checkpoints');
     if (!existingStr) return [];
-    const checkpointsList = JSON.parse(existingStr);
-    return checkpointsList.map((c: any) => ({ label: c.label, timestamp: c.timestamp }));
+    const checkpointsList = JSON.parse(existingStr) as CheckpointItem[];
+    return checkpointsList.map((c) => ({ label: c.label, timestamp: c.timestamp }));
   } catch {
     return [];
   }
@@ -534,8 +540,8 @@ export async function restoreCheckpoint(timestamp: number): Promise<boolean> {
     const db = await getDB();
     const existingStr = await db.get('bbMeta', 'checkpoints');
     if (!existingStr) return false;
-    const checkpointsList = JSON.parse(existingStr);
-    const checkpoint = checkpointsList.find((c: any) => c.timestamp === timestamp);
+    const checkpointsList = JSON.parse(existingStr) as CheckpointItem[];
+    const checkpoint = checkpointsList.find((c) => c.timestamp === timestamp);
     if (!checkpoint) return false;
 
     // Clear existing stores
@@ -546,9 +552,9 @@ export async function restoreCheckpoint(timestamp: number): Promise<boolean> {
     await tx.done;
 
     // Restore data from checkpoint
-    const putDb = db as any;
+    const putDb = db as unknown as { put: (store: string, val: unknown, key?: string) => Promise<unknown> };
     for (const [store, items] of Object.entries(checkpoint.backup)) {
-      if (!USER_DATA_STORES.includes(store as any)) continue;
+      if (!USER_DATA_STORES.includes(store as typeof USER_DATA_STORES[number])) continue;
       if (Array.isArray(items)) {
         for (const item of items) {
           // wizardProfile & settings have no keyPath; restore under their
@@ -577,18 +583,32 @@ export async function auditAndRepairDatabase(): Promise<{ status: 'healthy' | 'r
   const logs: string[] = [];
   try {
     const db = await getDB();
-    logs.push('Starting database health audit...');
+    logs.push('Starting comprehensive database health audit...');
     
     const budgets = await db.getAll('budgets');
     logs.push(`Found ${budgets.length} budgets.`);
     
     const expenses = await db.getAll('expenses');
     logs.push(`Found ${expenses.length} expenses.`);
+
+    const incomes = await db.getAll('incomes');
+    logs.push(`Found ${incomes.length} income entries.`);
+
+    const bills = await db.getAll('bills');
+    logs.push(`Found ${bills.length} bills.`);
+
+    const savingsGoals = await db.getAll('savingsGoals');
+    logs.push(`Found ${savingsGoals.length} savings goals.`);
+
+    const debts = await db.getAll('debts');
+    logs.push(`Found ${debts.length} debts.`);
     
     let repairedCount = 0;
+
+    // 1. Audit Expenses
     for (const exp of expenses) {
       let patched = false;
-      if (typeof exp.amount !== 'number' || isNaN(exp.amount)) {
+      if (typeof exp.amount !== 'number' || isNaN(exp.amount) || exp.amount < 0) {
         exp.amount = Math.max(0, Number(exp.amount) || 0);
         patched = true;
       }
@@ -601,16 +621,85 @@ export async function auditAndRepairDatabase(): Promise<{ status: 'healthy' | 'r
         repairedCount++;
       }
     }
+
+    // 2. Audit Incomes
+    for (const inc of incomes) {
+      let patched = false;
+      if (typeof inc.amount !== 'number' || isNaN(inc.amount) || inc.amount < 0) {
+        inc.amount = Math.max(0, Number(inc.amount) || 0);
+        patched = true;
+      }
+      if (!inc.frequency) {
+        inc.frequency = 'monthly';
+        patched = true;
+      }
+      if (patched) {
+        await db.put('incomes', inc);
+        repairedCount++;
+      }
+    }
+
+    // 3. Audit Bills
+    for (const bill of bills) {
+      let patched = false;
+      if (typeof bill.amount !== 'number' || isNaN(bill.amount) || bill.amount < 0) {
+        bill.amount = Math.max(0, Number(bill.amount) || 0);
+        patched = true;
+      }
+      if (typeof bill.dueDay !== 'number' || isNaN(bill.dueDay) || bill.dueDay < 1 || bill.dueDay > 31) {
+        bill.dueDay = Math.min(31, Math.max(1, Number(bill.dueDay) || 1));
+        patched = true;
+      }
+      if (patched) {
+        await db.put('bills', bill);
+        repairedCount++;
+      }
+    }
+
+    // 4. Audit Savings Goals
+    for (const goal of savingsGoals) {
+      let patched = false;
+      if (typeof goal.targetAmount !== 'number' || isNaN(goal.targetAmount) || goal.targetAmount <= 0) {
+        goal.targetAmount = Math.max(1000, Number(goal.targetAmount) || 1000);
+        patched = true;
+      }
+      if (typeof goal.currentAmount !== 'number' || isNaN(goal.currentAmount) || goal.currentAmount < 0) {
+        goal.currentAmount = Math.max(0, Number(goal.currentAmount) || 0);
+        patched = true;
+      }
+      if (patched) {
+        await db.put('savingsGoals', goal);
+        repairedCount++;
+      }
+    }
+
+    // 5. Audit Debts
+    for (const debt of debts) {
+      let patched = false;
+      if (typeof debt.balance !== 'number' || isNaN(debt.balance) || debt.balance < 0) {
+        debt.balance = Math.max(0, Number(debt.balance) || 0);
+        patched = true;
+      }
+      if (typeof debt.minimumPayment !== 'number' || isNaN(debt.minimumPayment) || debt.minimumPayment < 0) {
+        debt.minimumPayment = Math.max(0, Number(debt.minimumPayment) || 0);
+        patched = true;
+      }
+      if (patched) {
+        await db.put('debts', debt);
+        repairedCount++;
+      }
+    }
     
     if (repairedCount > 0) {
-      logs.push(`Repaired ${repairedCount} corrupted expense entries.`);
+      logs.push(`Repaired ${repairedCount} corrupted or invalid records across financial stores.`);
       return { status: 'repaired', logs };
     }
     
-    logs.push('Database is healthy.');
+    logs.push('All database stores are healthy.');
     return { status: 'healthy', logs };
-  } catch (err: any) {
-    logs.push(`Audit failed: ${err.message || err}`);
+  } catch (err: unknown) {
+    const errMessage = err instanceof Error ? err.message : String(err);
+    logs.push(`Audit failed: ${errMessage}`);
     return { status: 'failed', logs };
   }
 }

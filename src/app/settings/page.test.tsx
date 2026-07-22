@@ -22,7 +22,7 @@ vi.mock('convex/react', () => {
   return {
     useMutation: () => vi.fn().mockResolvedValue({ success: true }),
     useAction: () => vi.fn().mockResolvedValue({ success: true }),
-    useQuery: (queryRef: any) => {
+    useQuery: (queryRef: { name?: string } | null | undefined) => {
       // Mock cloud snapshots list for diagnostic modal
       if (queryRef && typeof queryRef === 'object' && queryRef.name === 'listCloudSnapshots') {
         return [];

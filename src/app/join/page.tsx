@@ -1,7 +1,7 @@
 // app/join/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { Check, X, QrCode } from 'lucide-react';
@@ -25,7 +25,7 @@ export default function JoinPage() {
   const [status, setStatus] = useState<Status>(code ? 'working' : 'idle');
   const [error, setError] = useState<string>('');
 
-  const t = (en: string, th: string) => (locale === 'th' ? th : en);
+  const t = useCallback((en: string, th: string) => (locale === 'th' ? th : en), [locale]);
 
   useEffect(() => {
     if (!code || status !== 'working') return;

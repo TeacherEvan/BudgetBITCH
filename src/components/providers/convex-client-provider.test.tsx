@@ -57,7 +57,7 @@ describe('ConvexClientProvider', () => {
       </ConvexClientProvider>,
     );
 
-    const storage = capturedStorage as Storage;
+    const storage = capturedStorage as unknown as Storage;
     expect(storage).toBeDefined();
 
     window.localStorage.setItem('__convexAuthRefreshToken', 'dummy');

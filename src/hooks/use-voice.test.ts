@@ -71,20 +71,25 @@ describe('useVoice Hook', () => {
     // Store originals
     originalWindow = global.window;
     originalLocalStorage = global.localStorage;
-    originalSpeechRecognition = global.SpeechRecognition;
-    originalWebkitSpeechRecognition = global.webkitSpeechRecognition;
-    originalSpeechSynthesis = global.speechSynthesis;
-    originalSpeechSynthesisUtterance = global.SpeechSynthesisUtterance;
+    const g = globalThis as unknown as Record<string, unknown>;
+    originalSpeechRecognition = g.SpeechRecognition;
+    originalWebkitSpeechRecognition = g.webkitSpeechRecognition;
+    originalSpeechSynthesis = g.speechSynthesis;
+    originalSpeechSynthesisUtterance = g.SpeechSynthesisUtterance;
     
+    const mockStorage = {
+      getItem: vi.fn(),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+      length: 0,
+      key: vi.fn(),
+    };
+
     // Mock window with localStorage
     global.window = {
       ...global.window,
-      localStorage: {
-        getItem: vi.fn(),
-        setItem: vi.fn(),
-        removeItem: vi.fn(),
-        clear: vi.fn(),
-      },
+      localStorage: mockStorage,
       matchMedia: vi.fn().mockImplementation(query => ({
         matches: false,
         media: query,
@@ -95,28 +100,31 @@ describe('useVoice Hook', () => {
         removeEventListener: vi.fn(),
         dispatchEvent: vi.fn(),
       })),
-    };
+    } as unknown as Window & typeof globalThis;
     
     // Ensure mocks are on global AND window
-    global.SpeechRecognition = MockSpeechRecognition;
-    global.webkitSpeechRecognition = MockSpeechRecognition;
-    global.window.SpeechRecognition = MockSpeechRecognition;
-    global.window.webkitSpeechRecognition = MockSpeechRecognition;
-    global.window.speechSynthesis = mockSynthesis;
-    global.speechSynthesis = mockSynthesis;
-    global.window.SpeechSynthesisUtterance = MockSpeechSynthesisUtterance;
-    global.SpeechSynthesisUtterance = MockSpeechSynthesisUtterance;
-    global.localStorage = global.window.localStorage;
+    g.SpeechRecognition = MockSpeechRecognition;
+    g.webkitSpeechRecognition = MockSpeechRecognition;
+    (global.window as unknown as Record<string, unknown>).SpeechRecognition = MockSpeechRecognition;
+    (global.window as unknown as Record<string, unknown>).webkitSpeechRecognition = MockSpeechRecognition;
+    (global.window as unknown as Record<string, unknown>).speechSynthesis = mockSynthesis;
+    g.speechSynthesis = mockSynthesis;
+    (global.window as unknown as Record<string, unknown>).SpeechSynthesisUtterance = MockSpeechSynthesisUtterance;
+    g.SpeechSynthesisUtterance = MockSpeechSynthesisUtterance;
+    global.localStorage = mockStorage;
   });
 
   afterEach(() => {
+    const g = globalThis as unknown as Record<string, unknown>;
     global.window = originalWindow;
     global.localStorage = originalLocalStorage;
-    global.SpeechRecognition = originalSpeechRecognition;
-    global.webkitSpeechRecognition = originalWebkitSpeechRecognition;
-    global.speechSynthesis = originalSpeechSynthesis;
-    global.window.speechSynthesis = originalSpeechSynthesis;
-    global.SpeechSynthesisUtterance = originalSpeechSynthesisUtterance;
+    g.SpeechRecognition = originalSpeechRecognition;
+    g.webkitSpeechRecognition = originalWebkitSpeechRecognition;
+    g.speechSynthesis = originalSpeechSynthesis;
+    if (global.window) {
+      (global.window as unknown as Record<string, unknown>).speechSynthesis = originalSpeechSynthesis;
+    }
+    g.SpeechSynthesisUtterance = originalSpeechSynthesisUtterance;
     vi.restoreAllMocks();
   });
 
@@ -128,10 +136,12 @@ describe('useVoice Hook', () => {
     });
 
     it('returns isSupported false when SpeechRecognition not available', () => {
-      global.SpeechRecognition = undefined;
-      global.webkitSpeechRecognition = undefined;
-      global.window.SpeechRecognition = undefined;
-      global.window.webkitSpeechRecognition = undefined;
+      const g = globalThis as unknown as Record<string, unknown>;
+      const win = global.window as unknown as Record<string, unknown>;
+      g.SpeechRecognition = undefined;
+      g.webkitSpeechRecognition = undefined;
+      win.SpeechRecognition = undefined;
+      win.webkitSpeechRecognition = undefined;
       
       const { result } = renderHook(() => useVoice('en-US'));
       
@@ -154,7 +164,7 @@ describe('useVoice Hook', () => {
     });
 
     it('loads settings from localStorage when available', () => {
-      global.window.localStorage.getItem.mockReturnValue(
+      vi.mocked(global.window.localStorage.getItem).mockReturnValue(
         JSON.stringify({ enabled: true, rate: 1.5, pitch: 1.2 })
       );
       
@@ -167,7 +177,7 @@ describe('useVoice Hook', () => {
     });
 
     it('falls back to defaults when localStorage is corrupted', () => {
-      global.window.localStorage.getItem.mockReturnValue('invalid json');
+      vi.mocked(global.window.localStorage.getItem).mockReturnValue('invalid json');
       
       const { result } = renderHook(() => useVoice('en-US'));
       

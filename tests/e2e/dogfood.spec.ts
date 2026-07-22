@@ -16,8 +16,8 @@ test.describe('BudgetBITCH Dogfood Audit E2E Flow', () => {
     }
     // Real sign-in (client-only auth).
     await page.goto('/sign-in');
-    await page.getByLabel(/email address/i).fill(TEST_EMAIL);
-    await page.getByLabel(/password/i).fill(TEST_PASSWORD);
+    await page.getByLabel(/email address/i).fill(TEST_EMAIL ?? '');
+    await page.getByLabel(/password/i).fill(TEST_PASSWORD ?? '');
     await page.getByRole('button', { name: /sign in$/i }).click();
     await expect(page).toHaveURL(/\/(dashboard|wizard)/, { timeout: 20000 });
     // Seed locale + manifesto-seen so the audit sees the dashboard directly.
