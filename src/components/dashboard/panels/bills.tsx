@@ -1,7 +1,7 @@
 // components/dashboard/panels/bills.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Plus, Trash2, Edit, Calendar, List, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useBills } from '@/hooks/use-local-db';
 import { Input } from '@/components/ui/input';
@@ -126,12 +126,21 @@ export function Bills({ locale = 'en' }: BillsProps) {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
-  const categoryOptions = CATEGORIES.map(c => ({
-    value: c.value as ExpenseCategory,
-    label: locale === 'th' ? c.label.th : c.label.en,
-  }));
+  const categoryOptions = useMemo(
+    () =>
+      CATEGORIES.map(c => ({
+        value: c.value as ExpenseCategory,
+        label: locale === 'th' ? c.label.th : c.label.en,
+      })),
+    [locale]
+  );
 
-  const sortedBills = [...bills].sort((a, b) => getDaysUntilDue(a.dueDay) - getDaysUntilDue(b.dueDay));
+  const sortedBills = useMemo(() => {
+    return bills
+      .map(b => ({ bill: b, days: getDaysUntilDue(b.dueDay) }))
+      .sort((a, b) => a.days - b.days)
+      .map(x => x.bill);
+  }, [bills]);
 
   // ---- Calendar view helpers ----
   const firstOfMonth = new Date(calYear, calMonth, 1);

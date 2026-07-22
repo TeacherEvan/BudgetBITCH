@@ -26,7 +26,7 @@ export function useExpenses() {
     let mounted = true;
     getExpenses().then(e => {
       if (mounted) {
-        setExpenses(e.sort((a, b) => b.date.localeCompare(a.date)));
+        setExpenses([...e].sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0)));
         setLoading(false);
       }
     }).catch(() => {
@@ -44,13 +44,13 @@ export function useExpenses() {
   const add = useCallback(async (expense: Omit<ExpenseEntry, 'id'>) => {
     const newExpense = { ...expense, id: generateId() };
     await addExpense(newExpense);
-    setExpenses(prev => [newExpense, ...prev].sort((a, b) => b.date.localeCompare(a.date)));
+    setExpenses(prev => [...prev, newExpense].sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0)));
   }, []);
 
   const update = useCallback(async (expense: ExpenseEntry) => {
     await updateExpense(expense);
     setExpenses(prev => prev.map(e => e.id === expense.id ? expense : e)
-      .sort((a, b) => b.date.localeCompare(a.date)));
+      .sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0)));
   }, []);
 
   const remove = useCallback(async (id: string) => {

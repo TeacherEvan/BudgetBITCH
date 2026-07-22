@@ -119,44 +119,46 @@ export function __closeDbForTest(): void {
   }
 }
 
+// Singleton proxy for SSR rendering to avoid re-allocating proxies per SSR invocation
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const DUMMY_SSR_DB = new Proxy({} as any, {
+  get(target, prop) {
+    if (prop === 'then') {
+      return undefined;
+    }
+    if (prop === 'transaction') {
+      return () => ({
+        store: new Proxy({}, {
+          get(t, p) {
+            if (p === 'index') {
+              return () => new Proxy({}, {
+                get(ti, pi) {
+                  if (pi === 'iterate') {
+                    return async function* () {};
+                  }
+                  return () => Promise.resolve();
+                }
+              });
+            }
+            return () => Promise.resolve();
+          }
+        }),
+        done: Promise.resolve(),
+        objectStore: () => ({
+          clear: () => Promise.resolve()
+        })
+      });
+    }
+    if (typeof prop === 'string' && (prop.startsWith('getAll') || prop.includes('Index'))) {
+      return () => Promise.resolve([]);
+    }
+    return () => Promise.resolve(undefined);
+  }
+});
+
 export async function getDB(): Promise<IDBPDatabase<BudgetBITCHDB>> {
   if (typeof window === 'undefined') {
-    // Return a dummy DB proxy to prevent SSR crashes.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return new Proxy({} as any, {
-      get(target, prop) {
-        if (prop === 'then') {
-          return undefined;
-        }
-        if (prop === 'transaction') {
-          return () => ({
-            store: new Proxy({}, {
-              get(t, p) {
-                if (p === 'index') {
-                  return () => new Proxy({}, {
-                    get(ti, pi) {
-                      if (pi === 'iterate') {
-                        return async function* () {};
-                      }
-                      return () => Promise.resolve();
-                    }
-                  });
-                }
-                return () => Promise.resolve();
-              }
-            }),
-            done: Promise.resolve(),
-            objectStore: () => ({
-              clear: () => Promise.resolve()
-            })
-          });
-        }
-        if (typeof prop === 'string' && (prop.startsWith('getAll') || prop.includes('Index'))) {
-          return () => Promise.resolve([]);
-        }
-        return () => Promise.resolve(undefined);
-      }
-    });
+    return DUMMY_SSR_DB;
   }
 
   if (dbInstance) return dbInstance;

@@ -1,7 +1,7 @@
 // components/dashboard/panels/expense-tracker.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Plus, Trash2, Edit, Mic, FileSpreadsheet } from 'lucide-react';
 import { useExpenses, useBudgets } from '@/hooks/use-local-db';
 import { addExpense, generateId } from '@/lib/db/local-db';
@@ -73,13 +73,21 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
     source: 'manual' as const,
   });
 
-  const categoryBudgets = new Map(budgets.map(b => [b.category, b.monthlyLimit]));
-  const categorySpending = new Map<ExpenseCategory, number>();
-  expenses.forEach(e => {
-    if (e.amount > 0) {
-      categorySpending.set(e.category, (categorySpending.get(e.category) || 0) + e.amount);
+  const categoryBudgets = useMemo(
+    () => new Map(budgets.map(b => [b.category, b.monthlyLimit])),
+    [budgets]
+  );
+
+  const categorySpending = useMemo(() => {
+    const map = new Map<ExpenseCategory, number>();
+    for (let i = 0; i < expenses.length; i++) {
+      const e = expenses[i];
+      if (e.amount > 0) {
+        map.set(e.category, (map.get(e.category) || 0) + e.amount);
+      }
     }
-  });
+    return map;
+  }, [expenses]);
 
   const handleVoiceAdd = (expense: { merchant: string; amount: number; category: ExpenseCategory; note?: string }) => {
     add({
