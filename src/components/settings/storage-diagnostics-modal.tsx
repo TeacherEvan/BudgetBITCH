@@ -12,7 +12,7 @@ import {
   auditAndRepairDatabase 
 } from '@/lib/db/local-db';
 import { restoreFromCloudSnapshot } from '@/lib/convex/sync-snapshots';
-import { Shield, CheckCircle, AlertTriangle, Database, Activity, RefreshCw } from 'lucide-react';
+import { Shield, Database, Activity } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface StorageDiagnosticsModalProps {
@@ -62,6 +62,8 @@ export function StorageDiagnosticsModal({ isOpen, onClose, locale }: StorageDiag
       setAuditStatus('failed');
     }
   };
+ 
+ 
 
   const handleRestoreCheckpoint = async (timestamp: number) => {
     if (!confirm(locale === 'th' ? 'กู้คืนข้อมูลจากสแนปช็อตนี้หรือไม่? ข้อมูลปัจจุบันจะถูกเขียนทับ' : 'Restore from this checkpoint? Current local data will be overwritten.')) return;

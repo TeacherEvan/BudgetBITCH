@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
-import { USER_DATA_STORES, type UserDataStore, clearAllUserData, getDB, createLocalCheckpoint } from '@/lib/db/local-db';
+import { USER_DATA_STORES, type UserDataStore, clearAllUserData, getDB, createLocalCheckpoint, type BudgetBITCHDB } from '@/lib/db/local-db';
 import { createBackupPayload, parseAndValidateBackup, type BackupData } from '@/lib/db/backup-schema';
 import { encryptBackup, decryptBackup } from '@/lib/db/crypto-backup';
 import { formatMoney } from '@/lib/utils/currency';
@@ -111,7 +111,7 @@ export function DataBackupCard({
       a.click();
       URL.revokeObjectURL(url);
       setExportStatus('success');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Export failed:', err);
       setExportStatus('error');
     } finally {
@@ -121,29 +121,35 @@ export function DataBackupCard({
 
   const executeDataImport = async (data: BackupData) => {
     // 1. Create a failsafe local checkpoint before modifying anything
-    await createLocalCheckpoint('Pre-Import Backup');
-
-    const db = await getDB();
-    
-    // Clear existing stores
-    const allStores = [...USER_DATA_STORES, 'settings'] as const;
-    const tx = db.transaction(allStores as any, 'readwrite');
-    for (const store of allStores) {
-      await tx.objectStore(store).clear();
-    }
-    await tx.done;
-
-    // Write new data
-    const putDb = db as any;
-    for (const [store, items] of Object.entries(data)) {
-      if (Array.isArray(items)) {
-        for (const item of items) {
-          await putDb.put(store, item);
+    const executeDataImport = async (data: BackupData) => {
+      // 1. Create a failsafe local checkpoint before modifying anything
+      await createLocalCheckpoint('Pre-Import Backup');
+      const db = await getDB();
+      // Note: We are going to use a single transaction for clearing and writing.
+      const allStores = [...USER_DATA_STORES, 'settings'] as const;
+      const tx = db.transaction(allStores, 'readwrite');
+      // Clear existing stores
+      for (const store of allStores) {
+        await tx.objectStore(store).clear();
+      }
+      // Write new data
+      for (const [store, items] of Object.entries(data)) {
+        const storeObj = tx.objectStore(store);
+        if (store === 'wizardProfile' || store === 'settings') {
+          if (items.length > 0) {
+            // We expect only one item, but we take the first one.
+            await storeObj.put(items[0], 'current');
+          }
+        } else {
+          for (const item of items) {
+            await storeObj.put(item);
+          }
         }
       }
-    }
-
-    setImportStatus('success');
+      await tx.done;
+      setImportStatus('success');
+      window.location.reload();
+    };
     window.location.reload();
   };
 
@@ -166,9 +172,9 @@ export function DataBackupCard({
         // Standard validation
         const { data } = await parseAndValidateBackup(fileString);
         await executeDataImport(data);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Import failed:', err);
-        setImportErrorMessage(err.message || 'Invalid file format');
+        setImportErrorMessage(err instanceof Error ? err.message : 'Invalid file format');
         setImportStatus('error');
       }
     };
