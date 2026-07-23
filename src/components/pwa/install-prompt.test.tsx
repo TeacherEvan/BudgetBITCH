@@ -259,4 +259,29 @@ describe('PWAInstallPrompt', () => {
     
     vi.useRealTimers();
   });
+
+  it('uses window.__deferredPwaPrompt if event fired before component mount', async () => {
+    const mockPrompt = vi.fn().mockResolvedValue(undefined);
+    const mockUserChoice = Promise.resolve({ outcome: 'accepted' as const, platform: 'web' });
+    const earlyEvent = new Event('beforeinstallprompt');
+    Object.defineProperty(earlyEvent, 'prompt', { value: mockPrompt });
+    Object.defineProperty(earlyEvent, 'userChoice', { value: mockUserChoice });
+
+    // Store early event on window object before component renders
+    (window as unknown as { __deferredPwaPrompt?: unknown }).__deferredPwaPrompt = earlyEvent;
+
+    render(<PWAInstallPrompt onDismiss={mockOnDismiss} locale="en" />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Install Budget-BOSS')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /install/i }));
+
+    await waitFor(() => {
+      expect(mockPrompt).toHaveBeenCalledTimes(1);
+    });
+
+    delete (window as unknown as { __deferredPwaPrompt?: unknown }).__deferredPwaPrompt;
+  });
 });

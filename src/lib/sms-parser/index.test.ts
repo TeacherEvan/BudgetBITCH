@@ -11,7 +11,7 @@ import {
   filterByConfidence,
   parseSMSArray,
 } from './index';
-import type { TransactionCandidate, ParsedSMSResult } from './types';
+import type { ParsedSMSResult } from './types';
 
 describe('detectCountry', () => {
   it('detects Thailand from baht symbol and bank names', () => {

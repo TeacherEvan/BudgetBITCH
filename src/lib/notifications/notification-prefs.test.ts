@@ -1,5 +1,5 @@
 // src/lib/notifications/notification-prefs.test.ts
-import { expect, test, beforeEach, vi } from 'vitest';
+import { expect, test, beforeEach } from 'vitest';
 import {
   getNotificationPrefs,
   saveNotificationPrefs,

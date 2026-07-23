@@ -1,9 +1,9 @@
 // Main SMS Parser entry point
 // International pluggable parser for bank SMS messages
 
-import { detectCountry, countryToCurrency, normalizeAmount, normalizeDate, extractMerchant, detectType } from './detect';
+import { detectCountry, countryToCurrency, extractMerchant, detectType } from './detect';
 import type { TransactionCandidate, ParsedSMSResult } from './types';
-import { allPatterns, getPatternsForCountry } from './patterns';
+import { getPatternsForCountry } from './patterns';
 
 // Cache one global-flag RegExp per pattern source so parseSMS does not
 // recompile a RegExp object on every SMS (the previous `.sort().matchAll(new

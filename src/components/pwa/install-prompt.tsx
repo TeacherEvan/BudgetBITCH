@@ -11,6 +11,11 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
 }
 
+function getEarlyEvent(): BeforeInstallPromptEvent | null {
+  if (typeof window === 'undefined') return null;
+  return (window as unknown as { __deferredPwaPrompt?: BeforeInstallPromptEvent }).__deferredPwaPrompt || null;
+}
+
 export function PWAInstallPrompt({ 
   onDismiss, 
   locale = 'en' 
@@ -18,8 +23,8 @@ export function PWAInstallPrompt({
   onDismiss?: () => void;
   locale?: 'th' | 'en';
 }) {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [showPrompt, setShowPrompt] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(getEarlyEvent);
+  const [showPrompt, setShowPrompt] = useState(() => getEarlyEvent() !== null);
   const [isStandalone, setIsStandalone] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
@@ -57,6 +62,7 @@ export function PWAInstallPrompt({
     const handler = (e: Event) => {
       const promptEvent = e as BeforeInstallPromptEvent;
       promptEvent.preventDefault();
+      (window as unknown as { __deferredPwaPrompt?: BeforeInstallPromptEvent }).__deferredPwaPrompt = promptEvent;
       setDeferredPrompt(promptEvent);
       setShowPrompt(true);
       setWaitingForPrompt(false);
@@ -78,10 +84,11 @@ export function PWAInstallPrompt({
   }, []);
 
   const handleInstall = async () => {
-    if (deferredPrompt) {
+    const activePrompt = deferredPrompt || (window as unknown as { __deferredPwaPrompt?: BeforeInstallPromptEvent }).__deferredPwaPrompt;
+    if (activePrompt) {
       try {
-        await deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
+        await activePrompt.prompt();
+        const { outcome } = await activePrompt.userChoice;
         if (outcome === 'accepted') {
           setShowPrompt(false);
           onDismiss?.();
@@ -90,6 +97,7 @@ export function PWAInstallPrompt({
         console.error('Error triggering install prompt:', error);
       } finally {
         setDeferredPrompt(null);
+        delete (window as unknown as { __deferredPwaPrompt?: BeforeInstallPromptEvent }).__deferredPwaPrompt;
       }
     } else {
       // Show manual instructions modal for browser installation
@@ -211,8 +219,12 @@ export function PWAInstallPrompt({
             <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
             <p className="leading-relaxed">
               {locale === 'th' 
-                ? 'เบราว์เซอร์ของคุณยังไม่รองรับการติดตั้งแบบอัตโนมัติ กรุณาทำตามวิธีติดตั้งด้านล่างสำหรับเครื่องของคุณ:' 
-                : 'Your browser does not support automatic installation. Please follow the instructions below for your device:'}
+                ? (isIOS
+                    ? 'iOS Safari ต้องเพิ่มลงหน้าจอโฮมผ่านเมนูแชร์:'
+                    : 'ระบบติดตั้งอัตโนมัติขึ้นอยู่กับเบราว์เซอร์ของคุณ หากกดติดตั้งแล้วไม่ขึ้นป๊อปอัป คุณสามารถคลิกไอคอนติดตั้งบนแถบที่อยู่ URL หรือทำตามขั้นตอนด้านล่าง:')
+                : (isIOS
+                    ? 'iOS Safari requires adding to Home Screen via the Share menu:'
+                    : 'Automatic install prompt is managed by your browser. If clicking Install does not trigger a popup, use your browser\'s Install icon in the address bar or follow the steps below:')}
             </p>
           </div>
 

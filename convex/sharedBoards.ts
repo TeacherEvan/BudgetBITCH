@@ -76,7 +76,7 @@ export const ensureProfile = mutation({
     let userId: Id<"users"> | null;
     try {
       userId = await getAuthUserId(ctx);
-    } catch (e) {
+    } catch {
       return null;
     }
     if (!userId) return null;
