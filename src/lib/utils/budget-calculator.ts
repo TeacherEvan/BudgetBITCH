@@ -41,8 +41,8 @@ export function calculateBudgetFromWizard(profile: WizardProfile): BudgetCalcula
   
   const totalFixedExpenses = rent + transport + phoneInternet + subscriptions + entertainment + healthcare;
   
-  // Savings target based on savings rate percentage
-  const savingsRatePct = Math.min(Math.max(answers.savingsRatePct || 20, 0), 50);
+  // Savings target based on savings rate percentage (0% default when omitted)
+  const savingsRatePct = answers.savingsRatePct !== undefined ? Math.min(Math.max(answers.savingsRatePct, 0), 50) : 0;
   const savingsTarget = Math.round(income * (savingsRatePct / 100));
   
   // Remaining after fixed expenses and savings

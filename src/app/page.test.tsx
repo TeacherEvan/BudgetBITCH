@@ -13,6 +13,10 @@ vi.mock('@convex-dev/auth/react', () => ({
   }),
 }));
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 // Mock localStorage
 const mockLocalStorage = {
   getItem: vi.fn(),

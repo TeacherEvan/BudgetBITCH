@@ -11,11 +11,12 @@ import { useWizardProfile } from '@/hooks/use-local-db';
 import { useAccountSync } from '@/hooks/use-account-sync';
 import { initializeBudgetsFromWizard } from '@/lib/utils/budget-calculator';
 import { getWizardProfile, saveWizardProfile, saveCriticalExpenseCommitment } from '@/lib/db/local-db';
-import { Loader2 } from 'lucide-react';
 import { useQuery } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
 import type { CriticalExpenseKey } from '@/lib/types/budget';
 import { syncDailySnapshot } from '@/lib/convex/sync-snapshots';
+
+import { MoneySyncLoading } from '@/components/ui/money-sync-loading';
 
 interface DashboardClientProps {
   wizardCompleted: boolean;
@@ -154,11 +155,7 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
   }, [router]);
 
   if (isLoading || profileLoading) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loader2 className="h-8 w-8 text-amber-400 animate-spin" />
-      </div>
-    );
+    return <MoneySyncLoading locale={locale} />;
   }
 
   return (
