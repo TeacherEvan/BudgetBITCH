@@ -159,8 +159,8 @@ export const linkByCode = mutation({
       .withIndex("by_shareCode", (q) => q.eq("shareCode", code))
       .unique();
 
-    if (!partner) throw new Error("Share code not found");
-    if (partner.userId === userId) throw new Error("Cannot link to yourself");
+    if (!partner) throw new ConvexError("Share code not found");
+    if (partner.userId === userId) throw new ConvexError("Cannot link to yourself");
 
     const myProfile = await ensureProfileDoc(ctx, userId);
 
@@ -168,10 +168,10 @@ export const linkByCode = mutation({
     // linking into a partner who is already in another couple would corrupt the
     // previous partner's linkedBoardId (review finding F3).
     if (myProfile.linkedBoardId) {
-      throw new Error("You are already linked to a partner; unlink first");
+      throw new ConvexError("You are already linked to a partner; unlink first");
     }
     if (partner.linkedBoardId) {
-      throw new Error("That share code is already linked to someone else");
+      throw new ConvexError("That share code is already linked to someone else");
     }
 
     // Reuse an existing board if either party is already linked (1:1 couple, single board).
@@ -229,9 +229,9 @@ export const getBoard = query({
       .query("sharedBoards")
       .withIndex("by_boardId", (q) => q.eq("boardId", args.boardId))
       .unique();
-    if (!board) throw new Error("Board not found");
+    if (!board) throw new ConvexError("Board not found");
     if (board.memberA !== userId && board.memberB !== userId) {
-      throw new Error("Not a member of this board");
+      throw new ConvexError("Not a member of this board");
     }
     return board;
   },
@@ -252,9 +252,9 @@ export const pushBoard = mutation({
       .query("sharedBoards")
       .withIndex("by_boardId", (q) => q.eq("boardId", args.boardId))
       .unique();
-    if (!board) throw new Error("Board not found");
+    if (!board) throw new ConvexError("Board not found");
     if (board.memberA !== userId && board.memberB !== userId) {
-      throw new Error("Not a member of this board");
+      throw new ConvexError("Not a member of this board");
     }
 
     const incoming = (args.data ?? {}) as Record<string, StoredRecord>;

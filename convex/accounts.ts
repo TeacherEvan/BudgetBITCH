@@ -511,14 +511,14 @@ export const redeemInviteToken = mutation({
       .withIndex("by_token", (q) => q.eq("token", token))
       .unique();
     if (!invite) {
-      throw new Error("Invite link is invalid or expired");
+      throw new ConvexError("Invite link is invalid or expired");
     }
 
     const acc = await ctx.db
       .query("accounts")
       .withIndex("by_accountId", (q) => q.eq("accountId", invite.accountId))
       .unique();
-    if (!acc || !acc.boardId) throw new Error("Account not found");
+    if (!acc || !acc.boardId) throw new ConvexError("Account not found");
 
     const boardRows = await ctx.db
       .query("boardMembers")
@@ -530,7 +530,7 @@ export const redeemInviteToken = mutation({
     }
 
     if (invite.status !== "pending") {
-      throw new Error("Invite link has already been used");
+      throw new ConvexError("Invite link has already been used");
     }
 
     const members = await ctx.db
@@ -538,7 +538,7 @@ export const redeemInviteToken = mutation({
       .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
       .collect();
     if (members.length >= MAX_MEMBERS) {
-      throw new Error(`An account can have at most ${MAX_MEMBERS} members`);
+      throw new ConvexError(`An account can have at most ${MAX_MEMBERS} members`);
     }
 
     await ctx.db.insert("boardMembers", {
@@ -586,20 +586,20 @@ export const acceptInvite = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new ConvexError("Authentication required");
     const invite = await ctx.db.get(args.inviteId as Id<"invites">);
-    if (!invite) throw new Error("Invite not found");
+    if (!invite) throw new ConvexError("Invite not found");
     if (invite.toUserId !== userId) {
-      throw new Error("Not your invite");
+      throw new ConvexError("Not your invite");
     }
     if (invite.status !== "pending") {
-      throw new Error("Invite already handled");
+      throw new ConvexError("Invite already handled");
     }
     const board = await ctx.db
       .query("accountBoards")
       .withIndex("by_boardId", (q) => q.eq("boardId", invite.boardId))
       .unique();
-    if (!board) throw new Error("Board not found");
+    if (!board) throw new ConvexError("Board not found");
     if (board.members.length >= MAX_MEMBERS) {
-      throw new Error(`An account can have at most ${MAX_MEMBERS} members`);
+      throw new ConvexError(`An account can have at most ${MAX_MEMBERS} members`);
     }
 
     await ctx.db.patch(invite._id, { status: "accepted" });
@@ -630,9 +630,9 @@ export const declineInvite = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new ConvexError("Authentication required");
     const invite = await ctx.db.get(args.inviteId as Id<"invites">);
-    if (!invite) throw new Error("Invite not found");
+    if (!invite) throw new ConvexError("Invite not found");
     if (invite.toUserId !== userId) {
-      throw new Error("Not your invite");
+      throw new ConvexError("Not your invite");
     }
     await ctx.db.patch(invite._id, { status: "declined" });
     return { success: true };
@@ -650,15 +650,15 @@ export const removeMember = mutation({
         q.eq("accountId", args.accountId),
       )
       .unique();
-    if (!acc) throw new Error("Account not found");
+    if (!acc) throw new ConvexError("Account not found");
     if (acc.ownerId !== ownerId) {
-      throw new Error("Only the owner can remove members");
+      throw new ConvexError("Only the owner can remove members");
     }
     const target = args.userId as Id<"users">;
     if (target === ownerId) {
-      throw new Error("Owner cannot be removed; transfer or delete the account");
+      throw new ConvexError("Owner cannot be removed; transfer or delete the account");
     }
-    if (!acc.boardId) throw new Error("Account has no shared board");
+    if (!acc.boardId) throw new ConvexError("Account has no shared board");
 
     const memberRow = (
       await ctx.db
@@ -703,11 +703,11 @@ export const leaveAccount = mutation({
         q.eq("accountId", args.accountId),
       )
       .unique();
-    if (!acc) throw new Error("Account not found");
+    if (!acc) throw new ConvexError("Account not found");
     if (acc.ownerId === userId) {
-      throw new Error("Owner cannot leave; transfer ownership or delete");
+      throw new ConvexError("Owner cannot leave; transfer ownership or delete");
     }
-    if (!acc.boardId) throw new Error("Account has no shared board");
+    if (!acc.boardId) throw new ConvexError("Account has no shared board");
 
     const memberRow = (
       await ctx.db

@@ -14,7 +14,7 @@ export const parseReceipt = action({
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      throw new Error(
+      throw new ConvexError(
         "Gemini API key is not configured in the backend environment. Please set GEMINI_API_KEY in your Convex dashboard."
       );
     }
@@ -100,7 +100,7 @@ Do not include any formatting, markdown wrappers, or extra text. Output ONLY the
     } catch (error) {
       console.error("Error in parseReceipt action:", error);
       const message = error instanceof Error ? error.message : String(error);
-      throw new Error(`Failed to parse receipt: ${message}`);
+      throw new ConvexError(`Failed to parse receipt: ${message}`);
     }
   },
 });
