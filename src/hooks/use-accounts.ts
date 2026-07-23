@@ -370,6 +370,36 @@ export function useAccounts(): UseAccounts {
      
   }, [server, nonce]);
 
+  const switchTo = useCallback(
+    async (accountId: string) => {
+      const local = await getLocalAccounts();
+      const meta = local.find((l) => l.accountId === accountId);
+      try {
+        if (meta?.boardId) {
+          const board = (await convex.query(api.accounts.getAccountBoard, {
+            boardId: meta.boardId,
+          })) as {
+            boardId: string;
+            updatedAt: number;
+            data: Record<string, { value: unknown; updatedAt: number }> | null;
+          } | null;
+          if (board?.data) {
+            await adoptRemoteAccount(meta, board.data);
+          } else {
+            await localSwitch(accountId);
+          }
+        } else {
+          await localSwitch(accountId);
+        }
+      } catch (e) {
+        console.error("Convex board fetch failed, falling back to local switch:", e);
+        await localSwitch(accountId);
+      }
+      setCurrentAccountId(accountId);
+    },
+    [convex],
+  );
+
   const createAccount = useCallback(
     async (input: { umbrella: LocalAccountMeta["umbrella"]; name: string }) => {
       if (!isAuthenticated) {
@@ -484,36 +514,6 @@ export function useAccounts(): UseAccounts {
       refresh();
     },
     [deleteMut, refresh],
-  );
-
-  const switchTo = useCallback(
-    async (accountId: string) => {
-      const local = await getLocalAccounts();
-      const meta = local.find((l) => l.accountId === accountId);
-      try {
-        if (meta?.boardId) {
-          const board = (await convex.query(api.accounts.getAccountBoard, {
-            boardId: meta.boardId,
-          })) as {
-            boardId: string;
-            updatedAt: number;
-            data: Record<string, { value: unknown; updatedAt: number }> | null;
-          } | null;
-          if (board?.data) {
-            await adoptRemoteAccount(meta, board.data);
-          } else {
-            await localSwitch(accountId);
-          }
-        } else {
-          await localSwitch(accountId);
-        }
-      } catch (e) {
-        console.error("Convex board fetch failed, falling back to local switch:", e);
-        await localSwitch(accountId);
-      }
-      setCurrentAccountId(accountId);
-    },
-    [convex],
   );
 
   return {
