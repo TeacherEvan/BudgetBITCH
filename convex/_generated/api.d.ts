@@ -16,6 +16,8 @@ import type * as boardMerge from "../boardMerge.js";
 import type * as http from "../http.js";
 import type * as legal from "../legal.js";
 import type * as lib_auth from "../lib/auth.js";
+import type * as push from "../push.js";
+import type * as pushSend from "../pushSend.js";
 import type * as receipts from "../receipts.js";
 import type * as sharedBoards from "../sharedBoards.js";
 import type * as snapshots from "../snapshots.js";
@@ -35,6 +37,8 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   legal: typeof legal;
   "lib/auth": typeof lib_auth;
+  push: typeof push;
+  pushSend: typeof pushSend;
   receipts: typeof receipts;
   sharedBoards: typeof sharedBoards;
   snapshots: typeof snapshots;

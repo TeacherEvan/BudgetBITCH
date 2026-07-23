@@ -140,4 +140,21 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_acceptedAt", ["acceptedAt"]),
+
+  // Web Push (VAPID) subscriptions — one per browser endpoint, owned by user.
+  // Free: VAPID keys in Convex env, web-push library sends. No third-party service.
+  pushSubscriptions: defineTable({
+    userId: v.id("users"),
+    endpoint: v.string(),
+    subscription: v.object({
+      endpoint: v.string(),
+      keys: v.object({
+        p256dh: v.string(),
+        auth: v.string(),
+      }),
+    }),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_endpoint", ["endpoint"]),
 });
