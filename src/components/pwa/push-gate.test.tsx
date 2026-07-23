@@ -18,9 +18,15 @@ function mockPush() {
   (navigator as any).serviceWorker = { ready: Promise.resolve({ pushManager: (window as any).PushManager }) };
 }
 
+const ORIGINAL_VAPID_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+
 describe('PushGate', () => {
-  beforeEach(() => mockPush());
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY = 'BEl62iUYgUivxIkv69yViEuiBIa40yV4nwu1vH1J8mQ4N_zE1h8L5d9a';
+    mockPush();
+  });
   afterEach(() => {
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY = ORIGINAL_VAPID_KEY;
     delete (window as any).Notification;
     delete (window as any).PushManager;
     delete (navigator as any).serviceWorker;

@@ -18,9 +18,15 @@ function mockPushManager() {
   };
 }
 
+const ORIGINAL_VAPID_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+
 describe('PushPermission', () => {
-  beforeEach(() => mockPushManager());
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY = 'BEl62iUYgUivxIkv69yViEuiBIa40yV4nwu1vH1J8mQ4N_zE1h8L5d9a';
+    mockPushManager();
+  });
   afterEach(() => {
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY = ORIGINAL_VAPID_KEY;
     delete (window as any).Notification;
     delete (window as any).PushManager;
     delete (navigator as any).serviceWorker;
@@ -67,5 +73,21 @@ describe('PushPermission', () => {
   it('supports Thai locale labels', () => {
     render(<PushPermission locale="th" onSubscribe={() => {}} onClose={() => {}} />);
     expect(screen.getByTestId('push-allow-btn')).toHaveTextContent('อนุญาต');
+  });
+
+  it('displays error when VAPID key is not configured', async () => {
+    delete process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    const onSubscribe = vi.fn();
+    const onClose = vi.fn();
+    render(<PushPermission locale="en" onSubscribe={onSubscribe} onClose={onClose} />);
+
+    fireEvent.click(screen.getByTestId('push-allow-btn'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('push-error')).toHaveTextContent(
+        'Push notifications key (VAPID) is not configured.'
+      );
+    });
+    expect(onSubscribe).not.toHaveBeenCalled();
   });
 });

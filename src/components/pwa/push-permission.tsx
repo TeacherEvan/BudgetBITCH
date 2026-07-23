@@ -35,6 +35,17 @@ export function PushPermission({ locale, onSubscribe, onClose }: PushPermissionP
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length) as Uint8Array<ArrayBuffer>;
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
   const handleAllow = async () => {
     if (busy) return;
     if (typeof window === 'undefined' || !('Notification' in window) || !('serviceWorker' in navigator)) {
@@ -49,10 +60,18 @@ export function PushPermission({ locale, onSubscribe, onClose }: PushPermissionP
         onClose();
         return;
       }
+
+      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!vapidPublicKey || !vapidPublicKey.trim()) {
+        setError('Push notifications key (VAPID) is not configured.');
+        return;
+      }
+
+      const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey.trim());
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? '').replace(/_/g, '/').replace(/-/g, '+'),
+        applicationServerKey,
       });
       const raw = sub.toJSON() as PushSubscriptionInput;
       await onSubscribe({
