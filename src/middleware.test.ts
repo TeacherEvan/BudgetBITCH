@@ -16,7 +16,7 @@ vi.mock("next/server", async () => {
   };
 });
 
-import middleware, { config } from "./middleware";
+import proxy, { config } from "./proxy";
 
 const publicApiRoutes = [
   "/api/v1/start-smart/blueprint",
@@ -28,7 +28,7 @@ const protectedApiRoutes = [
   "/api/v1/auth/bootstrap",
 ] as const;
 
-describe("middleware", () => {
+describe("proxy", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     nextResponseNextMock.mockReset();
@@ -38,7 +38,7 @@ describe("middleware", () => {
   });
 
   it("keeps the root route public without authentication", async () => {
-    const response = await middleware(new Request("http://localhost/") as never);
+    const response = await proxy(new Request("http://localhost/") as never);
 
     expect(nextResponseNextMock).toHaveBeenCalledTimes(1);
     expect(response).toBe("next-response");
@@ -48,7 +48,7 @@ describe("middleware", () => {
     // In client-only localStorage auth, the middleware can't read the token,
     // so protected PAGES pass through for the client guard to gate.
     const request = new Request("http://localhost/dashboard");
-    const response = await middleware(request as never);
+    const response = await proxy(request as never);
 
     expect(nextResponseRedirectMock).not.toHaveBeenCalled();
     expect(nextResponseNextMock).toHaveBeenCalledTimes(1);
@@ -57,7 +57,7 @@ describe("middleware", () => {
 
   it("returns a JSON 401 for protected API routes when no session exists", async () => {
     const request = new Request("http://localhost/api/v1/auth/bootstrap");
-    const response = await middleware(request as never) as Response;
+    const response = await proxy(request as never) as Response;
 
     expect(nextResponseRedirectMock).not.toHaveBeenCalled();
     expect(response.status).toBe(401);
@@ -73,7 +73,7 @@ describe("middleware", () => {
     "keeps %s outside middleware protection when no session exists",
     async (pathname) => {
       const request = new Request(`http://localhost${pathname}`);
-      const response = await middleware(request as never);
+      const response = await proxy(request as never);
 
       expect(nextResponseRedirectMock).not.toHaveBeenCalled();
       expect(nextResponseNextMock).toHaveBeenCalledTimes(1);
@@ -87,7 +87,7 @@ describe("middleware", () => {
         cookie: "budgetbitch:e2e-auth-state=signed-in",
       },
     });
-    const response = await middleware(request as never);
+    const response = await proxy(request as never);
 
     expect(nextResponseRedirectMock).not.toHaveBeenCalled();
     expect(nextResponseNextMock).toHaveBeenCalledTimes(1);
@@ -96,7 +96,7 @@ describe("middleware", () => {
 
   it.each(protectedApiRoutes)("protects %s when no session exists", async (pathname) => {
     const request = new Request(`http://localhost${pathname}`);
-    const response = await middleware(request as never) as Response;
+    const response = await proxy(request as never) as Response;
 
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toEqual({

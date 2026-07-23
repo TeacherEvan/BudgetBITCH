@@ -17,6 +17,7 @@ test('exportExpensesToCsv converts expense entries and handles quoted fields', (
       amount: 150.5,
       category: 'food',
       note: 'Coffee, pastries & tax',
+      source: 'manual',
     },
     {
       id: 'e2',
@@ -24,6 +25,7 @@ test('exportExpensesToCsv converts expense entries and handles quoted fields', (
       merchant: 'Shell Station',
       amount: 1200,
       category: 'transport',
+      source: 'manual',
     },
   ];
 
@@ -41,14 +43,15 @@ test('exportIncomesToCsv formats income entries correctly', () => {
       date: '2026-07-01',
       source: 'Acme Corp Salary',
       amount: 65000,
-      category: 'income',
+      category: 'salary',
       frequency: 'monthly',
       note: 'Main salary',
+      createdAt: '2026-07-01T00:00:00.000Z',
     },
   ];
 
   const csv = exportIncomesToCsv(incomes);
   const lines = csv.split('\n');
   expect(lines[0]).toBe('date,source,amount,category,frequency,note');
-  expect(lines[1]).toBe('2026-07-01,Acme Corp Salary,65000,income,monthly,Main salary');
+  expect(lines[1]).toBe('2026-07-01,Acme Corp Salary,65000,salary,monthly,Main salary');
 });
