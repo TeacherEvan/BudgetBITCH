@@ -25,6 +25,7 @@ import {
   LocalAccountMeta,
   UmbrellaKey,
 } from "@/lib/types/accounts";
+import { notifyBoardChanged } from "@/lib/types/budget";
 
 // Re-export so callers don't need to know the raw store name.
 export const ACCOUNTS_DATA_STORE = "accountsData";
@@ -60,6 +61,7 @@ export async function getCurrentAccountId(): Promise<string> {
 export async function setCurrentAccountId(accountId: string): Promise<void> {
   const database = await db();
   await database.put("bbMeta", accountId, CURRENT_ACCOUNT_KEY);
+  notifyBoardChanged("switch");
 }
 
 // ── local accounts meta ──────────────────────────────────────────────────────

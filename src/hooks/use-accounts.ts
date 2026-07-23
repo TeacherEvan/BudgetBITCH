@@ -388,10 +388,11 @@ export function useAccounts(): UseAccounts {
         role: "owner",
         hasLocalData: true,
       });
+      await switchTo(res.accountId);
       refresh();
       return res;
     },
-    [createMut, refresh, isAuthenticated],
+    [createMut, switchTo, refresh, isAuthenticated],
   );
 
   const createInviteToken = useCallback(

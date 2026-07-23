@@ -168,7 +168,10 @@ export function useAccountSync(): UseAccountSync {
     if (isOnline()) {
       try {
         setSyncing(true);
-        await pushBoard({ boardId: bid, data: data as never, updatedAt });
+        const res = (await pushBoard({ boardId: bid, data: data as never, updatedAt })) as
+          | { updatedAt?: number }
+          | undefined;
+        lastAppliedAt.current = res?.updatedAt ?? updatedAt;
         setLastError(null);
       } catch (e) {
         setLastError(e instanceof Error ? e.message : "Push failed");
@@ -217,6 +220,7 @@ export function useAccountSync(): UseAccountSync {
     const onChanged = (e: Event) => {
       const customEvent = e as CustomEvent<{ source?: string }>;
       if (customEvent.detail?.source === "switch") {
+        lastAppliedAt.current = 0;
         void resolveActiveBoard();
         return;
       }
