@@ -44,6 +44,8 @@ export interface UseAccountSync {
   syncing: boolean;
   pushPending: boolean;
   lastError: string | null;
+  /** Force an immediate push of the active board and drain any queued pushes. */
+  syncNow: () => Promise<void>;
 }
 
 function getQueue(): QueuedPush[] {
@@ -151,7 +153,7 @@ export function useAccountSync(): UseAccountSync {
     setPushPending(remaining.length > 0);
   }, [isAuthenticated, pushBoard]);
 
-  const doPush = async () => {
+  const doPush = useCallback(async () => {
     if (!isAuthenticated) return;
     const bid = boardIdRef.current;
     if (!bid) return;
@@ -185,7 +187,7 @@ export function useAccountSync(): UseAccountSync {
       setQueue(filtered);
       setPushPending(true);
     }
-  };
+  }, [isAuthenticated, pushBoard, flushQueue]);
 
   const schedulePush = () => {
     pendingRef.current = true;
@@ -196,6 +198,17 @@ export function useAccountSync(): UseAccountSync {
       void doPush();
     }, PUSH_DEBOUNCE_MS);
   };
+
+  // Manual "Sync Now": force an immediate push of the active board's current
+  // state and drain any queued pushes. Mirrors useSharedBoard.syncNow so the
+  // Accounts feature has the same on-demand control the couple board has.
+  const syncNow = useCallback(async () => {
+    if (!isAuthenticated) return;
+    const bid = boardIdRef.current;
+    if (!bid) return;
+    await doPush();
+    await flushQueue();
+  }, [isAuthenticated, doPush, flushQueue]);
 
   // Listen for local board edits → schedule a push. Attached unconditionally;
   // doPush/schedulePush no-op until boardId resolves, so an edit made in the
@@ -261,5 +274,5 @@ export function useAccountSync(): UseAccountSync {
     })();
   }, [boardId, getBoard]);
 
-  return { boardId, loading, syncing, pushPending, lastError };
+  return { boardId, loading, syncing, pushPending, lastError, syncNow };
 }

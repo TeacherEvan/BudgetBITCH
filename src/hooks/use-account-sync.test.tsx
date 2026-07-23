@@ -41,6 +41,11 @@ function HookProbe() {
   return null;
 }
 
+function ProbeWithSyncNow() {
+  const { syncNow } = useAccountSync();
+  return <button data-testid="sync" onClick={() => void syncNow()}>sync</button>;
+}
+
 
 
 function makeExpense(id: string, amount = 100): ExpenseEntry {
@@ -264,5 +269,41 @@ describe('useAccountSync', () => {
     expect(pushBoard).toHaveBeenCalledTimes(1);
     const lastCall = (pushBoard.mock.calls[0] as unknown[])[0] as { boardId: string };
     expect(lastCall.boardId).toBe('board_another');
+  });
+
+  it('syncNow forces an immediate push of the active account board', async () => {
+    const result = render(<ProbeWithSyncNow />);
+    // Let the active account's boardId resolve before clicking.
+    await act(async () => {
+      await sleep(250);
+    });
+    pushBoard.mockClear();
+
+    await act(async () => {
+      result.getByTestId('sync').click();
+      await sleep(100);
+    });
+
+    expect(pushBoard).toHaveBeenCalledTimes(1);
+    const call = (pushBoard.mock.calls[0] as unknown[])[0] as { boardId: string };
+    expect(call.boardId).toBe('board_family');
+  });
+
+  it('syncNow pushes to the personal board (personal has no boardId but is pushable)', async () => {
+    await setCurrentAccountId('personal');
+    const result = render(<ProbeWithSyncNow />);
+    await act(async () => {
+      await sleep(250);
+    });
+    pushBoard.mockClear();
+
+    await act(async () => {
+      result.getByTestId('sync').click();
+      await sleep(100);
+    });
+
+    expect(pushBoard).toHaveBeenCalledTimes(1);
+    const call = (pushBoard.mock.calls[0] as unknown[])[0] as { boardId: string };
+    expect(call.boardId).toBe('personal');
   });
 });

@@ -4,7 +4,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Users, ArrowRightLeft, LogOut, Trash2 } from 'lucide-react';
+import { Plus, Users, ArrowRightLeft, LogOut, Trash2, RefreshCw } from 'lucide-react';
 import { useConvexAuth } from '@convex-dev/auth/react';
 import { useAccounts } from '@/hooks/use-accounts';
 import { useAccountSync } from '@/hooks/use-account-sync';
@@ -44,7 +44,7 @@ export function AccountsView({ locale, onLocaleChange }: AccountsViewProps) {
     deleteAccount,
   } = useAccounts();
   // Drive sync for the active board while this screen is mounted.
-  useAccountSync();
+  const { syncNow, syncing } = useAccountSync();
 
   const [creating, setCreating] = useState(false);
   const [newUmbrella, setNewUmbrella] = useState<UmbrellaKey | null>(null);
@@ -132,10 +132,18 @@ export function AccountsView({ locale, onLocaleChange }: AccountsViewProps) {
               {t('Run up to 5 independent budgets — family, business, trips & more.', 'จัดงบอิสระได้สูงสุด 5 บัญชี — ครอบครัว ธุรกิจ ทริป ฯลฯ')}
             </p>
           </div>
-          <Button variant="primary" onClick={() => setCreating(true)} disabled={!canCreate || !ready}>
-            <Plus className="mr-1.5 h-4 w-4" />
-            {t('New account', 'บัญชีใหม่')}
-          </Button>
+          <div className="flex items-center gap-2">
+            {currentAccountId !== 'personal' && activeAccount && (
+              <Button variant="secondary" onClick={() => void syncNow()} disabled={syncing || !ready}>
+                <RefreshCw className={`mr-1.5 h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+                {syncing ? t('Syncing…', 'กำลังซิงค์…') : t('Sync now', 'ซิงค์ตอนนี้')}
+              </Button>
+            )}
+            <Button variant="primary" onClick={() => setCreating(true)} disabled={!canCreate || !ready}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              {t('New account', 'บัญชีใหม่')}
+            </Button>
+          </div>
         </div>
 
         {errorMsg && (
