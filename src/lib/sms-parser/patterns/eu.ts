@@ -1,3 +1,4 @@
+import type { SMSPattern } from '../types';
 import { normalizeAmount } from '../detect';
 
 export const euPatterns: SMSPattern[] = [
