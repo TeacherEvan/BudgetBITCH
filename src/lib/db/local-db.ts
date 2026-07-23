@@ -109,7 +109,12 @@ export interface BudgetBITCHDB extends DBSchema {
 }
 
 const DB_NAME = 'budgetbitch';
-const DB_VERSION = 3;
+// Bumped to 5: forces the IndexedDB upgrade callback to run for existing clients
+// whose database version was frozen (at 3) before the `incomes` store was added
+// (commit 08757d2). Without the bump the upgrade callback never executes, so
+// `incomes` is never created and reads throw
+// "IDBDatabase.transaction: 'incomes' is not a known object store name".
+const DB_VERSION = 5;
 let dbInstance: IDBPDatabase<BudgetBITCHDB> | null = null;
 let dbPromise: Promise<IDBPDatabase<BudgetBITCHDB>> | null = null;
 
@@ -446,8 +451,12 @@ export async function clearAllData(): Promise<void> {
     'locationCache', 'settings',
     'accountsData', 'localAccounts', 'bbMeta',
   ] as const;
-  const tx = db.transaction(stores, 'readwrite');
-  for (const store of stores) {
+  const activeStores = db.objectStoreNames
+    ? stores.filter((store) => db.objectStoreNames.contains(store))
+    : [...stores];
+  if (activeStores.length === 0) return;
+  const tx = db.transaction(activeStores, 'readwrite');
+  for (const store of activeStores) {
     await tx.objectStore(store).clear();
   }
   await tx.done;
@@ -455,8 +464,12 @@ export async function clearAllData(): Promise<void> {
 
 export async function clearAllUserData(): Promise<void> {
   const db = await getDB();
-  const tx = db.transaction(USER_DATA_STORES, 'readwrite');
-  for (const store of USER_DATA_STORES) {
+  const activeStores = db.objectStoreNames
+    ? USER_DATA_STORES.filter((store) => db.objectStoreNames.contains(store))
+    : [...USER_DATA_STORES];
+  if (activeStores.length === 0) return;
+  const tx = db.transaction(activeStores, 'readwrite');
+  for (const store of activeStores) {
     await tx.objectStore(store).clear();
   }
   await tx.done;
