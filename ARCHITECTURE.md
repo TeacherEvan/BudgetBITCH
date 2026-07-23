@@ -24,7 +24,7 @@ This repository is a single Next.js + Convex codebase: the **BudgetBITCH app** a
 
 ### Directory Boundaries
 
-- `src/app/**` — routes, route groups, layouts, API handlers (Convex HTTP via `/api/convex-auth`), and the standalone `/quick-add` widget route ([page.tsx](src/app/quick-add/page.tsx))
+- `src/app/**` — routes, route groups, layouts, API handlers (Convex Auth HTTP via `/api/convex-auth`, registered in `convex/http.ts`), and the standalone `/quick-add` widget route ([page.tsx](src/app/quick-add/page.tsx))
 - `src/components/**` — reusable UI
   - `auth/` — Account recovery, entry panel, password form
   - `accounts/` — Multi-board shared budgeting (board/umbrella management, QR/link invite) + automatic cross-account sync. Includes in-app "Sharing & Collaboration Guidance" to explain how users can invite others and set up shared budgets for family, friends, or work.

@@ -62,7 +62,15 @@ export const termsContent: Record<LegalLocale, LegalDoc> = {
         ],
       },
       {
-        heading: "8. Contact",
+        heading: "8. AI Features and Accuracy",
+        body: [
+          "Budget-BOSS includes AI-assisted features. The receipt scanner sends your receipt photo to Google's Gemini AI (a third-party service) to read the merchant, amount, date, and category. AI may misread; you must review and correct the result before saving.",
+          "Market Watch shows headlines aggregated from independent third-party news publishers (such as Bangkok Post and Reuters) and may display automated, generic suggestions derived from those headlines. These are not our opinions and are not financial advice.",
+          "We are not responsible for errors in AI-generated or aggregated content. You remain responsible for every transaction you record.",
+        ],
+      },
+      {
+        heading: "9. Contact",
         body: [
           "Questions about these Terms? Email legal@budgetbitch.app.",
         ],
@@ -119,7 +127,15 @@ export const termsContent: Record<LegalLocale, LegalDoc> = {
         ],
       },
       {
-        heading: "8. ติดต่อ",
+        heading: "8. ฟีเจอร์ AI และความถูกต้อง",
+        body: [
+          "Budget-BOSS มีฟีเจอร์ที่ใช้ AI ช่วย เครื่องสแกนใบเสร็จจะส่งรูปใบเสร็จของคุณไปยัง Google Gemini AI (บริการของบุคคลที่สาม) เพื่ออ่านชื่อร้าน จำนวนเงิน วันที่ และหมวดหมู่ AI อาจอ่านผิดได้ คุณต้องตรวจสอบและแก้ไขผลลัพธ์ก่อนบันทึก",
+          "Market Watch แสดงข่าวจากสำนักข่าวอิสระบุคคลที่สาม (เช่น Bangkok Post และ Reuters) และอาจแสดงคำแนะนำทั่วไปอัตโนมัติที่ได้จากหัวข้อข่าวเหล่านั้น สิ่งเหล่านี้ไม่ใช่ความเห็นของเรา และไม่ใช่คำแนะนำทางการเงิน",
+          "เราไม่รับผิดชอบต่อข้อผิดพลาดในเนื้อหาที่สร้างโดย AI หรือที่รวบรวมมา คุณยังคงรับผิดชอบต่อทุกธุรกรรมที่คุณบันทึก",
+        ],
+      },
+      {
+        heading: "9. ติดต่อ",
         body: [
           "มีคำถามเกี่ยวกับข้อกำหนดนี้? อีเมลมาที่ legal@budgetbitch.app",
         ],
@@ -202,7 +218,15 @@ export const privacyContent: Record<LegalLocale, LegalDoc> = {
         ],
       },
       {
-        heading: "10. Contact",
+        heading: "11. Third-Party Services",
+        body: [
+          "Receipt scanning: when you use the receipt scanner, your receipt image is transmitted to Google LLC's Gemini AI service for optical character recognition. Google processes the image to extract text; we receive only the parsed merchant, amount, date, and category. This processing is covered by Google's own privacy terms.",
+          "Market Watch: headlines are fetched from independent third-party news publishers (Bangkok Post, Reuters, Thai PBS, PPTV, and others) over their public feeds. We do not control their content and link out to their sites.",
+          "We do not sell or share your personal data with these providers beyond what each feature requires to function.",
+        ],
+      },
+      {
+        heading: "12. Contact",
         body: [
           "Data protection questions: legal@budgetbitch.app.",
         ],
@@ -282,7 +306,15 @@ export const privacyContent: Record<LegalLocale, LegalDoc> = {
         ],
       },
       {
-        heading: "10. ติดต่อ",
+        heading: "11. บริการบุคคลที่สาม",
+        body: [
+          "การสแกนใบเสร็จ: เมื่อคุณใช้เครื่องสแกนใบเสร็จ รูปใบเสร็จของคุณจะถูกส่งไปยังบริการ Google Gemini AI ของ Google LLC เพื่อการจดจำตัวอักษร (OCR) Google ประมวลผลรูปเพื่อดึงข้อความ เราได้รับเฉพาะร้าน จำนวนเงิน วันที่ และหมวดหมู่ที่แยกได้ การประมวลผลนี้อยู่ภายใต้เงื่อนไขความเป็นส่วนตัวของ Google",
+          "Market Watch: หัวข้อข่าวถูกดึงจากสำนักข่าวอิสระบุคคลที่สาม (Bangkok Post, Reuters, Thai PBS, PPTV และอื่น ๆ) ผ่านฟีดสาธารณะ เราไม่ควบคุมเนื้อหาของพวกเขา และมีลิงก์ไปยังเว็บไซต์ของตน",
+          "เราไม่ขายหรือแบ่งปันข้อมูลส่วนบุคคลของคุณกับผู้ให้บริการเหล่านี้ นอกเหนือจากที่ฟีเจอร์แต่ละตัวต้องการเพื่อทำงาน",
+        ],
+      },
+      {
+        heading: "12. ติดต่อ",
         body: [
           "คำถามเรื่องการคุ้มครองข้อมูล: legal@budgetbitch.app",
         ],

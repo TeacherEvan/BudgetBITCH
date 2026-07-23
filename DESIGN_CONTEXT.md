@@ -16,7 +16,7 @@ Personality cues:
 Emotional goal: replace money fog with immediate clarity and control, without bloated copy or over-explaining.
 
 ### Aesthetic Direction
-The app should support both light and dark themes rather than staying dark-only. The visual direction should keep the product distinctive and editorial enough to feel intentional, but it must avoid bloat, unnecessary flourish, and long scrolling experiences.
+The app ships dark-base accent themes (Obsidian Gold default, Amber, Emerald, and a cooler Dark variant) rather than a single look. A true light mode is a planned enhancement, not yet shipped; the visual direction should keep the product distinctive and editorial enough to feel intentional, but it must avoid bloat, unnecessary flourish, and long scrolling experiences.
 
 References and anti-references derived from project context and user guidance:
 - keep: strong hierarchy, dense-but-readable scanning, practical action-first surfaces
@@ -29,5 +29,5 @@ The most important visual constraint is compression: every screen should get to 
 2. Compress the interface. Remove bloated copy, repeated framing, and avoid scroll-heavy layouts whenever possible.
 3. Make hierarchy do the work. Use typography, spacing, and grouping to create clarity before adding more containers or decoration.
 4. Stay privacy-forward and trustworthy. The product should feel controlled, factual, and respectful rather than persuasive or noisy.
-5. Design both themes intentionally. Light and dark modes should each feel native to the brand, not like one is a thin inversion of the other.
+5. Design the accent themes intentionally. Current themes (Gold, Amber, Emerald, Dark) are all dark-base variants that should each feel native to the brand; any future light mode must also feel native, not like a thin inversion.
 6. Keep interactions calm and fast. Motion, transitions, and progressive disclosure should clarify state, not perform personality.

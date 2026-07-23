@@ -12,9 +12,9 @@ BudgetBITCH/
 ├── .github/                         # GitHub workflows, copilot instructions
 ├── .vercel/                         # Vercel deployment config
 ├── .worktrees/                      # Git worktrees
-├── convex/                          # Convex backend (auth + daily snapshots ONLY)
+├── convex/                          # Convex backend (auth, accounts, shared boards, snapshots, receipts, legal)
 │   ├── _generated/                  # Auto-generated (don't edit)
-│   ├── schema.ts                    # 📋 Schema: authTables + dailySnapshots
+│   ├── schema.ts                    # 📋 Schema: authTables + userProfiles, sharedBoards, accounts, boardMembers, accountBoards, invites, dailySnapshots, legalAgreements, cookieConsents
 │   ├── auth.config.ts               # Convex Auth configuration
 │   ├── snapshots.ts                 # 📝 Mutation: upsertDailySnapshot
 │   └── tsconfig.json
@@ -150,8 +150,8 @@ BudgetBITCH/
 ├── AGENTS.md                            # Agent instructions
 ├── ARCHITECTURE.MD                      # Architecture doc
 ├── CLAUDE.md                            # Claude instructions
-├── next.config.ts                       # Next.js config + next-pwa + i18n
-├── package.json                         # 📝 PRUNED deps (no Prisma/Neon/Inngest/Resend/Sentry)
+├── next.config.ts                       # Next.js config + i18n (next-pwa removed; PWA via public/sw.js + src/components/pwa/pwa-register.tsx)
+├── package.json                         # 📝 PRUNED deps (no Prisma/Neon/Inngest/Sentry; Resend optional for password-reset emails)
 ├── postcss.config.mjs                   # Tailwind PostCSS
 ├── README.md                            # Project readme
 ├── tsconfig.json                        # TypeScript config
