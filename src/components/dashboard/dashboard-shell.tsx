@@ -235,13 +235,13 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
         </aside>
 
         {/* THE ONLY SCROLL ZONE */}
-        <div className="bb-scroll-zone flex flex-col px-4 py-4 lg:px-6">
+        <div className="bb-scroll-zone flex flex-col px-4 py-4 sm:px-5 lg:px-6">
           {/* Daily Disposable Hero */}
           <DailyDisposableHero locale={locale} onSetup={onSetup} />
 
           {/* Excel Power Budgeting Control Bar */}
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 p-3 bg-neutral-900/80 backdrop-blur-xl rounded-2xl border border-white/10">
-            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+            <div className="flex w-full items-center gap-1.5 overflow-x-auto scrollbar-none">
               <button
                 type="button"
                 onClick={() => setExcelTab('standard')}
@@ -291,7 +291,7 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
             <button
               type="button"
               onClick={() => setScenarioModalOpen(true)}
-              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-500 to-amber-500 text-white font-bold text-xs shadow-lg hover:brightness-110 transition-all flex items-center gap-1.5 shrink-0"
+              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-500 to-amber-500 text-white font-bold text-xs shadow-lg hover:brightness-110 transition-all flex items-center gap-1.5 shrink-0 w-full sm:w-auto justify-center"
             >
               <span>⚙️</span>
               <span>{locale === 'th' ? 'What-If Sandbox (Goal Seek)' : 'What-If Sandbox (Goal Seek)'}</span>
@@ -435,7 +435,7 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
       </Modal>
 
       {/* Mobile Floating Action Button (FAB) for Quick Add Widget */}
-      <div className="fixed bottom-20 right-4 z-40 lg:hidden">
+      <div className="fixed bottom-20 right-4 z-30 lg:hidden">
         <Link
           href="/quick-add"
           aria-label={locale === 'th' ? 'เพิ่มรายการด่วน' : 'Quick Add Widget'}

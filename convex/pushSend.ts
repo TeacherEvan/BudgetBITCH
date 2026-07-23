@@ -6,6 +6,8 @@
 
 import { v } from "convex/values";
 import { action } from "./_generated/server";
+import type { DataModel } from "./_generated/dataModel";
+import type { DocumentByName } from "convex/server";
 import { internal } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import webpush from "web-push";
@@ -30,10 +32,8 @@ export const sendReminder = action({
       );
     }
 
-    const subs: Array<{
-      _id: any;
-      subscription: { endpoint: string; keys: { p256dh: string; auth: string } };
-    }> = await ctx.runQuery(internal.push._listForUser, { userId });
+    const subs: DocumentByName<DataModel, "pushSubscriptions">[] =
+      await ctx.runQuery(internal.push._listForUser, { userId });
 
     const payload = JSON.stringify({ title, body });
     let sent = 0;
@@ -47,9 +47,10 @@ export const sendReminder = action({
           payload,
         );
         sent++;
-      } catch (err: any) {
+      } catch (err) {
         // 404/410 = subscription expired/invalid → remove it.
-        if (err?.statusCode === 404 || err?.statusCode === 410) {
+        const status = (err as { statusCode?: number })?.statusCode;
+        if (status === 404 || status === 410) {
           await ctx.runMutation(internal.push._remove, { id: sub._id });
         }
       }

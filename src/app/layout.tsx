@@ -17,6 +17,7 @@ import { SharedBoardSync } from '@/components/shared-board/shared-board-sync';
 import { AccountSyncMount } from '@/components/accounts/account-sync-mount';
 import { PWARegister } from '@/components/pwa/pwa-register';
 import { PWAInstallPrompt } from '@/components/pwa/install-prompt';
+import { AppShellExtras } from '@/components/pwa/app-shell-extras';
 import { WebViewBanner } from '@/components/webview/webview-banner';
 import { SiteFooter } from '@/components/legal/site-footer';
 import { CookieConsentBanner } from '@/components/legal/cookie-consent-banner';
@@ -78,6 +79,7 @@ export default async function RootLayout({
               <AccountSyncMount />
               <PWARegister />
               <PWAInstallPrompt locale={locale} />
+              <AppShellExtras locale={locale} />
               <WebViewBanner />
               {children}
               <SiteFooter />

@@ -304,11 +304,11 @@
   }
 
   /* Viewport contract: the scroll zone fills the space below the header
-     (flex:1). The mobile tab bar is fixed/absolute and floats over the
-     bottom, so we pad the scroll zone by the tab bar height so the last
-     card never hides behind it. */
+     (flex:1). The mobile tab bar + floating Quick-Add FAB are fixed and
+     float over the bottom, so we pad the scroll zone past BOTH so the last
+     card is never hidden behind either (FAB sits ~5rem above the tab bar). */
   .bb-scroll-zone {
-    padding-bottom: var(--tab-bar-height);
+    padding-bottom: calc(var(--tab-bar-height) + 5rem);
   }
 }
 

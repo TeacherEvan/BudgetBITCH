@@ -1,7 +1,7 @@
 // Bump CACHE_VERSION to force Service Worker clients to discard stale cached
 // app shells / chunks — required after a Convex deployment-URL change so
 // returning PWA users stop loading an old bundle that points at a dead backend.
-const CACHE_VERSION = 4;
+const CACHE_VERSION = 5;
 const APP_SHELL_CACHE = `bb-app-shell-v${CACHE_VERSION}`;
 const STATIC_ASSET_CACHE = `bb-static-assets-v${CACHE_VERSION}`;
 const SAFE_ROUTE_SHELLS = ["/", "/dashboard", "/wizard", "/settings"];
@@ -172,4 +172,46 @@ self.addEventListener("periodicsync", (event) => {
   if (event.tag === SYNC_TAG) {
     event.waitUntil(triggerClientFlush());
   }
+});
+
+// --- Web Push (VAPID) ----------------------------------------------------
+// Pushes are encrypted end-to-end; the SW only decrypts + displays them.
+self.addEventListener("push", (event) => {
+  let payload = { title: "Budget-BOSS", body: "You have an update." };
+  try {
+    if (event.data) {
+      const data = event.data.json();
+      payload = { title: data.title ?? payload.title, body: data.body ?? payload.body };
+    }
+  } catch {
+    // ignore parse errors, use default
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: "/icons/icon-192x192.png",
+      badge: "/icons/icon-96x96.png",
+      tag: "budgetbitch-push",
+      data: { url: "/dashboard" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = (event.notification.data && event.notification.data.url) || "/dashboard";
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clientList) => {
+        for (const client of clientList) {
+          if ("focus" in client) {
+            client.navigate(target);
+            return client.focus();
+          }
+        }
+        return self.clients.openWindow(target);
+      }),
+  );
 });

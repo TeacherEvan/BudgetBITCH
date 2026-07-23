@@ -1,7 +1,7 @@
 // components/privacy/weekly-disclaimer.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { ShieldCheck } from 'lucide-react';
 
@@ -41,15 +41,10 @@ function currentIsoWeek(): string {
 
 export function WeeklyPrivacyDisclaimer({ locale }: { locale: 'th' | 'en' }) {
   const l = LABELS[locale];
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    if (typeof localStorage === 'undefined') return;
-    const acknowledged = localStorage.getItem(STORAGE_KEY);
-    if (acknowledged !== currentIsoWeek()) {
-      setOpen(true);
-    }
-  }, []);
+  const [open, setOpen] = useState(() => {
+    if (typeof localStorage === 'undefined') return false;
+    return localStorage.getItem(STORAGE_KEY) !== currentIsoWeek();
+  });
 
   const acknowledge = () => {
     try {
