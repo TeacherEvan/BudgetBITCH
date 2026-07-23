@@ -242,7 +242,7 @@ export function ConvexPasswordAuthForm({
       <button type="submit" className="bb-button-primary w-full justify-center md:w-auto" disabled={isSubmitting}>
         {isSubmitting ? "Working..." : submitLabel}
       </button>
-      <p className="bb-mini-copy text-sm">{helperText}</p>
+      {helperText ? <p className="bb-mini-copy text-sm">{helperText}</p> : null}
     </form>
   );
 }

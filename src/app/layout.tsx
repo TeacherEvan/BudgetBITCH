@@ -5,8 +5,6 @@ import './globals.css';
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   viewportFit: 'cover',
   themeColor: [
     { media: '(prefers-color-scheme: dark)', color: '#0a0a0f' },
@@ -39,8 +37,21 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: 'Budget-BOSS',
+  title: 'Budget-BOSS — Plan First. Panic Less.',
   description: 'Plan first. Panic less. A privacy-first budgeting app with multi-currency and offline support.',
+  openGraph: {
+    title: 'Budget-BOSS — Plan First. Panic Less.',
+    description: 'Privacy-first budgeting with multi-currency and offline support.',
+    url: 'https://budget-bitch-green.vercel.app/',
+    siteName: 'Budget-BOSS',
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Budget-BOSS — Plan First. Panic Less.',
+    description: 'Privacy-first budgeting with multi-currency and offline support.',
+  },
 };
 
 export default async function RootLayout({
@@ -58,8 +69,6 @@ export default async function RootLayout({
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#0a0a0f" media="(prefers-color-scheme: dark)" />
-        <meta name="theme-color" content="#f5d742" media="(prefers-color-scheme: light)" />
       </head>
       <body className="flex min-h-screen flex-col bg-black text-white">
         <ConvexClientProvider>

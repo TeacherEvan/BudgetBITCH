@@ -1,5 +1,5 @@
 import type { SMSPattern } from '../types';
-import { normalizeAmount, normalizeDate, extractMerchant } from '../detect';
+import { normalizeAmount, normalizeDate } from '../detect';
 
 export const sgPatterns: SMSPattern[] = [
   {

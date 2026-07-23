@@ -151,7 +151,7 @@ export const listMyAccounts = query({
     const joinedBoardRows = await ctx.db
       .query("boardMembers")
       .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
+      .take(50);
     const joined = (
       await Promise.all(
         joinedBoardRows
@@ -228,11 +228,12 @@ export const getAccount = query({
       )
       .unique();
     if (!acc || !acc.boardId) return null;
-    const memberRows = await ctx.db
+    const isMember = await ctx.db
       .query("boardMembers")
-      .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
-      .collect();
-    const isMember = memberRows.some((r) => r.userId === userId);
+      .withIndex("by_user_and_board", (q) =>
+        q.eq("userId", userId).eq("boardId", acc.boardId!),
+      )
+      .first();
     if (!isMember) return null;
     return {
       accountId: acc.accountId,

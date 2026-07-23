@@ -54,7 +54,8 @@ export default defineSchema({
     joinedAt: v.number(),
   })
     .index("by_user", ["userId"])
-    .index("by_board", ["boardId"]),
+    .index("by_board", ["boardId"])
+    .index("by_user_and_board", ["userId", "boardId"]),
 
   // Multi-member shared board (generalizes the couple sharedBoards).
   accountBoards: defineTable({

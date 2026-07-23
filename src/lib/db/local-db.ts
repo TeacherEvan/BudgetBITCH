@@ -111,6 +111,7 @@ export interface BudgetBITCHDB extends DBSchema {
 const DB_NAME = 'budgetbitch';
 const DB_VERSION = 3;
 let dbInstance: IDBPDatabase<BudgetBITCHDB> | null = null;
+let dbPromise: Promise<IDBPDatabase<BudgetBITCHDB>> | null = null;
 
 // Test-only hook: drop the cached connection so the next getDB() re-opens the
 // SAME persisted IndexedDB.
@@ -123,6 +124,7 @@ export function __closeDbForTest(): void {
     }
     dbInstance = null;
   }
+  dbPromise = null;
 }
 
 // Singleton proxy for SSR rendering to avoid re-allocating proxies per SSR invocation
@@ -168,8 +170,9 @@ export async function getDB(): Promise<IDBPDatabase<BudgetBITCHDB>> {
   }
 
   if (dbInstance) return dbInstance;
+  if (dbPromise) return dbPromise;
 
-  dbInstance = await openDB<BudgetBITCHDB>(DB_NAME, DB_VERSION, {
+  dbPromise = openDB<BudgetBITCHDB>(DB_NAME, DB_VERSION, {
     upgrade(db, oldVersion, newVersion) {
       if (!db.objectStoreNames.contains('wizardProfile')) db.createObjectStore('wizardProfile');
       if (!db.objectStoreNames.contains('expenses')) {
@@ -208,9 +211,15 @@ export async function getDB(): Promise<IDBPDatabase<BudgetBITCHDB>> {
         console.log(`[Storage] Migrating database from version ${oldVersion} to ${newVersion}`);
       }
     },
+  }).then((db) => {
+    dbInstance = db;
+    return db;
+  }).catch((err) => {
+    dbPromise = null;
+    throw err;
   });
 
-  return dbInstance;
+  return dbPromise;
 }
 
 // Lossless-sync write bookkeeping
