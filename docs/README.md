@@ -9,6 +9,7 @@ This directory serves as the documentation repository. Both Human developers and
 ## 📋 Core Documentation Map
 
 - **[System Architecture](../ARCHITECTURE.md)**: Deep dive into the stack components (Next.js, Convex, Service Worker, next-intl), directory boundaries, runtime startup/language flows, and data ownership structure.
+- **[CI/CD & Automated Reliability](CI_CD.md)**: Operations manual for the 9-stage quality gate pipeline, GitHub Actions workflows, custom build/schema guards, Vercel git integration, and emergency production rollbacks.
 - **[Codebase Directory Index](CODEBASE_INDEX.md)**: Orientation graph and detailed description of directories, Next.js page routes, React UI components, database schemas, and shared modules.
 - **[Developer Tree Diagram](dev-tree-diagram.md)**: High-level visual map of the workspace structure and quick reference cheat sheet for file priority, data flow, and standard commands.
 - **[Design Context & Identity](../DESIGN_CONTEXT.md)**: Guidelines on user persona, direct unsentimental brand personality, color modes (light/dark themes), and design principles.
@@ -28,19 +29,25 @@ npm run dev
 # 2. Start the Convex backend sync/local development terminal
 npx convex dev
 
-# 3. Run type-checking
-npx tsc --noEmit
+# 3. Run full local CI quality gate pipeline (lint, typecheck, check:idb, test, test:convex, build)
+npm run ci
 
-# 4. Run unit and component tests (Vitest)
+# 4. Run type-checking
+npm run typecheck
+
+# 5. Run unit and component tests (Vitest)
 npm test
 
-# 5. Run end-to-end integration tests (Playwright)
+# 6. Run IndexedDB schema guard check
+npm run check:idb
+
+# 7. Run end-to-end integration tests (Playwright)
 npm run test:e2e
 
-# 6. Run linting
+# 8. Run linting
 npm run lint
 
-# 7. Compile production build
+# 9. Compile production build
 npm run build
 ```
 

@@ -1,18 +1,21 @@
-# .github/dependabot.yml
 version: 2
 updates:
-  - package-ecosystem: npm
-    directory: /
+  - package-ecosystem: "npm"
+    directory: "/"
     schedule:
-      interval: weekly
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
     open-pull-requests-limit: 5
-    groups:
-      dependencies:
-        patterns:
-          - "*"
+    labels:
+      - "dependencies"
+      - "automated"
 
-  - package-ecosystem: github-actions
-    directory: /
+  - package-ecosystem: "github-actions"
+    directory: "/"
     schedule:
-      interval: monthly
+      interval: "weekly"
     open-pull-requests-limit: 3
+    labels:
+      - "ci"
+      - "automated"

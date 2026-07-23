@@ -126,3 +126,14 @@ Work in the root app by default.
 - **Actions:** `"use node";` at top for Node.js built-ins; no `ctx.db` access; `fetch()` available in default runtime.
 - **HTTP:** Defined in `convex/http.ts` with `httpAction`; registered at exact path.
 - **Testing:** Use `convex-test` with `vitest`, `environment: "edge-runtime"`, module map from `import.meta.glob`.
+
+## 5) CI/CD & Automated Reliability Pipeline
+
+The repository operates a 9-stage shift-left quality gate pipeline in GitHub Actions (`.github/workflows/ci.yml`) and local execution via `npm run ci`:
+
+- **Static Quality Gates**: `lint` (ESLint v9 Flat Config), `typecheck` (`tsc --noEmit`), `idb-schema-guard` (`scripts/check-idb-stores.mjs`).
+- **Test Automation**: Vitest unit/component suite (`npm test`), Convex backend test suite (`npm run test:convex`), Playwright E2E integration suite (`npm run test:e2e`).
+- **Deployment Guards**: Production Convex URL deployment guard (`scripts/check-convex-deployment.mjs`) running during Vercel production prebuilds to prevent client environment variable drift.
+- **Rollback Mechanics**: Instant zero-rebuild production rollbacks via `.github/workflows/rollback.yml` (`npx vercel rollback`).
+- **Detailed Handbook**: Refer to [docs/CI_CD.md](docs/CI_CD.md) for full pipeline specs, secrets, and runbooks.
+

@@ -11,10 +11,14 @@
     "prebuild": "node ./scripts/check-convex-deployment.mjs",
     "start": "node ./scripts/run-with-sanitized-env.mjs next start",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "check:idb": "node scripts/check-idb-stores.mjs",
+    "check:convex": "node scripts/check-convex-deployment.mjs",
     "test": "vitest run",
     "test:convex": "vitest run --config convex/vitest.config.ts",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "ci": "node scripts/run-full-ci.mjs"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.6.0",

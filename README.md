@@ -5,7 +5,19 @@ BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.
 ## Navigation docs
 
 - [docs/README.md](docs/README.md) — Central documentation hub & navigation map
+- [docs/CI_CD.md](docs/CI_CD.md) — Master CI/CD & Automated Reliability Pipeline manual
 - [docs/CODEBASE_INDEX.md](docs/CODEBASE_INDEX.md) — Consolidated orientation map, route/module index, and practical filesystem tree
+
+## 🛡️ Quality Gates & CI/CD Pipeline
+
+The project enforces a 9-stage shift-left quality gate pipeline (`.github/workflows/ci.yml`). Developers and AI agents can run the full suite locally before pushing:
+
+```bash
+# Run all 6 local quality gates (lint, typecheck, check:idb, test, test:convex, build)
+npm run ci
+```
+
+- **Documentation**: See [docs/CI_CD.md](docs/CI_CD.md) for full gate specifications, build guard mechanics (`scripts/check-idb-stores.mjs`, `scripts/check-convex-deployment.mjs`), and Vercel rollback runbooks.
 
 ## Features
 

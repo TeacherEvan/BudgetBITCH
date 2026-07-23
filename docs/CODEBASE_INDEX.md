@@ -386,3 +386,18 @@ Useful anchors (representative files that exist):
 1. Edit `src/lib/db/local-db.ts`
 2. Update related hooks in `src/hooks/use-local-db.ts`
 3. Re-run related tests
+
+## 10. CI/CD & Automation Infrastructure
+
+| Directory / File | Purpose |
+| :--- | :--- |
+| `.github/workflows/ci.yml` | Main 9-stage quality gate pipeline (`lint`, `typecheck`, `test`, `convex-test`, `idb-schema-guard`, `deploy-guard`, `build`, `e2e`, `security-audit`) |
+| `.github/workflows/release-draft.yml` | Tag-triggered (`v*`) release notes and GitHub release drafting workflow |
+| `.github/workflows/rollback.yml` | Manual Vercel production deployment rollback workflow (`npx vercel rollback`) |
+| `.github/workflows/update-dependencies.yml` | Weekly automated dependency upgrade and security audit workflow |
+| `.github/dependabot.yml` | Dependabot configuration for weekly `npm` and `github-actions` vulnerability scanning |
+| `.github/PULL_REQUEST_TEMPLATE.md` | Mandatory PR quality gate checklist and risk assessment template |
+| `scripts/run-full-ci.mjs` | Local unified quality gate runner script (`npm run ci`) |
+| `scripts/check-idb-stores.mjs` | IndexedDB schema guard script ensuring object stores in `USER_DATA_STORES` are created in `upgrade()` |
+| `scripts/check-convex-deployment.mjs` | Vercel production prebuild guard ensuring `NEXT_PUBLIC_CONVEX_URL` matches `steady-ox-280` |
+| `docs/CI_CD.md` | Master operational handbook for CI/CD, build guards, secrets, and production rollbacks |

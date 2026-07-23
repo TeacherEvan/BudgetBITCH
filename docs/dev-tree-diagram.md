@@ -270,14 +270,26 @@ public/manifest.json.map
 # Dev
 npm run dev
 
+# Full CI Quality Gate Runner (lint, typecheck, check:idb, test, test:convex, build)
+npm run ci
+
+# Type check
+npm run typecheck
+
+# IndexedDB Schema Guard
+npm run check:idb
+
 # Build
 npm run build
 
 # Lint
 npm run lint
 
-# Test
+# Unit & Component Tests
 npm test
+
+# Convex Backend Tests
+npm run test:convex
 
 # Test watch
 npm run test:watch
@@ -287,9 +299,6 @@ npm run test:e2e
 
 # Convex dev
 npx convex dev
-
-# Type check
-npx tsc --noEmit
 ```
 
 ---
