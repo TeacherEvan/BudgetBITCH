@@ -44,7 +44,7 @@ export const upsertDailySnapshot = mutation({
     const existing = await ctx.db
       .query("dailySnapshots")
       .withIndex("by_user_and_date", (q) => q.eq("userId", userId).eq("date", today))
-      .unique();
+      .first();
 
     if (existing) {
       // Update existing snapshot

@@ -19,7 +19,7 @@ export async function ensureProfileDoc(
   const existing = await ctx.db
     .query("userProfiles")
     .withIndex("by_user", (q) => q.eq("userId", userId))
-    .unique();
+    .first();
   if (existing) return existing;
   for (let attempt = 0; attempt < 10; attempt++) {
     const shareCode = Math.random()

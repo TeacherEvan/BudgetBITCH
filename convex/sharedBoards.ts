@@ -51,7 +51,7 @@ async function ensureProfileDoc(
   const existing = await ctx.db
     .query("userProfiles")
     .withIndex("by_user", (q) => q.eq("userId", userId))
-    .unique();
+    .first();
   if (existing) return existing;
 
   // Create with a unique shareCode (retry on collision).

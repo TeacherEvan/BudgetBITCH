@@ -44,7 +44,7 @@ test("recordAgreement requires authentication", async () => {
       termsVersion: "2026-07-19",
       privacyVersion: "2026-07-19",
     }),
-  ).rejects.toThrow(/Not authenticated/);
+  ).rejects.toThrow(/Authentication required/);
 });
 
 test("recordAgreement captures optional client metadata", async () => {

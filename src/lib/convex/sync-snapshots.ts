@@ -158,11 +158,16 @@ export async function gatherSnapshotData(): Promise<GatherResult> {
   };
 }
 
+function sanitizeForConvex<T>(obj: T): T {
+  if (obj === undefined || obj === null) return obj;
+  return JSON.parse(JSON.stringify(obj));
+}
+
 export async function syncDailySnapshot(): Promise<{ success: boolean; date: string }> {
   const today = new Date().toISOString().split('T')[0];
 
   try {
-    const syncArgs = await gatherSnapshotData();
+    const syncArgs = sanitizeForConvex(await gatherSnapshotData());
 
     const convex = getConvexClient();
     if (!convex) {
@@ -181,7 +186,7 @@ export async function syncDailySnapshot(): Promise<{ success: boolean; date: str
     return { success: true, date: today };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    if (errorMessage.includes("Authentication required")) {
+    if (errorMessage.includes("Authentication required") || errorMessage.includes("Authentication") || errorMessage.includes("Unauthenticated")) {
       console.log('User is not authenticated yet. Queueing snapshot offline.');
     } else {
       console.error('Sync failed:', error);
@@ -235,8 +240,9 @@ export function registerSyncWorker() {
 export async function queueOfflineSnapshot(data: SyncSnapshotArgs) {
   if (typeof window === 'undefined') return;
   
+  const cleanData = sanitizeForConvex(data);
   const queue = JSON.parse(localStorage.getItem('budgetbitch:offlineQueue') || '[]');
-  queue.push({ data, timestamp: Date.now() });
+  queue.push({ data: cleanData, timestamp: Date.now() });
   localStorage.setItem('budgetbitch:offlineQueue', JSON.stringify(queue));
   
   // Try to sync immediately if online
@@ -265,12 +271,13 @@ export async function flushOfflineQueue() {
   const remaining = [...queue];
   for (const item of queue) {
     try {
-      await convex.mutation(api.snapshots.upsertDailySnapshot, item.data);
+      const cleanData = sanitizeForConvex(item.data);
+      await convex.mutation(api.snapshots.upsertDailySnapshot, cleanData);
       console.log('Flushed offline snapshot:', item.timestamp);
       remaining.shift(); // Remove successfully flushed item
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes("Authentication required")) {
+      if (errorMessage.includes("Authentication required") || errorMessage.includes("Authentication") || errorMessage.includes("Unauthenticated")) {
         console.log('User is not authenticated yet. Postponing offline queue flush.');
       } else {
         console.error('Failed to flush offline snapshot:', error);
