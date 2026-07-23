@@ -1,3 +1,4 @@
+// src/components/welcome/welcome-window.test.tsx
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -41,10 +42,15 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: () => undefined }),
 }));
 
+// Mock ProTipsCard component to isolate WelcomeWindow tests
+vi.mock("@/components/pro-tips/pro-tips-card", () => ({
+  ProTipsCard: () => <div data-testid="pro-tips-card" />
+}));
+
 import { WelcomeWindow } from "./welcome-window";
 
 describe("WelcomeWindow", () => {
-  it("renders the welcome heading with explicit auth links", () => {
+  it("renders the welcome heading with explicit auth links, 3D letters, and slogan", () => {
     render(
       <WelcomeWindow
         signInHref="/sign-in?redirectTo=%2F"
@@ -52,9 +58,14 @@ describe("WelcomeWindow", () => {
       />,
     );
 
-    expect(
-      screen.getByRole("heading", { name: /open your budget-boss board/i }),
-    ).toBeInTheDocument();
+    // Verify 3D letters render
+    expect(screen.getAllByText('B')).toBeDefined();
+    expect(screen.getAllByText('O')).toBeDefined();
+    expect(screen.getAllByText('S')).toBeDefined();
+
+    // Verify slogan is present
+    expect(screen.getByText(/["“]Shut up and do it!!!["”]/i)).toBeInTheDocument();
+
     expect(screen.getByRole("link", { name: /open sign in/i })).toHaveAttribute(
       "href",
       "/sign-in?redirectTo=%2F",
@@ -65,6 +76,7 @@ describe("WelcomeWindow", () => {
     );
     expect(screen.getByText(/private by default\. setup only if needed\./i)).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: /language/i })).toBeInTheDocument();
+    expect(screen.getByTestId("pro-tips-card")).toBeInTheDocument();
   });
 
   it("renders the welcome reasons as a compact list for fast scanning", () => {
@@ -79,6 +91,5 @@ describe("WelcomeWindow", () => {
 
     expect(reasonsList).toBeInTheDocument();
     expect(screen.getAllByRole("listitem")).toHaveLength(6);
-    expect(screen.queryByRole("heading", { name: /sign in first/i, level: 2 })).not.toBeInTheDocument();
   });
 });

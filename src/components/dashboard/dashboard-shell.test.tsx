@@ -21,6 +21,10 @@ vi.mock('@/hooks/use-critical-expense', () => ({
   useCriticalExpense: () => ({ commitment: null, loading: false }),
 }));
 
+vi.mock('@/components/ui/sync-status-indicator', () => ({
+  SyncStatusIndicator: () => <div data-testid="sync-status-indicator" />,
+}));
+
 // The AccountSwitcher child uses useAccounts (Convex); mock it so the shell
 // test only exercises panel switching, not the accounts data layer.
 vi.mock('@/hooks/use-accounts', () => ({

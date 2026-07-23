@@ -4,13 +4,13 @@
 'use client';
 
 import { useState } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
-import { Plus, Check, Copy, Users, ArrowRightLeft, LogOut, Trash2 } from 'lucide-react';
+import { Plus, Users, ArrowRightLeft, LogOut, Trash2 } from 'lucide-react';
 import { useConvexAuth } from '@convex-dev/auth/react';
 import { useAccounts } from '@/hooks/use-accounts';
 import { useAccountSync } from '@/hooks/use-account-sync';
 import { useExpenses, useIncomes } from '@/hooks/use-local-db';
 import { SyncedAccountDashboard } from './synced-account-dashboard';
+import { AccountInviteModal } from './account-invite-modal';
 import {
   UMBRELLA_KEYS,
   UMBRELLAS,
@@ -50,7 +50,6 @@ export function AccountsView({ locale, onLocaleChange }: AccountsViewProps) {
   const [newUmbrella, setNewUmbrella] = useState<UmbrellaKey | null>(null);
   const [newName, setNewName] = useState('');
   const [busy, setBusy] = useState(false);
-  const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [expandedInvite, setExpandedInvite] = useState<string | null>(null);
   const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [generatingInvite, setGeneratingInvite] = useState(false);
@@ -94,16 +93,6 @@ export function AccountsView({ locale, onLocaleChange }: AccountsViewProps) {
       setExpandedInvite(accountId);
     } finally {
       setGeneratingInvite(false);
-    }
-  };
-
-  const handleCopy = async (code: string) => {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopiedCode(code);
-      setTimeout(() => setCopiedCode(null), 1500);
-    } catch {
-      /* clipboard unavailable */
     }
   };
 
@@ -261,34 +250,6 @@ export function AccountsView({ locale, onLocaleChange }: AccountsViewProps) {
                       </Button>
                     )}
                   </div>
-
-                  {expandedInvite === a.accountId && (inviteToken || a.inviteCode) && (
-                    <div className="mt-4 flex flex-col items-center gap-3 rounded-xl border border-[var(--gold-border-soft)] bg-[var(--bg-surface-2)] p-4">
-                      {(() => {
-                        const code = inviteToken ?? a.inviteCode!;
-                        return (
-                          <>
-                            <QRCodeSVG value={inviteUrl(code)} size={148} bgColor="#080600" fgColor="#F5D742" level="M" />
-                            <p className="text-xs text-[var(--text-2)]">{t('Scan to join, or share the link:', 'สแกนเพื่อเข้าร่วม หรือแชร์ลิงก์:')}</p>
-                            <div className="flex w-full items-center gap-2">
-                              <code className="flex-1 truncate rounded-lg bg-black/40 px-3 py-2 font-mono text-sm text-[var(--gold-bright)]">
-                                {code}
-                              </code>
-                              <Button variant="secondary" onClick={() => handleCopy(code)}>
-                                {copiedCode === code ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                              </Button>
-                            </div>
-                            <a
-                              href={inviteUrl(code)}
-                              className="w-full truncate text-center text-xs text-[var(--gold-bright)] underline"
-                            >
-                              {inviteUrl(code)}
-                            </a>
-                          </>
-                        );
-                      })()}
-                    </div>
-                  )}
                 </div>
               );
             })}
@@ -369,6 +330,24 @@ export function AccountsView({ locale, onLocaleChange }: AccountsViewProps) {
           </Button>
         </div>
       </Modal>
+
+      {(() => {
+        const inviteAccount = accounts.find((a) => a.accountId === expandedInvite);
+        const code = inviteToken ?? inviteAccount?.inviteCode;
+        return (
+          <AccountInviteModal
+            isOpen={!!expandedInvite && !!code}
+            onClose={() => {
+              setExpandedInvite(null);
+              setInviteToken(null);
+            }}
+            inviteCode={code || ''}
+            inviteUrl={code ? inviteUrl(code) : ''}
+            accountName={inviteAccount?.name || ''}
+            locale={locale}
+          />
+        );
+      })()}
     </div>
   );
 }
