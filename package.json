@@ -17,6 +17,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.6.0",
     "@convex-dev/auth": "^0.0.92",
     "@parcel/watcher": "^2.6.0",
     "@swc/core": "^1.15.46",

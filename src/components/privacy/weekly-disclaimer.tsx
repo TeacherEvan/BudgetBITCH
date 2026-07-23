@@ -41,10 +41,17 @@ function currentIsoWeek(): string {
 
 export function WeeklyPrivacyDisclaimer({ locale }: { locale: 'th' | 'en' }) {
   const l = LABELS[locale];
-  const [open, setOpen] = useState(() => {
-    if (typeof localStorage === 'undefined') return false;
-    return localStorage.getItem(STORAGE_KEY) !== currentIsoWeek();
-  });
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(STORAGE_KEY) !== currentIsoWeek()) {
+        setOpen(true);
+      }
+    } catch {
+      // ignore storage failures (private mode)
+    }
+  }, []);
 
   const acknowledge = () => {
     try {
