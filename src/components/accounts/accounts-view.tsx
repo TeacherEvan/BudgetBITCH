@@ -87,10 +87,14 @@ export function AccountsView({ locale, onLocaleChange }: AccountsViewProps) {
 
   const handleInvite = async (accountId: string) => {
     setGeneratingInvite(true);
+    setErrorMsg(null);
     try {
       const token = await createInviteToken(accountId);
       setInviteToken(token);
       setExpandedInvite(accountId);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMsg(msg);
     } finally {
       setGeneratingInvite(false);
     }

@@ -450,23 +450,34 @@ export const createInviteToken = mutation({
       .query("accounts")
       .withIndex("by_accountId", (q) => q.eq("accountId", args.accountId))
       .unique();
-    if (!acc) throw new Error("Account not found");
-    if (acc.ownerId !== userId) throw new Error("Only the owner can invite");
-    if (!acc.boardId) throw new Error("Account has no shared board");
+    if (!acc) throw new ConvexError("Account not found");
+    if (acc.ownerId !== userId) throw new ConvexError("Only the owner can invite");
+    if (!acc.boardId) throw new ConvexError("Account has no shared board");
 
     const memberRows = await ctx.db
       .query("boardMembers")
       .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
       .collect();
+
+    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+    const now = Date.now();
     const tokenRows = await ctx.db
       .query("invites")
       .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
       .collect();
-    const outstanding = tokenRows.filter(
-      (r) => r.status === "pending" && !r.toUserId,
+
+    for (const r of tokenRows) {
+      if (r.status === "pending" && !r.toUserId && now - r.createdAt > SEVEN_DAYS_MS) {
+        await ctx.db.patch(r._id, { status: "expired" });
+      }
+    }
+
+    const activeOutstanding = tokenRows.filter(
+      (r) => r.status === "pending" && !r.toUserId && (now - r.createdAt <= SEVEN_DAYS_MS),
     ).length;
-    if (memberRows.length + outstanding >= MAX_MEMBERS) {
-      throw new Error(`An account can have at most ${MAX_MEMBERS} members`);
+
+    if (memberRows.length + activeOutstanding >= MAX_MEMBERS) {
+      throw new ConvexError(`An account can have at most ${MAX_MEMBERS} members`);
     }
 
     const token =
