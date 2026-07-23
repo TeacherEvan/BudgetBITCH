@@ -77,11 +77,9 @@ export const ensureProfile = mutation({
     try {
       userId = await getAuthUserId(ctx);
     } catch (e) {
-      throw new ConvexError(
-        `Auth failed in ensureProfile: ${e instanceof Error ? e.message : String(e)}`,
-      );
+      return null;
     }
-    if (!userId) throw new ConvexError("Authentication required");
+    if (!userId) return null;
     const profile = await ensureProfileDoc(ctx, userId);
     return {
       shareCode: profile.shareCode,
