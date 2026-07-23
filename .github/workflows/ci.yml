@@ -198,3 +198,25 @@ jobs:
 
       - name: Audit (high)
         run: npm audit --audit-level=high
+
+  idb-schema-guard:
+    name: IndexedDB Schema Guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Fails the build if any store in USER_DATA_STORES lacks a
+      # createObjectStore() call in upgrade() — prevents orphaned-store
+      # regressions (real prod bug, 2026-07-24).
+      - name: Verify every USER_DATA_STORES entry is created in upgrade()
+        run: node scripts/check-idb-stores.mjs
