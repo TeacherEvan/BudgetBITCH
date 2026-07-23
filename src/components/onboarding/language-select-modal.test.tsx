@@ -16,7 +16,7 @@ describe('LanguageSelectModal', () => {
     
     expect(screen.getByRole('button', { name: /ไทย.*Thai/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /English/i })).toBeInTheDocument();
-    expect(screen.getByText('Welcome to BudgetBITCH')).toBeInTheDocument();
+    expect(screen.getByText('Welcome to Budget-BOSS')).toBeInTheDocument();
     expect(screen.getByText('Choose your language to get started')).toBeInTheDocument();
   });
 
@@ -48,7 +48,7 @@ describe('LanguageSelectModal', () => {
   it('does not render when isOpen is false', () => {
     render(<LanguageSelectModal isOpen={false} onComplete={mockOnComplete} />);
     
-    expect(screen.queryByText('Welcome to BudgetBITCH')).not.toBeInTheDocument();
+    expect(screen.queryByText('Welcome to Budget-BOSS')).not.toBeInTheDocument();
     expect(mockOnComplete).not.toHaveBeenCalled();
   });
 

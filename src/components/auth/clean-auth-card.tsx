@@ -46,7 +46,7 @@ export function CleanAuthCard({ initialFlow, redirectTo = "/dashboard" }: CleanA
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
           }}>
-            BudgetBITCH
+            Budget-BOSS
           </span>
           <LocaleSwitcher />
         </div>

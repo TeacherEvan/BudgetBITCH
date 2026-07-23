@@ -4,10 +4,10 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => {
     const translations: Record<string, string> = {
-      brand: "BudgetBITCH",
-      heading: "Open your BudgetBITCH board",
+      brand: "Budget-BOSS",
+      heading: "Open your Budget-BOSS board",
       description:
-        "Sign in to unlock your root flow. After that, BudgetBITCH can send you into the one-time startup questionnaire or straight to the landing board based on your saved startup progress.",
+        "Sign in to unlock your root flow. After that, Budget-BOSS can send you into the one-time startup questionnaire or straight to the landing board based on your saved startup progress.",
       openSignIn: "Open sign in",
       openSignUp: "Open sign-up",
       privacyPromise: "Private by default. Setup only if needed.",
@@ -17,7 +17,7 @@ vi.mock("next-intl", () => ({
       "quickReasons.keepItShort.title": "Keep the first step short",
       "quickReasons.keepItShort.description": "The startup questionnaire only appears after sign-in and only when your first-run progress is still incomplete.",
       "quickReasons.moveWithoutSprawl.title": "Move without the sprawl",
-      "quickReasons.moveWithoutSprawl.description": "BudgetBITCH keeps the entry path dense, readable, and ready for quick scanning on smaller screens.",
+      "quickReasons.moveWithoutSprawl.description": "Budget-BOSS keeps the entry path dense, readable, and ready for quick scanning on smaller screens.",
       rootFlow: "Root flow",
       authFirstThenSetup: "Auth first, then setup",
       rootFlowDescription:
@@ -53,7 +53,7 @@ describe("WelcomeWindow", () => {
     );
 
     expect(
-      screen.getByRole("heading", { name: /open your budgetbitch board/i }),
+      screen.getByRole("heading", { name: /open your budget-boss board/i }),
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /open sign in/i })).toHaveAttribute(
       "href",

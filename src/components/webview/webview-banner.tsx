@@ -42,7 +42,7 @@ export function WebViewBanner() {
   return (
     <div className="fixed inset-x-0 top-0 z-[60] bg-amber-500 px-4 py-3 text-center text-sm font-semibold text-black">
       <p className="mb-1">
-        For the full BudgetBITCH experience (including sign-in), open this page
+        For the full Budget-BOSS experience (including sign-in), open this page
         in your browser.
       </p>
       <div className="flex items-center justify-center gap-3">

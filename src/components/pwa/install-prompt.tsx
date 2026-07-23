@@ -108,7 +108,7 @@ export function PWAInstallPrompt({
 
   const labels = {
     th: {
-      title: 'ติดตั้ง BudgetBITCH',
+      title: 'ติดตั้ง Budget-BOSS',
       description: 'เพิ่มลงหน้าจอหลักเพื่อเข้าถึงง่ายขึ้น ทำงานออฟไลน์ได้',
       install: 'ติดตั้ง',
       preparing: 'กำลังเตรียมการ...',
@@ -131,7 +131,7 @@ export function PWAInstallPrompt({
       ]
     },
     en: {
-      title: 'Install BudgetBITCH',
+      title: 'Install Budget-BOSS',
       description: 'Add to home screen for quick access. Works offline.',
       install: 'Install',
       preparing: 'Preparing...',

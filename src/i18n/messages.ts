@@ -93,10 +93,10 @@ export const localeMessages = {
       },
     },
     welcome: {
-      brand: "BudgetBITCH",
-      heading: "Open your BudgetBITCH board",
+      brand: "Budget-BOSS",
+      heading: "Open your Budget-BOSS board",
       description:
-        "Sign in to unlock your root flow. After that, BudgetBITCH can send you into the one-time startup questionnaire or straight to the landing board based on your saved startup progress.",
+        "Sign in to unlock your root flow. After that, Budget-BOSS can send you into the one-time startup questionnaire or straight to the landing board based on your saved startup progress.",
       openSignIn: "Open sign in",
       openSignUp: "Open sign-up",
       privacyPromise: "Private by default. Setup only if needed.",
@@ -115,7 +115,7 @@ export const localeMessages = {
         moveWithoutSprawl: {
           title: "Move without the sprawl",
           description:
-            "BudgetBITCH keeps the entry path dense, readable, and ready for quick scanning on smaller screens.",
+            "Budget-BOSS keeps the entry path dense, readable, and ready for quick scanning on smaller screens.",
         },
       },
       rootFlow: "Root flow",
@@ -134,7 +134,7 @@ export const localeMessages = {
       kicker: "Startup questionnaire",
       title: "Ballpark expenses",
       description:
-        "Add rough recurring costs first so BudgetBITCH can open with a practical money baseline instead of a blank board.",
+        "Add rough recurring costs first so Budget-BOSS can open with a practical money baseline instead of a blank board.",
       topCategoriesTitle: "Common expense titles",
       entryLabel: "Expense title",
       entryPlaceholder: "Search or select a common expense",
@@ -172,21 +172,21 @@ export const localeMessages = {
       secureAccess: "Secure access",
       useGoogleToStart: "Create your account",
       useGoogleToContinue: "Use your account",
-      googleOnly: "Convex Auth creates and protects BudgetBITCH accounts.",
+      googleOnly: "Convex Auth creates and protects Budget-BOSS accounts.",
       secureSignIn: "Use your email and password to open the same account on any device.",
       gmailPrivacy: "No Google OAuth client or user-managed env file is required for login.",
       minimalData:
-        "BudgetBITCH keeps only the minimal account, workspace, preference, and integration data it needs to run.",
+        "Budget-BOSS keeps only the minimal account, workspace, preference, and integration data it needs to run.",
       whyThisStepExists: "Why this step exists",
       localProfileFirst: "Local profile first",
       localProfileDescription:
-        "BudgetBITCH verifies the Convex Auth account, then creates your local profile, personal workspace, and default workspace preference once so the app can load the right data shape on the server.",
+        "Budget-BOSS verifies the Convex Auth account, then creates your local profile, personal workspace, and default workspace preference once so the app can load the right data shape on the server.",
     },
     signIn: {
       eyebrow: "Sign in",
       title: "Open your budget board",
       description:
-        "Use your BudgetBITCH account, then let the app finish local setup for your workspace before the dashboard opens.",
+        "Use your Budget-BOSS account, then let the app finish local setup for your workspace before the dashboard opens.",
       needAccount: "Need an account?",
       openSignUp: "Open sign-up",
       continueWithGoogle: "Sign in",
@@ -203,7 +203,7 @@ export const localeMessages = {
       eyebrow: "Create account",
       title: "Create your budget account",
       description:
-        "Choose an email and password. BudgetBITCH will create your account in Convex and finish local workspace setup next.",
+        "Choose an email and password. Budget-BOSS will create your account in Convex and finish local workspace setup next.",
       haveAccount: "Already have an account?",
       openSignIn: "Open sign in",
       submit: "Create account",
@@ -216,12 +216,12 @@ export const localeMessages = {
       eyebrow: "Continue",
       missingEmailTitle: "Add an email to finish setup",
       missingEmailDescription:
-        "BudgetBITCH requires an email-backed Convex account before local setup can finish.",
+        "Budget-BOSS requires an email-backed Convex account before local setup can finish.",
       missingEmailHelp:
         "Create or sign in with an email and password account, then return here to finish setup.",
       title: "Finish your local setup",
       description:
-        "BudgetBITCH needs one local profile and one personal workspace before the dashboard can load server-side data for this account.",
+        "Budget-BOSS needs one local profile and one personal workspace before the dashboard can load server-side data for this account.",
       whatHappensNext: "What happens next",
       oneSafeBootstrap: "One safe bootstrap",
       oneSafeBootstrapDescription:
@@ -230,7 +230,7 @@ export const localeMessages = {
         "This email is already linked to a different account. Sign out here, switch to the original sign-in method, or contact support before continuing.",
       bootstrapIssueTitle: "Setup needs attention",
       bootstrapIssueDescription:
-        "BudgetBITCH could not finish the secure Convex setup step for this session.",
+        "Budget-BOSS could not finish the secure Convex setup step for this session.",
       bootstrapIssueHelp:
         "Try again after the app owner checks Convex Auth and CONVEX_SYNC_SECRET settings.",
       continueToDashboard: "Continue to dashboard",
@@ -240,9 +240,9 @@ export const localeMessages = {
       eyebrow: "Security settings",
       title: "Open your account security controls.",
       description:
-        "BudgetBITCH uses Convex Auth email and password accounts. Use the \"Forgot password?\" link on sign-in to reset it by email. Email verification is a planned follow-up.",
+        "Budget-BOSS uses Convex Auth email and password accounts. Use the \"Forgot password?\" link on sign-in to reset it by email. Email verification is a planned follow-up.",
       googleAccountEyebrow: "Account credentials",
-      googleAccountTitle: "Use your BudgetBITCH account.",
+      googleAccountTitle: "Use your Budget-BOSS account.",
       googleAccountDescription:
         "Your account is created in Convex Auth with the email and password you choose on sign-up.",
       openGoogleSecurity: "Use a strong unique password with at least 8 characters.",
@@ -255,7 +255,7 @@ export const localeMessages = {
       privacyItems: {
         signInOnly: "Convex Auth verifies sign-in and returns your account identity.",
         minimalData:
-          "BudgetBITCH keeps only the local account, workspace, preference, and integration data it needs to run.",
+          "Budget-BOSS keeps only the local account, workspace, preference, and integration data it needs to run.",
         noMarketingData: "No marketing data is recorded or sold.",
         personalizationUserOnly:
           "Personalization stays user-only and is not shared with brokers or third-party advertisers.",
@@ -680,10 +680,10 @@ export const localeMessages = {
       },
     },
     welcome: {
-      brand: "BudgetBITCH",
-      heading: "打开你的 BudgetBITCH 控制板",
+      brand: "Budget-BOSS",
+      heading: "打开你的 Budget-BOSS 控制板",
       description:
-        "先登录，再解锁你的起始流程。之后，BudgetBITCH 会根据你保存的启动进度，把你带到一次性的启动问卷或直接进入主面板。",
+        "先登录，再解锁你的起始流程。之后，Budget-BOSS 会根据你保存的启动进度，把你带到一次性的启动问卷或直接进入主面板。",
       openSignIn: "打开登录",
       openSignUp: "打开注册",
       privacyPromise: "默认以隐私为先。只有在需要时才进入设置。",
@@ -699,7 +699,7 @@ export const localeMessages = {
         },
         moveWithoutSprawl: {
           title: "保持清晰，不要蔓延",
-          description: "BudgetBITCH 让入口流程紧凑、易读，并适合在较小屏幕上快速浏览。",
+          description: "Budget-BOSS 让入口流程紧凑、易读，并适合在较小屏幕上快速浏览。",
         },
       },
       rootFlow: "起始流程",
@@ -716,7 +716,7 @@ export const localeMessages = {
     launchWizard: {
       kicker: "启动问卷",
       title: "大致开支",
-      description: "先记录粗略的常见支出，让 BudgetBITCH 打开时就有一个实用的资金基线，而不是空白面板。",
+      description: "先记录粗略的常见支出，让 Budget-BOSS 打开时就有一个实用的资金基线，而不是空白面板。",
       topCategoriesTitle: "常见支出标题",
       entryLabel: "支出标题",
       entryPlaceholder: "搜索或选择一个常见支出",
@@ -753,19 +753,19 @@ export const localeMessages = {
       secureAccess: "安全访问",
       useGoogleToStart: "创建你的账户",
       useGoogleToContinue: "使用你的账户",
-      googleOnly: "Convex Auth 会创建并保护 BudgetBITCH 账户。",
+      googleOnly: "Convex Auth 会创建并保护 Budget-BOSS 账户。",
       secureSignIn: "使用邮箱和密码在任何设备上打开同一个账户。",
       gmailPrivacy: "登录不需要 Google OAuth 客户端，也不需要用户自己添加环境文件。",
-      minimalData: "BudgetBITCH 仅保留运行所需的最少账户、工作区、偏好设置和集成数据。",
+      minimalData: "Budget-BOSS 仅保留运行所需的最少账户、工作区、偏好设置和集成数据。",
       whyThisStepExists: "为什么需要这一步",
       localProfileFirst: "先建立本地资料",
       localProfileDescription:
-        "BudgetBITCH 会验证 Convex Auth 账户，然后创建本地资料、个人工作区和默认工作区偏好，这样服务器端才能加载正确的数据结构。",
+        "Budget-BOSS 会验证 Convex Auth 账户，然后创建本地资料、个人工作区和默认工作区偏好，这样服务器端才能加载正确的数据结构。",
     },
     signIn: {
       eyebrow: "登录",
       title: "打开你的预算面板",
-      description: "使用你的 BudgetBITCH 账户登录，然后让应用为你的工作区完成本地设置，再进入仪表板。",
+      description: "使用你的 Budget-BOSS 账户登录，然后让应用为你的工作区完成本地设置，再进入仪表板。",
       needAccount: "还没有账户？",
       openSignUp: "打开注册",
       continueWithGoogle: "登录",
@@ -779,7 +779,7 @@ export const localeMessages = {
     signUp: {
       eyebrow: "创建账户",
       title: "创建你的预算账户",
-      description: "选择邮箱和密码。BudgetBITCH 会在 Convex 中创建账户，然后继续完成本地工作区设置。",
+      description: "选择邮箱和密码。Budget-BOSS 会在 Convex 中创建账户，然后继续完成本地工作区设置。",
       haveAccount: "已有账户？",
       openSignIn: "打开登录",
       submit: "创建账户",
@@ -790,17 +790,17 @@ export const localeMessages = {
     authContinue: {
       eyebrow: "继续",
       missingEmailTitle: "添加邮箱以完成设置",
-      missingEmailDescription: "BudgetBITCH 需要一个带邮箱的 Convex 账户才能完成本地设置。",
+      missingEmailDescription: "Budget-BOSS 需要一个带邮箱的 Convex 账户才能完成本地设置。",
       missingEmailHelp: "请使用邮箱和密码创建账户或登录，然后回到这里完成设置。",
       title: "完成你的本地设置",
-      description: "在仪表板为此账户加载服务器端数据之前，BudgetBITCH 需要先创建一个本地资料和一个个人工作区。",
+      description: "在仪表板为此账户加载服务器端数据之前，Budget-BOSS 需要先创建一个本地资料和一个个人工作区。",
       whatHappensNext: "接下来会发生什么",
       oneSafeBootstrap: "一次安全初始化",
       oneSafeBootstrapDescription:
         "继续操作会一次性创建缺失记录，后续登录会复用这些记录，然后打开已选定工作区的仪表板。",
       relinkConflict: "这个邮箱已关联到另一个账户。请先退出，切换回原来的登录方式，或联系支持后再继续。",
       bootstrapIssueTitle: "设置需要处理",
-      bootstrapIssueDescription: "BudgetBITCH 无法为此会话完成安全的 Convex 设置步骤。",
+      bootstrapIssueDescription: "Budget-BOSS 无法为此会话完成安全的 Convex 设置步骤。",
       bootstrapIssueHelp: "请在应用所有者检查 Convex Auth 和 CONVEX_SYNC_SECRET 设置后重试。",
       continueToDashboard: "继续前往仪表板",
       rerunSafe: "如果当前会话已经创建好本地记录，重复执行也是安全的。",
@@ -809,9 +809,9 @@ export const localeMessages = {
       eyebrow: "安全设置",
       title: "打开你的账户安全控制。",
       description:
-        "BudgetBITCH 使用 Convex Auth 邮箱和密码账户。第一版尚未启用密码重置和邮箱验证。",
+        "Budget-BOSS 使用 Convex Auth 邮箱和密码账户。第一版尚未启用密码重置和邮箱验证。",
       googleAccountEyebrow: "账户凭据",
-      googleAccountTitle: "使用你的 BudgetBITCH 账户。",
+      googleAccountTitle: "使用你的 Budget-BOSS 账户。",
       googleAccountDescription:
         "你的账户会使用注册时选择的邮箱和密码创建在 Convex Auth 中。",
       openGoogleSecurity: "使用至少 8 个字符的强且唯一的密码。",
@@ -823,7 +823,7 @@ export const localeMessages = {
       privacyEyebrow: "隐私",
       privacyItems: {
         signInOnly: "Convex Auth 会验证登录并返回你的账户身份。",
-        minimalData: "BudgetBITCH 仅保留运行所需的本地账户、工作区、偏好设置和集成数据。",
+        minimalData: "Budget-BOSS 仅保留运行所需的本地账户、工作区、偏好设置和集成数据。",
         noMarketingData: "不会记录或出售任何营销数据。",
         personalizationUserOnly: "个性化仅供用户本人使用，不会分享给数据经纪商或第三方广告商。",
         gmailPrivacy: "登录不需要 Google OAuth 客户端，也不需要用户自己添加环境文件。",
@@ -1296,10 +1296,10 @@ export const localeMessages = {
       },
     },
     welcome: {
-      brand: "BudgetBITCH",
-      heading: "เปิดบอร์ด BudgetBITCH ของคุณ",
+      brand: "Budget-BOSS",
+      heading: "เปิดบอร์ด Budget-BOSS ของคุณ",
       description:
-        "ลงชื่อเข้าใช้ก่อนเพื่อปลดล็อกเส้นทางเริ่มต้นของคุณ หลังจากนั้น BudgetBITCH จะพาคุณไปยังแบบสอบถามเริ่มต้นครั้งเดียว หรือเข้าสู่บอร์ดหลักตามความคืบหน้าที่บันทึกไว้",
+        "ลงชื่อเข้าใช้ก่อนเพื่อปลดล็อกเส้นทางเริ่มต้นของคุณ หลังจากนั้น Budget-BOSS จะพาคุณไปยังแบบสอบถามเริ่มต้นครั้งเดียว หรือเข้าสู่บอร์ดหลักตามความคืบหน้าที่บันทึกไว้",
       openSignIn: "เปิดหน้าลงชื่อเข้าใช้",
       openSignUp: "เปิดหน้าสมัครใช้งาน",
       privacyPromise: "เป็นส่วนตัวโดยค่าเริ่มต้น ตั้งค่าเพิ่มเมื่อจำเป็นเท่านั้น",
@@ -1315,7 +1315,7 @@ export const localeMessages = {
         },
         moveWithoutSprawl: {
           title: "ไปต่อได้โดยไม่รก",
-          description: "BudgetBITCH ทำให้เส้นทางเริ่มต้นกระชับ อ่านง่าย และสแกนได้เร็วบนหน้าจอขนาดเล็ก",
+          description: "Budget-BOSS ทำให้เส้นทางเริ่มต้นกระชับ อ่านง่าย และสแกนได้เร็วบนหน้าจอขนาดเล็ก",
         },
       },
       rootFlow: "เส้นทางเริ่มต้น",
@@ -1333,7 +1333,7 @@ export const localeMessages = {
       kicker: "แบบสอบถามเริ่มต้น",
       title: "ค่าใช้จ่ายคร่าว ๆ",
       description:
-        "เพิ่มค่าใช้จ่ายประจำแบบคร่าว ๆ ก่อน เพื่อให้ BudgetBITCH เปิดมาพร้อมฐานเงินที่ใช้งานได้ แทนที่จะเป็นกระดานว่าง",
+        "เพิ่มค่าใช้จ่ายประจำแบบคร่าว ๆ ก่อน เพื่อให้ Budget-BOSS เปิดมาพร้อมฐานเงินที่ใช้งานได้ แทนที่จะเป็นกระดานว่าง",
       topCategoriesTitle: "หมวดค่าใช้จ่ายยอดนิยม",
       entryLabel: "ชื่อค่าใช้จ่าย",
       entryPlaceholder: "ค้นหาหรือเลือกค่าใช้จ่ายที่พบบ่อย",
@@ -1371,19 +1371,19 @@ export const localeMessages = {
       secureAccess: "การเข้าถึงอย่างปลอดภัย",
       useGoogleToStart: "สร้างบัญชีของคุณ",
       useGoogleToContinue: "ใช้บัญชีของคุณ",
-      googleOnly: "Convex Auth สร้างและปกป้องบัญชี BudgetBITCH",
+      googleOnly: "Convex Auth สร้างและปกป้องบัญชี Budget-BOSS",
       secureSignIn: "ใช้อีเมลและรหัสผ่านเพื่อเปิดบัญชีเดียวกันบนทุกอุปกรณ์",
       gmailPrivacy: "การเข้าสู่ระบบไม่ต้องใช้ Google OAuth client หรือไฟล์ env จากผู้ใช้",
-      minimalData: "BudgetBITCH จะเก็บเฉพาะข้อมูลบัญชี พื้นที่ทำงาน การตั้งค่า และการเชื่อมต่อที่จำเป็นต่อการทำงานเท่านั้น",
+      minimalData: "Budget-BOSS จะเก็บเฉพาะข้อมูลบัญชี พื้นที่ทำงาน การตั้งค่า และการเชื่อมต่อที่จำเป็นต่อการทำงานเท่านั้น",
       whyThisStepExists: "ทำไมต้องมีขั้นตอนนี้",
       localProfileFirst: "สร้างโปรไฟล์ภายในก่อน",
       localProfileDescription:
-        "BudgetBITCH ตรวจสอบบัญชี Convex Auth จากนั้นจึงสร้างโปรไฟล์ภายใน พื้นที่ทำงานส่วนตัว และค่ากำหนดเริ่มต้น เพื่อให้เซิร์ฟเวอร์โหลดข้อมูลได้ถูกต้อง",
+        "Budget-BOSS ตรวจสอบบัญชี Convex Auth จากนั้นจึงสร้างโปรไฟล์ภายใน พื้นที่ทำงานส่วนตัว และค่ากำหนดเริ่มต้น เพื่อให้เซิร์ฟเวอร์โหลดข้อมูลได้ถูกต้อง",
     },
     signIn: {
       eyebrow: "ลงชื่อเข้าใช้",
       title: "เปิดบอร์ดงบประมาณของคุณ",
-      description: "ใช้บัญชี BudgetBITCH ของคุณ จากนั้นให้แอปตั้งค่าภายในสำหรับพื้นที่ทำงานก่อนเปิดแดชบอร์ด",
+      description: "ใช้บัญชี Budget-BOSS ของคุณ จากนั้นให้แอปตั้งค่าภายในสำหรับพื้นที่ทำงานก่อนเปิดแดชบอร์ด",
       needAccount: "ยังไม่มีบัญชี?",
       openSignUp: "เปิดหน้าสมัครใช้งาน",
       continueWithGoogle: "ลงชื่อเข้าใช้",
@@ -1397,7 +1397,7 @@ export const localeMessages = {
     signUp: {
       eyebrow: "สร้างบัญชี",
       title: "สร้างบัญชีงบประมาณของคุณ",
-      description: "เลือกอีเมลและรหัสผ่าน BudgetBITCH จะสร้างบัญชีใน Convex แล้วตั้งค่าพื้นที่ทำงานภายในต่อ",
+      description: "เลือกอีเมลและรหัสผ่าน Budget-BOSS จะสร้างบัญชีใน Convex แล้วตั้งค่าพื้นที่ทำงานภายในต่อ",
       haveAccount: "มีบัญชีอยู่แล้ว?",
       openSignIn: "เปิดหน้าลงชื่อเข้าใช้",
       submit: "สร้างบัญชี",
@@ -1408,17 +1408,17 @@ export const localeMessages = {
     authContinue: {
       eyebrow: "ดำเนินการต่อ",
       missingEmailTitle: "เพิ่มอีเมลเพื่อให้การตั้งค่าเสร็จสมบูรณ์",
-      missingEmailDescription: "BudgetBITCH ต้องใช้บัญชี Convex ที่มีอีเมลเพื่อให้การตั้งค่าภายในเสร็จสมบูรณ์",
+      missingEmailDescription: "Budget-BOSS ต้องใช้บัญชี Convex ที่มีอีเมลเพื่อให้การตั้งค่าภายในเสร็จสมบูรณ์",
       missingEmailHelp: "สร้างบัญชีหรือลงชื่อเข้าใช้ด้วยอีเมลและรหัสผ่าน แล้วกลับมาที่นี่เพื่อจบการตั้งค่า",
       title: "ตั้งค่าภายในของคุณให้เสร็จ",
-      description: "BudgetBITCH ต้องมีโปรไฟล์ภายในหนึ่งรายการและพื้นที่ทำงานส่วนตัวหนึ่งรายการก่อนที่แดชบอร์ดจะโหลดข้อมูลฝั่งเซิร์ฟเวอร์สำหรับบัญชีนี้",
+      description: "Budget-BOSS ต้องมีโปรไฟล์ภายในหนึ่งรายการและพื้นที่ทำงานส่วนตัวหนึ่งรายการก่อนที่แดชบอร์ดจะโหลดข้อมูลฝั่งเซิร์ฟเวอร์สำหรับบัญชีนี้",
       whatHappensNext: "จะเกิดอะไรขึ้นต่อไป",
       oneSafeBootstrap: "เริ่มต้นอย่างปลอดภัยเพียงครั้งเดียว",
       oneSafeBootstrapDescription:
         "การดำเนินการต่อจะสร้างข้อมูลที่ยังขาดอยู่เพียงครั้งเดียว ใช้ข้อมูลเดิมในครั้งถัดไป และเปิดแดชบอร์ดพร้อมเลือกพื้นที่ทำงานที่ได้ผลลัพธ์ไว้แล้ว",
       relinkConflict: "อีเมลนี้เชื่อมกับอีกบัญชีหนึ่งอยู่แล้ว โปรดออกจากระบบ สลับไปใช้วิธีลงชื่อเข้าใช้เดิม หรือติดต่อฝ่ายช่วยเหลือก่อนดำเนินการต่อ",
       bootstrapIssueTitle: "การตั้งค่าต้องตรวจสอบ",
-      bootstrapIssueDescription: "BudgetBITCH ยังทำขั้นตอนตั้งค่า Convex แบบปลอดภัยสำหรับเซสชันนี้ไม่สำเร็จ",
+      bootstrapIssueDescription: "Budget-BOSS ยังทำขั้นตอนตั้งค่า Convex แบบปลอดภัยสำหรับเซสชันนี้ไม่สำเร็จ",
       bootstrapIssueHelp: "ลองอีกครั้งหลังจากเจ้าของแอปตรวจสอบ Convex Auth และค่า CONVEX_SYNC_SECRET แล้ว",
       continueToDashboard: "ไปยังแดชบอร์ดต่อ",
       rerunSafe: "สามารถเรียกใช้อีกครั้งได้อย่างปลอดภัย หากเซสชันนี้ได้สร้างข้อมูลภายในไว้แล้ว",
@@ -1427,9 +1427,9 @@ export const localeMessages = {
       eyebrow: "การตั้งค่าความปลอดภัย",
       title: "เปิดตัวควบคุมความปลอดภัยของบัญชีคุณ",
       description:
-        "BudgetBITCH ใช้บัญชีอีเมลและรหัสผ่านของ Convex Auth รุ่นแรกนี้ยังไม่เปิดใช้การรีเซ็ตรหัสผ่านหรือยืนยันอีเมล",
+        "Budget-BOSS ใช้บัญชีอีเมลและรหัสผ่านของ Convex Auth รุ่นแรกนี้ยังไม่เปิดใช้การรีเซ็ตรหัสผ่านหรือยืนยันอีเมล",
       googleAccountEyebrow: "ข้อมูลบัญชี",
-      googleAccountTitle: "ใช้บัญชี BudgetBITCH ของคุณ",
+      googleAccountTitle: "ใช้บัญชี Budget-BOSS ของคุณ",
       googleAccountDescription:
         "บัญชีของคุณจะถูกสร้างใน Convex Auth ด้วยอีเมลและรหัสผ่านที่เลือกตอนสมัครใช้งาน",
       openGoogleSecurity: "ใช้รหัสผ่านที่เดายากและไม่ซ้ำ ความยาวอย่างน้อย 8 ตัวอักษร",
@@ -1442,7 +1442,7 @@ export const localeMessages = {
       privacyItems: {
         signInOnly: "Convex Auth ตรวจสอบการลงชื่อเข้าใช้และส่งคืนตัวตนของบัญชีคุณ",
         minimalData:
-          "BudgetBITCH จะเก็บเฉพาะข้อมูลบัญชีภายใน พื้นที่ทำงาน การตั้งค่า และการเชื่อมต่อที่จำเป็นต่อการทำงาน",
+          "Budget-BOSS จะเก็บเฉพาะข้อมูลบัญชีภายใน พื้นที่ทำงาน การตั้งค่า และการเชื่อมต่อที่จำเป็นต่อการทำงาน",
         noMarketingData: "ไม่มีการบันทึกหรือขายข้อมูลการตลาด",
         personalizationUserOnly:
           "การปรับแต่งจะใช้สำหรับผู้ใช้คนนั้นเท่านั้น และไม่แชร์กับนายหน้าข้อมูลหรือผู้ลงโฆษณาภายนอก",

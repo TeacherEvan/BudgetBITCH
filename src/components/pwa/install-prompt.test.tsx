@@ -36,7 +36,7 @@ describe('PWAInstallPrompt', () => {
   it('does not render immediately (waits for beforeinstallprompt)', () => {
     render(<PWAInstallPrompt onDismiss={mockOnDismiss} locale="en" />);
     
-    expect(screen.queryByText('Install BudgetBITCH')).not.toBeInTheDocument();
+    expect(screen.queryByText('Install Budget-BOSS')).not.toBeInTheDocument();
   });
 
   it('shows prompt after beforeinstallprompt event fires', async () => {
@@ -56,7 +56,7 @@ describe('PWAInstallPrompt', () => {
     });
     
     await waitFor(() => {
-      expect(screen.getByText('Install BudgetBITCH')).toBeInTheDocument();
+      expect(screen.getByText('Install Budget-BOSS')).toBeInTheDocument();
     });
   });
 
@@ -75,7 +75,7 @@ describe('PWAInstallPrompt', () => {
     });
     
     await waitFor(() => {
-      expect(screen.getByText('ติดตั้ง BudgetBITCH')).toBeInTheDocument();
+      expect(screen.getByText('ติดตั้ง Budget-BOSS')).toBeInTheDocument();
       expect(screen.getByText('เพิ่มลงหน้าจอหลักเพื่อเข้าถึงง่ายขึ้น ทำงานออฟไลน์ได้')).toBeInTheDocument();
       expect(screen.getByText('ติดตั้ง')).toBeInTheDocument();
       expect(screen.getByText('ภายหลัง')).toBeInTheDocument();
@@ -97,7 +97,7 @@ describe('PWAInstallPrompt', () => {
     });
     
     await waitFor(() => {
-      expect(screen.getByText('Install BudgetBITCH')).toBeInTheDocument();
+      expect(screen.getByText('Install Budget-BOSS')).toBeInTheDocument();
       expect(screen.getByText('Add to home screen for quick access. Works offline.')).toBeInTheDocument();
       expect(screen.getByText('Install')).toBeInTheDocument();
       expect(screen.getByText('Later')).toBeInTheDocument();
@@ -119,7 +119,7 @@ describe('PWAInstallPrompt', () => {
     });
     
     await waitFor(() => {
-      expect(screen.getByText('Install BudgetBITCH')).toBeInTheDocument();
+      expect(screen.getByText('Install Budget-BOSS')).toBeInTheDocument();
     });
     
     fireEvent.click(screen.getByRole('button', { name: /later/i }));
@@ -142,7 +142,7 @@ describe('PWAInstallPrompt', () => {
     });
     
     await waitFor(() => {
-      expect(screen.getByText('Install BudgetBITCH')).toBeInTheDocument();
+      expect(screen.getByText('Install Budget-BOSS')).toBeInTheDocument();
     });
     
     fireEvent.click(screen.getByLabelText('Dismiss'));
@@ -166,7 +166,7 @@ describe('PWAInstallPrompt', () => {
     });
     
     await waitFor(() => {
-      expect(screen.getByText('Install BudgetBITCH')).toBeInTheDocument();
+      expect(screen.getByText('Install Budget-BOSS')).toBeInTheDocument();
     });
     
     fireEvent.click(screen.getByRole('button', { name: /install/i }));
@@ -193,7 +193,7 @@ describe('PWAInstallPrompt', () => {
     });
     
     await waitFor(() => {
-      expect(screen.getByText('Install BudgetBITCH')).toBeInTheDocument();
+      expect(screen.getByText('Install Budget-BOSS')).toBeInTheDocument();
     });
     
     fireEvent.click(screen.getByRole('button', { name: /install/i }));
@@ -222,7 +222,7 @@ describe('PWAInstallPrompt', () => {
     
     render(<PWAInstallPrompt onDismiss={mockOnDismiss} locale="en" />);
     
-    expect(screen.queryByText('Install BudgetBITCH')).not.toBeInTheDocument();
+    expect(screen.queryByText('Install Budget-BOSS')).not.toBeInTheDocument();
   });
 
   it('shows universal fallback prompt if no beforeinstallprompt event fires after timeout', async () => {
@@ -235,7 +235,7 @@ describe('PWAInstallPrompt', () => {
       vi.advanceTimersByTime(4000);
     });
     
-    expect(screen.queryByText('Install BudgetBITCH')).toBeInTheDocument();
+    expect(screen.queryByText('Install Budget-BOSS')).toBeInTheDocument();
     
     vi.useRealTimers();
   });
@@ -249,7 +249,7 @@ describe('PWAInstallPrompt', () => {
       vi.advanceTimersByTime(4000);
     });
     
-    expect(screen.getByText('Install BudgetBITCH')).toBeInTheDocument();
+    expect(screen.getByText('Install Budget-BOSS')).toBeInTheDocument();
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /install/i }));

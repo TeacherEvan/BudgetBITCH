@@ -5,7 +5,6 @@ import { Wrench, Settings, BarChart2, PieChart, TrendingUp, Circle, ExternalLink
 import { useState } from 'react';
 import Link from 'next/link';
 import { Modal } from '@/components/ui/modal';
-import { Toggle } from '@/components/ui/toggle';
 import { useDisplayPrefs, type GraphType } from '@/hooks/use-display-prefs';
 import { useNewsPrefs, ALL_GENRES, type NewsGenre } from '@/hooks/use-news-prefs';
 import { SyncStatusIndicator } from '@/components/ui/sync-status-indicator';
@@ -13,8 +12,6 @@ import { SyncStatusIndicator } from '@/components/ui/sync-status-indicator';
 interface HeaderBarProps {
   locale: 'th' | 'en';
   onLocaleChange: (locale: 'th' | 'en') => void;
-  voiceEnabled?: boolean;
-  onVoiceToggle?: () => void;
 }
 
 const GRAPH_OPTIONS: { type: GraphType; icon: React.ReactNode; label: { th: string; en: string } }[] = [
@@ -33,7 +30,7 @@ const GENRE_LABELS: Record<NewsGenre, { th: string; en: string; emoji: string }>
   deals:    { th: 'โปรโมชั่น',   en: 'Deals',    emoji: '🛍️' },
 };
 
-export function HeaderBar({ locale, onLocaleChange, voiceEnabled = false, onVoiceToggle }: HeaderBarProps) {
+export function HeaderBar({ locale, onLocaleChange }: HeaderBarProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { graphType, setGraphType } = useDisplayPrefs();
   const { isGenreEnabled, toggleGenre } = useNewsPrefs();
@@ -78,11 +75,11 @@ export function HeaderBar({ locale, onLocaleChange, voiceEnabled = false, onVoic
             color: 'transparent',
           }}
         >
-          BudgetBITCH
+          Budget-BOSS
         </h1>
       </Link>
 
-      {/* Right: Sync Status + Quick Add + Voice pill + Settings wrench */}
+      {/* Right: Sync Status + Quick Add + Settings wrench */}
       <div className="flex items-center gap-2.5">
         <SyncStatusIndicator locale={locale} />
         <Link
@@ -93,15 +90,6 @@ export function HeaderBar({ locale, onLocaleChange, voiceEnabled = false, onVoic
           <span className="text-sm font-black">+</span>
           <span className="hidden sm:inline">{locale === 'th' ? 'บันทึกด่วน' : 'Quick Add'}</span>
         </Link>
-        <div className="hidden items-center gap-2 md:flex">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[rgba(248,243,232,0.5)]">Voice</span>
-          <Toggle
-            checked={voiceEnabled}
-            onCheckedChange={onVoiceToggle}
-            size="sm"
-            aria-label="Toggle voice guidance"
-          />
-        </div>
         <button
           type="button"
           onClick={() => setSettingsOpen(true)}
@@ -146,19 +134,7 @@ export function HeaderBar({ locale, onLocaleChange, voiceEnabled = false, onVoic
             </div>
           </section>
 
-          {/* Voice */}
-          <section>
-            <h3 className="mb-3 text-xs font-bold uppercase tracking-[0.15em] text-[#C9960C]">
-              {locale === 'th' ? 'เสียงช่วยแนะนำ' : 'Voice Assistant'}
-            </h3>
-            <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/4 px-4 py-3">
-              <div>
-                <p className="text-sm font-medium text-white">{locale === 'th' ? 'เปิดใช้เสียงช่วย' : 'Enable voice guidance'}</p>
-                <p className="text-xs text-white/50 mt-0.5">{locale === 'th' ? 'วิซาร์ดจะอ่านคำถามออกเสียง' : 'Wizard reads questions aloud'}</p>
-              </div>
-              <Toggle checked={voiceEnabled} onCheckedChange={onVoiceToggle} size="sm" />
-            </div>
-          </section>
+
 
           {/* Chart Type */}
           <section>

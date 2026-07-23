@@ -10,7 +10,7 @@ const COPY = {
   en: {
     title: "Reset your password",
     description:
-      "Enter the email for your BudgetBITCH account and we'll send a reset code.",
+      "Enter the email for your Budget-BOSS account and we'll send a reset code.",
     emailLabel: "Email address",
     submit: "Send reset code",
     sent: "If that email exists, a reset code is on its way. Check your inbox (and spam).",
@@ -19,7 +19,7 @@ const COPY = {
   },
   th: {
     title: "รีเซ็ตรหัสผ่าน",
-    description: "ป้อนอีเมลของบัญชี BudgetBITCH ของคุณ เราจะส่งรหัสรีเซ็ตให้",
+    description: "ป้อนอีเมลของบัญชี Budget-BOSS ของคุณ เราจะส่งรหัสรีเซ็ตให้",
     emailLabel: "ที่อยู่อีเมล",
     submit: "ส่งรหัสรีเซ็ต",
     sent: "หากอีเมลนี้มีในระบบ รหัสรีเซ็ตจะถูกส่งไปแล้ว ตรวจสอบกล่องจดหมาย (และสแปม)",
@@ -28,7 +28,7 @@ const COPY = {
   },
   zh: {
     title: "重置密码",
-    description: "输入你的 BudgetBITCH 账户邮箱，我们会发送重置验证码。",
+    description: "输入你的 Budget-BOSS 账户邮箱，我们会发送重置验证码。",
     emailLabel: "电子邮箱",
     submit: "发送验证码",
     sent: "如果该邮箱存在，重置验证码已发出。请查收收件箱（及垃圾邮件）。",
@@ -89,7 +89,7 @@ export function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) {
             WebkitTextFillColor: "transparent",
           }}
         >
-          BudgetBITCH
+          Budget-BOSS
         </span>
 
         <h1 className="mt-6 text-2xl font-bold text-white">{copy.title}</h1>

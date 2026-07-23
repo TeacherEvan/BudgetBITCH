@@ -26,7 +26,7 @@ function appOrigin(): string {
 }
 
 function resendFrom(): string {
-  return process.env.AUTH_EMAIL_FROM ?? "BudgetBITCH <onboarding@resend.dev>";
+  return process.env.AUTH_EMAIL_FROM ?? "Budget-BOSS <onboarding@resend.dev>";
 }
 
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
@@ -50,7 +50,7 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
             body: JSON.stringify({
               from: resendFrom(),
               to: [identifier],
-              subject: "Reset your BudgetBITCH password",
+              subject: "Reset your Budget-BOSS password",
               html: resetEmailHtml({ url: target, code: token }),
               text: resetEmailText({ url: target, code: token }),
             }),
@@ -65,7 +65,7 @@ export const signUp = signIn;
 
 function resetEmailHtml({ url, code }: { url: string; code: string }) {
   return `<div style="font-family:Inter,system-ui,sans-serif;color:#0f172a">
-  <h2>Reset your BudgetBITCH password</h2>
+  <h2>Reset your Budget-BOSS password</h2>
   <p>We received a request to reset your password. Use the code below on the
   reset page, or open the link to prefill it.</p>
   <p style="font-size:24px;letter-spacing:4px;font-weight:700">${code}</p>
@@ -76,7 +76,7 @@ function resetEmailHtml({ url, code }: { url: string; code: string }) {
 }
 
 function resetEmailText({ url, code }: { url: string; code: string }) {
-  return `Reset your BudgetBITCH password
+  return `Reset your Budget-BOSS password
 
 We received a request to reset your password. Use this code on the reset page:
 

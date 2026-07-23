@@ -18,7 +18,6 @@ import {
 } from 'lucide-react';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { useWizardProfile } from '@/hooks/use-local-db';
-import { useVoice } from '@/hooks/use-voice';
 import { useCriticalExpense } from '@/hooks/use-critical-expense';
 import { useSharedBoard } from '@/hooks/use-shared-board';
 import { useDisplayPrefs } from '@/hooks/use-display-prefs';
@@ -28,7 +27,6 @@ import { RequireAuth } from '@/components/auth/require-auth';
 import { useCurrencyOverride } from '@/hooks/use-currency-override';
 import { AccountSettingsCard } from '@/components/settings/account-settings-card';
 import { PreferenceSettingsCard } from '@/components/settings/preference-settings-card';
-import { VoiceSettingsCard } from '@/components/settings/voice-settings-card';
 import { PartnerSharingCard } from '@/components/settings/partner-sharing-card';
 import { DataBackupCard } from '@/components/settings/data-backup-card';
 
@@ -50,12 +48,6 @@ export default function SettingsPage() {
   };
 
   const { profile, clear: clearProfile } = useWizardProfile();
-  const {
-    settings: voiceSettings,
-    updateSettings: updateVoiceSettings,
-    toggleVoice,
-    isSupported,
-  } = useVoice(locale === 'th' ? 'th-TH' : 'en-US');
   const { commitment } = useCriticalExpense();
   const shared = useSharedBoard();
   const { graphType, setGraphType, accentColor, setAccentColor } = useDisplayPrefs();
@@ -145,14 +137,6 @@ export default function SettingsPage() {
             profile={profile}
             override={override}
             clearProfile={clearProfile}
-          />
-
-          <VoiceSettingsCard
-            locale={locale}
-            voiceSettings={voiceSettings}
-            updateVoiceSettings={updateVoiceSettings}
-            toggleVoice={toggleVoice}
-            isSupported={isSupported}
           />
 
           <PartnerSharingCard

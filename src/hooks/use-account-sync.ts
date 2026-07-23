@@ -93,8 +93,9 @@ export function useAccountSync(): UseAccountSync {
   const resolveActiveBoard = useCallback(async () => {
     const accountId = await getCurrentAccountId();
     const meta = await getLocalAccount(accountId);
-    boardIdRef.current = meta?.boardId ?? null;
-    setBoardId(meta?.boardId ?? null);
+    const activeBid = meta?.boardId ?? (accountId === "personal" ? "personal" : null);
+    boardIdRef.current = activeBid;
+    setBoardId(activeBid);
   }, []);
 
   useEffect(() => {

@@ -20,7 +20,6 @@ type Status = 'idle' | 'success' | 'error';
 
 const RESET_PRESERVE = [
   'budgetbitch:theme',
-  'voiceSettings',
   'bb-locale',
   'budgetbitch:offlineQueue',
   'budgetbitch:boardQueue',

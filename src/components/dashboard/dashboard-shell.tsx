@@ -1,7 +1,7 @@
 // components/dashboard/dashboard-shell.tsx
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { X, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -32,9 +32,10 @@ import { CashFlowProjectionCard } from '@/components/dashboard/cash-flow-project
 import { CategoryPivotCard } from '@/components/dashboard/category-pivot-card';
 import { BudgetVarianceGrid } from '@/components/dashboard/budget-variance-grid';
 
-export type PanelKey = 'expenses' | 'inflow' | 'budget' | 'budgetAlerts' | 'bills' | 'goals' | 'netWorth' | 'subscriptions' | 'emergency' | 'debt' | 'forecast';
+export type PanelKey = 'daily_budget' | 'expenses' | 'inflow' | 'budget' | 'budgetAlerts' | 'bills' | 'goals' | 'netWorth' | 'subscriptions' | 'emergency' | 'debt' | 'forecast';
 
 export const PANEL_CONFIG: Record<PanelKey, { label: { th: string; en: string }; icon: string }> = {
+  daily_budget: { label: { th: 'งบประมาณรายวัน', en: 'Daily Budget' }, icon: '📅' },
   expenses: { label: { th: 'ค่าใช้จ่าย', en: 'Expenses' }, icon: '💸' },
   inflow: { label: { th: 'รายรับ', en: 'Inflow / Income' }, icon: '💵' },
   budget: { label: { th: 'งบประมาณ', en: 'Budget' }, icon: '📊' },
@@ -48,32 +49,15 @@ export const PANEL_CONFIG: Record<PanelKey, { label: { th: string; en: string };
   forecast: { label: { th: 'พยากรณ์', en: 'Forecast' }, icon: '🔮' },
 };
 
-const PANEL_ORDER: PanelKey[] = ['expenses', 'inflow', 'budget', 'budgetAlerts', 'bills', 'goals', 'netWorth', 'subscriptions', 'emergency', 'debt', 'forecast'];
-
-const PANELS: PanelConfig[] = [
-  { id: 'expenses', title: 'Expenses', children: <ExpenseTracker /> },
-  { id: 'inflow', title: 'Income Inflow', children: <IncomeInflowPanel /> },
-  { id: 'budget', title: 'Budget', children: <BudgetVisual /> },
-  { id: 'budgetAlerts', title: 'Budget Alerts', children: <BudgetAlerts /> },
-  { id: 'bills', title: 'Bills', children: <Bills /> },
-  { id: 'goals', title: 'Goals', children: <SavingsGoals /> },
-  { id: 'netWorth', title: 'Net Worth', children: <NetWorth /> },
-  { id: 'subscriptions', title: 'Subscriptions', children: <Subscriptions /> },
-  { id: 'emergency', title: 'Emergency', children: <EmergencyFund /> },
-  { id: 'debt', title: 'Debt', children: <DebtPayoff /> },
-  { id: 'forecast', title: 'Forecast', children: <CashFlowForecast /> },
-];
-
+const PANEL_ORDER: PanelKey[] = ['daily_budget', 'expenses', 'inflow', 'budget', 'budgetAlerts', 'bills', 'goals', 'netWorth', 'subscriptions', 'emergency', 'debt', 'forecast'];
 
 interface DashboardShellProps {
   locale: 'th' | 'en';
   onLocaleChange?: (locale: 'th' | 'en') => void;
-  voiceEnabled?: boolean;
-  onVoiceToggle?: () => void;
   onSetup?: () => void;
 }
 
-export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, onVoiceToggle, onSetup }: DashboardShellProps) {
+export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShellProps) {
   const { loading: commitmentLoading } = useCriticalExpense();
   const { profile } = useWizardProfile();
   const { budgets, loading: budgetsLoading } = useBudgets();
@@ -122,11 +106,26 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
 
   const isPanelOpen = (panel: PanelKey) => openPanels.includes(panel);
 
+  const panels: PanelConfig[] = useMemo(() => [
+    { id: 'daily_budget', title: 'Daily Budget', children: <DailyDisposableHero locale={locale} onSetup={onSetup} /> },
+    { id: 'expenses', title: 'Expenses', children: <ExpenseTracker /> },
+    { id: 'inflow', title: 'Income Inflow', children: <IncomeInflowPanel /> },
+    { id: 'budget', title: 'Budget', children: <BudgetVisual /> },
+    { id: 'budgetAlerts', title: 'Budget Alerts', children: <BudgetAlerts /> },
+    { id: 'bills', title: 'Bills', children: <Bills /> },
+    { id: 'goals', title: 'Goals', children: <SavingsGoals /> },
+    { id: 'netWorth', title: 'Net Worth', children: <NetWorth /> },
+    { id: 'subscriptions', title: 'Subscriptions', children: <Subscriptions /> },
+    { id: 'emergency', title: 'Emergency', children: <EmergencyFund /> },
+    { id: 'debt', title: 'Debt', children: <DebtPayoff /> },
+    { id: 'forecast', title: 'Forecast', children: <CashFlowForecast /> },
+  ], [locale, onSetup]);
+
   // Only render the panels the user has toggled on in the sidebar (desktop).
-  const visiblePanels = PANELS.filter((panel) => openPanels.includes(panel.id as PanelKey));
+  const visiblePanels = panels.filter((panel) => openPanels.includes(panel.id as PanelKey));
 
   // Mobile: exactly one active panel rendered at a time.
-  const mobilePanel = PANELS.find((panel) => panel.id === mobileActivePanel) ?? PANELS[0];
+  const mobilePanel = panels.find((panel) => panel.id === mobileActivePanel) ?? panels[0];
 
   return (
     <div className="bb-viewport-fill bg-[var(--bg-base)]">
@@ -135,8 +134,6 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
         <HeaderBar
           locale={locale}
           onLocaleChange={(next) => onLocaleChange?.(next)}
-          voiceEnabled={voiceEnabled}
-          onVoiceToggle={() => onVoiceToggle?.()}
         />
       </header>
 

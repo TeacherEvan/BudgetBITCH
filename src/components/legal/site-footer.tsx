@@ -22,7 +22,7 @@ export function SiteFooter() {
   return (
     <footer className="mt-auto border-t border-white/10 bg-black/40">
       <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-6 text-sm text-white/50">
-        <span className="font-semibold text-white/70">BudgetBITCH</span>
+        <span className="font-semibold text-white/70">Budget-BOSS</span>
         <Link href="/terms" className="hover:text-amber-400">
           {termsContent[locale].title}
         </Link>

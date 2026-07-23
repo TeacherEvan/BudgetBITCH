@@ -9,8 +9,8 @@ test.describe("Auth — sign-in page", () => {
     await page.goto("/sign-in");
   });
 
-  test("renders the BudgetBITCH sign-in card", async ({ page }) => {
-    await expect(page.getByText("BudgetBITCH").first()).toBeVisible();
+  test("renders the Budget-BOSS sign-in card", async ({ page }) => {
+    await expect(page.getByText("Budget-BOSS").first()).toBeVisible();
     await expect(page.getByRole("heading", { name: /welcome back/i })).toBeVisible();
     await expect(page.getByLabel(/email address/i)).toBeVisible();
     await expect(page.getByLabel(/password/i)).toBeVisible();

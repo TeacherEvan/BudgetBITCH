@@ -26,11 +26,9 @@ import { HeaderBar } from '@/components/layout/header-bar';
 interface AccountsViewProps {
   locale: 'th' | 'en';
   onLocaleChange?: (locale: 'th' | 'en') => void;
-  voiceEnabled?: boolean;
-  onVoiceToggle?: () => void;
 }
 
-export function AccountsView({ locale, onLocaleChange, voiceEnabled, onVoiceToggle }: AccountsViewProps) {
+export function AccountsView({ locale, onLocaleChange }: AccountsViewProps) {
   const auth = useConvexAuth();
   const isAuthenticated = auth?.isAuthenticated ?? false;
 
@@ -136,8 +134,6 @@ export function AccountsView({ locale, onLocaleChange, voiceEnabled, onVoiceTogg
       <HeaderBar
         locale={locale}
         onLocaleChange={(l) => onLocaleChange?.(l)}
-        voiceEnabled={voiceEnabled ?? false}
-        onVoiceToggle={() => onVoiceToggle?.()}
       />
       <main className="bb-scroll-zone mx-auto w-full max-w-3xl px-4 py-6 space-y-6">
         <div className="flex items-center justify-between">

@@ -39,7 +39,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: 'BudgetBITCH',
+  title: 'Budget-BOSS',
   description: 'Plan first. Panic less. A privacy-first budgeting app with multi-currency and offline support.',
 };
 

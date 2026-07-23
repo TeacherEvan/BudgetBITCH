@@ -50,7 +50,7 @@ export function LanguageSelectModal({ isOpen, onComplete }: LanguageSelectModalP
     <Modal
       isOpen={true}
       onClose={() => {}} // Prevent close - must select language
-      title="Welcome to BudgetBITCH"
+      title="Welcome to Budget-BOSS"
       description="Choose your language to get started"
       size="md"
       showCloseButton={false}
@@ -62,7 +62,7 @@ export function LanguageSelectModal({ isOpen, onComplete }: LanguageSelectModalP
           <div className="mx-auto w-16 h-16 rounded-2xl bg-amber-400/20 flex items-center justify-center mb-4">
             <span className="text-3xl">💰</span>
           </div>
-          <h3 className="text-2xl font-semibold text-white">BudgetBITCH</h3>
+          <h3 className="text-2xl font-semibold text-white">Budget-BOSS</h3>
           <p className="mt-2 text-white/70">Plan first. Panic less.</p>
         </div>
 

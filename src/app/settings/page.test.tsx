@@ -53,15 +53,6 @@ vi.mock('@/hooks/use-local-db', () => ({
   }),
 }));
 
-vi.mock('@/hooks/use-voice', () => ({
-  useVoice: () => ({
-    settings: { enabled: false, rate: 1, pitch: 1 },
-    updateSettings: vi.fn(),
-    toggleVoice: vi.fn(),
-    isSupported: true,
-  }),
-}));
-
 vi.mock('@/hooks/use-critical-expense', () => ({
   useCriticalExpense: () => ({
     commitment: null,
@@ -228,7 +219,6 @@ describe('SettingsPage', () => {
       'settings-profile',
       'settings-display',
       'settings-news',
-      'settings-preferences',
       'settings-data',
       'settings-shared',
       'settings-privacy',

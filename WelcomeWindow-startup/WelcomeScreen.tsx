@@ -407,7 +407,7 @@ export default function WelcomeScreen({ onEnter }: WelcomeScreenProps) {
                 animation: prefersReducedMotion ? "none" : "bbShimmer 2.8s linear infinite",
               }}
             >
-              BudgetBITCH
+              Budget-BOSS
             </h1>
             <p className="text-sm text-emerald-200/65 tracking-wide mt-1">
               The Storybook Spectacle Starts Here

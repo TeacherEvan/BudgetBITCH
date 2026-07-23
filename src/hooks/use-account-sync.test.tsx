@@ -169,14 +169,16 @@ describe('useAccountSync', () => {
     expect(firstCall.boardId).toBe('board_family');
   });
 
-  it('does nothing when the active board is personal (no boardId)', async () => {
+  it('pushes to personal board when active account is personal', async () => {
     await setCurrentAccountId('personal');
     render(<HookProbe />);
     await act(async () => {
       window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT));
       await sleep(1000);
     });
-    expect(pushBoard).not.toHaveBeenCalled();
+    expect(pushBoard).toHaveBeenCalledTimes(1);
+    const firstCall = (pushBoard.mock.calls[0] as unknown[])[0] as { boardId: string };
+    expect(firstCall.boardId).toBe('personal');
   });
 
   it('queues an offline edit to localStorage instead of pushing', async () => {

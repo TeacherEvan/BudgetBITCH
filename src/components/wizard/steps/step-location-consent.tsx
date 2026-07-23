@@ -17,7 +17,6 @@ interface StepLocationConsentProps {
   onChange: (key: 'locationConsent', value: boolean) => void;
   error?: string | null;
   disabled?: boolean;
-  speak: (text: string) => void;
 }
 
 /**
@@ -45,7 +44,7 @@ async function persistResolvedArea(lat: number, lon: number): Promise<void> {
   }
 }
 
-export function StepLocationConsent({ locale, value, onChange, error, disabled, speak }: StepLocationConsentProps) {
+export function StepLocationConsent({ locale, value, onChange, error, disabled }: StepLocationConsentProps) {
   const [disclaimerRead, setDisclaimerRead] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [unsupported, setUnsupported] = useState(
@@ -94,7 +93,6 @@ export function StepLocationConsent({ locale, value, onChange, error, disabled, 
   const handleGrantLocation = () => {
     if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
       setUnsupported(true);
-      speak(locale === 'th' ? 'เบราว์เซอร์นี้ไม่รองรับตำแหน่ง' : 'This browser does not support location');
       return;
     }
     setRequesting(true);
@@ -105,30 +103,13 @@ export function StepLocationConsent({ locale, value, onChange, error, disabled, 
       async (position) => {
         setRequesting(false);
         onChange('locationConsent', true);
-        const msg = locale === 'th' ? 'อนุญาตตำแหน่งแล้ว' : 'Location permission granted';
-        speak(msg);
         // Resolve + persist the area so currency and Market Watch are
         // location-driven. Non-fatal: consent is still granted even if the
         // reverse geocode fails.
         void persistResolvedArea(position.coords.latitude, position.coords.longitude);
       },
-      (err) => {
+      () => {
         setRequesting(false);
-        let msg: string;
-        switch (err.code) {
-          case err.PERMISSION_DENIED:
-            msg = locale === 'th' ? 'การเข้าถึงตำแหน่งถูกปฏิเสธ' : 'Location access denied';
-            break;
-          case err.POSITION_UNAVAILABLE:
-            msg = locale === 'th' ? 'ไม่พบตำแหน่งปัจจุบัน' : 'Location unavailable';
-            break;
-          case err.TIMEOUT:
-            msg = locale === 'th' ? 'หมดเวลาการเข้าถึงตำแหน่ง' : 'Location request timed out';
-            break;
-          default:
-            msg = locale === 'th' ? 'ไม่สามารถเข้าถึงตำแหน่งได้' : 'Unable to access location';
-        }
-        speak(msg);
       },
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
     );
@@ -183,8 +164,6 @@ export function StepLocationConsent({ locale, value, onChange, error, disabled, 
           variant="ghost"
           onClick={() => {
             onChange('locationConsent', false);
-            const msg = locale === 'th' ? 'ข้ามการอนุญาตตำแหน่ง' : 'Skipping location permission';
-            speak(msg);
           }}
           disabled={disabled}
           className="w-full"

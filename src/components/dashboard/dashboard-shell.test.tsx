@@ -21,14 +21,6 @@ vi.mock('@/hooks/use-critical-expense', () => ({
   useCriticalExpense: () => ({ commitment: null, loading: false }),
 }));
 
-vi.mock('@/hooks/use-voice', () => ({
-  useVoice: () => ({
-    settings: { enabled: false },
-    toggleVoice: vi.fn(),
-    speak: vi.fn(),
-  }),
-}));
-
 // The AccountSwitcher child uses useAccounts (Convex); mock it so the shell
 // test only exercises panel switching, not the accounts data layer.
 vi.mock('@/hooks/use-accounts', () => ({
@@ -145,9 +137,9 @@ describe('DashboardShell (mobile)', () => {
     const sheet = screen.getByTestId('mobile-sheet');
     // Cut One Expense lives in the mobile sheet (primary mobile access point).
     expect(within(sheet).getByRole('button', { name: /pick 1 to cut this month/i })).toBeInTheDocument();
-    // All 11 panels are reachable from the sheet, plus the account switcher.
-    // 15 = close(X) + Cut One + Market Watch + AccountSwitcher + 11 panels.
-    expect(within(sheet).getAllByRole('button')).toHaveLength(15);
+    // All 12 panels are reachable from the sheet, plus the account switcher.
+    // 16 = close(X) + Cut One + Market Watch + AccountSwitcher + 12 panels.
+    expect(within(sheet).getAllByRole('button')).toHaveLength(16);
   });
 
   it('does not render the floating FAB', () => {

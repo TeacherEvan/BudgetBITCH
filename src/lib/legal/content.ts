@@ -15,18 +15,18 @@ export const termsContent: Record<LegalLocale, LegalDoc> = {
   en: {
     title: "Terms of Service",
     intro:
-      "BudgetBITCH is a personal budgeting tool. By creating an account you agree to use the app for your own household finances. You are responsible for the accuracy of the data you enter.",
+      "Budget-BOSS is a personal budgeting tool. By creating an account you agree to use the app for your own household finances. You are responsible for the accuracy of the data you enter.",
     sections: [
       {
         heading: "1. Acceptance of Terms",
         body: [
-          "By signing up or using BudgetBITCH you agree to these Terms and our Privacy Policy. If you do not agree, do not use the app.",
+          "By signing up or using Budget-BOSS you agree to these Terms and our Privacy Policy. If you do not agree, do not use the app.",
         ],
       },
       {
         heading: "2. The Service",
         body: [
-          "BudgetBITCH helps you track income, expenses, savings, and net worth on your own device. We provide estimates and projections for guidance only; they are not financial, legal, or tax advice.",
+          "Budget-BOSS helps you track income, expenses, savings, and net worth on your own device. We provide estimates and projections for guidance only; they are not financial, legal, or tax advice.",
           "We do not guarantee any specific financial outcome. You make the final decision on every transaction.",
         ],
       },
@@ -46,7 +46,7 @@ export const termsContent: Record<LegalLocale, LegalDoc> = {
       {
         heading: "5. Limitation of Liability",
         body: [
-          "The app is provided as-is, without warranty. To the maximum extent permitted by law, BudgetBITCH is not liable for any loss arising from your use of the app or reliance on its calculations.",
+          "The app is provided as-is, without warranty. To the maximum extent permitted by law, Budget-BOSS is not liable for any loss arising from your use of the app or reliance on its calculations.",
         ],
       },
       {
@@ -72,18 +72,18 @@ export const termsContent: Record<LegalLocale, LegalDoc> = {
   th: {
     title: "ข้อกำหนดการให้บริการ",
     intro:
-      "BudgetBITCH คือเครื่องมือจัดการงบประมาณส่วนบุคคล เมื่อคุณสร้างบัญชี ถือว่าคุณตกลงใช้แอปสำหรับการเงินครัวเรือนของตนเอง คุณเป็นผู้รับผิดชอบต่อความถูกต้องของข้อมูลที่คุณกรอก",
+      "Budget-BOSS คือเครื่องมือจัดการงบประมาณส่วนบุคคล เมื่อคุณสร้างบัญชี ถือว่าคุณตกลงใช้แอปสำหรับการเงินครัวเรือนของตนเอง คุณเป็นผู้รับผิดชอบต่อความถูกต้องของข้อมูลที่คุณกรอก",
     sections: [
       {
         heading: "1. การยอมรับข้อกำหนด",
         body: [
-          "การสมัครหรือใช้ BudgetBITCH ถือว่าคุณยอมรับข้อกำหนดนี้และนโยบายความเป็นส่วนตัวของเรา หากไม่ยอมรับ กรุณาอย่าใช้แอป",
+          "การสมัครหรือใช้ Budget-BOSS ถือว่าคุณยอมรับข้อกำหนดนี้และนโยบายความเป็นส่วนตัวของเรา หากไม่ยอมรับ กรุณาอย่าใช้แอป",
         ],
       },
       {
         heading: "2. บริการ",
         body: [
-          "BudgetBITCH ช่วยให้คุณติดตามรายได้ รายจ่าย การออม และสินทรัพย์สุทธิบนอุปกรณ์ของคุณเอง เราให้ค่าประมาณและการคาดการณ์เพื่อเป็นแนวทางเท่านั้น ไม่ใช่คำแนะนำทางการเงิน กฎหมาย หรือภาษี",
+          "Budget-BOSS ช่วยให้คุณติดตามรายได้ รายจ่าย การออม และสินทรัพย์สุทธิบนอุปกรณ์ของคุณเอง เราให้ค่าประมาณและการคาดการณ์เพื่อเป็นแนวทางเท่านั้น ไม่ใช่คำแนะนำทางการเงิน กฎหมาย หรือภาษี",
           "เราไม่รับประกันผลลัพธ์ทางการเงินใด ๆ คุณเป็นผู้ตัดสินใจสุดท้ายในทุกธุรกรรม",
         ],
       },
@@ -103,7 +103,7 @@ export const termsContent: Record<LegalLocale, LegalDoc> = {
       {
         heading: "5. ข้อจำกัดความรับผิด",
         body: [
-          "แอปให้บริการตามสภาพที่เป็นจริง โดยไม่มีการรับประกัน ภายใต้ขอบเขตสูงสุดที่กฎหมายอนุญาต BudgetBITCH ไม่รับผิดชอบต่อความสูญเสียใด ๆ ที่เกิดจากการใช้แอปหรือการพึ่งพาการคำนวณของแอป",
+          "แอปให้บริการตามสภาพที่เป็นจริง โดยไม่มีการรับประกัน ภายใต้ขอบเขตสูงสุดที่กฎหมายอนุญาต Budget-BOSS ไม่รับผิดชอบต่อความสูญเสียใด ๆ ที่เกิดจากการใช้แอปหรือการพึ่งพาการคำนวณของแอป",
         ],
       },
       {
@@ -295,7 +295,7 @@ export const cookieContent: Record<LegalLocale, LegalDoc> = {
   en: {
     title: "Cookie Policy",
     intro:
-      "BudgetBITCH uses a small number of cookies and local storage values to keep the app working and to remember your preferences.",
+      "Budget-BOSS uses a small number of cookies and local storage values to keep the app working and to remember your preferences.",
     sections: [
       {
         heading: "1. Essential Cookies",
@@ -326,7 +326,7 @@ export const cookieContent: Record<LegalLocale, LegalDoc> = {
   th: {
     title: "นโยบายคุกกี้",
     intro:
-      "BudgetBITCH ใช้คุกกี้และค่าการจัดเก็บในเครื่องจำนวนน้อย เพื่อให้แอปทำงานได้และจดจำความต้องการของคุณ",
+      "Budget-BOSS ใช้คุกกี้และค่าการจัดเก็บในเครื่องจำนวนน้อย เพื่อให้แอปทำงานได้และจดจำความต้องการของคุณ",
     sections: [
       {
         heading: "1. คุกกี้ที่จำเป็น",

@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, Edit, Mic, FileSpreadsheet } from 'lucide-react';
+import { Plus, Trash2, Edit, FileSpreadsheet } from 'lucide-react';
 import { useExpenses, useBudgets } from '@/hooks/use-local-db';
 import { addExpense, generateId } from '@/lib/db/local-db';
 import type { ExpenseEntry } from '@/lib/types/budget';
@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useCurrency } from '@/hooks/use-currency';
 import type { ExpenseCategory } from '@/lib/types/budget';
-import { VoiceExpenseInput } from './voice-expense-input';
 
 interface Expense {
   id: string;
@@ -61,7 +60,6 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
   const { budgets } = useBudgets();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [showVoiceInput, setShowVoiceInput] = useState(false);
   const [showImport, setShowImport] = useState(false);
   
   const [formData, setFormData] = useState<FormData>({
@@ -88,14 +86,6 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
     }
     return map;
   }, [expenses]);
-
-  const handleVoiceAdd = (expense: { merchant: string; amount: number; category: ExpenseCategory; note?: string }) => {
-    add({
-      ...expense,
-      date: new Date().toISOString().split('T')[0],
-      source: 'voice',
-    });
-  };
 
   const handleImportRows = async (rows: ParsedExpense[]) => {
     // Persist each parsed row as an ExpenseEntry with a generated id.
@@ -177,15 +167,6 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
           {locale === 'th' ? 'บันทึกค่าใช้จ่าย' : 'Expense Tracker'}
         </h3>
         <div className="flex gap-2">
-          <Button 
-            variant="secondary" 
-            size="sm" 
-            onClick={() => setShowVoiceInput(true)}
-            className="flex items-center gap-1"
-          >
-            <Mic className="w-4 h-4" />
-            <span className="hidden @xs:inline">{locale === 'th' ? 'เสียง' : 'Voice'}</span>
-          </Button>
           <Button
             variant="secondary"
             size="sm"
@@ -202,14 +183,6 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
           </Button>
         </div>
       </div>
-
-      {/* Voice Input Modal */}
-      <VoiceExpenseInput
-        locale={locale}
-        onAddExpense={handleVoiceAdd}
-        isOpen={showVoiceInput}
-        onClose={() => setShowVoiceInput(false)}
-      />
 
       {/* CSV Import Modal */}
       <ImportCsvModal
