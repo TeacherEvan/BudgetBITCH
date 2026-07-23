@@ -21,8 +21,9 @@ const sloganMap = {
   zh: '别废话，开干！！！'
 };
 
-// Shared expo-out curve for a calm, premium reveal.
+// Expo-out curve + a softer cinematic ease for a calm, premium reveal.
 const EXPO_OUT = [0.22, 1, 0.36, 1] as const;
+const CINE_IN = [0.16, 1, 0.3, 1] as const;
 
 export function WelcomeWindow({ signInHref, signUpHref }: WelcomeWindowProps) {
   const t = useTranslations('welcome');
@@ -61,13 +62,27 @@ export function WelcomeWindow({ signInHref, signUpHref }: WelcomeWindowProps) {
     },
   ] as const;
 
-  // Choreography: backdrop -> eyebrow -> wordmark -> sweep -> subhead/cta.
+  // Scene choreography: ignite -> camera settle -> eyebrow -> wordmark forged -> sweep -> cascade.
+  const scene: Variants = {
+    hidden: prefersReduced
+      ? { opacity: 1 }
+      : { opacity: 0, rotateX: 14, scale: 0.94, y: 36 },
+    visible: {
+      opacity: 1,
+      rotateX: 0,
+      scale: 1,
+      y: 0,
+      transition: { duration: 1.1, ease: CINE_IN },
+    },
+  };
+
   const eyebrow: Variants = {
-    hidden: prefersReduced ? { opacity: 1 } : { opacity: 0, letterSpacing: '0.5em' },
+    hidden: prefersReduced ? { opacity: 1 } : { opacity: 0, letterSpacing: '0.6em', filter: 'blur(4px)' },
     visible: {
       opacity: 1,
       letterSpacing: '0.2em',
-      transition: { duration: 0.8, ease: 'easeOut', delay: prefersReduced ? 0 : 0.1 },
+      filter: 'blur(0px)',
+      transition: { duration: 0.9, ease: 'easeOut', delay: prefersReduced ? 0 : 0.35 },
     },
   };
 
@@ -75,53 +90,73 @@ export function WelcomeWindow({ signInHref, signUpHref }: WelcomeWindowProps) {
     hidden: {},
     visible: {
       transition: {
-        staggerChildren: prefersReduced ? 0 : 0.07,
-        delayChildren: prefersReduced ? 0 : 0.4,
+        staggerChildren: prefersReduced ? 0 : 0.09,
+        delayChildren: prefersReduced ? 0 : 0.6,
       },
     },
   };
 
+  // Forged letters: rise from the clip mask, de-blur, with a brief gold flare + settle.
   const letter: Variants = {
     hidden: prefersReduced
       ? { opacity: 1, y: '0%', filter: 'blur(0px)' }
-      : { opacity: 0, y: '110%', filter: 'blur(8px)' },
+      : { opacity: 0, y: '115%', filter: 'blur(10px)' },
     visible: {
       opacity: 1,
       y: '0%',
       filter: 'blur(0px)',
-      transition: { duration: 0.7, ease: EXPO_OUT },
+      transition: { duration: 0.75, ease: EXPO_OUT },
     },
   };
 
   const fadeUp: Variants = {
-    hidden: prefersReduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } },
+    hidden: prefersReduced ? { opacity: 1, y: 0, filter: 'blur(0px)' } : { opacity: 0, y: 16, filter: 'blur(6px)' },
+    visible: {
+      opacity: 1,
+      y: 0,
+      filter: 'blur(0px)',
+      transition: { duration: 0.7, ease: 'easeOut' },
+    },
   };
 
   return (
     <main className="bb-page-shell relative px-4 py-8 text-white md:px-5 md:py-10 overflow-hidden min-h-screen flex items-center justify-center">
       {/* Centered dark radial backdrop */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(245,215,66,0.06),transparent_60%)] pointer-events-none z-0" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(245,215,66,0.07),transparent_60%)] pointer-events-none z-0" />
 
-      {/* Single breathing gold glow behind the wordmark (premium, not noisy) */}
+      {/* Ignite bloom: the scene powers on from a single gold point (one-shot) */}
+      {!prefersReduced && (
+        <motion.div
+          data-testid="welcome-ignite-bloom"
+          initial={{ scale: 0, opacity: 0.9 }}
+          animate={{ scale: 1.6, opacity: 0 }}
+          transition={{ duration: 1.3, ease: 'easeOut' }}
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] rounded-full pointer-events-none z-0"
+          style={{
+            background:
+              'radial-gradient(circle, rgba(255,233,168,0.55) 0%, rgba(245,215,66,0.25) 35%, transparent 70%)',
+            mixBlendMode: 'screen',
+          }}
+        />
+      )}
+
+      {/* Breathing gold glow behind the wordmark — more alive (scale + opacity) */}
       <motion.div
         data-testid="welcome-breathing-glow"
-        initial={{ opacity: prefersReduced ? 0.45 : 0.3 }}
-        animate={
-          prefersReduced
-            ? { opacity: 0.45 }
-            : { opacity: [0.3, 0.55, 0.3] }
-        }
-        transition={
-          prefersReduced
-            ? { duration: 0 }
-            : { duration: 6, ease: 'easeInOut', repeat: Infinity }
-        }
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[620px] h-[620px] bg-amber-500/10 rounded-full blur-[150px] pointer-events-none z-0"
+        initial={{ opacity: prefersReduced ? 0.5 : 0.3, scale: 1 }}
+        animate={prefersReduced ? { opacity: 0.5, scale: 1 } : { opacity: [0.3, 0.6, 0.3], scale: [1, 1.18, 1] }}
+        transition={prefersReduced ? { duration: 0 } : { duration: 6.5, ease: 'easeInOut', repeat: Infinity }}
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[640px] h-[640px] bg-amber-500/10 rounded-full blur-[150px] pointer-events-none z-0"
       />
 
       <MobilePanelFrame>
-        <section className="relative mx-auto grid max-w-6xl gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(22rem,0.8fr)] z-10">
+        <motion.section
+          variants={scene}
+          initial="hidden"
+          animate="visible"
+          style={{ transformPerspective: 1200, transformOrigin: 'center top' }}
+          className="relative mx-auto grid max-w-6xl gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(22rem,0.8fr)] z-10"
+        >
           {/* Main Welcome panel */}
           <article className="bb-panel bg-black/85 backdrop-blur-md border border-amber-400/20 shadow-[0_0_50px_rgba(245,215,66,0.05)] p-7 md:p-9 relative overflow-hidden">
             {/* Top gold line accent */}
@@ -140,7 +175,7 @@ export function WelcomeWindow({ signInHref, signUpHref }: WelcomeWindowProps) {
               <LocaleSwitcher />
             </div>
 
-            {/* Cinematic masked wordmark reveal */}
+            {/* Cinematic forged wordmark reveal */}
             <div
               className="mt-6 flex flex-col items-start gap-1 select-none relative"
               style={{ perspective: '1000px' }}
@@ -149,13 +184,13 @@ export function WelcomeWindow({ signInHref, signUpHref }: WelcomeWindowProps) {
               {!prefersReduced && (
                 <motion.div
                   data-testid="welcome-light-sweep"
-                  initial={{ x: '-150%', opacity: 0 }}
-                  animate={{ x: '250%', opacity: [0, 0.9, 0] }}
-                  transition={{ delay: 1.5, duration: 1.1, ease: 'easeInOut' }}
+                  initial={{ x: '-160%', opacity: 0 }}
+                  animate={{ x: '260%', opacity: [0, 1, 0] }}
+                  transition={{ delay: 1.65, duration: 1.2, ease: 'easeInOut' }}
                   className="absolute inset-0 z-20 pointer-events-none"
                   style={{
                     background:
-                      'linear-gradient(120deg, transparent 35%, rgba(255,255,255,0.55) 50%, transparent 65%)',
+                      'linear-gradient(120deg, transparent 35%, rgba(255,255,255,0.65) 50%, transparent 65%)',
                     transform: 'skewX(-18deg)',
                     mixBlendMode: 'screen',
                   }}
@@ -170,10 +205,10 @@ export function WelcomeWindow({ signInHref, signUpHref }: WelcomeWindowProps) {
                 aria-label="BUDGET"
               >
                 {Array.from('BUDGET').map((char, index) => (
-                  <span key={index} className="inline-block overflow-hidden">
+                  <span key={index} className="inline-block overflow-hidden pb-[0.08em]">
                     <motion.span
                       variants={letter}
-                      className="inline-block transform-gpu"
+                      className="inline-block transform-gpu drop-shadow-[0_0_18px_rgba(245,215,66,0.35)]"
                     >
                       {char}
                     </motion.span>
@@ -189,7 +224,7 @@ export function WelcomeWindow({ signInHref, signUpHref }: WelcomeWindowProps) {
                 aria-label="BOSS"
               >
                 {Array.from('BOSS').map((char, index) => (
-                  <span key={index} className="inline-block overflow-hidden">
+                  <span key={index} className="inline-block overflow-hidden pb-[0.08em]">
                     <motion.span variants={letter} className="inline-block transform-gpu">
                       {char}
                     </motion.span>
@@ -220,7 +255,7 @@ export function WelcomeWindow({ signInHref, signUpHref }: WelcomeWindowProps) {
               animate="visible"
               className="mt-6 flex flex-wrap gap-4"
             >
-              <Link href={signInHref} className="bb-button-primary border border-amber-400/40 bg-amber-400 text-black hover:bg-amber-300 hover:shadow-[0_0_20px_rgba(245,215,66,0.3)] transition-all">
+              <Link href={signInHref} className="bb-button-primary border border-amber-400/40 bg-amber-400 text-black hover:bg-amber-300 hover:shadow-[0_0_28px_rgba(245,215,66,0.45)] transition-all">
                 {t('openSignIn')}
               </Link>
               <Link href={signUpHref} className="bb-button-secondary border border-zinc-800 text-white hover:bg-white/5 transition-all">
@@ -243,7 +278,10 @@ export function WelcomeWindow({ signInHref, signUpHref }: WelcomeWindowProps) {
             </div>
 
             {/* Features list */}
-            <ul
+            <motion.ul
+              variants={fadeUp}
+              initial="hidden"
+              animate="visible"
               className="mt-6 grid gap-3"
               aria-label={t('quickReasonsAria')}
             >
@@ -269,11 +307,16 @@ export function WelcomeWindow({ signInHref, signUpHref }: WelcomeWindowProps) {
                   </div>
                 </li>
               ))}
-            </ul>
+            </motion.ul>
           </article>
 
           {/* Right sidebar */}
-          <aside className="grid gap-4 self-start">
+          <motion.aside
+            variants={fadeUp}
+            initial="hidden"
+            animate="visible"
+            className="grid gap-4 self-start"
+          >
             <article className="bb-panel border border-amber-400/10 bg-black/85 backdrop-blur-md p-5">
               <p className="bb-kicker text-amber-400">{t('rootFlow')}</p>
               <h2 className="mt-2 text-xl font-bold text-white">{t('authFirstThenSetup')}</h2>
@@ -296,8 +339,8 @@ export function WelcomeWindow({ signInHref, signUpHref }: WelcomeWindowProps) {
                 </li>
               </ul>
             </article>
-          </aside>
-        </section>
+          </motion.aside>
+        </motion.section>
       </MobilePanelFrame>
     </main>
   );
