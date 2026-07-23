@@ -133,13 +133,17 @@ export async function gatherSnapshotData(): Promise<GatherResult> {
   try {
     const db = await getDB();
     for (const storeName of USER_DATA_STORES) {
-      const list = await db.getAll(storeName);
-      fullBackupData[storeName] = list;
-      storeCounts[storeName] = list.length;
+      if (!db.objectStoreNames || db.objectStoreNames.contains(storeName)) {
+        const list = await db.getAll(storeName);
+        fullBackupData[storeName] = list;
+        storeCounts[storeName] = list.length;
+      }
     }
-    const settingsList = await db.getAll('settings');
-    fullBackupData['settings'] = settingsList;
-    storeCounts['settings'] = settingsList.length;
+    if (!db.objectStoreNames || db.objectStoreNames.contains('settings')) {
+      const settingsList = await db.getAll('settings');
+      fullBackupData['settings'] = settingsList;
+      storeCounts['settings'] = settingsList.length;
+    }
   } catch (err) {
     console.error('Failed to gather full stores for backup snapshot:', err);
   }
@@ -317,11 +321,16 @@ export async function restoreFromCloudSnapshot(snapshot: CloudSnapshot): Promise
 
     // Clear and restore each store
     const allStores = [...USER_DATA_STORES, 'settings'] as const;
-    const tx = db.transaction([...allStores], 'readwrite');
-    for (const store of allStores) {
-      await tx.objectStore(store).clear();
+    const activeStores = db.objectStoreNames
+      ? allStores.filter((store) => db.objectStoreNames.contains(store))
+      : [...allStores];
+    if (activeStores.length > 0) {
+      const tx = db.transaction([...activeStores], 'readwrite');
+      for (const store of activeStores) {
+        await tx.objectStore(store).clear();
+      }
+      await tx.done;
     }
-    await tx.done;
 
     for (const store of allStores) {
       const items = backup[store];

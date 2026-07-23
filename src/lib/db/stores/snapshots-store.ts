@@ -72,60 +72,40 @@ export async function replaceBoardData(board: BoardSnapshot): Promise<void> {
     'wizardProfile', 'expenses', 'budgets', 'bills', 'savingsGoals',
     'netWorthSnapshots', 'debts', 'criticalExpenseCommitments', 'incomes',
   ] as const;
-  const tx = db.transaction(stores, 'readwrite');
+  const activeStores = db.objectStoreNames
+    ? stores.filter((s) => db.objectStoreNames.contains(s))
+    : [...stores];
+  if (activeStores.length === 0) return;
+  const tx = db.transaction(activeStores, 'readwrite');
 
-  const incomingKeys = new Set<string>();
   const stage: { store: typeof stores[number]; value: unknown; explicitKey?: string | number }[] = [];
 
   if (board.wizardProfile) {
-    incomingKeys.add('wizardProfile:current');
     stage.push({ store: 'wizardProfile', value: board.wizardProfile, explicitKey: 'current' });
   }
   for (const e of board.expenses ?? []) {
-    incomingKeys.add(`expenses:${e.id}`);
     stage.push({ store: 'expenses', value: e });
   }
   for (const b of board.budgets ?? []) {
-    incomingKeys.add(`budgets:${b.category}`);
     stage.push({ store: 'budgets', value: b });
   }
   for (const b of board.bills ?? []) {
-    incomingKeys.add(`bills:${b.id}`);
     stage.push({ store: 'bills', value: b });
   }
   for (const g of board.savingsGoals ?? []) {
-    incomingKeys.add(`savingsGoals:${g.id}`);
     stage.push({ store: 'savingsGoals', value: g });
   }
   for (const s of board.netWorthSnapshots ?? []) {
-    incomingKeys.add(`netWorthSnapshots:${s.date}`);
     stage.push({ store: 'netWorthSnapshots', value: s });
   }
   for (const d of board.debts ?? []) {
-    incomingKeys.add(`debts:${d.id}`);
     stage.push({ store: 'debts', value: d });
   }
   for (const c of board.criticalExpenseCommitments ?? []) {
-    incomingKeys.add(`criticalExpenseCommitments:${c.month}`);
     stage.push({ store: 'criticalExpenseCommitments', value: c });
   }
   for (const i of board.incomes ?? []) {
-    incomingKeys.add(`incomes:${i.id}`);
     stage.push({ store: 'incomes', value: i });
-  }
-
-  for (const store of stores) {
-    const os = tx.objectStore(store);
-    const all = await os.getAll();
-    const keyPath = os.keyPath as string | null;
-    for (const record of all) {
-      const key = keyPath
-        ? (record as unknown as Record<string, unknown>)[keyPath]
-        : (record as { id: string }).id;
-      if (!incomingKeys.has(`${store}:${String(key)}`)) {
-        continue;
-      }
-    }
   }
 
   for (const item of stage) {
@@ -200,7 +180,7 @@ export async function applyRemoteBoard(map: Record<string, { value: unknown; upd
   const db = await getDB();
   const stores = [
     'wizardProfile', 'expenses', 'budgets', 'bills', 'savingsGoals',
-    'netWorthSnapshots', 'debts', 'criticalExpenseCommitments',
+    'netWorthSnapshots', 'debts', 'criticalExpenseCommitments', 'incomes',
   ] as const;
 
   const stage: { store: typeof stores[number]; value: unknown; explicitKey?: string | number; updatedAt: number }[] = [];
@@ -223,7 +203,11 @@ export async function applyRemoteBoard(map: Record<string, { value: unknown; upd
     }),
   );
 
-  const tx = db.transaction(stores, 'readwrite');
+  const activeStores = db.objectStoreNames
+    ? stores.filter((s) => db.objectStoreNames.contains(s))
+    : [...stores];
+  if (activeStores.length === 0) return;
+  const tx = db.transaction(activeStores, 'readwrite');
   for (const item of stage) {
     const localTs = localTsMap.get(`${item.store}:${item.explicitKey}`) ?? 0;
     if (item.updatedAt <= localTs) continue;
