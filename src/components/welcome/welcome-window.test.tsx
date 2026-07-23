@@ -66,6 +66,14 @@ describe("WelcomeWindow", () => {
     // Verify slogan is present
     expect(screen.getByText(/["“]Shut up and do it!!!["”]/i)).toBeInTheDocument();
 
+    // Premium-cinematic: no floating money emoji particles
+    expect(screen.queryByText("🪙")).toBeNull();
+    expect(screen.queryByText("💵")).toBeNull();
+
+    // Premium-cinematic: single breathing glow + one-shot light sweep present
+    expect(screen.getByTestId("welcome-breathing-glow")).toBeInTheDocument();
+    expect(screen.getByTestId("welcome-light-sweep")).toBeInTheDocument();
+
     expect(screen.getByRole("link", { name: /open sign in/i })).toHaveAttribute(
       "href",
       "/sign-in?redirectTo=%2F",
