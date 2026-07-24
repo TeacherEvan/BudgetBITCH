@@ -47,13 +47,9 @@ interface VicinityFeed {
   locale: 'th' | 'en';
   category: NewsItem['category'];
   source: string;
-  // Center point for distance calculation
   center: { lat: number; lon: number };
-  // Radius in km — feeds within this distance qualify
   radiusKm: number;
-  // Priority within same tier (lower = shown first)
   priority: number;
-  // Feed reliability score (0-1) for sorting ties
   reliability: number;
 }
 
@@ -61,7 +57,7 @@ type Tier = 'city' | 'province' | 'country' | 'region' | 'global';
 
 const TIERED_FEED_REGISTRY: Record<Tier, VicinityFeed[]> = {
   city: [
-    // Bangkok example — extend per major city
+    // Bangkok example
     { url: 'https://www.bangkokpost.com/rss/data/business.xml', locale: 'th', category: 'finance', source: 'Bangkok Post Business', center: { lat: 13.7563, lon: 100.5018 }, radiusKm: 30, priority: 1, reliability: 0.95 },
     { url: 'https://englishnews.thaipbs.or.th/rss', locale: 'th', category: 'local', source: 'Thai PBS', center: { lat: 13.7563, lon: 100.5018 }, radiusKm: 30, priority: 2, reliability: 0.9 },
     // Add: PTT/PTTOR fuel price RSS if available, BTS/MRT alerts
@@ -77,7 +73,6 @@ const TIERED_FEED_REGISTRY: Record<Tier, VicinityFeed[]> = {
       { url: 'https://www.bangkokpost.com/rss/data/general.xml', locale: 'th', category: 'local', source: 'Bangkok Post', center: { lat: 13.7563, lon: 100.5018 }, radiusKm: 1000, priority: 2, reliability: 0.95 },
       { url: 'https://englishnews.thaipbs.or.th/rss', locale: 'th', category: 'local', source: 'Thai PBS', center: { lat: 13.7563, lon: 100.5018 }, radiusKm: 1000, priority: 3, reliability: 0.9 },
       { url: 'https://www.pptvhd36.com/rss', locale: 'th', category: 'local', source: 'PPTV', center: { lat: 13.7563, lon: 100.5018 }, radiusKm: 1000, priority: 4, reliability: 0.8 },
-      // Fuel prices — check EGAT/PTT for RSS
       { url: 'https://www.pttplc.com/rss/th/news.xml', locale: 'th', category: 'fuel', source: 'PTT News', center: { lat: 13.7563, lon: 100.5018 }, radiusKm: 1000, priority: 5, reliability: 0.85 },
     ],
     SG: [
@@ -117,7 +112,6 @@ const TIERED_FEED_REGISTRY: Record<Tier, VicinityFeed[]> = {
   },
   region: {
     SEA: ['TH', 'SG', 'MY', 'PH', 'ID', 'VN', 'MM', 'KH', 'LA'],
-    // Map to country feeds above
   },
   global: [
     { url: 'https://feeds.bloomberg.com/markets/news.rss', locale: 'en', category: 'finance', source: 'Bloomberg Markets', center: { lat: 40.7128, lon: -74.0060 }, radiusKm: 20000, priority: 1, reliability: 0.98 },
@@ -130,9 +124,6 @@ const TIERED_FEED_REGISTRY: Record<Tier, VicinityFeed[]> = {
 ### Resolver Algorithm
 
 ```typescript
-// lib/news/vicinity-resolver.ts
-import { VicinityFeed, TIERED_FEED_REGISTRY } from './vicinity-registry';
-
 export function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -144,7 +135,7 @@ export function haversineKm(lat1: number, lon1: number, lat2: number, lon2: numb
 export function resolveVicinityFeeds(userLat: number, userLon: number, userCountry: string | null): VicinityFeed[] {
   const qualified: Array<VicinityFeed & { distanceKm: number; tier: Tier }> = [];
 
-  // 1. City feeds (exact match by proximity)
+  // 1. City feeds
   for (const feed of TIERED_FEED_REGISTRY.city) {
     const dist = haversineKm(userLat, userLon, feed.center.lat, feed.center.lon);
     if (dist <= feed.radiusKm) qualified.push({ ...feed, distanceKm: dist, tier: 'city' });
@@ -168,7 +159,7 @@ export function resolveVicinityFeeds(userLat: number, userLon: number, userCount
   const region = getRegionForCountry(userCountry);
   if (region && TIERED_FEED_REGISTRY.region[region]) {
     for (const countryCode of TIERED_FEED_REGISTRY.region[region]) {
-      if (countryCode === userCountry) continue; // already added
+      if (countryCode === userCountry) continue;
       for (const feed of TIERED_FEED_REGISTRY.country[countryCode] || []) {
         const dist = haversineKm(userLat, userLon, feed.center.lat, feed.center.lon);
         if (dist <= feed.radiusKm) qualified.push({ ...feed, distanceKm: dist, tier: 'region' });
@@ -214,7 +205,6 @@ function getRegionForCountry(country: string | null): keyof typeof TIERED_FEED_R
 ## 2. Client Hook: `useVicinityFeeds` (`hooks/use-vicinity-feeds.ts`)
 
 ```typescript
-// hooks/use-vicinity-feeds.ts
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -233,7 +223,7 @@ const CACHE_KEY = 'bb:vicinityNewsCache';
 const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
 
 export function useVicinityFeeds(locale: 'th' | 'en'): VicinityFeedResult {
-  const { location, country } = useResolvedLocation(); // Returns { lat, lon } | null + country code
+  const { location, country } = useResolvedLocation();
   const [items, setItems] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -248,7 +238,6 @@ export function useVicinityFeeds(locale: 'th' | 'en'): VicinityFeedResult {
 
     try {
       setLoading(true);
-      // Build feed URLs from resolver (server-side or client-side)
       const params = new URLSearchParams({
         lat: location.lat.toString(),
         lon: location.lon.toString(),
@@ -274,11 +263,9 @@ export function useVicinityFeeds(locale: 'th' | 'en'): VicinityFeedResult {
       setLastUpdated(Date.now());
       setError(null);
 
-      // Cache for offline/refresh
       localStorage.setItem(CACHE_KEY, JSON.stringify({ items: sorted, timestamp: Date.now(), locale }));
     } catch (err) {
       setError(locale === 'th' ? 'โหลดข่าวไม่สำเร็จ' : 'Failed to load news');
-      // Try cache
       const cached = localStorage.getItem(CACHE_KEY);
       if (cached) {
         const { items, timestamp } = JSON.parse(cached);
@@ -304,7 +291,6 @@ export function useVicinityFeeds(locale: 'th' | 'en'): VicinityFeedResult {
 ## 3. API Route: `/api/news/vicinity/route.ts`
 
 ```typescript
-// app/api/news/vicinity/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import Parser from 'rss-parser';
 import { resolveVicinityFeeds } from '@/lib/news/vicinity-resolver';
@@ -329,6 +315,26 @@ async function fetchFeed(feed: VicinityFeed): Promise<NewsItem[]> {
   }
 }
 
+function getActionableText(item: { title: string; category: string }): string | undefined {
+  const lower = item.title.toLowerCase();
+  if (lower.includes('fuel') || lower.includes('น้ำมัน') || lower.includes('gas') || lower.includes('diesel')) {
+    return 'เช็คราคาน้ำมันก่อนเติม';
+  }
+  if (lower.includes('1+1') || lower.includes('buy 1') || lower.includes('ซื้อ 1 แถม 1')) {
+    return 'เจอโปรโมชั่น 1+1 - จัดซื้อได้เลย';
+  }
+  if (lower.includes('discount') || lower.includes('sale') || lower.includes('ลดราคา') || lower.includes('โปรโมชั่น')) {
+    return 'มีส่วนลด - พิจารณาซื้อ';
+  }
+  if (lower.includes('bts') || lower.includes('mrt') || lower.includes('บีทีเอส') || lower.includes('บัตรประจำเดือน')) {
+    return 'เช็คบัตรประจำเดือนประหยัดกว่าซื้อรายวัน';
+  }
+  if (lower.includes('electricity') || lower.includes('ค่าไฟ')) {
+    return 'ตรวจสอบค่าไฟ - อาจมีการปรับราคา';
+  }
+  return undefined;
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const lat = parseFloat(searchParams.get('lat') || '0');
@@ -343,7 +349,6 @@ export async function GET(request: NextRequest) {
   const feeds = resolveVicinityFeeds(lat, lon, country);
   const allItems: NewsItem[] = [];
 
-  // Fetch in parallel with timeout
   const results = await Promise.allSettled(feeds.map(f => fetchFeed(f)));
   for (const result of results) {
     if (result.status === 'fulfilled') allItems.push(...result.value);
@@ -365,32 +370,19 @@ export async function GET(request: NextRequest) {
 
 ## 4. Animated Feed List Component (`components/dashboard/animated-feed-list.tsx`)
 
-### Lottie/Rive Animations
+### Animation Assets (Lottie/Rive)
 
-| State | Animation Source | Trigger |
-|-------|------------------|---------|
-| **Skeleton loading** | Lottie: `animations/loading-gold-shimmer.json` | Loop on mount |
-| **Empty (no location)** | Rive: `animations/empty-tuk-tuk.riv` | Auto-play + "Enable Location" CTA |
-| **Empty (no items)** | Lottie: `animations/empty-coin-jar.json` | Loop |
-| **Error** | Lottie: `animations/error-signal-lost.json` | Play once + retry button |
-| **Pull-to-refresh** | Rive: `animations/refresh-coin-drop.riv` | Drag progress drives animation |
+| State | File | Description |
+|-------|------|-------------|
+| Skeleton loading | `animations/loading-gold-shimmer.json` | Gold shimmer sweep, loops |
+| Empty (no location) | `animations/empty-tuk-tuk.json` | Tuk-tuk waits for GPS signal |
+| Empty (no items) | `animations/empty-coin-jar.json` | Coin jar with tumbleweed |
+| Error | `animations/error-signal-lost.json` | Signal bars flicker red |
+| Pull-to-refresh | `animations/refresh-coin-drop.riv` | Coin drops into piggy bank |
 
 ### Framer Motion Variants
 
 ```typescript
-// components/dashboard/animated-feed-list.tsx
-'use client';
-
-import { motion, AnimatePresence } from 'framer-motion';
-import { useVicinityFeeds } from '@/hooks/use-vicinity-feeds';
-import { Lottie } from 'lottie-react';
-import { FeedCard } from './feed-card';
-import { BudgetTipSkeleton } from './budget-tip-skeleton';
-import loadingAnimation from '@/animations/loading-gold-shimmer.json';
-import emptyLocationAnimation from '@/animations/empty-tuk-tuk.json';
-import emptyNoItemsAnimation from '@/animations/empty-coin-jar.json';
-import errorAnimation from '@/animations/error-signal-lost.json';
-
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -409,6 +401,23 @@ const itemVariants = {
   },
   exit: { opacity: 0, y: -20, scale: 0.95, transition: { duration: 0.15 } },
 };
+```
+
+### Component Structure
+
+```typescript
+'use client';
+
+import { motion, AnimatePresence } from 'framer-motion';
+import { Lottie } from 'lottie-react';
+import { useVicinityFeeds } from '@/hooks/use-vicinity-feeds';
+import { FeedCard } from './feed-card';
+import { BudgetTipSkeleton } from './budget-tip-skeleton';
+import loadingAnimation from '@/animations/loading-gold-shimmer.json';
+import emptyLocationAnimation from '@/animations/empty-tuk-tuk.json';
+import emptyNoItemsAnimation from '@/animations/empty-coin-jar.json';
+import errorAnimation from '@/animations/error-signal-lost.json';
+import refreshAnimation from '@/animations/refresh-coin-drop.json';
 
 const BUDGET_TIPS_TH = [
   '💡 เติมน้ำมันวันพุธ-พฤหัส ราคามักถูกกว่า',
@@ -431,9 +440,10 @@ export function AnimatedFeedList({ locale }: { locale: 'th' | 'en' }) {
   const tips = locale === 'th' ? BUDGET_TIPS_TH : BUDGET_TIPS_EN;
   const [refreshProgress, setRefreshProgress] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [startY, setStartY] = useState(0);
 
-  // Pull-to-refresh handler (touch + mouse wheel)
-  const handleTouchStart = (e: React.TouchEvent) => { /* track startY */ };
+  // Pull-to-refresh handlers
+  const handleTouchStart = (e: React.TouchEvent) => { setStartY(e.touches[0].clientY); };
   const handleTouchMove = (e: React.TouchEvent) => {
     const delta = e.touches[0].clientY - startY;
     if (delta > 0 && !isRefreshing) {
@@ -451,8 +461,8 @@ export function AnimatedFeedList({ locale }: { locale: 'th' | 'en' }) {
     }
   };
 
-  // Empty state: no location permission
-  if (!error && loading && !lastUpdated) {
+  // Loading skeletons with budget tips
+  if (loading && !lastUpdated) {
     return (
       <motion.div className="space-y-3" variants={containerVariants} initial="hidden" animate="visible">
         <Lottie animationData={loadingAnimation} loop style={{ height: 120 }} />
@@ -461,7 +471,7 @@ export function AnimatedFeedList({ locale }: { locale: 'th' | 'en' }) {
     );
   }
 
-  // Empty state: location denied/unavailable
+  // Empty: no location
   if (!error && items.length === 0 && !loading && !lastUpdated) {
     return (
       <div className="space-y-4 text-center py-8">
@@ -474,7 +484,7 @@ export function AnimatedFeedList({ locale }: { locale: 'th' | 'en' }) {
     );
   }
 
-  // Empty state: no items after fetch
+  // Empty: no items after fetch
   if (!error && items.length === 0 && !loading) {
     return (
       <div className="space-y-4 text-center py-8">
@@ -511,13 +521,7 @@ export function AnimatedFeedList({ locale }: { locale: 'th' | 'en' }) {
       {/* Pull-to-refresh indicator */}
       <AnimatePresence>
         {isRefreshing && (
-          <motion.div
-            key="refresh"
-            layout
-            className="flex justify-center py-2"
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-          >
+          <motion.div key="refresh" layout className="flex justify-center py-2" animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
             <Lottie animationData={refreshAnimation} loop style={{ height: 60, width: 60 }} />
           </motion.div>
         )}
@@ -544,7 +548,6 @@ export function AnimatedFeedList({ locale }: { locale: 'th' | 'en' }) {
 ## 5. Feed Card Component (`components/dashboard/feed-card.tsx`)
 
 ```typescript
-// components/dashboard/feed-card.tsx
 'use client';
 
 import { motion } from 'framer-motion';
@@ -610,7 +613,7 @@ export function FeedCard({ item, locale, index }: FeedCardProps) {
             </span>
           </div>
 
-          <h4 className="font-medium text-white text-sm line-clamp-2 group-hover:text-amber-400 transition-colors">
+          <h4 className="font-medium text-white text-sm group-hover:text-amber-400 transition-colors line-clamp-2">
             {item.title}
           </h4>
 
@@ -619,7 +622,9 @@ export function FeedCard({ item, locale, index }: FeedCardProps) {
               className="mt-2 text-sm text-amber-400 font-medium flex items-center gap-1"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, type: 'spring', stiffness: 300 }}
+              transition={{ delay: 0.3, type: 'spring', stiffness: 200, damping: 20 }}
+              animate={{ scale: [1, 1.02, 1] }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
             >
               <span>💡</span>
               {item.actionable}
@@ -647,15 +652,12 @@ export function FeedCard({ item, locale, index }: FeedCardProps) {
 
 ---
 
-## 6. Budget Tip Skeleton (`components/dashboard/budget-tip-skeleton.tsx`)
+## 5. Budget Tip Skeleton (`components/dashboard/budget-tip-skeleton.tsx`)
 
 ```typescript
-// components/dashboard/budget-tip-skeleton.tsx
 'use client';
 
 import { motion } from 'framer-motion';
-import { Lottie } from 'lottie-react';
-import loadingAnimation from '@/animations/loading-gold-shimmer.json';
 
 interface BudgetTipSkeletonProps {
   tips: string[];
@@ -663,42 +665,42 @@ interface BudgetTipSkeletonProps {
 }
 
 export function BudgetTipSkeleton({ tips, count }: BudgetTipSkeletonProps) {
-  const [tipIndex, setTipIndex] = useState(0);
+  const [currentTip, setCurrentTip] = useState(0);
 
-  // Rotate tip every 3 seconds
   useEffect(() => {
-    const id = setInterval(() => setTipIndex(i => (i + 1) % tips.length), 3000);
-    return () => clearInterval(id);
+    const interval = setInterval(() => {
+      setCurrentTip(prev => (prev + 1) % tips.length);
+    }, 3000);
+    return () => clearInterval(interval);
   }, [tips.length]);
 
   return (
-    <div className="space-y-3" role="status" aria-label="Loading news with budget tips">
-      {[...Array(count)].map((_, i) => (
+    <div className="space-y-2" role="status" aria-live="polite">
+      {Array.from({ length: count }).map((_, i) => (
         <motion.div
           key={i}
-          className="h-24 rounded-xl bg-white/5 overflow-hidden relative"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
+          className="h-16 bg-white/5 rounded-xl"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
           transition={{ delay: i * 0.1 }}
         >
-          {/* Gold shimmer sweep */}
-          <Lottie animationData={loadingAnimation} loop style={{ width: '100%', height: '100%' }} />
-
-          {/* Budget tip overlay */}
-          <div className="absolute inset-0 flex items-center justify-center px-4 pointer-events-none">
-            <motion.span
-              className="text-white/70 text-sm text-center font-medium bg-black/60 px-3 py-1.5 rounded-lg"
-              key={tipIndex}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.3 }}
-            >
-              {tips[tipIndex]}
-            </motion.span>
-          </div>
+          <motion.div
+            className="absolute inset-0 bg-gradient-to-r from-transparent via-[var(--gold-glow)]/5 to-transparent"
+            animate={{ x: ['-100%', '100%'] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+          />
         </motion.div>
       ))}
+      <motion.p
+        className="text-center text-white/40 text-xs mt-2 font-mono"
+        key={currentTip}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.3 }}
+      >
+        {tips[currentTip]}
+      </motion.p>
     </div>
   );
 }
@@ -706,97 +708,190 @@ export function BudgetTipSkeleton({ tips, count }: BudgetTipSkeletonProps) {
 
 ---
 
-## 7. Animation Assets Required
+## 6. CSS Variables (Add to `globals.css`)
 
-| File | Format | Spec |
-|------|--------|------|
-| `public/animations/loading-gold-shimmer.json` | Lottie | 2s loop, gold sweep left→right, obsidian bg |
-| `public/animations/empty-tuk-tuk.json` | Lottie | 3s loop, tuk-tuk idles, "Enable Location" speech bubble |
-| `public/animations/empty-coin-jar.json` | Lottie | 4s loop, coins drop into jar, jar fills then resets |
-| `public/animations/error-signal-lost.json` | Lottie | 2s once, signal bars drop, "📡" shakes |
-| `public/animations/refresh-coin-drop.riv` | Rive | State machine: idle → pull (coin rises) → release (coin drops + bounce) → refresh spin |
+```css
+/* Animation tokens */
+:root {
+  --gold-glow: #F5D742;
+  --gold-bright: #E8B020;
+  --shimmer-duration: 1.5s;
+  --card-entrance-stagger: 80ms;
+  --card-entrance-spring: cubic-bezier(0.16, 1, 0.3, 1);
+}
 
-**Commission specs**:
-- **Style**: Obsidian Gold palette (`#080600` bg, `#C9960C` gold, `#F5D742` glow)
-- **Dimensions**: 200×200px square, transparent bg
-- **Delivery**: `.json` (Lottie) + `.riv` (Rive) for each
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .bb-reduced-motion *,
+  .bb-reduced-motion *::before,
+  .bb-reduced-motion *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+```
 
 ---
 
-## 8. Updated `AlertsSidebar` Integration
+## Testing Strategy
+
+### Unit Tests (`src/lib/news/vicinity-resolver.test.ts`)
 
 ```typescript
-// components/dashboard/alerts-sidebar.tsx (simplified)
-'use client';
+import { haversineKm, resolveVicinityFeeds } from '@/lib/news/vicinity-resolver';
 
-import { AnimatedFeedList } from './animated-feed-list';
+export async function runTests() {
+  // Haversine accuracy
+  const bangkokToPattaya = haversineKm(13.7563, 100.5018, 12.9236, 100.8825);
+  assert.ok(bangkokToPattaya > 100 && bangkokToPattaya < 150, `Expected ~130km, got ${bangkokToPattaya}`);
 
-export function AlertsSidebar({ locale, isModal = false }: { locale: 'th' | 'en'; isModal?: boolean }) {
-  if (isModal) {
-    return (
-      <div className="h-full flex flex-col">
-        <AnimatedFeedList locale={locale} />
-      </div>
-    );
+  const bangkokToPhuket = haversineKm(13.7563, 100.5018, 7.8861, 98.3926);
+  assert.ok(bangkokToPhuket > 650 && bangkokToPhuket < 750, `Expected ~680km, got ${bangkokToPhuket}`);
+
+  // Tier ordering: city > province > country > region > global
+  const feeds = resolveVicinityFeeds(13.7563, 100.5018, 'TH');
+  const tiers = feeds.map(f => f.tier);
+  const firstCityIdx = tiers.indexOf('city');
+  const firstProvinceIdx = tiers.indexOf('province');
+  const firstCountryIdx = tiers.indexOf('country');
+  const firstRegionIdx = tiers.indexOf('region');
+  const firstGlobalIdx = tiers.indexOf('global');
+
+  assert.ok(firstCityIdx < firstProvinceIdx || firstProvinceIdx === -1, 'city before province');
+  assert.ok(firstProvinceIdx < firstCountryIdx || firstProvinceIdx === -1, 'province before country');
+  assert.ok(firstCountryIdx < firstRegionIdx || firstCountryIdx === -1, 'country before region');
+  assert.ok(firstRegionIdx < firstGlobalIdx || firstRegionIdx === -1, 'region before global');
+
+  console.log('✅ vicinity-resolver tests passed');
+}
+```
+
+### Integration Tests (`tests/integration/market-watch-vicinity.test.ts`)
+
+```typescript
+import { useVicinityFeeds } from '@/hooks/use-vicinity-feeds';
+
+export async function runTests() {
+  // Mock location + fetch, verify feed ordering
+  // Mock error states, verify empty/error UI
+  // Test pull-to-refresh triggers refetch
+  console.log('✅ market-watch-vicinity integration tests passed');
+}
+```
+
+### E2E Tests (`tests/e2e/market-watch.spec.ts`)
+
+```typescript
+import { test, expect } from '@playwright/test';
+
+test('Market Watch loads vicinity feeds for Bangkok', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('[data-testid="market-watch"]');
+  
+  // Check loading animation
+  await expect(page.locator('lottie-player')).toBeVisible();
+  
+  // Check feed cards appear with animation
+  await page.waitForSelector('[data-testid="feed-card"]');
+  const cards = await page.locator('[data-testid="feed-card"]').all();
+  expect(cards.length).toBeGreaterThan(0);
+  
+  // Check category badges
+  await expect(page.locator('text=Finance').first()).toBeVisible();
+  
+  // Check actionable badge pulse animation
+  await expect(page.locator('[data-testid="actionable-badge"]').first()).toHaveClass(/animate-pulse/);
+});
+```
+
+---
+
+## Phased Rollout
+
+### Phase 1 (This PR)
+- [ ] Vicinity resolver with curated feeds for TH + 8 SE Asian hubs + US/GB/AU fallbacks
+- [ ] `/api/news/vicinity` endpoint
+- [ ] `useVicinityFeeds` hook with caching
+- [ ] Skeleton loaders with rotating budget tips
+- [ ] Empty states (no location, no items)
+- [ ] Error state with retry
+
+### Phase 2 (Follow-up PR)
+- [ ] Lottie/Rive animations for all states
+- [ ] Framer Motion staggered card entrance
+- [ ] Pull-to-refresh with coin drop animation
+- [ ] Feed card hover/tap micro-interactions
+- [ ] Gold shimmer sweep on card hover
+- [ ] Actionable badge pulse animation
+
+### Phase 3 (Polish)
+- [ ] Province-level feeds for BKK metro
+- [ ] Feed health monitoring (auto-disable failing feeds)
+- [ ] User preference: category filters
+- [ ] Offline-first: show cached news with staled news with "offline" badge
+- [ ] Midnight/weekend contextual tips
+
+---
+
+## Success Criteria
+
+| Metric | Target |
+|--------|--------|
+| Feed relevance (user in BKK sees TH feeds first) | 100% |
+| Load time (cached) | < 200ms |
+| Load time (fresh) | < 3s |
+| Animation frame rate | 60fps on mid-range mobile |
+| Empty state engagement (enable location) | > 15% CTR |
+| Pull-to-refresh usage | > 5% of sessions |
+
+---
+
+## Dependencies to Add
+
+```json
+{
+  "dependencies": {
+    "lottie-react": "^2.4.0",
+    "@rive-app/canvas": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/lottie-react": "^2.0.0"
   }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-white text-lg">
-          {locale === 'th' ? 'ข่าวและข้อมูลล่าสุด' : 'Latest Updates'}
-        </h3>
-      </div>
-      <AnimatedFeedList locale={locale} />
-    </div>
-  );
 }
 ```
 
 ---
 
-## 9. Testing Strategy
+## Files to Create/Modify
 
-| Test | Tool | Coverage |
-|------|------|----------|
-| `vicinity-resolver.ts` distance sort | Vitest | 100% — tier order, distance, priority, reliability |
-| `useVicinityFeeds` hook | React Testing Library | Mock geolocation, cache, error, refresh |
-| `/api/news/vicinity` route | Vitest + MSW | Mock RSS parser, verify feed selection |
-| `AnimatedFeedList` | Playwright | Visual regression: loading, empty, error, success states |
-| `FeedCard` animations | Playwright | Hover shimmer, actionable pulse, entrance stagger |
-| Lottie/Rive load | Playwright | Animations render, no console errors |
-
----
-
-## 10. Rollout Phases
-
-| Phase | Deliverable | Est. Effort |
-|-------|-------------|-------------|
-| **1. Resolver + Feeds** | `vicinity-resolver.ts`, `vicinity-registry.ts`, API route, hook | 2-3 days |
-| **2. Animated List + Cards** | `AnimatedFeedList`, `FeedCard`, `BudgetTipSkeleton` | 2 days |
-| **3. Lottie/Rive Assets** | Commission 5 animations, integrate | 1-2 days (external) |
-| **4. Polish & Edge Cases** | Pull-to-refresh, offline cache, a11y, perf | 1-2 days |
-
----
-
-## 11. Success Criteria
-
-- ✅ User in Bangkok sees BKK feeds first, then TH national, then SEA, then global
-- ✅ User in Singapore sees SG feeds → SEA region → global
-- ✅ Skeleton shows rotating Thai/English budget tips with gold shimmer
-- ✅ Empty state shows tuk-tuk animation + location CTA
-- ✅ Pull-to-refresh triggers coin-drop Rive animation
-- ✅ Cards stagger in with spring physics, hover shimmer sweep
-- ✅ Actionable badges pulse in on mount
-- ✅ All animations < 16ms frame budget on 5-year-old Android
-- ✅ 0 console errors, 100% a11y (axe-core)
+| File | Action |
+|------|--------|
+| `lib/news/vicinity-resolver.ts` | Create |
+| `lib/news/vicinity-registry.ts` | Create |
+| `hooks/use-vicinity-feeds.ts` | Create |
+| `app/api/news/vicinity/route.ts` | Create |
+| `components/dashboard/animated-feed-list.tsx` | Create |
+| `components/dashboard/feed-card.tsx` | Create |
+| `components/dashboard/budget-tip-skeleton.tsx` | Create |
+| `components/dashboard/alerts-sidebar.tsx` | Modify (swap list) |
+| `animations/loading-gold-shimmer.json` | Add |
+| `animations/empty-tuk-tuk.json` | Add |
+| `animations/empty-coin-jar.json` | Add |
+| `animations/error-signal-lost.json` | Add |
+| `animations/refresh-coin-drop.riv` | Add |
+| `src/lib/news/vicinity-resolver.test.ts` | Create |
+| `tests/integration/market-watch-vicinity.test.ts` | Create |
+| `tests/e2e/market-watch.spec.ts` | Create |
 
 ---
 
-## 12. Out of Scope (Future)
+## Commit Plan
 
-- Push notifications for fuel price drops
-- User-customizable feed categories
-- Offline-first IndexedDB sync (beyond 6h cache)
-- Provincial feeds for non-TH countries
-- Admin feed health dashboard
+1. `feat: add vicinity feed resolver with tiered registry`
+2. `feat: add vicinity news API route`
+3. `feat: add useVicinityFeeds hook with caching`
+4. `feat: add animated feed list + feed card + budget tip skeleton`
+5. `feat: integrate animated feed list into AlertsSidebar`
+6. `test: add unit + integration + e2e tests for vicinity feeds`
+7. `chore: add Lottie/Rive animations + install dependencies`
