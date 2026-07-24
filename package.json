@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^7.6.0",
-    "@convex-dev/auth": "^0.0.92",
+    "@convex-dev/auth": "^0.0.94",
     "@parcel/watcher": "^2.6.0",
     "@rive-app/canvas": "^2.39.1",
     "@swc/core": "^1.15.46",
