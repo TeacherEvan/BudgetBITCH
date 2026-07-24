@@ -71,7 +71,7 @@ export default async function RootLayout({
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body className="flex min-h-screen flex-col bg-black text-white">
+      <body className="flex min-h-screen flex-col bg-black pb-28 text-white">
         <ConvexClientProvider>
           <NextIntlClientProvider messages={messages} locale={locale}>
             <ThemeProvider>

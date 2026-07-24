@@ -1,22 +1,37 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
 
+const isCI = process.env.CI === 'true';
+const hasConvexUrl = !!process.env.NEXT_PUBLIC_CONVEX_URL;
+
 const steps = [
-  { name: '1/6 Linting (ESLint)', cmd: 'npm', args: ['run', 'lint'] },
-  { name: '2/6 Type Checking (tsc)', cmd: 'npm', args: ['run', 'typecheck'] },
-  { name: '3/6 IndexedDB Schema Guard', cmd: 'node', args: ['scripts/check-idb-stores.mjs'] },
-  { name: '4/6 Unit & Component Tests (Vitest)', cmd: 'npm', args: ['test'] },
-  { name: '5/6 Convex Backend Tests', cmd: 'npm', args: ['run', 'test:convex'] },
-  { name: '6/6 Production Build (Next.js)', cmd: 'npm', args: ['run', 'build'] },
+  { name: '1/8 Linting (ESLint)', cmd: 'npm', args: ['run', 'lint'] },
+  { name: '2/8 Type Checking (tsc)', cmd: 'npm', args: ['run', 'typecheck'] },
+  { name: '3/8 IndexedDB Schema Guard', cmd: 'node', args: ['scripts/check-idb-stores.mjs'] },
+  { name: '4/8 Unit & Component Tests (Vitest)', cmd: 'npm', args: ['test'] },
+  { name: '5/8 Convex Backend Tests', cmd: 'npm', args: ['run', 'test:convex'] },
+  { name: '6/8 Production Build (Next.js)', cmd: 'npm', args: ['run', 'build'] },
+  { name: '7/8 Security Audit (npm audit)', cmd: 'npm', args: ['audit', '--audit-level=high'], skipLocal: true },
+  { name: '8/8 Deploy Guard (Convex URL check)', cmd: 'node', args: ['scripts/check-convex-deployment.mjs'], skipLocal: !hasConvexUrl && !isCI },
 ];
 
 console.log('\n======================================================');
 console.log('🚀 BudgetBITCH Local Quality Gate Runner (CI)');
 console.log('======================================================\n');
 
+if (!isCI && !hasConvexUrl) {
+  console.log('ℹ️  Running in LOCAL mode (no NEXT_PUBLIC_CONVEX_URL set)');
+  console.log('   Gates 7-8 will be skipped (require CI/Convex env).\n');
+}
+
 const startTime = Date.now();
 
 for (const step of steps) {
+  if (step.skipLocal && !isCI) {
+    console.log(`⏭️  Skipping ${step.name} (CI-only gate)\n`);
+    continue;
+  }
+
   console.log(`▶ Running ${step.name}...`);
   const stepStart = Date.now();
   const res = spawnSync(step.cmd, step.args, {

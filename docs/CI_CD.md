@@ -106,7 +106,7 @@ All workflows are located in `.github/workflows/`:
 
 ## 5. Local Developer Quality Gate Runner
 
-Developers and AI agents can execute the exact pipeline locally prior to committing:
+Developers and AI agents can execute the core pipeline locally prior to committing:
 
 ```bash
 # Run all 6 local quality gates sequentially
@@ -119,28 +119,52 @@ Output format:
 🚀 BudgetBITCH Local Quality Gate Runner (CI)
 ======================================================
 
-▶ Running 1/6 Linting (ESLint)...
-✅ Passed 1/6 Linting (ESLint) (2.41s)
+ℹ️  Running in LOCAL mode (no NEXT_PUBLIC_CONVEX_URL set)
+   Gates 7-8 will be skipped (require CI/Convex env).
 
-▶ Running 2/6 Type Checking (tsc)...
-✅ Passed 2/6 Type Checking (tsc) (3.12s)
+▶ Running 1/8 Linting (ESLint)...
+✅ Passed 1/8 Linting (ESLint) (2.41s)
 
-▶ Running 3/6 IndexedDB Schema Guard...
-✅ Passed 3/6 IndexedDB Schema Guard (0.15s)
+▶ Running 2/8 Type Checking (tsc)...
+✅ Passed 2/8 Type Checking (tsc) (3.12s)
 
-▶ Running 4/6 Unit & Component Tests (Vitest)...
-✅ Passed 4/6 Unit & Component Tests (Vitest) (12.45s)
+▶ Running 3/8 IndexedDB Schema Guard...
+✅ Passed 3/8 IndexedDB Schema Guard (0.15s)
 
-▶ Running 5/6 Convex Backend Tests...
-✅ Passed 5/6 Convex Backend Tests (4.10s)
+▶ Running 4/8 Unit & Component Tests (Vitest)...
+✅ Passed 4/8 Unit & Component Tests (Vitest) (12.45s)
 
-▶ Running 6/6 Production Build (Next.js)...
-✅ Passed 6/6 Production Build (Next.js) (18.20s)
+▶ Running 5/8 Convex Backend Tests...
+✅ Passed 5/8 Convex Backend Tests (4.10s)
+
+▶ Running 6/8 Production Build (Next.js)...
+✅ Passed 6/8 Production Build (Next.js) (18.20s)
+
+⏭️  Skipping 7/8 Security Audit (npm audit) (CI-only gate)
+
+⏭️  Skipping 8/8 Deploy Guard (Convex URL check) (CI-only gate)
 
 ======================================================
 🎉 ALL QUALITY GATES PASSED CLEANLY in 40.43s
 ======================================================
 ```
+
+### Gate Mapping: Local vs CI
+
+| Gate | Local (`npm run ci`) | CI (GitHub Actions) |
+|------|---------------------|---------------------|
+| 1. Lint | ✅ | ✅ |
+| 2. Type Check | ✅ | ✅ |
+| 3. IDB Schema Guard | ✅ | ✅ |
+| 4. Unit Tests | ✅ | ✅ |
+| 5. Convex Tests | ✅ | ✅ |
+| 6. Production Build | ✅ | ✅ |
+| 7. Security Audit | ⏭️ CI-only | ✅ |
+| 8. Deploy Guard | ⏭️ CI-only* | ✅ |
+
+*Deploy Guard runs locally only if `NEXT_PUBLIC_CONVEX_URL` is set.
+
+---
 
 ---
 

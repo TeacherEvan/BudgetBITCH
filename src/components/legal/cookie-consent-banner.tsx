@@ -110,7 +110,7 @@ export function CookieConsentBanner() {
     <div
       role="dialog"
       aria-label={copy.title}
-      className="fixed inset-x-0 bottom-0 z-50 border-t-2 border-amber-400/60 bg-zinc-950/95 px-4 py-4 backdrop-blur-xl sm:px-6"
+      className="fixed inset-x-0 bottom-0 z-50 border-t-2 border-amber-400/60 bg-zinc-950/95 px-4 py-4 backdrop-blur-xl pointer-events-none sm:px-6"
     >
       <div className="mx-auto flex max-w-4xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-white/80">
@@ -128,14 +128,14 @@ export function CookieConsentBanner() {
           <button
             type="button"
             onClick={() => persist(true, false)}
-            className="bb-button-secondary px-4 py-2 text-sm font-semibold"
+            className="bb-button-secondary pointer-events-auto px-4 py-2 text-sm font-semibold"
           >
             {copy.essentialOnly}
           </button>
           <button
             type="button"
             onClick={() => persist(true, true)}
-            className="bb-button-primary px-4 py-2 text-sm font-semibold"
+            className="bb-button-primary pointer-events-auto px-4 py-2 text-sm font-semibold"
           >
             {copy.acceptAll}
           </button>

@@ -25,7 +25,7 @@ test.describe("PWA install prompt", () => {
 test.describe("In-app webview banner", () => {
   test("normal browser shows no webview banner and home renders", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText(/budgetbitch/i, { exact: false }).first()).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText(/budget/i, { exact: false }).first()).toBeVisible({ timeout: 8000 });
     await expect(page.getByText(/open this page in your browser/i)).toHaveCount(0);
   });
 

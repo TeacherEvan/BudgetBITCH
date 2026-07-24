@@ -85,6 +85,61 @@ export async function seedLocalStorage(page: Page, locale: "en" | "th" = "en") {
   );
 }
 
+// Race-safe consent dismissal: seeds storage AND installs an in-page observer
+// that auto-clicks the privacy "Got it" and cookie "Essential only" buttons
+// whenever they appear (including the one-frame hydration flash). This keeps
+// E2E from being gated by real product overlays.
+export async function setupConsentDismissal(page: Page) {
+  await page.addInitScript(() => {
+    const tryDismiss = () => {
+      const gotIt = document.querySelector<HTMLButtonElement>(
+        '[data-testid="privacy-gotit-btn"]',
+      );
+      if (gotIt) gotIt.click();
+      const essential = Array.from(document.querySelectorAll("button")).find(
+        (b) => /essential only/i.test(b.textContent ?? ""),
+      );
+      if (essential) (essential as HTMLButtonElement).click();
+    };
+
+    try {
+      const d = new Date();
+      const date = new Date(
+        Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()),
+      );
+      const dayNum = (date.getUTCDay() + 6) % 7;
+      date.setUTCDate(date.getUTCDate() - dayNum + 3);
+      const firstThursday = new Date(Date.UTC(date.getUTCFullYear(), 0, 4));
+      const week =
+        1 +
+        Math.round(
+          ((date.getTime() - firstThursday.getTime()) / 86400000 -
+            3 +
+            ((firstThursday.getUTCDay() + 6) % 7)) /
+            7,
+        );
+      const isoWeek = `${date.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+      localStorage.setItem("budgetbitch:privacyDisclaimerWeek", isoWeek);
+    } catch {
+      /* ignore */
+    }
+
+    // Test-only backstop: guarantee the global privacy + cookie overlays never
+    // intercept pointer events during E2E. (Unit tests cover the modal's real
+    // visibility logic; this CSS exists only in the test browser.)
+    const style = document.createElement("style");
+    style.textContent =
+      '[data-testid="privacy-disclaimer"],[aria-label="Cookies"]{display:none!important;}';
+    document.documentElement.appendChild(style);
+
+    const obs = new MutationObserver(tryDismiss);
+    obs.observe(document.documentElement, { childList: true, subtree: true });
+    // Best-effort immediate pass once DOM is ready.
+    if (document.readyState !== "loading") tryDismiss();
+    else document.addEventListener("DOMContentLoaded", tryDismiss);
+  });
+}
+
 // Custom fixtures.
 export const test = base.extend<{
   errors: ErrorCollector;
@@ -96,6 +151,13 @@ export const test = base.extend<{
     // eslint-disable-next-line react-hooks/rules-of-hooks
     await use(collector);
   },
+});
+
+// Dismiss the global weekly privacy modal + cookie banner in every test so
+// overlays never block clicks (they're real product surfaces, but E2E
+// shouldn't be gated by them). Race-safe via in-page observer.
+test.beforeEach(async ({ page }) => {
+  await setupConsentDismissal(page);
 });
 
 export { expect };

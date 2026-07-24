@@ -1,7 +1,7 @@
 // components/privacy/weekly-disclaimer.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { ShieldCheck } from 'lucide-react';
 
@@ -39,16 +39,34 @@ function currentIsoWeek(): string {
   return `${date.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
 }
 
+function subscribeToStorage() {
+  // Acknowledgement happens on click; no external store events to subscribe to.
+  return () => {};
+}
+
+function getServerSnapshot(): boolean {
+  // SSR/hydration always starts closed; the client snapshot opens it post-mount.
+  return false;
+}
+
+function getClientSnapshot(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return localStorage.getItem(STORAGE_KEY) !== currentIsoWeek();
+  } catch {
+    return false;
+  }
+}
+
 export function WeeklyPrivacyDisclaimer({ locale }: { locale: 'th' | 'en' }) {
   const l = LABELS[locale];
-  const [open, setOpen] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    try {
-      return localStorage.getItem(STORAGE_KEY) !== currentIsoWeek();
-    } catch {
-      return false;
-    }
-  });
+  const storedOpen = useSyncExternalStore(
+    subscribeToStorage,
+    getClientSnapshot,
+    getServerSnapshot,
+  );
+  const [dismissed, setDismissed] = useState(false);
+  const open = storedOpen && !dismissed;
 
   const acknowledge = () => {
     try {
@@ -56,20 +74,20 @@ export function WeeklyPrivacyDisclaimer({ locale }: { locale: 'th' | 'en' }) {
     } catch {
       // ignore storage failures (private mode)
     }
-    setOpen(false);
+    setDismissed(true);
   };
 
   if (!open) return null;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm pointer-events-none"
       data-testid="privacy-disclaimer"
       role="dialog"
       aria-modal="true"
       aria-label={l.title}
     >
-      <div className="w-full max-w-md rounded-2xl border border-[rgba(201,150,12,0.3)] bg-[#0a0a0a] p-6 shadow-2xl">
+      <div className="w-full max-w-md rounded-2xl border border-[rgba(201,150,12,0.3)] bg-[#0a0a0a] p-6 shadow-2xl pointer-events-auto">
         <div className="mb-3 flex items-center gap-2">
           <ShieldCheck className="h-5 w-5 text-[#E8B020]" />
           <h2 className="text-sm font-bold uppercase tracking-widest text-[#C9960C]">{l.title}</h2>
