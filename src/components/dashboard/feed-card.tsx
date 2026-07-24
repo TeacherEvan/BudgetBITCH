@@ -75,8 +75,8 @@ export function FeedCard({ item, locale, index }: FeedCardProps) {
             <motion.p
               className="mt-2 text-sm text-amber-400 font-medium flex items-center gap-1 animate-pulse"
               initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0, scale: [1, 1.02, 1] }}
-              transition={{ delay: 0.3, type: 'spring', stiffness: 200, damping: 20, duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, type: 'spring', stiffness: 200, damping: 20 }}
             >
               <span>💡</span>
               {item.actionable}
