@@ -2,7 +2,7 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useVicinityFeeds } from '@/hooks/use-vicinity-feeds';
 import { useResolvedLocation } from '@/hooks/use-resolved-location';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 
 // Mock useResolvedLocation
 let mockLocation: { lat: number; lon: number } | null = { lat: 13.7563, lon: 100.5018 };
@@ -30,7 +30,7 @@ describe('useVicinityFeeds', () => {
       { title: 'News 2', link: 'https://b.com', pubDate: new Date().toISOString(), source: 'Test', category: 'fuel', locale: 'th' },
     ];
 
-    (fetch as vi.Mock).mockResolvedValueOnce({
+    (fetch as Mock).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ items: mockItems }),
     });
@@ -55,7 +55,7 @@ describe('useVicinityFeeds', () => {
       { title: 'News 2', link: 'https://b.com', pubDate: new Date().toISOString(), source: 'Test', category: 'fuel', locale: 'th' },
     ];
 
-    (fetch as vi.Mock).mockResolvedValueOnce({
+    (fetch as Mock).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ items: mockItems }),
     });
@@ -64,7 +64,7 @@ describe('useVicinityFeeds', () => {
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    (fetch as vi.Mock).mockResolvedValueOnce({
+    (fetch as Mock).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ items: [...mockItems, { title: 'News 3', link: 'https://c.com', pubDate: new Date().toISOString(), source: 'Test', category: 'deals', locale: 'th', actionable: 'Deal!' }] }),
     });
@@ -84,7 +84,7 @@ describe('useVicinityFeeds', () => {
     // Pre-populate cache
     localStorage.setItem('bb:vicinityNewsCache', JSON.stringify({ items: cachedItems, timestamp: Date.now(), locale: 'th' }));
 
-    (fetch as vi.Mock).mockRejectedValueOnce(new Error('Network error'));
+    (fetch as Mock).mockRejectedValueOnce(new Error('Network error'));
 
     const { result } = renderHook(() => useVicinityFeeds('th'));
 

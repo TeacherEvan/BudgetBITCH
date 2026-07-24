@@ -2,7 +2,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { AnimatedFeedList } from '@/components/dashboard/animated-feed-list';
 import { useVicinityFeeds } from '@/hooks/use-vicinity-feeds';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 
 // Mock the hook
 vi.mock('@/hooks/use-vicinity-feeds');
@@ -31,7 +31,7 @@ describe('AnimatedFeedList', () => {
   });
 
   it('renders feed cards with success state', async () => {
-    (useVicinityFeeds as vi.Mock).mockReturnValue({
+    (useVicinityFeeds as Mock).mockReturnValue({
       items: mockItems,
       loading: false,
       error: null,
@@ -52,7 +52,7 @@ describe('AnimatedFeedList', () => {
   });
 
   it('shows empty state for no location', () => {
-    (useVicinityFeeds as vi.Mock).mockReturnValue({
+    (useVicinityFeeds as Mock).mockReturnValue({
       items: [],
       loading: false,
       error: null,
@@ -66,7 +66,7 @@ describe('AnimatedFeedList', () => {
   });
 
   it('shows empty state for no items after fetch', () => {
-    (useVicinityFeeds as vi.Mock).mockReturnValue({
+    (useVicinityFeeds as Mock).mockReturnValue({
       items: [],
       loading: false,
       error: null,
@@ -80,7 +80,7 @@ describe('AnimatedFeedList', () => {
   });
 
   it('shows error state with retry button', () => {
-    (useVicinityFeeds as vi.Mock).mockReturnValue({
+    (useVicinityFeeds as Mock).mockReturnValue({
       items: [],
       loading: false,
       error: 'Failed to load news',
@@ -95,7 +95,7 @@ describe('AnimatedFeedList', () => {
   });
 
   it('shows loading state with skeletons', () => {
-    (useVicinityFeeds as vi.Mock).mockReturnValue({
+    (useVicinityFeeds as Mock).mockReturnValue({
       items: [],
       loading: true,
       error: null,

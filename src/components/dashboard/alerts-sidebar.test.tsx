@@ -2,7 +2,7 @@
 import { render, screen } from '@testing-library/react';
 import { AlertsSidebar } from '@/components/dashboard/alerts-sidebar';
 import { useVicinityFeeds } from '@/hooks/use-vicinity-feeds';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 
 // Mock the hook
 vi.mock('@/hooks/use-vicinity-feeds');
@@ -26,7 +26,7 @@ describe('AlertsSidebar', () => {
   });
 
   it('renders heading and feed items via AnimatedFeedList', async () => {
-    (useVicinityFeeds as vi.Mock).mockReturnValue({
+    (useVicinityFeeds as Mock).mockReturnValue({
       items: [
         { title: 'Test News', link: 'https://a.com', pubDate: new Date().toISOString(), source: 'Test', category: 'finance', locale: 'th' },
       ],
@@ -46,7 +46,7 @@ describe('AlertsSidebar', () => {
   });
 
   it('renders Thai heading when locale is th', () => {
-    (useVicinityFeeds as vi.Mock).mockReturnValue({
+    (useVicinityFeeds as Mock).mockReturnValue({
       items: [],
       loading: false,
       error: null,
@@ -59,7 +59,7 @@ describe('AlertsSidebar', () => {
   });
 
   it('renders English heading when locale is en', () => {
-    (useVicinityFeeds as vi.Mock).mockReturnValue({
+    (useVicinityFeeds as Mock).mockReturnValue({
       items: [],
       loading: false,
       error: null,
@@ -72,7 +72,7 @@ describe('AlertsSidebar', () => {
   });
 
   it('renders modal variant correctly', () => {
-    (useVicinityFeeds as vi.Mock).mockReturnValue({
+    (useVicinityFeeds as Mock).mockReturnValue({
       items: [
         { title: 'Test News', link: 'https://a.com', pubDate: new Date().toISOString(), source: 'Test', category: 'finance', locale: 'th' },
       ],

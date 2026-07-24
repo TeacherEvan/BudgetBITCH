@@ -25,6 +25,19 @@ vi.mock('@/components/ui/sync-status-indicator', () => ({
   SyncStatusIndicator: () => <div data-testid="sync-status-indicator" />,
 }));
 
+vi.mock('lottie-react', () => ({
+  __esModule: true,
+  default: ({ animationData: _animationData, ...props }: { animationData: unknown; [key: string]: unknown }) => (
+    <div data-testid="lottie-animation" {...props} />
+  ),
+  Lottie: ({ animationData: _animationData, ...props }: { animationData: unknown; [key: string]: unknown }) => (
+    <div data-testid="lottie-animation" {...props} />
+  ),
+  LottiePlayer: () => null,
+  useLottie: () => null,
+  useLottieInteractivity: () => null,
+}));
+
 // The AccountSwitcher child uses useAccounts (Convex); mock it so the shell
 // test only exercises panel switching, not the accounts data layer.
 vi.mock('@/hooks/use-accounts', () => ({

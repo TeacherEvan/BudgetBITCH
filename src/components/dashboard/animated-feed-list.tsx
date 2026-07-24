@@ -42,7 +42,7 @@ const itemVariants = {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: { type: 'spring', stiffness: 300, damping: 30 },
+    transition: { type: 'spring' as const, stiffness: 300, damping: 30 },
   },
   exit: { opacity: 0, y: -20, scale: 0.95, transition: { duration: 0.15 } },
 };
@@ -96,7 +96,7 @@ export function AnimatedFeedList({ locale }: { locale: 'th' | 'en' }) {
           {locale === 'th' ? 'อนุญาตตำแหน่งเพื่อดูข่าวใกล้ตัวคุณ' : 'Enable location for nearby news'}
         </p>
         <button
-          onClick={() => navigator.permissions.request({ name: 'geolocation' })}
+          onClick={() => navigator.geolocation.getCurrentPosition(() => {})}
           className="bb-button-primary mt-2"
         >
           {locale === 'th' ? 'เปิดตำแหน่ง' : 'Enable Location'}
