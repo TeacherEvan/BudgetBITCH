@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { MoreHorizontal } from "lucide-react";
-import { PANEL_CONFIG, type PanelKey } from "./dashboard-shell";
+import { PANEL_CONFIG, type PanelKey } from "./panelConfig";
 
 const PRIMARY_TABS: PanelKey[] = ['expenses', 'budget', 'goals', 'netWorth', 'budgetAlerts'];
 

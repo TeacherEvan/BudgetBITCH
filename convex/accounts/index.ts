@@ -1,4 +1,4 @@
-// convex/accounts.ts
+// convex/accounts/index.ts
 // Barrel export for accounts domain - maintains all existing api/internal bindings
 
 // Types and constants
@@ -9,14 +9,14 @@ export {
   UMBRELLA_KEYS,
   type UmbrellaKey,
   type AccountSummary,
-} from "./accounts/types";
+} from "./types";
 
 // Helpers
 export {
   generateInviteCode,
   ensureProfileDoc,
   getBoardMemberIds,
-} from "./accounts/helpers";
+} from "./helpers";
 
 // Account CRUD
 export {
@@ -26,7 +26,7 @@ export {
   renameAccount,
   rotateInviteCode,
   deleteAccount,
-} from "./accounts/accountCrud";
+} from "./accountCrud";
 
 // Account invites & members
 export {
@@ -40,11 +40,11 @@ export {
   leaveAccount,
   resolveInviteCode,
   getCurrentUserEmail,
-} from "./accounts/accountInvites";
+} from "./accountInvites";
 
 // Board sync & password
 export {
   pushAccountBoard,
   getAccountBoard,
   changePassword,
-} from "./accounts/accountBoardSync";
+} from "./accountBoardSync";

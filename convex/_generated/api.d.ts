@@ -9,7 +9,11 @@
  */
 
 import type * as accounts from "../accounts.js";
+import type * as accounts_accountBoardSync from "../accounts/accountBoardSync.js";
+import type * as accounts_accountCrud from "../accounts/accountCrud.js";
+import type * as accounts_accountInvites from "../accounts/accountInvites.js";
 import type * as accounts_helpers from "../accounts/helpers.js";
+import type * as accounts_index from "../accounts/index.js";
 import type * as accounts_types from "../accounts/types.js";
 import type * as auth from "../auth.js";
 import type * as boardMerge from "../boardMerge.js";
@@ -30,7 +34,11 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   accounts: typeof accounts;
+  "accounts/accountBoardSync": typeof accounts_accountBoardSync;
+  "accounts/accountCrud": typeof accounts_accountCrud;
+  "accounts/accountInvites": typeof accounts_accountInvites;
   "accounts/helpers": typeof accounts_helpers;
+  "accounts/index": typeof accounts_index;
   "accounts/types": typeof accounts_types;
   auth: typeof auth;
   boardMerge: typeof boardMerge;

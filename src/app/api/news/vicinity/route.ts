@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Parser from 'rss-parser';
-import { resolveVicinityFeeds } from '@/lib/news/vicinity-resolver';
+import { resolveVicinityFeeds, VicinityFeedWithMeta } from '@/lib/news/vicinity-resolver';
 import type { NewsItem } from '@/lib/types/budget';
-import type { VicinityFeedWithMeta } from '@/lib/news/vicinity-resolver';
 
 const parser = new Parser();
 
@@ -68,7 +67,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const lat = parseFloat(searchParams.get('lat') || '');
     const lon = parseFloat(searchParams.get('lon') || '');
-    const locale = (searchParams.get('locale') as 'th' | 'en') || 'th';
+    const _locale = (searchParams.get('locale') as 'th' | 'en') || 'th';
     const country = searchParams.get('country')?.toUpperCase() || null;
 
     if (isNaN(lat) || isNaN(lon)) {

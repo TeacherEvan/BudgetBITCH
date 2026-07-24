@@ -87,9 +87,12 @@ export function useVicinityFeeds(locale: 'th' | 'en'): VicinityFeedResult {
       fetchedLocationRef.current = locationKey;
       fetchNews();
     } else if (!location) {
-      setItems([]);
-      setLoading(false);
-      fetchedLocationRef.current = null;
+      // Use setTimeout to avoid setState in effect
+      setTimeout(() => {
+        setItems([]);
+        setLoading(false);
+        fetchedLocationRef.current = null;
+      }, 0);
     }
   }, [location, locale, country, fetchNews]);
 

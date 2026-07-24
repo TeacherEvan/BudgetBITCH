@@ -35,6 +35,7 @@ export function FeedCard({ item, locale, index }: FeedCardProps) {
 
   return (
     <motion.article
+      data-testid="feed-card"
       className="group p-4 rounded-xl bg-black/30 border border-white/10 hover:border-white/20 transition-colors relative overflow-hidden"
       whileHover={{ y: -2, boxShadow: '0 8px 32px rgba(245, 215, 66, 0.08)' }}
       transition={{ type: 'spring', stiffness: 400, damping: 25 }}
@@ -73,6 +74,7 @@ export function FeedCard({ item, locale, index }: FeedCardProps) {
 
           {isActionable && (
             <motion.p
+              data-testid="actionable-badge"
               className="mt-2 text-sm text-amber-400 font-medium flex items-center gap-1 animate-pulse"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}

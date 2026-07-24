@@ -31,7 +31,7 @@ describe('market-watch-api', () => {
     const response = await GET(request);
     const data = await response.json();
 
-    const fuelItem = data.items.find((i: any) => i.title.includes('Fuel'));
+    const fuelItem = data.items.find((i: { title: string; actionable?: string }) => i.title.includes('Fuel'));
     expect(fuelItem?.actionable).toContain('เช็คราคาน้ำมัน');
   });
 
@@ -58,7 +58,7 @@ describe('market-watch-api', () => {
     const response = await GET(request);
     const data = await response.json();
 
-    const links = data.items.map((item: any) => item.link);
+    const links = data.items.map((item: { link: string }) => item.link);
     const uniqueLinks = new Set(links);
     expect(links.length).toBe(uniqueLinks.size);
   });

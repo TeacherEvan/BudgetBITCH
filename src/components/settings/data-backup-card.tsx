@@ -1,3 +1,4 @@
+// components/settings/data-backup-card.tsx
 'use client';
 
 import { useState } from 'react';
@@ -15,6 +16,7 @@ import type { CurrencyOverride } from '@/hooks/use-currency-override';
 import { format } from 'date-fns';
 import { ChangePasswordModal } from '@/components/settings/change-password-modal';
 import { StorageDiagnosticsModal } from '@/components/settings/storage-diagnostics-modal';
+import { DecryptImportModal } from '@/components/settings/decrypt-import-modal';
 
 type Status = 'idle' | 'success' | 'error';
 
@@ -58,10 +60,10 @@ export function DataBackupCard({
   const [exportPassword, setExportPassword] = useState('');
   const [showExportPassword, setShowExportPassword] = useState(false);
   const [importPassword, setImportPassword] = useState('');
-  const [showImportPasswordInput, setShowImportPasswordInput] = useState(false);
   const [showImportPassword, setShowImportPassword] = useState(false);
   const [pendingFileString, setPendingFileString] = useState<string | null>(null);
   const [importErrorMessage, setImportErrorMessage] = useState('');
+  const [decryptModalOpen, setDecryptModalOpen] = useState(false);
 
   const handleResetConfirm = async () => {
     setResetOpen(false);
@@ -158,7 +160,7 @@ export function DataBackupCard({
         // Check if this is an encrypted backup payload
         if (rawPayload && rawPayload.isEncrypted) {
           setPendingFileString(fileString);
-          setShowImportPasswordInput(true);
+          setDecryptModalOpen(true);
           return;
         }
 
@@ -195,7 +197,7 @@ export function DataBackupCard({
       };
 
       const { data } = await parseAndValidateBackup(JSON.stringify(unencryptedPayload));
-      setShowImportPasswordInput(false);
+      setDecryptModalOpen(false);
       setPendingFileString(null);
       setImportPassword('');
       await executeDataImport(data);
@@ -314,7 +316,7 @@ export function DataBackupCard({
                 <h3 className="font-semibold text-white">{l.exportData}</h3>
               </div>
               <p className="text-sm text-white/50 mb-4">{l.exportDesc}</p>
-              
+             
               {/* Encryption UI */}
               <div className="mb-4 bg-black/20 p-3 rounded-lg border border-white/5 space-y-3">
                 <label className="flex items-center gap-2 text-xs text-white/70 cursor-pointer">
@@ -496,52 +498,21 @@ export function DataBackupCard({
         locale={locale}
       />
 
-      {/* Decrypt Password Prompt Modal */}
-      <Modal
-        isOpen={showImportPasswordInput}
+      {/* Decrypt Import Modal */}
+      <DecryptImportModal
+        isOpen={decryptModalOpen}
         onClose={() => {
-          setShowImportPasswordInput(false);
+          setDecryptModalOpen(false);
           setPendingFileString(null);
           setImportPassword('');
         }}
-        title={l.importPasswordTitle}
-        description={l.importPasswordDesc}
-        size="sm"
-      >
-        <div className="space-y-4">
-          <div className="relative">
-            <Input
-              type={showImportPassword ? 'text' : 'password'}
-              placeholder={l.enterPassword}
-              value={importPassword}
-              onChange={(e) => setImportPassword(e.target.value)}
-              className="w-full text-xs pr-8"
-            />
-            <button
-              type="button"
-              onClick={() => setShowImportPassword(!showImportPassword)}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70"
-            >
-              {showImportPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
-          </div>
-          <div className="flex gap-3 justify-end mt-4">
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setShowImportPasswordInput(false);
-                setPendingFileString(null);
-                setImportPassword('');
-              }}
-            >
-              {l.resetConfirmCancel}
-            </Button>
-            <Button variant="primary" onClick={handleDecryptAndImport} disabled={!importPassword}>
-              {l.submit}
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        onDecrypt={handleDecryptAndImport}
+        locale={locale}
+        importPassword={importPassword}
+        setImportPassword={setImportPassword}
+        showImportPassword={showImportPassword}
+        setShowImportPassword={setShowImportPassword}
+      />
 
       <Modal
         isOpen={resetOpen}

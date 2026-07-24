@@ -7,49 +7,21 @@ import { X, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { HeaderBar } from '@/components/layout/header-bar';
 import { AccountSwitcher } from '@/components/accounts/account-switcher';
-import { DailyDisposableHero } from '@/components/dashboard/daily-disposable-hero';
 import { CriticalExpensesModal } from '@/components/dashboard/critical-expenses-modal';
 import { AlertsSidebar } from '@/components/dashboard/alerts-sidebar';
 import { PriorityGuide } from '@/components/dashboard/priority-guide';
-import { ExpenseTracker } from '@/components/dashboard/panels/expense-tracker';
-import { BudgetVisual } from '@/components/dashboard/panels/budget-visual';
-import { BudgetAlerts } from '@/components/dashboard/panels/budget-alerts';
-import { Bills } from '@/components/dashboard/panels/bills';
-import { SavingsGoals } from '@/components/dashboard/panels/savings-goals';
-import { NetWorth } from '@/components/dashboard/panels/net-worth';
-import { Subscriptions } from '@/components/dashboard/panels/subscriptions';
-import { EmergencyFund } from '@/components/dashboard/panels/emergency-fund';
-import { DebtPayoff } from '@/components/dashboard/panels/debt-payoff';
-import { CashFlowForecast } from '@/components/dashboard/panels/cash-flow-forecast';
-import { IncomeInflowPanel } from '@/components/dashboard/panels/income-inflow-panel';
 import { Modal } from '@/components/ui/modal';
 import { useCriticalExpense } from '@/hooks/use-critical-expense';
 import { useWizardProfile, useBudgets, useBills } from '@/hooks/use-local-db';
-import { BentoGrid, PanelConfig } from '@/components/dashboard/bento-grid';
+import { BentoGrid, type PanelConfig } from '@/components/dashboard/bento-grid';
 import { MobilePanelTabs } from '@/components/dashboard/mobile-panel-tabs';
 import { ScenarioSandboxModal } from '@/components/dashboard/scenario-sandbox-modal';
 import { CashFlowProjectionCard } from '@/components/dashboard/cash-flow-projection-card';
 import { CategoryPivotCard } from '@/components/dashboard/category-pivot-card';
 import { BudgetVarianceGrid } from '@/components/dashboard/budget-variance-grid';
-
-export type PanelKey = 'daily_budget' | 'expenses' | 'inflow' | 'budget' | 'budgetAlerts' | 'bills' | 'goals' | 'netWorth' | 'subscriptions' | 'emergency' | 'debt' | 'forecast';
-
-export const PANEL_CONFIG: Record<PanelKey, { label: { th: string; en: string }; icon: string }> = {
-  daily_budget: { label: { th: 'งบประมาณรายวัน', en: 'Daily Budget' }, icon: '📅' },
-  expenses: { label: { th: 'ค่าใช้จ่าย', en: 'Expenses' }, icon: '💸' },
-  inflow: { label: { th: 'รายรับ', en: 'Inflow / Income' }, icon: '💵' },
-  budget: { label: { th: 'งบประมาณ', en: 'Budget' }, icon: '📊' },
-  budgetAlerts: { label: { th: 'การแจ้งเตือน', en: 'Budget Alerts' }, icon: '🔔' },
-  bills: { label: { th: 'บิล/บิลล์', en: 'Bills' }, icon: '📋' },
-  goals: { label: { th: 'เป้าหมาย', en: 'Goals' }, icon: '🎯' },
-  netWorth: { label: { th: 'มูลค่าสุทธิ', en: 'Net Worth' }, icon: '💰' },
-  subscriptions: { label: { th: 'สมัครสมาชิก', en: 'Subscriptions' }, icon: '📺' },
-  emergency: { label: { th: 'เงินสำรอง', en: 'Emergency' }, icon: '🛡️' },
-  debt: { label: { th: 'หนี้สิน', en: 'Debt' }, icon: '📉' },
-  forecast: { label: { th: 'พยากรณ์', en: 'Forecast' }, icon: '🔮' },
-};
-
-const PANEL_ORDER: PanelKey[] = ['daily_budget', 'expenses', 'inflow', 'budget', 'budgetAlerts', 'bills', 'goals', 'netWorth', 'subscriptions', 'emergency', 'debt', 'forecast'];
+import { buildPanels } from '@/components/dashboard/panels';
+import { PANEL_CONFIG, PANEL_ORDER, type PanelKey } from '@/components/dashboard/panelConfig';
+import { DailyDisposableHero } from '@/components/dashboard/daily-disposable-hero';
 
 interface DashboardShellProps {
   locale: 'th' | 'en';
@@ -106,20 +78,7 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
 
   const isPanelOpen = (panel: PanelKey) => openPanels.includes(panel);
 
-  const panels: PanelConfig[] = useMemo(() => [
-    { id: 'daily_budget', title: 'Daily Budget', children: <DailyDisposableHero locale={locale} onSetup={onSetup} /> },
-    { id: 'expenses', title: 'Expenses', children: <ExpenseTracker /> },
-    { id: 'inflow', title: 'Income Inflow', children: <IncomeInflowPanel /> },
-    { id: 'budget', title: 'Budget', children: <BudgetVisual /> },
-    { id: 'budgetAlerts', title: 'Budget Alerts', children: <BudgetAlerts /> },
-    { id: 'bills', title: 'Bills', children: <Bills /> },
-    { id: 'goals', title: 'Goals', children: <SavingsGoals /> },
-    { id: 'netWorth', title: 'Net Worth', children: <NetWorth /> },
-    { id: 'subscriptions', title: 'Subscriptions', children: <Subscriptions /> },
-    { id: 'emergency', title: 'Emergency', children: <EmergencyFund /> },
-    { id: 'debt', title: 'Debt', children: <DebtPayoff /> },
-    { id: 'forecast', title: 'Forecast', children: <CashFlowForecast /> },
-  ], [locale, onSetup]);
+  const panels: PanelConfig[] = useMemo(() => buildPanels(locale, onSetup), [locale, onSetup]);
 
   // Only render the panels the user has toggled on in the sidebar (desktop).
   const visiblePanels = panels.filter((panel) => openPanels.includes(panel.id as PanelKey));
@@ -185,6 +144,7 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
 
             {/* Market Watch - desktop sidebar, only below xl */}
             <button
+              data-testid="market-watch-trigger"
               onClick={() => setMarketWatchOpen(true)}
               className="xl:hidden flex w-full items-center gap-3 rounded-xl border border-sky-400/30 bg-sky-400/10 p-3 text-left transition-colors hover:bg-sky-400/20"
             >
@@ -373,7 +333,11 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
               <p className="font-medium text-[var(--text-1)] truncate">{locale === 'th' ? 'เลือก 1 อย่างลดในเดือนนี้' : 'Pick 1 to cut this month'}</p>
             </div>
           </button>
-          <button className="flex w-full items-center gap-3 rounded-xl border border-sky-400/30 bg-sky-400/10 p-3 text-left" onClick={() => { setMarketWatchOpen(true); setMobileMenuOpen(false); }}>
+          <button
+              data-testid="market-watch-trigger"
+              className="flex w-full items-center gap-3 rounded-xl border border-sky-400/30 bg-sky-400/10 p-3 text-left"
+              onClick={() => { setMarketWatchOpen(true); setMobileMenuOpen(false); }}
+            >
             <span className="text-2xl">📰</span>
             <div className="min-w-0">
               <p className="font-medium text-[var(--text-1)] truncate">{locale === 'th' ? 'ข่าวและข้อมูลล่าสุด' : 'Market Watch'}</p>
