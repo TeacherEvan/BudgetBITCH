@@ -22,9 +22,9 @@ export const inviteByCode = mutation({
         q.eq("accountId", args.accountId),
       )
       .unique();
-    if (!acc) throw new Error("Account not found");
-    if (acc.ownerId !== userId) throw new Error("Only the owner can invite");
-    if (!acc.boardId) throw new Error("Account has no shared board");
+    if (!acc) throw new ConvexError("Account not found");
+    if (acc.ownerId !== userId) throw new ConvexError("Only the owner can invite");
+    if (!acc.boardId) throw new ConvexError("Account has no shared board");
 
     const memberRows = await ctx.db
       .query("boardMembers")
@@ -39,7 +39,7 @@ export const inviteByCode = mutation({
     ).length;
     const totalOccupied = memberRows.length + pendingInvites;
     if (totalOccupied >= MAX_MEMBERS) {
-      throw new Error(`An account can have at most ${MAX_MEMBERS} members`);
+      throw new ConvexError(`An account can have at most ${MAX_MEMBERS} members`);
     }
 
     const code = args.code.trim().toUpperCase();
@@ -47,9 +47,9 @@ export const inviteByCode = mutation({
       .query("userProfiles")
       .withIndex("by_shareCode", (q) => q.eq("shareCode", code))
       .unique();
-    if (!invitee) throw new Error("Share code not found");
+    if (!invitee) throw new ConvexError("Share code not found");
     if (invitee.userId === userId) {
-      throw new Error("Cannot invite yourself");
+      throw new ConvexError("Cannot invite yourself");
     }
 
     const existingMember = await ctx.db
@@ -254,7 +254,7 @@ export const acceptInvite = mutation({
       joinedAt: Date.now(),
     });
     await ctx.db.patch(board._id, {
-      members: [...board.members, userId],
+      members: Array.from(new Set([...board.members, userId])),
     });
 
     const profile = await ensureProfileDoc(ctx, userId);

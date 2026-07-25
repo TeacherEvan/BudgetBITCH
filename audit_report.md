@@ -1,66 +1,81 @@
-# Phase 1: Codebase Audit Report — BudgetBITCH
+# Phase 1: AUDIT Report — Accounts & Syncing Features
 
-**Date:** 2026-07-23  
-**Target:** Full Codebase (`BudgetBITCH`)  
-**Framework:** Next.js 16 + React 19 + Convex Backend + TailwindCSS + Vitest / Playwright  
+## Scope Definition
+- **Target Feature Area**: Accounts management (umbrella multi-board budgeting) & syncing engine (local IndexedDB <-> Convex shared boards).
+- **Core Backend Files**:
+  - `convex/schema.ts` (accounts, accountBoards, boardMembers, userProfiles, invites)
+  - `convex/accounts.ts` (barrel export)
+  - `convex/accounts/index.ts` (barrel export)
+  - `convex/accounts/types.ts`
+  - `convex/accounts/helpers.ts`
+  - `convex/accounts/accountCrud.ts`
+  - `convex/accounts/accountBoardSync.ts`
+  - `convex/accounts/accountInvites.ts`
+  - `convex/boardMerge.ts` (Last-Write-Wins merging algorithm)
+  - `convex/accounts.test.ts`
+- **Core Client Files**:
+  - `src/lib/db/accountStorage.ts` (multi-board stash & swap model)
+  - `src/lib/db/local-db.ts` (IndexedDB 8-store persistence & board serialization)
+  - `src/hooks/use-accounts.ts` (client Accounts state & actions orchestration)
+  - `src/hooks/use-accounts.test.tsx`
+  - `src/hooks/use-account-sync.ts` (background sync engine, push debouncing & queueing)
+  - `src/hooks/use-account-sync.test.tsx`
+  - `src/components/accounts/accounts-view.tsx` (UI for accounts management)
+  - `src/components/accounts/synced-account-dashboard.tsx`
 
----
+## File Inventory & Line Counts
+| Language | Directory | File Path | Line Count |
+|---|---|---|---|
+| TypeScript (Convex) | `convex/` | `schema.ts` | 161 |
+| TypeScript (Convex) | `convex/accounts/` | `accountCrud.ts` | 361 |
+| TypeScript (Convex) | `convex/accounts/` | `accountBoardSync.ts` | 132 |
+| TypeScript (Convex) | `convex/accounts/` | `accountInvites.ts` | 406 |
+| TypeScript (Convex) | `convex/accounts/` | `helpers.ts` | 58 |
+| TypeScript (Convex) | `convex/accounts/` | `types.ts` | 29 |
+| TypeScript (Convex) | `convex/` | `accounts.ts` | 50 |
+| TypeScript (Convex) | `convex/` | `accounts.test.ts` | 502 |
+| TypeScript (Client) | `src/lib/db/` | `accountStorage.ts` | 238 |
+| TypeScript (Client) | `src/hooks/` | `use-accounts.ts` | 544 |
+| TypeScript (Client) | `src/hooks/` | `use-account-sync.ts` | 283 |
+| TSX (Client) | `src/components/accounts/` | `accounts-view.tsx` | 366 |
 
-## 1. Executive Summary & Inventory
-
-- **Total Source/Test Files:** 270 files (`.tsx`: 142, `.ts`: 126, `.js`/`.mjs`: 2)
-- **Total Lines of Code:** ~36,972 LOC
-- **Entry Points:**
-  - Web Frontend: `src/app/` (Next.js 16 App Router)
-  - State & Local Storage DB: `src/lib/db/local-db.ts` (IndexedDB via `idb`) & `src/hooks/use-local-db.ts`
-  - Backend API / Realtime: `convex/` (Convex cloud functions & schema)
-  - Internationalization: `src/i18n/`
-- **Key Modules & Directories:**
-  - `convex/`: Backend functions (`accounts.ts`, `sharedBoards.ts`, `snapshots.ts`, `receipts.ts`, `legal.ts`, `auth.ts`)
-  - `src/components/`: Dashboard panels (`bills.tsx`, `expense-tracker.tsx`, `subscriptions.tsx`, `savings-goals.tsx`), Settings, Modals, Accounts UI
-  - `src/lib/`: IndexedDB store (`local-db.ts`), SMS Parsers (`src/lib/sms-parser/`), Convex client integration (`sync-snapshots.ts`), Utilities
-  - `src/hooks/`: Reactive state custom hooks (`use-local-db.ts`, `use-accounts.ts`, `use-shared-board.ts`)
-
----
-
-## 2. Dependency Graph (High Level)
-
+## Dependency Graph
 ```
-[Next.js App Router (src/app/)]
-   │
-   ├──> [React UI Components (src/components/)]
-   │       ├──> [Hooks (src/hooks/use-local-db.ts, use-accounts.ts, etc.)]
-   │       │       ├──> [IndexedDB Local Storage (src/lib/db/local-db.ts)]
-   │       │       └──> [Convex Client Sync (src/lib/convex/sync-snapshots.ts)]
-   │       └──> [I18n (src/i18n/messages.ts)]
-   │
-   └──> [Convex Backend API (convex/)]
-           ├──> Schema & Tables (`accounts`, `sharedBoards`, `dailySnapshots`, `receipts`)
-           ├──> Auth Integration (`@convex-dev/auth`)
-           └──> Gemini AI API Actions (`receipts.ts`)
+UI Layer:
+  src/components/accounts/accounts-view.tsx
+    ├── useAccounts (src/hooks/use-accounts.ts)
+    │     ├── accountStorage (src/lib/db/accountStorage.ts)
+    │     │     └── local-db (src/lib/db/local-db.ts)
+    │     └── convex/api (accounts.listMyAccounts, createAccount, etc.)
+    └── useAccountSync (src/hooks/use-account-sync.ts)
+          ├── local-db (serializeBoardForSync, applyRemoteBoard)
+          ├── accountStorage (getCurrentAccountId, getLocalAccount)
+          └── convex/api (getAccountBoard, pushAccountBoard)
+
+Convex Backend Layer:
+  convex/accounts.ts -> convex/accounts/index.ts
+    ├── accountCrud.ts (createAccount, listMyAccounts, getAccount, renameAccount, rotateInviteCode, deleteAccount)
+    ├── accountBoardSync.ts (pushAccountBoard, getAccountBoard, changePassword)
+    │     └── boardMerge.ts (mergeRecords - LWW timestamp merge)
+    ├── accountInvites.ts (inviteByCode, createInviteToken, redeemInviteToken, listInvites, acceptInvite, declineInvite, removeMember, leaveAccount)
+    └── helpers.ts (generateInviteCode, ensureProfileDoc, getBoardMemberIds)
 ```
 
----
+## Test Coverage Baseline
+- **Vitest Runner**: `vitest run`
+- **Total Test Files**: 85 / 85 passed (100%)
+- **Total Tests**: 521 / 521 passed (100%)
+- **Accounts-specific tests**:
+  - `convex/accounts.test.ts`: 21 tests passed
+  - `src/hooks/use-accounts.test.tsx`: 8 tests passed
+  - `src/hooks/use-account-sync.test.tsx`: 7 tests passed
+  - `src/components/accounts/accounts-view.test.tsx`: 9 tests passed
+  - `src/components/accounts/synced-account-dashboard.test.tsx`: 1 test passed
 
-## 3. Test Coverage Baseline
-
-| Suite | Runner | Test Files | Total Tests | Pass Rate | Duration |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Frontend / Core Unit** | Vitest | 65 | 435 passed | 100% (435/435) | ~48.8s |
-| **Convex Backend Unit** | Vitest (`convex-test`) | 6 | 43 passed | 100% (43/43) | ~1.5s |
-| **Total Test Baseline** | — | **71** | **478 passed** | **100%** | **~50.3s** |
-
----
-
-## 4. Static Analysis & Lint Baseline
-
-- **ESLint Errors:** 0 errors
-- **ESLint Warnings:** 13 warnings (all related to `@typescript-eslint/no-unused-vars` in `src/lib/sms-parser/patterns/*.ts` files: `generic.ts`, `sg.ts`, `th.ts`, `us.ts`)
-- **TODOs / FIXMEs / XXXs:** 0 found across all codebase files
+## Lint & Typecheck Baseline
+- **TypeScript (`tsc --noEmit`)**: 0 errors
+- **ESLint (`eslint .`)**: 0 errors, 11 warnings (none in accounts/syncing files)
+- **TODOs / FIXMEs**: 0 found
 
 ---
-
-## 5. Scope Confirmation & Gate
-
-- **Scope:** Full codebase audit (Frontend, Local Storage, Hooks, Convex Backend).
-- **Status:** Phase 1 Complete. Ready for Phase 2: Review (Structural & Semantic Analysis).
+*Phase 1 Complete — Ready for Phase 2 (Review)*

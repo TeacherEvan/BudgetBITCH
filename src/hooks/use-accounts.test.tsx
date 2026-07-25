@@ -128,6 +128,17 @@ describe('useAccounts', () => {
     let api!: ReturnType<typeof useAccounts>;
     render(<HookProbe onReady={(a) => (api = a)} />);
     await waitFor(() => expect(api?.ready).toBe(true));
+    listMyAccounts.mockReturnValue([
+      {
+        accountId: 'acc-join',
+        umbrella: 'business',
+        name: 'Work',
+        role: 'member',
+        boardId: 'board-join',
+        memberCount: 2,
+        inviteCode: null,
+      },
+    ]);
     await act(async () => {
       await api.deleteAccount('acc-own');
     });
@@ -154,5 +165,20 @@ describe('useAccounts', () => {
 
     const current = await getCurrentAccountId();
     expect(current).toBe('acc-join');
+  });
+
+  it('persists server accounts to localAccounts IndexedDB for multi-hardware sync', async () => {
+    let api!: ReturnType<typeof useAccounts>;
+    render(<HookProbe onReady={(a) => (api = a)} />);
+    await waitFor(() => expect(api?.ready).toBe(true));
+
+    const { getLocalAccount } = await import('@/lib/db/accountStorage');
+    const ownMeta = await getLocalAccount('acc-own');
+    const joinMeta = await getLocalAccount('acc-join');
+
+    expect(ownMeta).toBeDefined();
+    expect(ownMeta?.boardId).toBe('board-own');
+    expect(joinMeta).toBeDefined();
+    expect(joinMeta?.boardId).toBe('board-join');
   });
 });

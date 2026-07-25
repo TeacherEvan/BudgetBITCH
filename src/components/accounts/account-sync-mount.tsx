@@ -28,12 +28,14 @@ export function AccountSyncMount() {
     isAuthenticated ? {} : 'skip'
   );
 
-  const restoredRef = useRef(false);
+  const restoredSnapshotIdRef = useRef<string | null>(null);
   const snapshotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!isAuthenticated || !latestSnapshot || restoredRef.current) return;
+    if (!isAuthenticated || !latestSnapshot) return;
     if (!latestSnapshot.fullBackupData) return;
+    const snapshotId = String(latestSnapshot._id || latestSnapshot.createdAt || '');
+    if (restoredSnapshotIdRef.current === snapshotId) return;
 
     (async () => {
       try {
@@ -41,12 +43,12 @@ export function AccountSyncMount() {
         const storedLastRestored = Number(localStorage.getItem(LAST_RESTORED_KEY) || '0');
         const snapshotTime = latestSnapshot.createdAt || 0;
 
-        // Auto-restore if local expenses are empty OR the cloud snapshot is newer than what we previously restored
+        // Auto-restore if local expenses are empty OR the cloud snapshot is newer than what was restored
         if (localExpenses.length === 0 || snapshotTime > storedLastRestored) {
           console.log('[AccountSyncMount] Auto-restoring cloud snapshot for desktop/mobile sync:', snapshotTime);
           const success = await restoreFromCloudSnapshot(latestSnapshot);
           if (success) {
-            restoredRef.current = true;
+            restoredSnapshotIdRef.current = snapshotId;
             localStorage.setItem(LAST_RESTORED_KEY, String(snapshotTime));
             notifyBoardChanged('remote');
           }

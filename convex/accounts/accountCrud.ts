@@ -161,7 +161,7 @@ export const listMyAccounts = query({
             const acc = await ctx.db
               .query("accounts")
               .withIndex("by_accountId", (q) =>
-                q.eq("accountId", board.boardId),
+                q.eq("accountId", board.accountId),
               )
               .unique();
             const members = await getBoardMemberIds(ctx, board.boardId);
@@ -250,11 +250,11 @@ export const renameAccount = mutation({
         q.eq("accountId", args.accountId),
       )
       .unique();
-    if (!acc) throw new Error("Account not found");
-    if (acc.ownerId !== userId) throw new Error("Only the owner can rename");
+    if (!acc) throw new ConvexError("Account not found");
+    if (acc.ownerId !== userId) throw new ConvexError("Only the owner can rename");
     const name = args.name.trim();
     if (name.length < 1 || name.length > 40) {
-      throw new Error("Account name must be 1–40 characters");
+      throw new ConvexError("Account name must be 1–40 characters");
     }
     await ctx.db.patch(acc._id, { name });
     if (acc.boardId) {
@@ -279,8 +279,8 @@ export const rotateInviteCode = mutation({
         q.eq("accountId", args.accountId),
       )
       .unique();
-    if (!acc) throw new Error("Account not found");
-    if (acc.ownerId !== userId) throw new Error("Only the owner can rotate");
+    if (!acc) throw new ConvexError("Account not found");
+    if (acc.ownerId !== userId) throw new ConvexError("Only the owner can rotate");
     let inviteCode = "";
     for (let attempt = 0; attempt < 10; attempt++) {
       const candidate = generateInviteCode();
@@ -295,7 +295,7 @@ export const rotateInviteCode = mutation({
         break;
       }
     }
-    if (!inviteCode) throw new Error("Failed to allocate an invite code");
+    if (!inviteCode) throw new ConvexError("Failed to allocate an invite code");
     await ctx.db.patch(acc._id, { inviteCode });
     return { inviteCode };
   },
@@ -312,8 +312,8 @@ export const deleteAccount = mutation({
         q.eq("accountId", args.accountId),
       )
       .unique();
-    if (!acc) throw new Error("Account not found");
-    if (acc.ownerId !== userId) throw new Error("Only the owner can delete");
+    if (!acc) throw new ConvexError("Account not found");
+    if (acc.ownerId !== userId) throw new ConvexError("Only the owner can delete");
 
     const profile = await ensureProfileDoc(ctx, userId);
     const owned = (profile.accountIds ?? []).filter(

@@ -90,6 +90,9 @@ export function useAccountSync(): UseAccountSync {
   // Latest boardId in a ref so the push path always reads the current value
   // (avoids stale closures when the edit listener fires before a re-render).
   const boardIdRef = useRef<string | null>(null);
+  // Push timer (debounce local edits).
+  const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingRef = useRef(false);
 
   // Resolve the active account's boardId from local storage.
   const resolveActiveBoard = useCallback(async () => {
@@ -112,14 +115,15 @@ export function useAccountSync(): UseAccountSync {
     };
   }, [resolveActiveBoard]);
 
-  // Reset lastAppliedAt when boardId switches to avoid using stale pull guards from other boards.
+  // Reset lastAppliedAt and clear pending push timers when boardId switches.
   useEffect(() => {
     lastAppliedAt.current = 0;
+    if (pushTimer.current) {
+      clearTimeout(pushTimer.current);
+      pushTimer.current = null;
+    }
+    pendingRef.current = false;
   }, [boardId]);
-
-  // Push timer (debounce local edits).
-  const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingRef = useRef(false);
 
   const flushQueue = useCallback(async () => {
     if (!isAuthenticated || !isOnline()) return;
@@ -168,10 +172,11 @@ export function useAccountSync(): UseAccountSync {
     if (isOnline()) {
       try {
         setSyncing(true);
-        const res = (await pushBoard({ boardId: bid, data: data as never, updatedAt })) as
-          | { updatedAt?: number }
-          | undefined;
-        lastAppliedAt.current = res?.updatedAt ?? updatedAt;
+        await pushBoard({ boardId: bid, data: data as never, updatedAt });
+        // Set lastAppliedAt to client's push timestamp. If server merged remote
+        // partner changes (bumping server updatedAt), the pull effect sees
+        // remote.updatedAt > lastAppliedAt and applies the merged partner records.
+        lastAppliedAt.current = updatedAt;
         setLastError(null);
       } catch (e) {
         setLastError(e instanceof Error ? e.message : "Push failed");
@@ -192,7 +197,7 @@ export function useAccountSync(): UseAccountSync {
     }
   }, [isAuthenticated, pushBoard, flushQueue]);
 
-  const schedulePush = () => {
+  const schedulePush = useCallback(() => {
     pendingRef.current = true;
     setPushPending(true);
     
@@ -200,7 +205,7 @@ export function useAccountSync(): UseAccountSync {
     pushTimer.current = setTimeout(() => {
       void doPush();
     }, PUSH_DEBOUNCE_MS);
-  };
+  }, [doPush]);
 
   // Manual "Sync Now": force an immediate push of the active board's current
   // state and drain any queued pushes. Mirrors useSharedBoard.syncNow so the
@@ -220,6 +225,11 @@ export function useAccountSync(): UseAccountSync {
     const onChanged = (e: Event) => {
       const customEvent = e as CustomEvent<{ source?: string }>;
       if (customEvent.detail?.source === "switch") {
+        if (pushTimer.current) {
+          clearTimeout(pushTimer.current);
+          pushTimer.current = null;
+        }
+        pendingRef.current = false;
         lastAppliedAt.current = 0;
         void resolveActiveBoard();
         return;
@@ -231,8 +241,7 @@ export function useAccountSync(): UseAccountSync {
     };
     window.addEventListener(BOARD_CHANGED_EVENT, onChanged);
     return () => window.removeEventListener(BOARD_CHANGED_EVENT, onChanged);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resolveActiveBoard]);
+  }, [resolveActiveBoard, schedulePush]);
 
   // Replay queued pushes when back online or requested by SW.
   useEffect(() => {

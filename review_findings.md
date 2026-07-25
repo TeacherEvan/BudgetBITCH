@@ -1,89 +1,120 @@
-# Deep Architectural & Security Code Review Audit — BudgetBITCH
+# Phase 2: REVIEW Findings Report — Accounts & Syncing Features
 
-**Date:** 2026-07-23  
-**Audit Scope:** Full Stack (`src/app`, `src/components`, `src/hooks`, `src/lib`, `convex/`)  
-**Methodology:** Static Code Inventory, Dynamic Test Execution, Convex Best Practices Audit, IndexedDB Concurrency Analysis, Anti-Pattern Scan  
+## Summary of Findings
 
----
-
-## Executive Summary & Matrix of Findings
-
-An exhaustive multi-dimensional review of the BudgetBITCH codebase was conducted across backend cloud functions, local IndexedDB persistence, React state hooks, security boundaries, and code quality. A total of **10 actionable issues** were identified across Critical, High, Medium, Low, and Style categories.
-
-| Ref ID | Subsystem | File & Location | Severity | Vulnerability / Anti-Pattern Category | Description |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **SEC-01** | Convex API | [`convex/receipts.ts:4-38`](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/convex/receipts.ts#L4-L38) | **CRITICAL** | Security / Unauthenticated Action | Public `parseReceipt` action invokes external Gemini AI API using project secret `GEMINI_API_KEY` without checking caller `getAuthUserId(ctx)`. Anyone can exhaust API quota over HTTP/WS. |
-| **CONV-01** | Convex DB | [`convex/accounts.ts:154,234,387...`](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/convex/accounts.ts#L154) | **HIGH** | Performance / Unbounded Queries | Multiple Convex database queries use `.collect()` without `.take()` caps or pagination (`boardMembers`, `invites`, `accountBoards`), exposing database read amplification as tables grow. |
-| **CONV-02** | Convex Schema | [`convex/schema.ts:14,31,67`](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/convex/schema.ts#L14) | **MEDIUM** | Schema / Type Safety | Overly permissive `v.any()` validators used on `wizardProfile`, `fullBackupData`, and `data` fields, bypassing Convex schema validation and payload size guards. |
-| **CONV-03** | Convex Schema | [`convex/schema.ts:50-58`](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/convex/schema.ts#L50-L58) | **MEDIUM** | Schema / Index Optimization | `boardMembers` table lacks a compound index `by_user_and_board` (`["userId", "boardId"]`), forcing filter scans for user-board lookup queries. |
-| **LOCAL-01** | Local Storage | [`src/lib/db/local-db.ts:165-173`](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/src/lib/db/local-db.ts#L165-L173) | **HIGH** | Concurrency / Race Condition | `getDB()` does not cache the in-flight `openDB()` promise. Simultaneous callers during app startup invoke `openDB()` concurrently, risking IndexedDB `blocked` state or version conflicts. |
-| **LOCAL-02** | Local Storage | [`src/lib/convex/sync-snapshots.ts:45`](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/src/lib/convex/sync-snapshots.ts#L45) | **MEDIUM** | Network / Error Recovery | Background snapshot sync flusher swallows offline queue flush errors silently without backoff retry timers or user status notifications. |
-| **CODE-01** | SMS Parser | [`src/lib/sms-parser/patterns/generic.ts:2`](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/src/lib/sms-parser/patterns/generic.ts#L2) | **STYLE** | Code Quality / Lint | 4 unused function imports (`normalizeDate`, `extractMerchant`, `detectType`, `countryToCurrency`) producing ESLint warnings. |
-| **CODE-02** | SMS Parser | [`src/lib/sms-parser/patterns/sg.ts:2`](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/src/lib/sms-parser/patterns/sg.ts#L2) | **STYLE** | Code Quality / Lint | 1 unused function import (`extractMerchant`) producing ESLint warning. |
-| **CODE-03** | SMS Parser | [`src/lib/sms-parser/patterns/th.ts:2`](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/src/lib/sms-parser/patterns/th.ts#L2) | **STYLE** | Code Quality / Lint | 1 unused function import (`extractMerchant`) producing ESLint warning. |
-| **CODE-04** | SMS Parser | [`src/lib/sms-parser/patterns/us.ts:2`](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/src/lib/sms-parser/patterns/us.ts#L2) | **STYLE** | Code Quality / Lint | 1 unused function import (`extractMerchant`) producing ESLint warning. |
-| **HYG-01** | Repo Hygiene | [`src/hooks/use-local-db.ts.backup`](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/src/hooks/use-local-db.ts.backup) | **LOW** | Repository Hygiene | Orphaned `.backup` file remaining in `src/hooks/` directory. |
+| ID | File / Component | Severity | Description |
+|---|---|---|---|
+| F1 | `convex/accounts/accountCrud.ts` | **CRITICAL** | Mismatched lookup index in `listMyAccounts` for joined members (`accountId` vs `boardId`). Query uses `board.boardId` instead of `board.accountId`, returning `null` for `acc` and omitting `inviteCode`. |
+| F2 | `src/hooks/use-account-sync.ts` | **HIGH** | Race condition in push timer when switching accounts. Pending debounced push timer is not cleared on account switch, causing edits from Account A to potentially push to Account B's board ID. |
+| F3 | `src/hooks/use-account-sync.ts` | **HIGH** | `lastAppliedAt` guard blocks reactive pull of merged remote data after push. Client sets `lastAppliedAt = res.updatedAt`, causing the subsequent reactive `getAccountBoard` pull containing partner edits to be ignored. |
+| F4 | `convex/accounts/accountCrud.ts` & `accountInvites.ts` | **MEDIUM** | Inconsistent error throwing (`new Error` vs `new ConvexError`). Standard JS `Error` is masked as an unhelpful `Server Error` by Convex, preventing clean client-side error handling in UI. |
+| F5 | `convex/accounts/accountInvites.ts` | **MEDIUM** | Potential duplicate user IDs in `accountBoards.members` array during `acceptInvite` if not deduplicated. |
 
 ---
 
-## Detailed Vulnerability & Architectural Analysis
+## Detailed Findings & Line References
 
-### 1. [SEC-01] CRITICAL: Unauthenticated Public Action in `convex/receipts.ts`
-- **Location:** [`convex/receipts.ts:4-38`](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/convex/receipts.ts#L4-L38)
-- **Root Cause:** `parseReceipt` is declared as a public Convex `action` taking `base64Image: v.string()`. It sends the image payload to Google's Gemini Flash 2.5 API using server `GEMINI_API_KEY`. However, it does not call `getAuthUserId(ctx)` or verify authentication.
-- **Risk:** Any unauthenticated client or external script can call `parseReceipt` via standard Convex WebSocket/HTTP client and burn the project's Gemini API quota.
-- **Fix:** Add caller authentication:
+### Finding F1: Mismatched Lookup Index in `listMyAccounts`
+- **File**: `convex/accounts/accountCrud.ts:161-167`
+- **Severity**: CRITICAL
+- **Code Reference**:
   ```typescript
-  const userId = await getAuthUserId(ctx);
-  if (!userId) {
-    throw new ConvexError("Authentication required to parse receipts");
-  }
+  const acc = await ctx.db
+    .query("accounts")
+    .withIndex("by_accountId", (q) =>
+      q.eq("accountId", board.boardId), // <-- BUG: board.boardId is the board ID, not the account ID!
+    )
+    .unique();
   ```
-
-### 2. [LOCAL-01] HIGH: IndexedDB `openDB()` Race Condition in `src/lib/db/local-db.ts`
-- **Location:** [`src/lib/db/local-db.ts:165-173`](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/src/lib/db/local-db.ts#L165-L173)
-- **Root Cause:**
-  ```typescript
-  let dbInstance: IDBPDatabase<BudgetBITCHDB> | null = null;
-  export async function getDB(): Promise<IDBPDatabase<BudgetBITCHDB>> {
-    if (dbInstance) return dbInstance;
-    dbInstance = await openDB<BudgetBITCHDB>(DB_NAME, DB_VERSION, { ... });
-  }
-  ```
-  `dbInstance` is only assigned *after* `openDB()` resolves. When multiple React components (e.g. `useAccounts`, `useExpenses`, `useBudgets`) trigger `getDB()` on initial render in parallel, `dbInstance` is `null` for all of them, causing multiple simultaneous calls to `openDB()`.
-- **Risk:** In browsers, concurrent `openDB` calls on the same database name during upgrade or open can cause blocked events, connection lockups, or `InvalidStateError`.
-- **Fix:** Store the pending `dbPromise` in module scope so concurrent invocations await the exact same promise:
-  ```typescript
-  let dbPromise: Promise<IDBPDatabase<BudgetBITCHDB>> | null = null;
-  export function getDB(): Promise<IDBPDatabase<BudgetBITCHDB>> {
-    if (typeof window === 'undefined') return Promise.resolve(DUMMY_SSR_DB);
-    if (!dbPromise) {
-      dbPromise = openDB<BudgetBITCHDB>(DB_NAME, DB_VERSION, { ... });
-    }
-    return dbPromise;
-  }
-  ```
-
-### 3. [CONV-01] HIGH: Unbounded `.collect()` Database Scans in `convex/accounts.ts`
-- **Location:** [`convex/accounts.ts:154, 234, 387, 459, 514`](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/convex/accounts.ts#L154)
-- **Root Cause:** Functions like `listMyAccounts`, `getAccount`, and `inviteByCode` perform `.collect()` queries across `boardMembers` and `accountBoards`. Per official Convex guidelines (`convex/_generated/ai/guidelines.md`), queries without explicit limits should use `.take(n)` or `.paginate()` to prevent read amplification as user data grows.
-- **Fix:** Replace unbounded `.collect()` queries with `.take(MAX_OWNED_ACCOUNTS)` or `.take(50)` bounds.
-
-### 4. [CONV-02] MEDIUM: Schema Type Validation Loosening (`v.any()`)
-- **Location:** [`convex/schema.ts:28, 67, 91, 108`](file:///home/ewaldt/Documents/VS/GAMES/BudgetBITCH/convex/schema.ts#L28)
-- **Root Cause:** `wizardProfile`, `fullBackupData`, and `sharedBoards.data` use `v.any()`. This disables server-side runtime validation and allows arbitrary oversized payloads.
-- **Fix:** Use structured validators (`v.object(...)` or `v.record(...)`) where feasible, or enforce client payload size checks before database persistence.
-
-### 5. [CODE-01 to CODE-04] STYLE: 13 ESLint Warnings in SMS Pattern Imports
-- **Location:** `src/lib/sms-parser/patterns/{generic,sg,th,us}.ts`
-- **Fix:** Remove unused imports (`normalizeDate`, `extractMerchant`, `detectType`, `countryToCurrency`).
+- **Analysis**:
+  In `createAccount`, `accountId` and `boardId` are distinct UUIDs (`accountId` = account record key, `boardId` = board record key). In `accountBoards`, the document stores `{ boardId: B, accountId: A }`. When `listMyAccounts` looks up joined accounts for a member, it iterates through `accountBoards` and queries `accounts` by `accountId = board.boardId`. Since `board.boardId` is B, `accounts` query by `accountId` returns `null`.
+- **Impact**: `acc` is `null`, causing `acc?.inviteCode ?? null` to evaluate to `null` for joined members instead of showing the account's invite code or resolving metadata.
+- **Recommended Refactor**: Change `board.boardId` to `board.accountId`.
 
 ---
 
-## Action Plan & Remediation Strategy
+### Finding F2: Race Condition in Push Timer on Account Switch
+- **File**: `src/hooks/use-account-sync.ts:195-203, 219-235`
+- **Severity**: HIGH
+- **Code Reference**:
+  ```typescript
+  const schedulePush = () => {
+    pendingRef.current = true;
+    setPushPending(true);
 
-1. **Step 1: Security Fix (SEC-01)** — Require `getAuthUserId(ctx)` in `convex/receipts.ts:parseReceipt` and update `convex/receipts.test.ts`.
-2. **Step 2: Concurrency Fix (LOCAL-01)** — Refactor `getDB()` in `src/lib/db/local-db.ts` to cache the open promise (`dbPromise`).
-3. **Step 3: Convex Query Optimization (CONV-01 & CONV-03)** — Add `.take(n)` bounds to `.collect()` queries in `convex/accounts.ts` and compound index `by_user_and_board` in `convex/schema.ts`.
-4. **Step 4: Clean ESLint Warnings & Orphan Files (CODE-01..04, HYG-01)** — Clean imports and remove `src/hooks/use-local-db.ts.backup`.
-5. **Step 5: Full Regression Testing** — Run `npm run lint`, `npm run test`, and `npm run test:convex` to verify clean builds.
+    if (pushTimer.current) clearTimeout(pushTimer.current);
+    pushTimer.current = setTimeout(() => {
+      void doPush();
+    }, PUSH_DEBOUNCE_MS);
+  };
+  ```
+- **Analysis**:
+  When a user edits an account board, `schedulePush()` starts an 800ms timer. If the user switches accounts during this window, `resolveActiveBoard()` updates `boardIdRef.current` to the new account's `boardId`. However, `pushTimer.current` is not cancelled on switch! When the 800ms timer expires, `doPush()` executes using `boardIdRef.current` (the NEW account boardId) and serializes the local IndexedDB state, leading to cross-account data push contamination.
+- **Impact**: Edits made right before switching accounts can overwrite or leak into the target account board on Convex.
+- **Recommended Refactor**:
+  1. Clear `pushTimer.current` and reset `pendingRef.current` whenever `boardId` changes or when a `source: "switch"` event occurs.
+  2. Capture `bid` at the moment `schedulePush()` is called, or ensure pending pushes are flushed for the outgoing board before completing the switch.
+
+---
+
+### Finding F3: Pull Guard Blocks Merged Remote Updates After Push
+- **File**: `src/hooks/use-account-sync.ts:173-174, 262`
+- **Severity**: HIGH
+- **Code Reference**:
+  ```typescript
+  // In doPush():
+  const res = (await pushBoard({ boardId: bid, data: data as never, updatedAt })) as { updatedAt?: number } | undefined;
+  lastAppliedAt.current = res?.updatedAt ?? updatedAt;
+
+  // In pull effect:
+  if (remote.updatedAt <= lastAppliedAt.current) return; // <-- Blocks applying merged board!
+  ```
+- **Analysis**:
+  `pushAccountBoard` on the server performs a Last-Write-Wins merge between the incoming records and existing server records (which may include recent edits from other board members). When `pushBoard` succeeds, the client sets `lastAppliedAt.current = res.updatedAt`. Immediately afterward, the reactive `useQuery(api.accounts.getAccountBoard)` subscription fires with the updated server board containing merged records from partner devices. However, the pull effect sees `remote.updatedAt <= lastAppliedAt.current` and aborts without calling `applyRemoteBoard()`.
+- **Impact**: Device A does not receive Device B's merged edits until the page is reloaded or the board is re-switched.
+- **Recommended Refactor**:
+  Allow `applyRemoteBoard` to process remote data updates when the remote board data contains merged keys that local storage does not have, or handle push completion timestamps without prematurely blocking reactive query updates.
+
+---
+
+### Finding F4: Inconsistent Error Handling (`new Error` vs `new ConvexError`)
+- **Files**: `convex/accounts/accountCrud.ts` and `convex/accounts/accountInvites.ts`
+- **Severity**: MEDIUM
+- **Code Reference**:
+  - `accountCrud.ts:253` — `throw new Error("Account not found");`
+  - `accountCrud.ts:254` — `throw new Error("Only the owner can rename");`
+  - `accountCrud.ts:282` — `throw new Error("Account not found");`
+  - `accountCrud.ts:283` — `throw new Error("Only the owner can rotate");`
+  - `accountCrud.ts:315` — `throw new Error("Account not found");`
+  - `accountCrud.ts:316` — `throw new Error("Only the owner can delete");`
+  - `accountInvites.ts:25` — `throw new Error("Account not found");`
+  - `accountInvites.ts:26` — `throw new Error("Only the owner can invite");`
+- **Analysis**:
+  Convex automatically masks standard JS `Error` objects as `Server Error` when sent to client applications. Throwing `ConvexError` ensures that custom error messages are safely sent to the client and accessible via `err.message` / `err.data`.
+- **Impact**: UI receives generic `Server Error` messages instead of clear feedback (e.g. "Only the owner can rename").
+- **Recommended Refactor**: Replace all `throw new Error(...)` with `throw new ConvexError(...)` in Convex functions.
+
+---
+
+### Finding F5: Deduplication of `accountBoards.members` Array
+- **File**: `convex/accounts/accountInvites.ts:256-258`
+- **Severity**: MEDIUM
+- **Code Reference**:
+  ```typescript
+  await ctx.db.patch(board._id, {
+    members: [...board.members, userId],
+  });
+  ```
+- **Analysis**:
+  In `acceptInvite`, `userId` is appended to `board.members`. If `userId` was already present in `board.members` (e.g. from a prior `redeemInviteToken` call), `board.members` will accumulate duplicate user IDs.
+- **Impact**: Array bloated with duplicate user IDs, affecting `memberCount` calculations.
+- **Recommended Refactor**: Use `Array.from(new Set([...board.members, userId]))`.
+
+---
+
+## Architectural Alignment Check
+- **Convex AI Guidelines**: Checked against `convex/_generated/ai/guidelines.md`. Functions use proper `query`/`mutation`/`action` exports with `v` validators. `getAuthUserId` is used consistently for authentication. Indexes `by_accountId`, `by_boardId`, `by_user`, `by_board`, `by_token`, `by_shareCode` exist in `convex/schema.ts`.
+- **Local-first IndexedDB Swap Model**: `accountStorage.ts` properly isolates active board data in 8 flat stores and stashes un-opened/switch-away accounts in `accountsData`.
+
+---
+*Phase 2 Complete — Ready for Phase 3 (Investigation & Root Cause)*

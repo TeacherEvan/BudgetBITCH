@@ -498,4 +498,40 @@ describe("invite token (QR / link)", () => {
     expect((board as any).members.length).toBe(2);
     expect((board as any).members).toContain(bobId);
   });
+
+  test("listMyAccounts returns inviteCode for joined members (F1 fix)", async () => {
+    const aliceId = await seedUser(t, "alice");
+    const bobId = await seedUser(t, "bob");
+    const { accountId, inviteCode } = await createAccount(aliceId, "friends", "Squad");
+    await makeProfile(bobId, "BOBSHARE");
+
+    await asUser(aliceId).mutation(api.accounts.inviteByCode, {
+      accountId,
+      code: "BOBSHARE",
+    });
+    const invites = await asUser(bobId).query(api.accounts.listInvites, {});
+    await asUser(bobId).mutation(api.accounts.acceptInvite, {
+      inviteId: invites[0].inviteId,
+    });
+
+    const bobAccounts = await asUser(bobId).query(api.accounts.listMyAccounts, {});
+    const joined = bobAccounts.find((a: any) => a.accountId === accountId);
+    expect(joined).toBeTruthy();
+    expect(joined!.inviteCode).toBe(inviteCode);
+  });
+
+  test("mutations throw ConvexError for unauthorized operations (F4 fix)", async () => {
+    const aliceId = await seedUser(t, "alice");
+    const bobId = await seedUser(t, "bob");
+    const { accountId } = await createAccount(aliceId, "family", "Fam");
+
+    await expect(
+      asUser(bobId).mutation(api.accounts.renameAccount, { accountId, name: "New Name" }),
+    ).rejects.toThrow("Only the owner can rename");
+
+    await expect(
+      asUser(bobId).mutation(api.accounts.deleteAccount, { accountId }),
+    ).rejects.toThrow("Only the owner can delete");
+  });
 });
+

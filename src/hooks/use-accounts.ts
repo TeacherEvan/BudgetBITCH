@@ -345,13 +345,20 @@ export function useAccounts(): UseAccounts {
       for (const s of server as ServerAccount[]) {
         seen.add(s.accountId);
         const existing = local.find((l) => l.accountId === s.accountId);
-        merged.push({
+        const serverMeta: LocalAccountMeta = {
           accountId: s.accountId,
           umbrella: s.umbrella as LocalAccountMeta["umbrella"],
           name: s.name,
           boardId: s.boardId,
           inviteCode: s.inviteCode ?? null,
           role: s.role,
+          hasLocalData: existing?.hasLocalData ?? s.role === "member",
+        };
+        if (!existing || existing.boardId !== s.boardId || existing.name !== s.name || existing.role !== s.role) {
+          await saveLocalAccount(serverMeta);
+        }
+        merged.push({
+          ...serverMeta,
           hasLocalData: existing?.hasLocalData ?? s.role === "member",
           memberCount: s.memberCount ?? 1,
           isLegacyCouple: s.umbrella === "couple" && !existing,
