@@ -18,6 +18,9 @@ This repository is a single Next.js + Convex codebase: the **BudgetBITCH app** a
 - **framer-motion** for animations
 - **recharts** for data visualization
 - **zod** for validation
+- **lottie-react** + **@rive-app/canvas** for lightweight brand motion
+- **qrcode.react** for shared-board / account invite QR codes
+- **web-push** (+ VAPID) for Web Push notifications (Convex action)
 - **Vitest** + **React Testing Library** for unit tests
 - **Playwright** for E2E tests
 - **Vercel** for deployment
