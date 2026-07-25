@@ -260,6 +260,7 @@ export default function QuickAddPage() {
         <div className="flex justify-center mb-8">
           <button
             onClick={() => setIsExpense(!isExpense)}
+            aria-label={isExpense ? (l.expense) : (l.income)}
             className={`
               w-24 h-24 rounded-full flex flex-col items-center justify-center border-2 transition-all duration-300 relative group
               ${isExpense 

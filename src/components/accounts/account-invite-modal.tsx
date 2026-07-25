@@ -112,6 +112,7 @@ export function AccountInviteModal({
                 type="text"
                 readOnly
                 value={inviteUrl}
+                aria-label={locale === 'th' ? 'ลิงก์คำเชิญ' : 'Invite URL link'}
                 className="flex-1 truncate rounded-xl border border-zinc-800 bg-black/60 px-3.5 py-2 font-mono text-xs text-amber-300 outline-none cursor-default"
               />
               <Button 

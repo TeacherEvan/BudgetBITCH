@@ -93,7 +93,8 @@ export function HeaderBar({ locale, onLocaleChange }: HeaderBarProps) {
         <button
           type="button"
           onClick={() => setSettingsOpen(true)}
-          aria-label="Quick settings"
+          aria-label={locale === 'th' ? 'ตั้งค่าด่วน' : 'Quick settings'}
+          aria-expanded={settingsOpen}
           id="header-settings-btn"
           className="flex h-9 w-9 items-center justify-center rounded-xl text-[rgba(248,243,232,0.7)] transition-transform duration-200 hover:rotate-90 hover:text-[#E8B020]"
         >
@@ -122,6 +123,7 @@ export function HeaderBar({ locale, onLocaleChange }: HeaderBarProps) {
                   key={l}
                   type="button"
                   onClick={() => { onLocaleChange(l); setSettingsOpen(false); }}
+                  aria-pressed={locale === l}
                   className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
                     locale === l
                       ? 'bg-[#C9960C] text-[#080600]'
@@ -134,8 +136,6 @@ export function HeaderBar({ locale, onLocaleChange }: HeaderBarProps) {
             </div>
           </section>
 
-
-
           {/* Chart Type */}
           <section>
             <h3 className="mb-3 text-xs font-bold uppercase tracking-[0.15em] text-[#C9960C]">
@@ -147,6 +147,7 @@ export function HeaderBar({ locale, onLocaleChange }: HeaderBarProps) {
                   key={type}
                   type="button"
                   onClick={() => setGraphType(type)}
+                  aria-pressed={graphType === type}
                   className={`flex flex-col items-center gap-1.5 rounded-xl border py-3 px-2 text-xs font-semibold transition-all ${
                     graphType === type
                       ? 'border-[#C9960C] bg-[#C9960C]/15 text-[#E8B020]'
@@ -177,6 +178,7 @@ export function HeaderBar({ locale, onLocaleChange }: HeaderBarProps) {
                     key={genre}
                     type="button"
                     onClick={() => toggleGenre(genre)}
+                    aria-pressed={enabled}
                     className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
                       enabled
                         ? 'border-[rgba(201,150,12,0.4)] bg-[rgba(201,150,12,0.12)] text-[#E8B020]'

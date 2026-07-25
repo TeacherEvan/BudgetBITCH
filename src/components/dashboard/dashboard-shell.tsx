@@ -320,7 +320,11 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
 
       {/* Mobile Bottom Sheet Sidebar */}
       <div data-testid="mobile-sheet" className={`lg:hidden fixed bottom-0 left-0 right-0 z-40 transform rounded-t-2xl border-t bg-[var(--bg-base)]/95 p-4 backdrop-blur-xl transition-transform duration-300 ${mobileMenuOpen ? 'translate-y-0' : 'translate-y-full'}`} style={{ maxHeight: '82vh', overflowY: 'auto' }}>
-        <button onClick={() => setMobileMenuOpen(false)} className="absolute -top-3 right-4 flex h-10 w-10 items-center justify-center rounded-full border border-[var(--gold-border-soft)] bg-[var(--bg-base)]/80">
+        <button
+          onClick={() => setMobileMenuOpen(false)}
+          aria-label={locale === 'th' ? 'ปิดเมนู' : 'Close menu'}
+          className="absolute -top-3 right-4 flex h-10 w-10 items-center justify-center rounded-full border border-[var(--gold-border-soft)] bg-[var(--bg-base)]/80"
+        >
           <X className="h-5 w-5 text-[var(--text-muted)]" />
         </button>
         <div className="space-y-4 pt-2">

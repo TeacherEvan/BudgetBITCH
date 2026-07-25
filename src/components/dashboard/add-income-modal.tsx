@@ -122,7 +122,7 @@ export function AddIncomeModal({ isOpen, onClose, locale }: AddIncomeModalProps)
       <form onSubmit={handleSubmit} className="space-y-4 pt-2">
         {/* Amount input */}
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-emerald-400 uppercase tracking-wider block">
+          <label htmlFor="income-amount-input" className="text-xs font-semibold text-emerald-400 uppercase tracking-wider block">
             {locale === 'th' ? 'จำนวนเงิน' : 'Amount'}
           </label>
           <div className="relative">
@@ -130,6 +130,7 @@ export function AddIncomeModal({ isOpen, onClose, locale }: AddIncomeModalProps)
               {formatCurrency(0, locale).replace(/[0,\s.]/g, '')}
             </span>
             <Input
+              id="income-amount-input"
               type="number"
               step="any"
               required
@@ -143,10 +144,11 @@ export function AddIncomeModal({ isOpen, onClose, locale }: AddIncomeModalProps)
 
         {/* Source / Description */}
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-white/70 uppercase tracking-wider block">
+          <label htmlFor="income-source-input" className="text-xs font-semibold text-white/70 uppercase tracking-wider block">
             {locale === 'th' ? 'แหล่งที่มา / ผู้จ่าย' : 'Source / Payer'}
           </label>
           <Input
+            id="income-source-input"
             type="text"
             required
             value={source}
@@ -158,15 +160,16 @@ export function AddIncomeModal({ isOpen, onClose, locale }: AddIncomeModalProps)
 
         {/* Category Pick grid */}
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-white/70 uppercase tracking-wider block">
+          <label id="income-category-label" className="text-xs font-semibold text-white/70 uppercase tracking-wider block">
             {locale === 'th' ? 'ประเภทรายได้' : 'Category'}
           </label>
-          <div className="grid grid-cols-4 gap-1.5">
+          <div role="group" aria-labelledby="income-category-label" className="grid grid-cols-4 gap-1.5">
             {CATEGORIES.map((cat) => (
               <button
                 key={cat.value}
                 type="button"
                 onClick={() => setCategory(cat.value)}
+                aria-pressed={category === cat.value}
                 className={`py-2 px-1 text-center rounded-xl border transition text-xs flex flex-col items-center gap-1 font-medium ${
                   category === cat.value
                     ? 'bg-emerald-950/40 border-emerald-500 text-white shadow-lg shadow-emerald-950/20'
@@ -185,10 +188,11 @@ export function AddIncomeModal({ isOpen, onClose, locale }: AddIncomeModalProps)
         {/* Frequency & Date */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-white/70 uppercase tracking-wider block">
+            <label htmlFor="income-frequency-select" className="text-xs font-semibold text-white/70 uppercase tracking-wider block">
               {locale === 'th' ? 'ความถี่' : 'Frequency'}
             </label>
             <select
+              id="income-frequency-select"
               value={frequency}
               onChange={(e) => setFrequency(e.target.value as IncomeFrequency)}
               className="w-full px-3 py-2 bg-[#0d0d14]/70 border border-zinc-800 rounded-xl text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 text-white outline-none"
@@ -202,10 +206,11 @@ export function AddIncomeModal({ isOpen, onClose, locale }: AddIncomeModalProps)
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-white/70 uppercase tracking-wider block">
+            <label htmlFor="income-date-input" className="text-xs font-semibold text-white/70 uppercase tracking-wider block">
               {locale === 'th' ? 'วันที่ได้รับ' : 'Date Received'}
             </label>
             <Input
+              id="income-date-input"
               type="date"
               required
               value={date}

@@ -66,6 +66,7 @@ export function MobilePanelTabs({ activePanel, onSelect, onMore, locale, alertCo
       <button
         type="button"
         onClick={onMore}
+        aria-label={locale === 'th' ? 'เมนูเพิ่มเติม' : 'More options'}
         className="relative flex flex-1 flex-col items-center justify-center gap-1 py-1 text-[10px] font-bold leading-tight cursor-pointer select-none"
       >
         {/* Icon */}
