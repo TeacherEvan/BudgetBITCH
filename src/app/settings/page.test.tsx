@@ -135,9 +135,10 @@ describe('SettingsPage', () => {
     expect(screen.getByRole('radio', { name: /gold/i })).toBeInTheDocument();
   });
 
-  it('renders the app-wide LocaleSwitcher (not a custom locale Select)', () => {
+  it('renders the Language section with a read-only notice (set once on first launch)', () => {
     renderWithProviders(<SettingsPage />);
-    expect(screen.getByRole('combobox')).toBeInTheDocument();
+    expect(screen.getByText('Language')).toBeInTheDocument();
+    expect(screen.getByText(/Set once on first launch/i)).toBeInTheDocument();
   });
 
   it('opens a confirm modal for reset instead of window.confirm', () => {

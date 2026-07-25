@@ -5,18 +5,19 @@ export interface WizardProfile {
   completed: true;
   completedAt: string; // ISO
   version: 1;
-  locale: 'th' | 'en'; // SET FIRST, NEVER CHANGES WITHOUT USER ACTION
+  locale: 'th' | 'en' | 'en-ZA' | 'en-TH'; // SET FIRST, NEVER CHANGES WITHOUT USER ACTION
   answers: {
-    income: number;           // Q1
-    rent: number;             // Q2
-    transport: number;        // Q3
-    phoneInternet: number;    // Q4
-    subscriptions: number;    // Q5
-    entertainment: number;    // Q6
-    healthcare: number;       // Q7
-    savingsRatePct: number;   // Q8 (0-50)
-    riskTolerance: 'low' | 'medium' | 'high'; // Q9
-    locationConsent: boolean; // Q10
+    income: number;           // Step 1
+    locationConsent: boolean; // Step 2
+    receiptScanned?: boolean; // Step 3
+    rent?: number;             // Optional (deprecated 10-step wizard)
+    transport?: number;        // Optional
+    phoneInternet?: number;    // Optional
+    subscriptions?: number;    // Optional
+    entertainment?: number;    // Optional
+    healthcare?: number;       // Optional
+    savingsRatePct?: number;   // Optional (0-50)
+    riskTolerance?: 'low' | 'medium' | 'high'; // Optional
     currency: import('@/lib/utils/currency').CurrencyCode | null; // from locale or location
   };
 }

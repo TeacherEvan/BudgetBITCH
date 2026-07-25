@@ -6,7 +6,6 @@ import { ArrowRight, ShieldCheck, Sparkles, Waypoints, Coins } from 'lucide-reac
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
-import { LocaleSwitcher } from '@/components/i18n/locale-switcher';
 import { MobilePanelFrame } from '@/components/mobile/mobile-panel-frame';
 import { ProTipsCard } from '@/components/pro-tips/pro-tips-card';
 
@@ -172,7 +171,6 @@ export function WelcomeWindow({ signInHref, signUpHref }: WelcomeWindowProps) {
                 <Coins className="h-3.5 w-3.5" />
                 <span>BOSS MODE</span>
               </motion.span>
-              <LocaleSwitcher />
             </div>
 
             {/* Cinematic forged wordmark reveal */}

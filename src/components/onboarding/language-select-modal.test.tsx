@@ -11,20 +11,21 @@ describe('LanguageSelectModal', () => {
     mockOnComplete.mockClear();
   });
 
-  it('renders Thai and English options when open', () => {
+  it('renders Thai, English (ZA), and English (TH) options when open', () => {
     render(<LanguageSelectModal isOpen={true} onComplete={mockOnComplete} />);
     
     expect(screen.getByRole('button', { name: /ไทย.*Thai/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /English/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /English \(South Africa\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /English \(Thailand\)/i })).toBeInTheDocument();
     expect(screen.getByText('Welcome to Budget-BOSS')).toBeInTheDocument();
     expect(screen.getByText('Choose your language to get started')).toBeInTheDocument();
   });
 
-  it('renders flag emojis for both languages', () => {
+  it('renders flag emojis for all 3 locale choices', () => {
     render(<LanguageSelectModal isOpen={true} onComplete={mockOnComplete} />);
     
-    expect(screen.getByText('🇹🇭')).toBeInTheDocument();
-    expect(screen.getByText('🇺🇸')).toBeInTheDocument();
+    expect(screen.getAllByText('🇹🇭')).toHaveLength(2);
+    expect(screen.getByText('🇿🇦')).toBeInTheDocument();
   });
 
   it('calls onComplete with th when Thai button clicked', () => {
@@ -36,13 +37,22 @@ describe('LanguageSelectModal', () => {
     expect(mockOnComplete).toHaveBeenCalledWith('th');
   });
 
-  it('calls onComplete with en when English button clicked', () => {
+  it('calls onComplete with en-ZA when English (ZA) button clicked', () => {
     render(<LanguageSelectModal isOpen={true} onComplete={mockOnComplete} />);
     
-    fireEvent.click(screen.getByRole('button', { name: /English/i }));
+    fireEvent.click(screen.getByRole('button', { name: /English \(South Africa\)/i }));
     
     expect(mockOnComplete).toHaveBeenCalledTimes(1);
-    expect(mockOnComplete).toHaveBeenCalledWith('en');
+    expect(mockOnComplete).toHaveBeenCalledWith('en-ZA');
+  });
+
+  it('calls onComplete with en-TH when English (TH) button clicked', () => {
+    render(<LanguageSelectModal isOpen={true} onComplete={mockOnComplete} />);
+    
+    fireEvent.click(screen.getByRole('button', { name: /English \(Thailand\)/i }));
+    
+    expect(mockOnComplete).toHaveBeenCalledTimes(1);
+    expect(mockOnComplete).toHaveBeenCalledWith('en-TH');
   });
 
   it('does not render when isOpen is false', () => {
@@ -101,7 +111,6 @@ describe('LanguageSelectModal', () => {
   it('shows persistence note about settings', () => {
     render(<LanguageSelectModal isOpen={true} onComplete={mockOnComplete} />);
     
-    expect(screen.getByText(/language preference is saved locally/i)).toBeInTheDocument();
-    expect(screen.getByText(/globe icon in header/i)).toBeInTheDocument();
+    expect(screen.getByText(/Your language is set once/i)).toBeInTheDocument();
   });
 });

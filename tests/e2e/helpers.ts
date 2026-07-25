@@ -130,10 +130,22 @@ export async function setupConsentDismissal(page: Page) {
     const style = document.createElement("style");
     style.textContent =
       '[data-testid="privacy-disclaimer"],[aria-label="Cookies"]{display:none!important;}';
-    document.documentElement.appendChild(style);
+
+    // addInitScript runs before documentElement exists on first navigation, so
+    // appending synchronously throws "Cannot read properties of null". Guard on
+    // readiness and observe `document` (not documentElement, which may be null).
+    const attachStyle = () => {
+      if (!document.documentElement) return;
+      document.documentElement.appendChild(style);
+    };
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", attachStyle, { once: true });
+    } else {
+      attachStyle();
+    }
 
     const obs = new MutationObserver(tryDismiss);
-    obs.observe(document.documentElement, { childList: true, subtree: true });
+    obs.observe(document, { childList: true, subtree: true });
     // Best-effort immediate pass once DOM is ready.
     if (document.readyState !== "loading") tryDismiss();
     else document.addEventListener("DOMContentLoaded", tryDismiss);

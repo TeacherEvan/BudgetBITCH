@@ -237,6 +237,8 @@ export interface AccountView extends LocalAccountMeta {
   hasLocalData: boolean;
   memberCount: number;
   isLegacyCouple?: boolean;
+  displayName?: string;
+  memberDisplayNames?: Record<string, string>;
 }
 
 export interface UseAccounts {
@@ -256,6 +258,7 @@ export interface UseAccounts {
   removeMember: (accountId: string, userId: string) => Promise<void>;
   renameAccount: (accountId: string, name: string) => Promise<void>;
   deleteAccount: (accountId: string) => Promise<void>;
+  setDisplayName: (displayName: string) => Promise<void>;
   switchTo: (accountId: string) => Promise<void>;
   refresh: () => void;
 }
@@ -268,6 +271,8 @@ type ServerAccount = {
   boardId: string | null;
   inviteCode: string | null;
   memberCount?: number;
+  displayName?: string;
+  memberDisplayNames?: Record<string, string>;
 };
 
 export function useAccounts(): UseAccounts {
@@ -289,6 +294,7 @@ export function useAccounts(): UseAccounts {
   const removeMut = useMutation(api.accounts.removeMember);
   const renameMut = useMutation(api.accounts.renameAccount);
   const deleteMut = useMutation(api.accounts.deleteAccount);
+  const setDisplayNameMut = useMutation(api.accounts.setDisplayName);
   const convex = useConvex();
 
   const refresh = useCallback(() => setNonce((n) => n + 1), []);
@@ -362,6 +368,8 @@ export function useAccounts(): UseAccounts {
           hasLocalData: existing?.hasLocalData ?? s.role === "member",
           memberCount: s.memberCount ?? 1,
           isLegacyCouple: s.umbrella === "couple" && !existing,
+          displayName: s.displayName,
+          memberDisplayNames: s.memberDisplayNames,
         });
       }
       const personal = local.find((l) => l.accountId === PERSONAL_ACCOUNT_ID);
@@ -523,6 +531,14 @@ export function useAccounts(): UseAccounts {
     [deleteMut, refresh],
   );
 
+  const setDisplayName = useCallback(
+    async (displayName: string) => {
+      await setDisplayNameMut({ displayName });
+      refresh();
+    },
+    [setDisplayNameMut, refresh],
+  );
+
   return {
     accounts,
     currentAccountId,
@@ -537,6 +553,7 @@ export function useAccounts(): UseAccounts {
     removeMember,
     renameAccount,
     deleteAccount,
+    setDisplayName,
     switchTo,
     refresh,
   };

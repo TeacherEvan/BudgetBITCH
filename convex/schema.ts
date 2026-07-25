@@ -157,4 +157,16 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_endpoint", ["endpoint"]),
+
+  // Bug reports / feedback submitted from the app (free Resend email to admin,
+  // persisted for triage). No paid crash service.
+  feedbackReports: defineTable({
+    type: v.union(v.literal("bug"), v.literal("feedback")),
+    message: v.string(),
+    email: v.optional(v.string()),
+    context: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+    locale: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_createdAt", ["createdAt"]),
 });

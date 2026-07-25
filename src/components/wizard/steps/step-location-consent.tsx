@@ -12,7 +12,7 @@ import {
 } from '@/modules/home-base/reverse-geocode-label';
 
 interface StepLocationConsentProps {
-  locale: 'th' | 'en';
+  locale: string;
   value: boolean;
   onChange: (key: 'locationConsent', value: boolean) => void;
   error?: string | null;
@@ -88,7 +88,7 @@ export function StepLocationConsent({ locale, value, onChange, error, disabled }
     },
   };
 
-  const l = labels[locale];
+  const l = labels[locale === 'th' ? 'th' : 'en'];
 
   const handleGrantLocation = () => {
     if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {

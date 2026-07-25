@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { ConvexPasswordAuthForm } from "./convex-password-auth-form";
 import { ForgotPasswordForm } from "./forgot-password-form";
-import { LocaleSwitcher } from "@/components/i18n/locale-switcher";
 
 type CleanAuthCardProps = {
   initialFlow: "signIn" | "signUp";
@@ -48,7 +47,6 @@ export function CleanAuthCard({ initialFlow, redirectTo = "/dashboard" }: CleanA
           }}>
             Budget-BOSS
           </span>
-          <LocaleSwitcher />
         </div>
 
         <h1 className="text-2xl font-bold text-white mb-2">

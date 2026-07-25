@@ -1,20 +1,46 @@
 // src/components/ui/money-sync-loading.tsx
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, Wallet, RefreshCw, ShieldCheck } from 'lucide-react';
 
 interface MoneySyncLoadingProps {
   locale?: 'th' | 'en';
   message?: string;
+  onComplete?: () => void;
 }
 
-export function MoneySyncLoading({ locale = 'en', message }: MoneySyncLoadingProps) {
+const MIN_DISPLAY_DURATION = 10000; // 10 seconds minimum display time
+
+export function MoneySyncLoading({ locale = 'en', message, onComplete }: MoneySyncLoadingProps) {
   const isThai = locale === 'th';
 
+  // Keep latest onComplete in a ref so the timer effect does NOT reset (and the
+  // 10s duration does not restart) when the parent re-renders with a new inline callback.
+    const onCompleteRef = useRef(onComplete);
+    useEffect(() => {
+      onCompleteRef.current = onComplete;
+    }, [onComplete]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onCompleteRef.current?.();
+    }, MIN_DISPLAY_DURATION);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  const statusText = message || (isThai ? 'คำนวณรายรับ & รายจ่าย...' : 'Calculating Money In & Money Out...');
+
   return (
-    <div className="fixed inset-0 z-[120] flex flex-col items-center justify-center bg-[#080600]/95 text-white backdrop-blur-2xl px-4 py-8 select-none overflow-hidden">
+    <div
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+      aria-label={statusText}
+      className="fixed inset-0 z-[120] flex flex-col items-center justify-center bg-[#080600]/95 text-white backdrop-blur-2xl px-4 py-8 select-none overflow-hidden"
+    >
       {/* Background Gold Ambient Glows */}
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-amber-500/10 rounded-full blur-[140px] pointer-events-none" />
 

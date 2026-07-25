@@ -26,6 +26,8 @@ export {
   renameAccount,
   rotateInviteCode,
   deleteAccount,
+  setDisplayName,
+  getMyProfile,
 } from "./accounts/accountCrud";
 
 // Account invites & members
@@ -41,6 +43,13 @@ export {
   resolveInviteCode,
   getCurrentUserEmail,
 } from "./accounts/accountInvites";
+
+// Purchase Notes
+export {
+  setPurchaseNote,
+  getPurchaseNotes,
+  deletePurchaseNote,
+} from "./accounts/purchaseNotes";
 
 // Board sync & password
 export {

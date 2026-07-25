@@ -41,6 +41,11 @@ export const TIERED_FEED_REGISTRY: {
       { url: 'https://www.pptvhd36.com/rss', locale: 'th', category: 'local', source: 'PPTV', center: { lat: 13.7563, lon: 100.5018 }, radiusKm: 1000, priority: 4, reliability: 0.8 },
       { url: 'https://www.pttplc.com/rss/th/news.xml', locale: 'th', category: 'fuel', source: 'PTT News', center: { lat: 13.7563, lon: 100.5018 }, radiusKm: 1000, priority: 5, reliability: 0.85 },
     ],
+    ZA: [
+      { url: 'https://feeds.news24.com/articles/fin24/rss', locale: 'en', category: 'finance', source: 'Fin24 Business', center: { lat: -26.2041, lon: 28.0473 }, radiusKm: 2000, priority: 1, reliability: 0.95 },
+      { url: 'https://www.moneyweb.co.za/feed/', locale: 'en', category: 'finance', source: 'Moneyweb SA', center: { lat: -26.2041, lon: 28.0473 }, radiusKm: 2000, priority: 2, reliability: 0.95 },
+      { url: 'https://www.businesslive.co.za/rss/', locale: 'en', category: 'finance', source: 'BusinessLIVE SA', center: { lat: -26.2041, lon: 28.0473 }, radiusKm: 2000, priority: 3, reliability: 0.9 },
+    ],
     SG: [
       { url: 'https://www.straitstimes.com/news/business/rss.xml', locale: 'en', category: 'finance', source: 'Straits Times Business', center: { lat: 1.3521, lon: 103.8198 }, radiusKm: 500, priority: 1, reliability: 0.95 },
       { url: 'https://www.channelnewsasia.com/rss/feeds/business.xml', locale: 'en', category: 'finance', source: 'CNA Business', center: { lat: 1.3521, lon: 103.8198 }, radiusKm: 500, priority: 2, reliability: 0.95 },

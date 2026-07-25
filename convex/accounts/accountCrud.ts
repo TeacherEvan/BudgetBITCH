@@ -128,6 +128,20 @@ export const listMyAccounts = query({
           const members = board
             ? await getBoardMemberIds(ctx, board.boardId)
             : [];
+          // Fetch display names for all members
+          const memberProfiles = await Promise.all(
+            members.map(async (memberId) => {
+              const mp = await ctx.db
+                .query("userProfiles")
+                .withIndex("by_user", (q) => q.eq("userId", memberId))
+                .unique();
+              return { userId: memberId, displayName: mp?.displayName ?? null };
+            }),
+          );
+          const memberDisplayNames: Record<string, string> = {};
+          for (const m of memberProfiles) {
+            if (m.displayName) memberDisplayNames[m.userId] = m.displayName;
+          }
           return {
             accountId: acc.accountId,
             umbrella: acc.umbrella,
@@ -136,6 +150,7 @@ export const listMyAccounts = query({
             boardId: acc.boardId,
             memberCount: members.length,
             inviteCode: acc.inviteCode,
+            memberDisplayNames,
           };
         }),
       )
@@ -164,15 +179,29 @@ export const listMyAccounts = query({
                 q.eq("accountId", board.accountId),
               )
               .unique();
-            const members = await getBoardMemberIds(ctx, board.boardId);
+            const memberIds = await getBoardMemberIds(ctx, board.boardId);
+            const memberProfiles = await Promise.all(
+              memberIds.map(async (memberId) => {
+                const mp = await ctx.db
+                  .query("userProfiles")
+                  .withIndex("by_user", (q) => q.eq("userId", memberId))
+                  .unique();
+                return { userId: memberId, displayName: mp?.displayName ?? null };
+              }),
+            );
+            const memberDisplayNames: Record<string, string> = {};
+            for (const m of memberProfiles) {
+              if (m.displayName) memberDisplayNames[m.userId] = m.displayName;
+            }
             return {
               accountId: board.accountId,
               umbrella: board.umbrella,
               name: board.name,
               role: "member" as const,
               boardId: board.boardId,
-              memberCount: members.length,
+              memberCount: memberProfiles.length,
               inviteCode: acc?.inviteCode ?? null,
+              memberDisplayNames,
             };
           }),
       )
@@ -298,6 +327,39 @@ export const rotateInviteCode = mutation({
     if (!inviteCode) throw new ConvexError("Failed to allocate an invite code");
     await ctx.db.patch(acc._id, { inviteCode });
     return { inviteCode };
+  },
+});
+
+export const setDisplayName = mutation({
+  args: { displayName: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new ConvexError("Authentication required");
+    const profile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .unique();
+    if (!profile) throw new ConvexError("Profile not found");
+    await ctx.db.patch(profile._id, { displayName: args.displayName });
+    return { success: true };
+  },
+});
+
+export const getMyProfile = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const profile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .unique();
+    if (!profile) return null;
+    return {
+      displayName: profile.displayName ?? null,
+      shareCode: profile.shareCode,
+      linkedBoardId: profile.linkedBoardId ?? null,
+    };
   },
 });
 

@@ -59,8 +59,9 @@ vi.mock('@/components/onboarding/language-select-modal', () => ({
   LanguageSelectModal: ({ isOpen, onComplete }: { isOpen: boolean; onComplete: (locale: string) => void }) =>
     isOpen ? (
       <div data-testid="language-modal" role="dialog">
+        <button onClick={() => onComplete('en-ZA')}>English (South Africa)</button>
+        <button onClick={() => onComplete('en-TH')}>English (Thailand)</button>
         <button onClick={() => onComplete('th')}>ไทย</button>
-        <button onClick={() => onComplete('en')}>English</button>
       </div>
     ) : null,
 }));
@@ -145,33 +146,27 @@ describe('Landing Page Splash-First Flow', () => {
     mockLocalStorage.getItem.mockReturnValue(null);
     renderWithProviders(<Home />);
 
-    const modal = screen.getByTestId('language-modal');
-    const thaiButton = modal.querySelector('button');
-    if (thaiButton) {
-      act(() => {
-        thaiButton.click();
-      });
-    }
+    const thaiButton = screen.getByRole('button', { name: 'ไทย' });
+    act(() => {
+      thaiButton.click();
+    });
 
     expect(mockLocalStorage.setItem).toHaveBeenCalledWith('budgetbitch:locale', 'th');
   });
 
-  it('saves locale to localStorage when English selected', () => {
+  it('saves locale to localStorage when English (ZA) selected', () => {
     mockSessionStorage.getItem.mockImplementation((key: string) =>
       key === 'bb:splash-seen' ? 'true' : null,
     );
     mockLocalStorage.getItem.mockReturnValue(null);
     renderWithProviders(<Home />);
 
-    const modal = screen.getByTestId('language-modal');
-    const buttons = modal.querySelectorAll('button');
-    if (buttons[1]) {
-      act(() => {
-        buttons[1].click();
-      });
-    }
+    const enZaButton = screen.getByRole('button', { name: 'English (South Africa)' });
+    act(() => {
+      enZaButton.click();
+    });
 
-    expect(mockLocalStorage.setItem).toHaveBeenCalledWith('budgetbitch:locale', 'en');
+    expect(mockLocalStorage.setItem).toHaveBeenCalledWith('budgetbitch:locale', 'en-ZA');
   });
 
   it('shows only auth card (no language modal) when locale is already set', () => {

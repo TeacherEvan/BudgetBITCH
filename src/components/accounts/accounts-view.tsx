@@ -220,6 +220,11 @@ export function AccountsView({ locale, onLocaleChange }: AccountsViewProps) {
                           ? t('Owner', 'เจ้าของ')
                           : t('Member', 'สมาชิก')}
                         {' · '}
+                        {a.displayName ? (
+                          <>
+                            {a.displayName} {' · '}
+                          </>
+                        ) : null}
                         {t(`${a.memberCount} member${a.memberCount === 1 ? '' : 's'}`, `${a.memberCount} สมาชิก`)}
                       </p>
                     </div>

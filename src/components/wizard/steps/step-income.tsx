@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 
 interface StepIncomeProps {
-  locale: 'th' | 'en';
+  locale: string;
   value: number;
   onChange: (key: 'income', value: number) => void;
   error?: string | null;
@@ -13,6 +13,7 @@ interface StepIncomeProps {
 }
 
 export function StepIncome({ locale, value, onChange, error, disabled }: StepIncomeProps) {
+  const isThai = locale === 'th';
   const labels = {
     th: {
       title: 'รายได้ต่อเดือน',
@@ -24,11 +25,11 @@ export function StepIncome({ locale, value, onChange, error, disabled }: StepInc
       title: 'Monthly Income',
       subtitle: 'Salary, side income, investments - all combined',
       placeholder: 'e.g. 35000',
-      helper: 'Enter total monthly income (THB)',
+      helper: 'Enter total monthly income',
     },
   };
 
-  const l = labels[locale];
+  const l = labels[isThai ? 'th' : 'en'];
 
   return (
     <div className="space-y-6">

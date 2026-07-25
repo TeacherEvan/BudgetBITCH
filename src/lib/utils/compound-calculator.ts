@@ -83,24 +83,28 @@ export function getSuggestedCriticalExpenseCost(
   key: import('@/lib/types/budget').CriticalExpenseKey,
   wizardAnswers: WizardProfile['answers']
 ): number {
-  // Suggest based on relevant wizard answers
+  const ent = wizardAnswers.entertainment || 0;
+  const health = wizardAnswers.healthcare || 0;
+  const subs = wizardAnswers.subscriptions || 0;
+  const trans = wizardAnswers.transport || 0;
+
   switch (key) {
     case 'sugar':
-      return Math.round(wizardAnswers.entertainment * 0.15); // ~15% of entertainment
+      return Math.round(ent * 0.15); // ~15% of entertainment
     case 'coffee':
-      return Math.round(wizardAnswers.entertainment * 0.2);  // ~20% of entertainment
+      return Math.round(ent * 0.2);  // ~20% of entertainment
     case 'takeaways':
-      return Math.round(wizardAnswers.entertainment * 0.4);  // ~40% of entertainment (eating out)
+      return Math.round(ent * 0.4);  // ~40% of entertainment (eating out)
     case 'alcohol':
-      return Math.round(wizardAnswers.entertainment * 0.25); // ~25% of entertainment
+      return Math.round(ent * 0.25); // ~25% of entertainment
     case 'cigarettes_vaping':
-      return Math.round(wizardAnswers.healthcare * 0.5);     // ~50% of healthcare
+      return Math.round(health * 0.5);     // ~50% of healthcare
     case 'streaming':
-      return Math.round(wizardAnswers.subscriptions * 0.6);  // ~60% of subscriptions
+      return Math.round(subs * 0.6);  // ~60% of subscriptions
     case 'ride_hailing':
-      return Math.round(wizardAnswers.transport * 0.4);      // ~40% of transport
+      return Math.round(trans * 0.4);      // ~40% of transport
     case 'impulse_shopping':
-      return Math.round(wizardAnswers.entertainment * 0.3);  // ~30% of entertainment
+      return Math.round(ent * 0.3);  // ~30% of entertainment
     default:
       return 0;
   }

@@ -23,7 +23,7 @@ import { SiteFooter } from '@/components/legal/site-footer';
 import { CookieConsentBanner } from '@/components/legal/cookie-consent-banner';
 import { NextIntlClientProvider } from 'next-intl';
 import { cookies } from 'next/headers';
-import { resolveLocale, localeMessages, localeCookieName } from '@/i18n/messages';
+import { resolveLocale, getLocaleMessages, localeCookieName } from '@/i18n/messages';
 
 const inter = Inter({
   variable: '--font-inter',
@@ -38,22 +38,17 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: 'Budget-BOSS — Plan First. Panic Less.',
-  description: 'Plan first. Panic less. A privacy-first budgeting app with multi-currency and offline support.',
-  openGraph: {
-    title: 'Budget-BOSS — Plan First. Panic Less.',
-    description: 'Privacy-first budgeting with multi-currency and offline support.',
-    url: 'https://budget-bitch-green.vercel.app/',
-    siteName: 'Budget-BOSS',
-    locale: 'en_US',
-    type: 'website',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Budget-BOSS — Plan First. Panic Less.',
-    description: 'Privacy-first budgeting with multi-currency and offline support.',
+  title: 'BudgetBITCH — Cinematic Privacy-First Budgeting',
+  description: 'Track money in, money out, net worth, and budget goals with end-to-end local privacy and couple sync.',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'BudgetBITCH',
   },
 };
+
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 
 export default async function RootLayout({
   children,
@@ -63,7 +58,7 @@ export default async function RootLayout({
   const cookieStore = await cookies();
   const rawLocale = resolveLocale(cookieStore.get(localeCookieName)?.value);
   const locale = rawLocale === 'th' ? 'th' : 'en';
-  const messages = localeMessages[rawLocale];
+  const messages = getLocaleMessages(rawLocale);
 
   return (
     <html lang={locale} suppressHydrationWarning className={`${inter.variable} ${spaceGrotesk.variable} antialiased`}>
@@ -72,21 +67,23 @@ export default async function RootLayout({
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body className="flex min-h-screen flex-col bg-black text-white">
-        <ConvexClientProvider>
-          <NextIntlClientProvider messages={messages} locale={locale}>
-            <ThemeProvider>
-              <SharedBoardSync />
-              <AccountSyncMount />
-              <PWARegister />
-              <PWAInstallPrompt locale={locale} />
-              <AppShellExtras locale={locale} />
-              <WebViewBanner />
-              {children}
-              <SiteFooter />
-              <CookieConsentBanner />
-            </ThemeProvider>
-          </NextIntlClientProvider>
-        </ConvexClientProvider>
+        <ErrorBoundary>
+          <ConvexClientProvider>
+            <NextIntlClientProvider messages={messages} locale={locale}>
+              <ThemeProvider>
+                <SharedBoardSync />
+                <AccountSyncMount />
+                <PWARegister />
+                <PWAInstallPrompt locale={locale} />
+                <AppShellExtras locale={locale} />
+                <WebViewBanner />
+                {children}
+                <SiteFooter />
+                <CookieConsentBanner />
+              </ThemeProvider>
+            </NextIntlClientProvider>
+          </ConvexClientProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

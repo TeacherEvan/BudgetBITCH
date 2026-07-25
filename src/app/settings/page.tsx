@@ -153,6 +153,33 @@ export default function SettingsPage() {
             profile={profile}
             override={override}
           />
+
+          {/* Feedback / Bug report — free mailto, no paid service */}
+          <section id="settings-feedback" className="scroll-mt-24">
+            <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#C9960C] mb-4">
+              {locale === 'th' ? 'แจ้งปัญหา / ข้อเสนอแนะ' : 'Report & Feedback'}
+            </h2>
+            <div className="p-4 rounded-2xl border border-white/10 bg-white/5 space-y-3">
+              <p className="text-sm text-white/60">
+                {locale === 'th'
+                  ? 'พบบั๊กหรือมีข้อเสนอแนะ? แจ้งผู้ดูแลได้โดยตรง'
+                  : 'Found a bug or have a suggestion? Tell the admin directly.'}
+              </p>
+              <Button
+                variant="primary"
+                className="w-full gap-2 justify-center"
+                onClick={() => {
+                  const subject = encodeURIComponent('Budget-BOSS Bug Report');
+                  const body = encodeURIComponent(
+                    `What happened?\n\n\n--- Context ---\nLocale: ${locale}\nUser-Agent: ${typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'}`,
+                  );
+                  window.location.href = `mailto:admin@budgetbitch.app?subject=${subject}&body=${body}`;
+                }}
+              >
+                {locale === 'th' ? 'แจ้งปัญหา / ส่งข้อเสนอแนะ' : 'Report Bug / Send Feedback'}
+              </Button>
+            </div>
+          </section>
         </main>
       </div>
     </RequireAuth>

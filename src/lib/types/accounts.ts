@@ -107,6 +107,8 @@ export interface LocalAccountMeta {
   role: "owner" | "member";
   /** True when this account's data is stashed locally (has been opened). */
   hasLocalData?: boolean;
+  /** User's chosen display name, visible to other board members. */
+  displayName?: string;
 }
 
 // Literal TH/EN labels for inline UI use (the app renders labels per-locale

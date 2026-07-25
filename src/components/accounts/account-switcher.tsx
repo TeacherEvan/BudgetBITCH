@@ -39,11 +39,19 @@ export function AccountSwitcher({ locale }: AccountSwitcherProps) {
 
   if (!active) return null;
 
+  const getDisplayName = (account: typeof active) => {
+    // For shared accounts, show the user's displayName if available
+    if (account.displayName) return account.displayName;
+    // Fallback to role-based label
+    if (account.role === 'owner') return locale === 'th' ? 'เจ้าของ' : 'Owner';
+    return locale === 'th' ? 'สมาชิก' : 'Member';
+  };
+
   return (
     <div className="relative" ref={ref}>
       <button
         type="button"
-        aria-label={locale === 'th' ? 'สลับบัญชี' : 'Switch account'}
+        aria-label={locale === 'th' ? `สลับบัญชี: ${active.name}` : `Switch account: ${active.name}`}
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-center gap-3 rounded-xl border border-[var(--gold-border-strong)] bg-[var(--gold-base)]/10 p-3 text-left transition-colors hover:bg-[var(--gold-base)]/20"
@@ -57,6 +65,9 @@ export function AccountSwitcher({ locale }: AccountSwitcherProps) {
           </p>
           <p className="truncate text-sm font-semibold text-[var(--text-1)]">
             {active.name}
+          </p>
+          <p className="truncate text-xs text-[var(--text-2)]">
+            {getDisplayName(active)}
           </p>
         </div>
         <ChevronDown className={`text-[var(--gold-bright)] transition-transform ${open ? 'rotate-180' : ''}`} />
@@ -76,7 +87,7 @@ export function AccountSwitcher({ locale }: AccountSwitcherProps) {
                 <p className="truncate text-sm font-medium text-[var(--text-1)]">{a.name}</p>
                 <p className="truncate text-xs text-[var(--text-2)]">
                   {umbrellaLabel(a.umbrella, locale)}
-                  {a.role === 'member' ? (locale === 'th' ? ' • สมาชิก' : ' • Member') : ''}
+                  {a.displayName ? ` · ${a.displayName}` : a.role === 'member' ? (locale === 'th' ? ' · สมาชิก' : ' · Member') : ''}
                 </p>
               </div>
               {a.accountId === currentAccountId && <Check className="h-4 w-4 text-[var(--gold-bright)]" />}

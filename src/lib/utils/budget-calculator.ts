@@ -50,7 +50,7 @@ export function calculateBudgetFromWizard(profile: WizardProfile): BudgetCalcula
   const dailyDisposable = Math.max(0, Math.round(remainingDisposable / 30));
   
   // Budget categories with limits derived from wizard + risk tolerance
-  const riskMultiplier = getRiskMultiplier(answers.riskTolerance);
+  const riskMultiplier = getRiskMultiplier(answers.riskTolerance || 'medium');
   
   // Map wizard answers to budget categories
   const budgets: CalculatedBudget[] = [

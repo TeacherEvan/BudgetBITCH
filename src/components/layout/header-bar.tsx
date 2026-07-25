@@ -62,7 +62,7 @@ export function HeaderBar({ locale, onLocaleChange }: HeaderBarProps) {
       {/* Center: Gold gradient title — click to return Home (dashboard) */}
       <Link
         href="/dashboard"
-        aria-label={locale === 'th' ? 'หน้าแรก' : 'Home'}
+        aria-label={locale === 'th' ? 'Budget-BOSS หน้าแรก' : 'Budget-BOSS Home'}
         className="no-underline"
       >
         <h1

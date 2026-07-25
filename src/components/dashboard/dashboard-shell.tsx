@@ -13,6 +13,7 @@ import { PriorityGuide } from '@/components/dashboard/priority-guide';
 import { Modal } from '@/components/ui/modal';
 import { useCriticalExpense } from '@/hooks/use-critical-expense';
 import { useWizardProfile, useBudgets, useBills } from '@/hooks/use-local-db';
+import { useResolvedLocation } from '@/hooks/use-resolved-location';
 import { BentoGrid, type PanelConfig } from '@/components/dashboard/bento-grid';
 import { MobilePanelTabs } from '@/components/dashboard/mobile-panel-tabs';
 import { ScenarioSandboxModal } from '@/components/dashboard/scenario-sandbox-modal';
@@ -35,12 +36,16 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
   const { budgets, loading: budgetsLoading } = useBudgets();
   const { bills } = useBills();
   const [criticalExpenseOpen, setCriticalExpenseOpen] = useState(false);
-  const [openPanels, setOpenPanels] = useState<PanelKey[]>(['expenses', 'budget']);
+  const [openPanels, setOpenPanels] = useState<PanelKey[]>(['budget']);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [marketWatchOpen, setMarketWatchOpen] = useState(false);
-  const [mobileActivePanel, setMobileActivePanel] = useState<PanelKey>('expenses');
+  const [mobileActivePanel, setMobileActivePanel] = useState<PanelKey>('budget');
   const [scenarioModalOpen, setScenarioModalOpen] = useState(false);
   const [excelTab, setExcelTab] = useState<'standard' | 'variance' | 'cashflow' | 'pivot'>('standard');
+
+  // Location determines Market Watch availability (location-specific feeds only)
+  const { location } = useResolvedLocation();
+  const hasLocation = location !== null;
 
 
   // T5: direction-aware panel transitions. Direction is decided in the
@@ -120,16 +125,17 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
               </p>
             </div>
           </Link>
-          <div className="mb-6 mt-4 space-y-3">
-            <h3 className="bb-kicker">
+          <div className="mb-6 mt-4 space-y-3" role="region" aria-label={locale === 'th' ? 'คุณลักษณะพิเศษ' : 'Special features'}>
+            <div className="bb-kicker" role="heading" aria-level={2}>
               {locale === 'th' ? 'ค่าใช้จ่ายที่ต้องลด' : 'Cut One Expense'}
-            </h3>
+            </div>
             <button
               onClick={() => setCriticalExpenseOpen(true)}
               className="flex w-full items-center gap-3 rounded-xl border border-[var(--gold-border-strong)] bg-[var(--gold-base)]/10 p-3 text-left transition-colors hover:bg-[var(--gold-base)]/20 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={commitmentLoading}
+              aria-label={locale === 'th' ? 'เลือกค่าใช้จ่าย 1 อย่างเพื่อลดในเดือนนี้ ดูศักยภาพการประหยัด' : 'Pick one expense to cut this month, see savings potential'}
             >
-              <span className="text-2xl">🎯</span>
+              <span className="text-2xl" aria-hidden="true">🎯</span>
               <div className="flex-1 text-left min-w-0">
                 <p className="text-sm font-medium text-[var(--text-1)] truncate">
                   {locale === 'th' ? 'เลือก 1 อย่างลดในเดือนนี้' : 'Pick 1 to cut this month'}
@@ -138,27 +144,50 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
                   {locale === 'th' ? 'ดูเงินที่จะประหยัดได้' : 'See your savings potential'}
                 </p>
               </div>
-              <ChevronDown className="text-[var(--gold-bright)]" />
+              <ChevronDown className="text-[var(--gold-bright)]" aria-hidden="true" />
             </button>
             {commitmentLoading && <p className="text-center text-xs text-[var(--text-2)]">{locale === 'th' ? 'กำลังโหลด...' : 'Loading...'}</p>}
 
             {/* Market Watch - desktop sidebar, only below xl */}
-            <button
-              data-testid="market-watch-trigger"
-              onClick={() => setMarketWatchOpen(true)}
-              className="xl:hidden flex w-full items-center gap-3 rounded-xl border border-sky-400/30 bg-sky-400/10 p-3 text-left transition-colors hover:bg-sky-400/20"
-            >
-              <span className="text-2xl">📰</span>
-              <div className="flex-1 text-left min-w-0">
-                <p className="text-sm font-medium text-[var(--text-1)] truncate">
-                  {locale === 'th' ? 'ข่าวและข้อมูลล่าสุด' : 'Market Watch'}
-                </p>
-                <p className="text-xs text-[var(--text-2)]">
-                  {locale === 'th' ? 'ดูราคาน้ำมัน โปรโมชั่น ข่าว' : 'Fuel, deals & news'}
-                </p>
-              </div>
-              <ChevronDown className="text-sky-400" />
-            </button>
+            <div className="bb-kicker" role="heading" aria-level={2}>
+              {locale === 'th' ? 'ข่าวและข้อมูลล่าสุด' : 'Market Watch'}
+            </div>
+            {hasLocation ? (
+              <button
+                data-testid="market-watch-trigger"
+                onClick={() => setMarketWatchOpen(true)}
+                className="xl:hidden flex w-full items-center gap-3 rounded-xl border border-sky-400/30 bg-sky-400/10 p-3 text-left transition-colors hover:bg-sky-400/20"
+                aria-label={locale === 'th' ? 'เปิด Market Watch ดูราคาน้ำมัน โปรโมชั่น ข่าว' : 'Open Market Watch for fuel prices, deals, and news'}
+              >
+                <span className="text-2xl" aria-hidden="true">📰</span>
+                <div className="flex-1 text-left min-w-0">
+                  <p className="text-sm font-medium text-[var(--text-1)] truncate">
+                    {locale === 'th' ? 'ข่าวและข้อมูลล่าสุด' : 'Market Watch'}
+                  </p>
+                  <p className="text-xs text-[var(--text-2)]">
+                    {locale === 'th' ? 'ดูราคาน้ำมัน โปรโมชั่น ข่าว' : 'Fuel, deals & news'}
+                  </p>
+                </div>
+                <ChevronDown className="text-sky-400" aria-hidden="true" />
+              </button>
+            ) : (
+              <button
+                data-testid="market-watch-location-locked"
+                disabled
+                className="xl:hidden flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3 text-left cursor-not-allowed opacity-60"
+                aria-label={locale === 'th' ? 'เปิดการใช้งานตำแหน่งที่ตั้งเพื่อดู Market Watch' : 'Enable location to use Market Watch'}
+              >
+                <span className="text-2xl" aria-hidden="true">📍</span>
+                <div className="flex-1 text-left min-w-0">
+                  <p className="text-sm font-medium text-[var(--text-1)] truncate">
+                    {locale === 'th' ? 'เปิดการใช้งานตำแหน่งที่ตั้ง' : 'Enable Location'}
+                  </p>
+                  <p className="text-xs text-[var(--text-2)]">
+                    {locale === 'th' ? 'จำเป็นสำหรับข่าวและราคาน้ำมันในพื้นที่' : 'Required for local news & fuel'}
+                  </p>
+                </div>
+              </button>
+            )}
           </div>
 
           <div className="relative space-y-2">
@@ -329,24 +358,39 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
         </button>
         <div className="space-y-4 pt-2">
           <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-[var(--text-1)]">{locale === 'th' ? 'เมนู' : 'Menu'}</h3>
+            <h2 className="font-semibold text-[var(--text-1)]">{locale === 'th' ? 'เมนู' : 'Menu'}</h2>
           </div>
-          <button className="flex w-full items-center gap-3 rounded-xl border border-[var(--gold-border-strong)] bg-[var(--gold-base)]/10 p-3 text-left disabled:cursor-not-allowed disabled:opacity-50" onClick={() => { setCriticalExpenseOpen(true); setMobileMenuOpen(false); }} disabled={commitmentLoading}>
-            <span className="text-2xl">🎯</span>
+          <button className="flex w-full items-center gap-3 rounded-xl border border-[var(--gold-border-strong)] bg-[var(--gold-base)]/10 p-3 text-left disabled:cursor-not-allowed disabled:opacity-50" onClick={() => { setCriticalExpenseOpen(true); setMobileMenuOpen(false); }} disabled={commitmentLoading} aria-label={locale === 'th' ? 'เลือกค่าใช้จ่าย 1 อย่างเพื่อลดในเดือนนี้' : 'Pick one expense to cut this month'}>
+            <span className="text-2xl" aria-hidden="true">🎯</span>
             <div className="min-w-0">
               <p className="font-medium text-[var(--text-1)] truncate">{locale === 'th' ? 'เลือก 1 อย่างลดในเดือนนี้' : 'Pick 1 to cut this month'}</p>
             </div>
           </button>
-          <button
+          {hasLocation ? (
+            <button
               data-testid="market-watch-trigger"
               className="flex w-full items-center gap-3 rounded-xl border border-sky-400/30 bg-sky-400/10 p-3 text-left"
               onClick={() => { setMarketWatchOpen(true); setMobileMenuOpen(false); }}
+              aria-label={locale === 'th' ? 'เปิด Market Watch' : 'Open Market Watch'}
             >
-            <span className="text-2xl">📰</span>
-            <div className="min-w-0">
-              <p className="font-medium text-[var(--text-1)] truncate">{locale === 'th' ? 'ข่าวและข้อมูลล่าสุด' : 'Market Watch'}</p>
-            </div>
-          </button>
+              <span className="text-2xl" aria-hidden="true">📰</span>
+              <div className="min-w-0">
+                <p className="font-medium text-[var(--text-1)] truncate">{locale === 'th' ? 'ข่าวและข้อมูลล่าสุด' : 'Market Watch'}</p>
+              </div>
+            </button>
+          ) : (
+            <button
+              data-testid="market-watch-location-locked"
+              disabled
+              className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3 text-left cursor-not-allowed opacity-60"
+              aria-label={locale === 'th' ? 'เปิดการใช้งานตำแหน่งที่ตั้งเพื่อดู Market Watch' : 'Enable location to use Market Watch'}
+            >
+              <span className="text-2xl" aria-hidden="true">📍</span>
+              <div className="min-w-0">
+                <p className="font-medium text-[var(--text-1)] truncate">{locale === 'th' ? 'เปิดการใช้งานตำแหน่งที่ตั้ง' : 'Enable Location'}</p>
+              </div>
+            </button>
+          )}
           <div className="pt-1">
             <AccountSwitcher locale={locale} />
           </div>

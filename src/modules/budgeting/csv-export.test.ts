@@ -1,6 +1,6 @@
 // src/modules/budgeting/csv-export.test.ts
 import { expect, test } from 'vitest';
-import { exportExpensesToCsv, exportIncomesToCsv } from './csv-export';
+import { exportExpensesToCsv, exportIncomesToCsv, exportBudgetsToCsv } from './csv-export';
 import type { ExpenseEntry, IncomeEntry } from '@/lib/types/budget';
 
 test('exportExpensesToCsv formats empty array to header row only', () => {
@@ -54,4 +54,14 @@ test('exportIncomesToCsv formats income entries correctly', () => {
   const lines = csv.split('\n');
   expect(lines[0]).toBe('date,source,amount,category,frequency,note');
   expect(lines[1]).toBe('2026-07-01,Acme Corp Salary,65000,salary,monthly,Main salary');
+});
+
+test('exportBudgetsToCsv formats budget limits to CSV with optional BOM', () => {
+  const budgets = [
+    { category: 'food' as const, monthlyLimit: 5000, alertAtPct: 80 },
+  ];
+  const csv = exportBudgetsToCsv(budgets, true);
+  expect(csv.startsWith('\uFEFF')).toBe(true);
+  expect(csv).toContain('category,monthlyLimit,alertAtPct');
+  expect(csv).toContain('food,5000,80');
 });

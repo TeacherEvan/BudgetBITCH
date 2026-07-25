@@ -1,5 +1,4 @@
-// src/modules/budgeting/csv-export.ts
-import type { ExpenseEntry, IncomeEntry } from '@/lib/types/budget';
+import type { ExpenseEntry, IncomeEntry, BudgetCategory } from '@/lib/types/budget';
 
 /**
  * Escapes a single string field according to RFC-4180 CSV rules.
@@ -14,10 +13,12 @@ function escapeCsvField(val: string | number | undefined | null): string {
   return str;
 }
 
-export function exportExpensesToCsv(expenses: ExpenseEntry[]): string {
+export const UTF8_BOM = '\uFEFF';
+
+export function exportExpensesToCsv(expenses: ExpenseEntry[], includeBom = false): string {
   const header = 'date,merchant,amount,category,note,recurringId';
   if (!expenses || expenses.length === 0) {
-    return header;
+    return (includeBom ? UTF8_BOM : '') + header;
   }
 
   const rows = expenses.map((e) => [
@@ -29,13 +30,14 @@ export function exportExpensesToCsv(expenses: ExpenseEntry[]): string {
     escapeCsvField(e.recurringId),
   ].join(','));
 
-  return [header, ...rows].join('\n');
+  const csv = [header, ...rows].join('\n');
+  return includeBom ? UTF8_BOM + csv : csv;
 }
 
-export function exportIncomesToCsv(incomes: IncomeEntry[]): string {
+export function exportIncomesToCsv(incomes: IncomeEntry[], includeBom = false): string {
   const header = 'date,source,amount,category,frequency,note';
   if (!incomes || incomes.length === 0) {
-    return header;
+    return (includeBom ? UTF8_BOM : '') + header;
   }
 
   const rows = incomes.map((i) => [
@@ -47,5 +49,23 @@ export function exportIncomesToCsv(incomes: IncomeEntry[]): string {
     escapeCsvField(i.note),
   ].join(','));
 
-  return [header, ...rows].join('\n');
+  const csv = [header, ...rows].join('\n');
+  return includeBom ? UTF8_BOM + csv : csv;
 }
+
+export function exportBudgetsToCsv(budgets: BudgetCategory[], includeBom = false): string {
+  const header = 'category,monthlyLimit,alertAtPct';
+  if (!budgets || budgets.length === 0) {
+    return (includeBom ? UTF8_BOM : '') + header;
+  }
+
+  const rows = budgets.map((b) => [
+    escapeCsvField(b.category),
+    escapeCsvField(b.monthlyLimit),
+    escapeCsvField(b.alertAtPct),
+  ].join(','));
+
+  const csv = [header, ...rows].join('\n');
+  return includeBom ? UTF8_BOM + csv : csv;
+}
+

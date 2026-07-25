@@ -3,7 +3,6 @@
 import { Globe, Palette, BarChart2, TrendingUp, PieChart, Circle } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
-import { LocaleSwitcher } from '@/components/i18n/locale-switcher';
 import type { CurrencyOverride } from '@/hooks/use-currency-override';
 import type { GraphType } from '@/hooks/use-display-prefs';
 import { ALL_GENRES, type NewsGenre } from '@/hooks/use-news-prefs';
@@ -58,7 +57,9 @@ export function PreferenceSettingsCard({
             <label className="block text-sm font-medium text-white/70 mb-2">
               {locale === 'th' ? 'ภาษา' : 'Language'} <Globe className="inline w-4 h-4 ml-1" />
             </label>
-            <LocaleSwitcher />
+            <p className="text-sm text-white/60">
+              {locale === 'th' ? 'ภาษา (ตั้งค่าครั้งเดียวเมื่อเปิดแอป)' : 'Set once on first launch'}
+            </p>
           </div>
           <div>
             <label className="block text-sm font-medium text-white/70 mb-2">

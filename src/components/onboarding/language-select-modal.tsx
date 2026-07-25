@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 
 interface LanguageSelectModalProps {
   isOpen: boolean;
-  onComplete: (locale: 'th' | 'en') => void;
+  onComplete: (locale: 'en-ZA' | 'en-TH' | 'th') => void;
 }
 
 export function LanguageSelectModal({ isOpen, onComplete }: LanguageSelectModalProps) {
@@ -71,24 +71,33 @@ export function LanguageSelectModal({ isOpen, onComplete }: LanguageSelectModalP
             size="lg"
             variant="primary"
             className="w-full justify-center gap-3 text-lg"
-            onClick={() => onComplete('th')}
+            onClick={() => onComplete('en-ZA')}
           >
-            <span className="text-2xl">🇹🇭</span>
-            <span>ไทย (Thai)</span>
+            <span className="text-2xl">🇿🇦</span>
+            <span>English (South Africa)</span>
           </Button>
           <Button
             size="lg"
             variant="secondary"
             className="w-full justify-center gap-3 text-lg"
-            onClick={() => onComplete('en')}
+            onClick={() => onComplete('en-TH')}
           >
-            <span className="text-2xl">🇺🇸</span>
-            <span>English</span>
+            <span className="text-2xl">🇹🇭</span>
+            <span>English (Thailand)</span>
+          </Button>
+          <Button
+            size="lg"
+            variant="secondary"
+            className="w-full justify-center gap-3 text-lg"
+            onClick={() => onComplete('th')}
+          >
+            <span className="text-2xl">🇹🇭</span>
+            <span>ไทย (Thai)</span>
           </Button>
         </div>
 
         <p className="text-xs text-white/50 text-center">
-          Your language preference is saved locally and can be changed in settings (globe icon in header)
+          Your language is set once. Reinstall the app to change it.
         </p>
       </div>
     </Modal>

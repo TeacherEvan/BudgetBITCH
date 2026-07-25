@@ -32,9 +32,12 @@ export default function Home() {
 
   const showLanguageModal = mounted && typeof window !== "undefined" && !localStorage.getItem(LANGUAGE_STORAGE_KEY);
 
-  const finishLocaleSelect = (selectedLocale: 'th' | 'en') => {
+  const finishLocaleSelect = (selectedLocale: 'en-ZA' | 'en-TH' | 'th' | string) => {
     try {
       localStorage.setItem(LANGUAGE_STORAGE_KEY, selectedLocale);
+      if (typeof document !== 'undefined') {
+        document.cookie = `bb-locale=${selectedLocale}; path=/; max-age=31536000; SameSite=Lax`;
+      }
     } catch {
       // noop
     }

@@ -83,7 +83,6 @@ describe("WelcomeWindow", () => {
       "/sign-up?redirectTo=%2F",
     );
     expect(screen.getByText(/private by default\. setup only if needed\./i)).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: /language/i })).toBeInTheDocument();
     expect(screen.getByTestId("pro-tips-card")).toBeInTheDocument();
   });
 

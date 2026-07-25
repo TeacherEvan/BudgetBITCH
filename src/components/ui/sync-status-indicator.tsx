@@ -162,12 +162,18 @@ export function SyncStatusIndicator({ locale }: SyncStatusIndicatorProps) {
 
   const l = labels[locale];
 
+  const statusWord = !online
+    ? (locale === 'th' ? 'ออฟไลน์' : 'Offline')
+    : pendingCount > 0
+      ? (locale === 'th' ? 'กำลังซิงค์' : 'Syncing')
+      : (locale === 'th' ? 'ซิงค์แล้ว' : 'Synced');
+
   return (
     <div className="relative" ref={ref}>
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        aria-label={locale === 'th' ? 'ดูสถานะการซิงค์' : 'View sync status'}
+        aria-label={`${l.status}: ${statusWord}`}
         aria-expanded={open}
         className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-all hover:bg-white/5 active:scale-95 ${
           !online

@@ -2,6 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 
+// Mutable so tests can simulate location-on / location-off (hoisted above vi.mock)
+type ResolvedLoc = { location: { lat: number; lon: number } | null; country: string | null };
+const mockResolvedLocation = vi.hoisted(() =>
+  vi.fn<() => ResolvedLoc>(() => ({ location: { lat: -33.9249, lon: 18.4241 }, country: 'ZA' })),
+);
+
 vi.mock('next-intl', () => ({
   useLocale: () => 'en',
   useTranslations: () => (key: string) => key,
@@ -19,6 +25,10 @@ vi.mock('@/hooks/use-local-db', () => ({
 
 vi.mock('@/hooks/use-critical-expense', () => ({
   useCriticalExpense: () => ({ commitment: null, loading: false }),
+}));
+
+vi.mock('@/hooks/use-resolved-location', () => ({
+  useResolvedLocation: () => mockResolvedLocation(),
 }));
 
 vi.mock('@/components/ui/sync-status-indicator', () => ({
@@ -93,67 +103,67 @@ vi.mock('@/components/dashboard/panels/income-inflow-panel', () => ({
   }
 }));
 
-import { DashboardShell } from './dashboard-shell';
-import React from 'react';
+import { DashboardShell } from './dashboard-shell'
+import React from 'react'
 
 const mockMatchMedia = vi.fn().mockReturnValue({
   matches: false,
   addEventListener: vi.fn(),
   removeEventListener: vi.fn(),
-});
+})
 
 beforeAll(() => {
-  vi.stubGlobal('matchMedia', mockMatchMedia);
-});
+  vi.stubGlobal('matchMedia', mockMatchMedia)
+})
 
 const renderShell = (props: Partial<React.ComponentProps<typeof DashboardShell>> = {}) =>
   render(
     <ThemeProvider>
       <DashboardShell locale="en" {...props} />
     </ThemeProvider>,
-  );
+  )
 
 // The panel card title is an <h3> with the panel name; the mocked body also renders the
 // same label. Scope to the card title to assert which single panel is shown.
-const cardTitle = (card: HTMLElement) => within(card).getByRole('heading', { level: 3 }).textContent;
+const cardTitle = (card: HTMLElement) => within(card).getByRole('heading', { level: 3 }).textContent
 
 describe('DashboardShell (mobile)', () => {
   beforeEach(() => {
-    localStorage.clear();
-    vi.clearAllMocks();
+    localStorage.clear()
+    vi.clearAllMocks()
     mockMatchMedia.mockReturnValue({
       matches: false,
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
-    });
-  });
+    })
+  })
 
-  it('renders exactly one panel card in the mobile region by default (expenses)', () => {
-    renderShell();
-    const mobileRegion = screen.getByTestId('mobile-panels');
-    const cards = within(mobileRegion).getAllByTestId('panel-card');
-    expect(cards).toHaveLength(1);
-    expect(cardTitle(cards[0])).toMatch(/expenses/i);
-  });
+  it('renders exactly one panel card in the mobile region by default (budget)', () => {
+    renderShell()
+    const mobileRegion = screen.getByTestId('mobile-panels')
+    const cards = within(mobileRegion).getAllByTestId('panel-card')
+    expect(cards).toHaveLength(1)
+    expect(cardTitle(cards[0])).toMatch(/budget/i)
+  })
 
   it('swaps the single rendered mobile panel when a bottom tab is clicked', () => {
-    renderShell();
-    const mobileRegion = screen.getByTestId('mobile-panels');
-    expect(within(mobileRegion).getAllByTestId('panel-card')).toHaveLength(1);
-    expect(cardTitle(within(mobileRegion).getByTestId('panel-card'))).toMatch(/expenses/i);
+    renderShell()
+    const mobileRegion = screen.getByTestId('mobile-panels')
+    expect(within(mobileRegion).getAllByTestId('panel-card')).toHaveLength(1)
+    expect(cardTitle(within(mobileRegion).getByTestId('panel-card'))).toMatch(/budget/i)
 
-    fireEvent.click(screen.getByTestId('mobile-tab-goals'));
+    fireEvent.click(screen.getByTestId('mobile-tab-goals'))
 
-    const cards = within(mobileRegion).getAllByTestId('panel-card');
-    expect(cards).toHaveLength(1);
-    expect(cardTitle(cards[0])).toMatch(/goals/i);
-  });
+    const cards = within(mobileRegion).getAllByTestId('panel-card')
+    expect(cards).toHaveLength(1)
+    expect(cardTitle(cards[0])).toMatch(/goals/i)
+  })
 
   it('mobile bottom sheet lists all panels including Cut One Expense', () => {
     renderShell();
     const sheet = screen.getByTestId('mobile-sheet');
     // Cut One Expense lives in the mobile sheet (primary mobile access point).
-    expect(within(sheet).getByRole('button', { name: /pick 1 to cut this month/i })).toBeInTheDocument();
+    expect(within(sheet).getByRole('button', { name: /pick one expense to cut this month/i })).toBeInTheDocument();
     // All 12 panels are reachable from the sheet, plus the account switcher.
     // 16 = close(X) + Cut One + Market Watch + AccountSwitcher + 12 panels.
     expect(within(sheet).getAllByRole('button')).toHaveLength(16);
@@ -168,16 +178,34 @@ describe('DashboardShell (mobile)', () => {
     renderShell();
     const triggers = screen.getAllByRole('button', { name: /market watch/i });
     fireEvent.click(triggers[0]);
-    expect(screen.getByRole('heading', { name: /market watch/i })).toBeInTheDocument();
+    // The modal heading has id="modal-title" - query by role heading with level 2 within dialog
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('heading', { level: 2 })).toBeInTheDocument();
   });
 
   it('Critical Expenses modal body is scrollable (overflow-y-auto)', () => {
     renderShell();
-    const triggers = screen.getAllByRole('button', { name: /pick 1 to cut this month/i });
+    const triggers = screen.getAllByRole('button', { name: /pick one expense to cut this month/i });
     fireEvent.click(triggers[0]);
     // The scrollable modal body wraps the "Pick one expense to cut" content.
     const dialog = screen.getByRole('dialog');
     expect(dialog.querySelector('.overflow-y-auto')).not.toBeNull();
     expect(dialog.className).toContain('max-h-[85vh]');
+  });
+});
+
+describe('DashboardShell — Market Watch location gating', () => {
+  it('renders Enable Location button (no trigger) when location is unavailable', () => {
+    mockResolvedLocation.mockReturnValue({ location: null, country: null });
+    renderShell();
+    expect(screen.getAllByTestId('market-watch-location-locked')).toHaveLength(2);
+    expect(screen.queryByTestId('market-watch-trigger')).toBeNull();
+  });
+
+  it('renders Market Watch trigger when location is available', () => {
+    mockResolvedLocation.mockReturnValue({ location: { lat: -33.9249, lon: 18.4241 }, country: 'ZA' });
+    renderShell();
+    expect(screen.getAllByTestId('market-watch-trigger')).toHaveLength(2);
+    expect(screen.queryByTestId('market-watch-location-locked')).toBeNull();
   });
 });
