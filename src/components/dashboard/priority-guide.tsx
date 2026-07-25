@@ -20,6 +20,7 @@ export interface PriorityAlert {
 
 const CRITICAL_SESSION_KEY = 'bb:critical-suppressed';
 const WARNING_SESSION_KEY = 'bb:warn-suppressed';
+const INFO_LOCAL_KEY = 'bb:info-dismissed';
 
 export function readSessionSet(key: string): Set<string> {
   if (typeof window === 'undefined') return new Set();
@@ -35,6 +36,25 @@ export function writeSessionSet(key: string, set: Set<string>): void {
   if (typeof window === 'undefined') return;
   try {
     sessionStorage.setItem(key, JSON.stringify([...set]));
+  } catch {
+    /* ignore quota / private-mode errors */
+  }
+}
+
+export function readLocalSet(key: string): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = localStorage.getItem(key);
+    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+export function writeLocalSet(key: string, set: Set<string>): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(key, JSON.stringify([...set]));
   } catch {
     /* ignore quota / private-mode errors */
   }
@@ -122,6 +142,7 @@ export function PriorityGuide() {
   const [dismissed, setDismissed] = useState<Set<string>>(() => new Set([
     ...readSessionSet(CRITICAL_SESSION_KEY),
     ...readSessionSet(WARNING_SESSION_KEY),
+    ...readLocalSet(INFO_LOCAL_KEY),
   ]));
 
   // INFO tips auto-dismiss after 10s
@@ -146,6 +167,10 @@ export function PriorityGuide() {
       const s = readSessionSet(WARNING_SESSION_KEY);
       s.add(id);
       writeSessionSet(WARNING_SESSION_KEY, s);
+    } else if (alert?.tier === 'info') {
+      const s = readLocalSet(INFO_LOCAL_KEY);
+      s.add(id);
+      writeLocalSet(INFO_LOCAL_KEY, s);
     }
   }
 
