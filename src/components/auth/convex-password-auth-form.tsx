@@ -148,9 +148,14 @@ export function ConvexPasswordAuthForm({
           // The Convex Auth Next.js proxy masks every auth error (incl. a normal
           // wrong-password) as a generic "Server Error" / MIDDLEWARE_INVOCATION_FAILED
           // 500. Surface a friendly credential hint instead of the raw proxy message.
+          // Also catch the raw backend errors ("InvalidAccountId", "InvalidSecret")
+          // that can leak through if the proxy forwards them verbatim.
           msg.includes("server error") ||
           msg.includes("middleware_invocation_failed") ||
-          msg.includes("middleware invocation failed")
+          msg.includes("middleware invocation failed") ||
+          msg.includes("invalidaccountid") ||
+          msg.includes("invalidsecret") ||
+          msg.includes("invalid credentials")
         ) {
           setError("Check your email and password, then try again.");
         } else {
