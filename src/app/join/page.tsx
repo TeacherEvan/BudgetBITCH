@@ -4,6 +4,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
+import { useConvexAuth } from '@convex-dev/auth/react';
 import { Check, X, QrCode } from 'lucide-react';
 import { useAccounts } from '@/hooks/use-accounts';
 import { HeaderBar } from '@/components/layout/header-bar';
@@ -15,6 +16,7 @@ export default function JoinPage() {
   const params = useSearchParams();
   const router = useRouter();
   const { redeemInviteToken } = useAccounts();
+  const { isLoading: authLoading, isAuthenticated } = useConvexAuth();
 
   const handleLocaleChange = (nextLocale: 'th' | 'en') => {
     document.cookie = `bb-locale=${nextLocale}; path=/; max-age=31536000; samesite=lax`;
@@ -27,8 +29,21 @@ export default function JoinPage() {
 
   const t = useCallback((en: string, th: string) => (locale === 'th' ? th : en), [locale]);
 
+  // Invite links are opened while logged out (e.g. from a fresh browser tab).
+  // Send the user to sign-in first, preserving the ?code= so they land back
+  // here after authenticating.
+  useEffect(() => {
+    if (authLoading || isAuthenticated) return;
+    const returnTo = code ? `/join?code=${encodeURIComponent(code)}` : '/join';
+    const url = new URL('/sign-in', window.location.origin);
+    url.searchParams.set('redirectTo', returnTo);
+    router.replace(url.toString());
+  }, [authLoading, isAuthenticated, code, router]);
+
   useEffect(() => {
     if (!code || status !== 'working') return;
+    // Wait for auth to resolve; unauthenticated users are redirected above.
+    if (authLoading || !isAuthenticated) return;
     let active = true;
     (async () => {
       try {
@@ -46,7 +61,7 @@ export default function JoinPage() {
     return () => {
       active = false;
     };
-  }, [code, status, redeemInviteToken, router, t]);
+  }, [code, status, authLoading, isAuthenticated, redeemInviteToken, router, t]);
 
   return (
     <div className="bb-viewport-fill bg-[var(--bg-base)]">
