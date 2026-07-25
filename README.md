@@ -131,7 +131,7 @@ For deeper orientation, start with `docs/CODEBASE_INDEX.md`.
 - `src/lib/convex/sync-snapshots.ts` gathers a daily snapshot from IndexedDB and calls the Convex mutation `upsertDailySnapshot` (table: `dailySnapshots`).
 - If Convex is not configured or the call fails, the snapshot is queued in `localStorage` (`budgetbitch:offlineQueue`); `flushOfflineQueue()` replays queued snapshots to Convex on reconnect (navigator `online` event).
 - The Service Worker (`public/sw.js`) registers and requests periodic sync for the daily snapshot.
-- `vercel.json` still declares a legacy cron path (`/api/cron/projections/check-ins/replay`) that has no matching route handler in this slice; the daily snapshot is pushed client-side, not via the cron. Remove or wire that cron before relying on it.
+- `vercel.json` previously declared a legacy cron path (`/api/cron/projections/check-ins/replay`) with no matching route handler; it has been removed. The daily snapshot is pushed client-side (`sync-snapshots.ts` → `upsertDailySnapshot`), not via a server cron.
 - Convex Auth email/password accounts are created by users through `/sign-up`; end users do not add environment files or OAuth credentials.
 
 ## Security & Vercel Headers
