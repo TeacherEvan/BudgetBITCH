@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useLocale } from "next-intl";
 import { shortLocale } from "@/lib/legal/versions";
 import { TERMS_VERSION, PRIVACY_VERSION } from "@/lib/legal/versions";
+import { flushOfflineQueue } from "@/lib/convex/sync-snapshots";
 
 type ConvexPasswordAuthFormProps = {
   flow: "signIn" | "signUp";
@@ -70,6 +71,8 @@ export function ConvexPasswordAuthForm({
       const formData = new FormData(event.currentTarget);
       formData.set("flow", flow);
       const result = await signIn("password", formData);
+      // Replay any snapshots queued while unauthenticated (cross-device sync).
+      void flushOfflineQueue();
 
       if (result.redirect) {
         window.location.href = result.redirect.toString();

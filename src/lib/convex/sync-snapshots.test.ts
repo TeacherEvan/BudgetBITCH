@@ -138,3 +138,64 @@ describe('syncDailySnapshot (C3 dedup)', () => {
     expect(queued).toHaveLength(1);
   });
 });
+
+vi.mock('@/components/providers/convex-client-provider', () => ({
+  convex: {
+    mutation: vi.fn(),
+  },
+}));
+
+import { flushOfflineQueue } from './sync-snapshots';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockConvex = (await import('@/components/providers/convex-client-provider')).convex as any;
+
+describe('flushOfflineQueue (no item-skip on partial failure)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Configure a Convex URL so getConvexClient returns the shared client.
+    vi.stubEnv('NEXT_PUBLIC_CONVEX_URL', 'https://test.convex.cloud');
+    // Simulate an authenticated user so auth gate passes.
+    localStorage.setItem('__convexAuthJWT_test', 'valid-token');
+    localStorage.removeItem('budgetbitch:offlineQueue');
+  });
+
+  it('retains only the items that actually failed; never skips the next item', async () => {
+    // Queue: item[0] fails with a non-auth error, item[1] succeeds.
+    const queue = [
+      { data: { totals: { income: 1 } }, timestamp: 1 },
+      { data: { totals: { income: 2 } }, timestamp: 2 },
+    ];
+    localStorage.setItem('budgetbitch:offlineQueue', JSON.stringify(queue));
+
+    let call = 0;
+    mockConvex.mutation.mockImplementation(async () => {
+      call += 1;
+      if (call === 1) throw new Error('Network blip');
+      return { ok: true };
+    });
+
+    await flushOfflineQueue();
+
+    // Only the failed (first) item should remain; the second was flushed.
+    const remaining = JSON.parse(localStorage.getItem('budgetbitch:offlineQueue') || '[]');
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0].timestamp).toBe(1);
+    expect(mockConvex.mutation).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps the whole tail when auth drops mid-flush', async () => {
+    const queue = [
+      { data: { totals: { income: 1 } }, timestamp: 1 },
+      { data: { totals: { income: 2 } }, timestamp: 2 },
+      { data: { totals: { income: 3 } }, timestamp: 3 },
+    ];
+    localStorage.setItem('budgetbitch:offlineQueue', JSON.stringify(queue));
+
+    mockConvex.mutation.mockRejectedValueOnce(new Error('Unauthenticated'));
+
+    await flushOfflineQueue();
+
+    const remaining = JSON.parse(localStorage.getItem('budgetbitch:offlineQueue') || '[]');
+    expect(remaining).toHaveLength(3);
+  });
+});

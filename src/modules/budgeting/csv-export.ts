@@ -1,12 +1,23 @@
 import type { ExpenseEntry, IncomeEntry, BudgetCategory } from '@/lib/types/budget';
 
 /**
+ * CSV formula-injection defense. Fields beginning with = + - @ tab CR or
+ * newline are interpreted as a formula by Excel/Sheets/OpenOffice and can
+ * execute. Prefix with a single quote so the cell renders as literal text.
+ */
+const FORMULA_INJECTION_PREFIXES = /^[\t=+\-@\r\n]/;
+
+/**
  * Escapes a single string field according to RFC-4180 CSV rules.
  * Wraps in double quotes if field contains commas, double quotes, or newlines.
+ * Also neutralizes formula-injection prefixes.
  */
 function escapeCsvField(val: string | number | undefined | null): string {
   if (val === undefined || val === null) return '';
-  const str = String(val);
+  let str = String(val);
+  if (FORMULA_INJECTION_PREFIXES.test(str)) {
+    str = `'${str}`;
+  }
   if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
     return `"${str.replace(/"/g, '""')}"`;
   }
@@ -69,3 +80,23 @@ export function exportBudgetsToCsv(budgets: BudgetCategory[], includeBom = false
   return includeBom ? UTF8_BOM + csv : csv;
 }
 
+/**
+ * Triggers a real browser download of the given CSV string via a Blob URL.
+ * No-op outside a browser (SSR / tests without DOM), returns true if a
+ * download was attempted. The object URL is always revoked to avoid leaks.
+ */
+export function downloadCsv(csv: string, filename: string): boolean {
+  if (typeof document === 'undefined' || typeof URL === 'undefined') {
+    return false;
+  }
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename.endsWith('.csv') ? filename : `${filename}.csv`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
+  return true;
+}

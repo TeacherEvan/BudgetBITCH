@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useLocale } from "next-intl";
 import { shortLocale } from "@/lib/legal/versions";
 import { AUTH_ROUTES } from "@/lib/auth/routes";
+import { flushOfflineQueue } from "@/lib/convex/sync-snapshots";
 
 const COPY = {
   en: {
@@ -71,6 +72,8 @@ export function ResetPasswordForm({ email = "", code = "" }: ResetPasswordFormPr
       formData.set("flow", "reset-verification");
       await signIn("password", formData);
       setSuccess(true);
+      // Replay any snapshots queued while unauthenticated (cross-device sync).
+      void flushOfflineQueue();
       // Convex Auth signs the user in after a successful reset; the provider
       // clears the code from the URL. Send them back to the dashboard.
       setTimeout(() => {

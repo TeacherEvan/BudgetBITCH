@@ -11,6 +11,12 @@ import { USER_DATA_STORES, clearAllUserData, getDB, createLocalCheckpoint } from
 import { createBackupPayload, parseAndValidateBackup, type BackupData } from '@/lib/db/backup-schema';
 import { encryptBackup, decryptBackup } from '@/lib/db/crypto-backup';
 import { formatMoney } from '@/lib/utils/currency';
+import {
+  exportExpensesToCsv,
+  exportIncomesToCsv,
+  exportBudgetsToCsv,
+  downloadCsv,
+} from '@/modules/budgeting/csv-export';
 import type { WizardProfile, CriticalExpenseCommitment } from '@/lib/types/budget';
 import type { CurrencyOverride } from '@/hooks/use-currency-override';
 import { format } from 'date-fns';
@@ -48,6 +54,7 @@ export function DataBackupCard({
 }: DataBackupCardProps) {
   const [syncing, setSyncing] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [csvExporting, setCsvExporting] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
   const [exportStatus, setExportStatus] = useState<Status>('idle');
   const [importStatus, setImportStatus] = useState<Status>('idle');
@@ -64,6 +71,34 @@ export function DataBackupCard({
   const [pendingFileString, setPendingFileString] = useState<string | null>(null);
   const [importErrorMessage, setImportErrorMessage] = useState('');
   const [decryptModalOpen, setDecryptModalOpen] = useState(false);
+
+  const handleExportCsv = async () => {
+    setCsvExporting(true);
+    try {
+      const db = await getDB();
+      const [expenses, incomes, budgets] = await Promise.all([
+        db.getAll('expenses'),
+        db.getAll('incomes'),
+        db.getAll('budgets'),
+      ]);
+      const stamp = format(new Date(), 'yyyy-MM-dd');
+      const sections = [
+        '# Expenses',
+        exportExpensesToCsv(expenses, true),
+        '',
+        '# Incomes',
+        exportIncomesToCsv(incomes, true),
+        '',
+        '# Budgets',
+        exportBudgetsToCsv(budgets, true),
+      ].join('\n');
+      downloadCsv(sections, `budgetbitch-data-${stamp}.csv`);
+    } catch (err) {
+      console.error('CSV export failed:', err);
+    } finally {
+      setCsvExporting(false);
+    }
+  };
 
   const handleResetConfirm = async () => {
     setResetOpen(false);
@@ -376,6 +411,21 @@ export function DataBackupCard({
               />
               {importStatus === 'success' && <p className="mt-2 text-sm text-emerald-400">{l.importSuccess}</p>}
               {importStatus === 'error' && <p className="mt-2 text-sm text-rose-400">{importErrorMessage || l.importError}</p>}
+            </div>
+          </Card>
+
+          <Card className="p-4 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                <Download className="w-5 h-5 text-amber-400" />
+                <h3 className="font-semibold text-white">{locale === 'th' ? 'ส่งออกข้อมูล (CSV)' : 'Export Data (CSV)'}</h3>
+              </div>
+              <p className="text-sm text-white/50 mb-4">{locale === 'th' ? 'ดาวน์โหลดค่าใช้จ่าย รายรับ และงบประมาณเป็นไฟล์ CSV' : 'Download expenses, incomes and budgets as a CSV file'}</p>
+            </div>
+            <div>
+              <Button variant="secondary" onClick={handleExportCsv} className="w-full" disabled={csvExporting}>
+                {csvExporting ? (locale === 'th' ? 'กำลังส่งออก...' : 'Exporting...') : (locale === 'th' ? 'ส่งออก CSV' : 'Export CSV')}
+              </Button>
             </div>
           </Card>
 

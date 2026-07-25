@@ -268,25 +268,27 @@ export async function flushOfflineQueue() {
   const queue = JSON.parse(localStorage.getItem("budgetbitch:offlineQueue") || "[]");
   if (queue.length === 0) return;
   
-  const remaining = [...queue];
+  const failed: unknown[] = [];
   for (const item of queue) {
     try {
       const cleanData = sanitizeForConvex(item.data);
       await convex.mutation(api.snapshots.upsertDailySnapshot, cleanData);
       console.log('Flushed offline snapshot:', item.timestamp);
-      remaining.shift(); // Remove successfully flushed item
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       if (errorMessage.includes("Authentication required") || errorMessage.includes("Authentication") || errorMessage.includes("Unauthenticated")) {
         console.log('User is not authenticated yet. Postponing offline queue flush.');
+        // Auth dropped mid-flush: keep the rest of the queue untouched.
+        failed.push(...queue.slice(queue.indexOf(item)));
+        break;
       } else {
         console.error('Failed to flush offline snapshot:', error);
+        failed.push(item);
       }
-      break;
     }
   }
   
-  localStorage.setItem('budgetbitch:offlineQueue', JSON.stringify(remaining));
+  localStorage.setItem('budgetbitch:offlineQueue', JSON.stringify(failed));
 }
 
 // Listen for online/offline events
