@@ -30,6 +30,7 @@ pnpm-debug.log*
 
 # test output
 /playwright-report
+/.playwright-cli/
 /test-results
 /coverage
 /dogfood-output
@@ -44,6 +45,7 @@ pnpm-debug.log*
 
 # docs (local planning working set — kept on disk, not committed)
 /docs/plans/
+/docs/ideas/
 
 # local DB (dev only)
 *.idb
