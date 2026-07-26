@@ -8,11 +8,13 @@ import { addExpense, generateId } from '@/lib/db/local-db';
 import type { ExpenseEntry } from '@/lib/types/budget';
 import type { ParsedExpense } from '@/modules/budgeting/csv-import';
 import { ImportCsvModal } from './import-csv-modal';
+import { PurchaseNoteModal } from './purchase-note-modal';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useCurrency } from '@/hooks/use-currency';
+import { usePurchaseNotes } from '@/hooks/use-purchase-notes';
 import type { ExpenseCategory } from '@/lib/types/budget';
 
 interface Expense {
@@ -58,9 +60,11 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
 
   const { expenses, add, update, remove, loading } = useExpenses();
   const { budgets } = useBudgets();
+  const { boardId, notes, setNote } = usePurchaseNotes();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
+  const [noteExpenseId, setNoteExpenseId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState<FormData>({
     merchant: '',
@@ -283,10 +287,25 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
                         {overBudget && <span className="text-xs px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400">
                           {locale === 'th' ? 'เกินงบ' : 'Over Budget'}
                         </span>}
+                        {boardId && (
+                          <button
+                            type="button"
+                            onClick={() => setNoteExpenseId(expense.id)}
+                            aria-label={locale === 'th' ? 'บันทึกการซื้อร่วม' : 'Shared note'}
+                            className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${
+                              notes[expense.id]
+                                ? 'bg-amber-400/20 text-amber-400 border-amber-400/30'
+                                : 'bg-white/10 text-white/70 border-white/10 hover:border-[rgba(201,150,12,0.4)]'
+                            }`}
+                          >
+                            📝 {notes[expense.id] ? '✓' : ''}
+                          </button>
+                        )}
                       </div>
                       <p className="text-xs text-white/50 mt-0.5 truncate">
                         {new Date(expense.date).toLocaleDateString(locale === 'th' ? 'th-TH' : 'en-US')} • {formatCurrency(expense.amount, locale)}
                         {expense.note && ` • ${expense.note}`}
+                        {notes[expense.id] && ` • 📝 ${notes[expense.id].note}`}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -306,6 +325,17 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
           </div>
         )}
       </div>
+
+      <PurchaseNoteModal
+        isOpen={noteExpenseId !== null}
+        onClose={() => setNoteExpenseId(null)}
+        locale={locale}
+        merchant={expenses.find((e) => e.id === noteExpenseId)?.merchant ?? ''}
+        initialNote={noteExpenseId ? notes[noteExpenseId]?.note ?? '' : ''}
+        onSave={(note) => {
+          if (noteExpenseId) return setNote(noteExpenseId, note);
+        }}
+      />
     </div>
   );
 }
