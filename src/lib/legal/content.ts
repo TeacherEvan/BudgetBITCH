@@ -105,7 +105,7 @@ export const termsContent: Record<LegalLocale, LegalDoc> = {
       {
         heading: "4. การใช้งานที่เหมาะสม",
         body: [
-          "กรุณาอย่าใช้แอปเพื่อกิจกรรมที่ผิดกฎหมาย หรือละเมิดสิทธิผู้อื่น หรือ滥用 บริการ เราอาจระงับบัญชีที่ฝ่าฝืนข้อกำหนดนี้",
+          "กรุณาอย่าใช้แอปเพื่อกิจกรรมที่ผิดกฎหมาย หรือละเมิดสิทธิผู้อื่น หรือใช้บริการในทางที่ผิด เราอาจระงับบัญชีที่ฝ่าฝืนข้อกำหนดนี้",
         ],
       },
       {
@@ -218,7 +218,7 @@ export const privacyContent: Record<LegalLocale, LegalDoc> = {
         ],
       },
       {
-        heading: "11. Third-Party Services",
+        heading: "10. Third-Party Services",
         body: [
           "Receipt scanning: when you use the receipt scanner, your receipt image is transmitted to Google LLC's Gemini AI service for optical character recognition. Google processes the image to extract text; we receive only the parsed merchant, amount, date, and category. This processing is covered by Google's own privacy terms.",
           "Market Watch: headlines are fetched from independent third-party news publishers (Bangkok Post, Reuters, Thai PBS, PPTV, and others) over their public feeds. We do not control their content and link out to their sites.",
@@ -226,7 +226,7 @@ export const privacyContent: Record<LegalLocale, LegalDoc> = {
         ],
       },
       {
-        heading: "12. Contact",
+        heading: "11. Contact",
         body: [
           "Data protection questions: legal@budgetbitch.app.",
         ],
@@ -306,7 +306,7 @@ export const privacyContent: Record<LegalLocale, LegalDoc> = {
         ],
       },
       {
-        heading: "11. บริการบุคคลที่สาม",
+        heading: "10. บริการบุคคลที่สาม",
         body: [
           "การสแกนใบเสร็จ: เมื่อคุณใช้เครื่องสแกนใบเสร็จ รูปใบเสร็จของคุณจะถูกส่งไปยังบริการ Google Gemini AI ของ Google LLC เพื่อการจดจำตัวอักษร (OCR) Google ประมวลผลรูปเพื่อดึงข้อความ เราได้รับเฉพาะร้าน จำนวนเงิน วันที่ และหมวดหมู่ที่แยกได้ การประมวลผลนี้อยู่ภายใต้เงื่อนไขความเป็นส่วนตัวของ Google",
           "Market Watch: หัวข้อข่าวถูกดึงจากสำนักข่าวอิสระบุคคลที่สาม (Bangkok Post, Reuters, Thai PBS, PPTV และอื่น ๆ) ผ่านฟีดสาธารณะ เราไม่ควบคุมเนื้อหาของพวกเขา และมีลิงก์ไปยังเว็บไซต์ของตน",
@@ -314,7 +314,7 @@ export const privacyContent: Record<LegalLocale, LegalDoc> = {
         ],
       },
       {
-        heading: "12. ติดต่อ",
+        heading: "11. ติดต่อ",
         body: [
           "คำถามเรื่องการคุ้มครองข้อมูล: legal@budgetbitch.app",
         ],
