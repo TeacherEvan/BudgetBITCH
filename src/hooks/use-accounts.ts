@@ -331,7 +331,10 @@ export function useAccounts(): UseAccounts {
 
   // Merge server accounts into the local listing view.
   useEffect(() => {
-    if (server === undefined) return;
+    // useQuery returns `undefined` ("skip") or `null` (still loading) before
+    // data resolves — neither is iterable. Guard both so the effect degrades
+    // gracefully instead of throwing an unhandled rejection.
+    if (server === undefined || server === null) return;
     (async () => {
       const local = await getLocalAccounts();
       if (!local.find((a) => a.accountId === PERSONAL_ACCOUNT_ID)) {

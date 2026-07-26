@@ -174,6 +174,14 @@ export async function getDB(): Promise<IDBPDatabase<BudgetBITCHDB>> {
     return DUMMY_SSR_DB;
   }
 
+  // jsdom / some environments expose `window` but no IndexedDB. Opening a DB
+  // there throws `indexedDB is not defined` and surfaces as an unhandled
+  // rejection in any caller's async effect (e.g. useAccounts hydration). Fail
+  // soft with the dummy DB so local-first callers degrade gracefully.
+  if (typeof indexedDB === 'undefined') {
+    return DUMMY_SSR_DB;
+  }
+
   if (dbInstance) return dbInstance;
   if (dbPromise) return dbPromise;
 

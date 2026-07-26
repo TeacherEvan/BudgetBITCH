@@ -29,6 +29,11 @@ vi.mock('convex/react', () => {
       }
       return null;
     },
+    // useAccounts (pulled in via AccountSettingsCard) calls useConvex(); the
+    // mock must expose it or the suite-level shared module registry throws
+    // "No useConvex export is defined on the convex/react mock".
+    useConvex: () => ({ query: vi.fn().mockResolvedValue(null) }),
+    useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
     ConvexReactClient: class {
       mutation = vi.fn().mockResolvedValue({ success: true });
       query = vi.fn().mockResolvedValue(null);
