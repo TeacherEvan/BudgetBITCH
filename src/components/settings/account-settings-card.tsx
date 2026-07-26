@@ -1,7 +1,11 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { useAccounts } from '@/hooks/use-accounts';
 import type { WizardProfile } from '@/lib/types/budget';
 import type { CurrencyOverride } from '@/hooks/use-currency-override';
 
@@ -19,6 +23,9 @@ export function AccountSettingsCard({
   clearProfile,
 }: AccountSettingsCardProps) {
   const router = useRouter();
+  const { setDisplayName } = useAccounts();
+  const [name, setName] = useState('');
+  const [saving, setSaving] = useState(false);
 
   return (
     <section id="settings-profile" className="scroll-mt-24">
@@ -48,6 +55,43 @@ export function AccountSettingsCard({
             {locale === 'th' ? 'ยังไม่ได้ตั้งค่าโปรไฟล์' : 'No profile set up yet'}
           </p>
         )}
+
+        <div className="space-y-2">
+          <label className="text-xs font-medium uppercase tracking-[0.1em] text-white/60">
+            {locale === 'th' ? 'ชื่อที่แสดง (สำหรับบอร์ดคู่)' : 'Display name (shared boards)'}
+          </label>
+          <div className="flex gap-2">
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={locale === 'th' ? 'เช่น Evan, Leandi' : 'e.g. Evan, Leandi'}
+              maxLength={40}
+              aria-label={locale === 'th' ? 'ชื่อที่แสดง' : 'Display name'}
+            />
+            <Button
+              type="button"
+              variant="primary"
+              disabled={saving || name.trim().length === 0}
+              onClick={async () => {
+                setSaving(true);
+                try {
+                  await setDisplayName(name.trim());
+                  setName('');
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            >
+              {saving ? (locale === 'th' ? 'บันทึก...' : 'Save...') : (locale === 'th' ? 'บันทึก' : 'Save')}
+            </Button>
+          </div>
+          <p className="text-xs text-white/40">
+            {locale === 'th'
+              ? 'แสดงให้สมาชิกบอร์ดคนอื่นเห็นแทนอีเมล'
+              : 'Shown to other board members instead of your email'}
+          </p>
+        </div>
+
         <button
           type="button"
           onClick={() => {
