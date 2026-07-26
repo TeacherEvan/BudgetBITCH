@@ -30,7 +30,15 @@ export default function Home() {
     return sessionStorage.getItem("bb:splash-seen") === "true";
   });
 
-  const showLanguageModal = mounted && typeof window !== "undefined" && !localStorage.getItem(LANGUAGE_STORAGE_KEY);
+  // Track whether the user has chosen a locale. Derived state (not a bare
+  // localStorage read) so selecting a language re-renders and closes the modal.
+  const [localeChosen, setLocaleChosen] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return Boolean(localStorage.getItem(LANGUAGE_STORAGE_KEY));
+  });
+
+  const showLanguageModal =
+    mounted && typeof window !== "undefined" && !localeChosen;
 
   const finishLocaleSelect = (selectedLocale: 'en-ZA' | 'en-TH' | 'th' | string) => {
     try {
@@ -41,6 +49,7 @@ export default function Home() {
     } catch {
       // noop
     }
+    setLocaleChosen(true);
     setSplashDismissed(true);
   };
 
