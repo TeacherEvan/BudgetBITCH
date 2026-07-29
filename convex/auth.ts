@@ -37,6 +37,7 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
       },
       reset: Email({
         id: "resend",
+        name: "Resend",
         from: resendFrom(),
         async sendVerificationRequest({ identifier, url, token }) {
           // Host the reset link on the real app origin, not CONVEX_SITE_URL.

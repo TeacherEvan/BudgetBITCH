@@ -1,17 +1,24 @@
 // Flat config for ESLint 9+ - based on eslint-config-next
 const path = require("path");
 
+const importPlugin = require("eslint-plugin-import");
+const reactPlugin = require("eslint-plugin-react");
+const jsxA11yPlugin = require("eslint-plugin-jsx-a11y");
+const reactHooksPlugin = require("eslint-plugin-react-hooks");
+const tseslintPlugin = require("@typescript-eslint/eslint-plugin");
+const tsParser = require("@typescript-eslint/parser");
+
 // This is the base config from eslint-config-next (converted to flat config)
 const baseConfig = {
   plugins: {
-    import: require("eslint-plugin-import"),
-    react: require("eslint-plugin-react"),
-    "jsx-a11y": require("eslint-plugin-jsx-a11y"),
-    "react-hooks": require("eslint-plugin-react-hooks"),
-    "@typescript-eslint": require("@typescript-eslint/eslint-plugin"),
+    import: importPlugin,
+    react: reactPlugin,
+    "jsx-a11y": jsxA11yPlugin,
+    "react-hooks": reactHooksPlugin,
+    "@typescript-eslint": tseslintPlugin,
   },
   languageOptions: {
-    parser: require("@typescript-eslint/parser"),
+    parser: tsParser,
     parserOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
@@ -36,7 +43,7 @@ const baseConfig = {
     },
   },
   rules: {
-    "import/no-anonymous-default-export": "warn",
+    // "import/no-anonymous-default-export": "warn", // Not available in eslint-plugin-import@1.14.0
     "react/no-unknown-property": "off",
     "react/react-in-jsx-scope": "off",
     "react/prop-types": "off",
@@ -50,8 +57,6 @@ const baseConfig = {
     // react-hooks rules
     "react-hooks/rules-of-hooks": "error",
     "react-hooks/exhaustive-deps": "warn",
-    "react-hooks/set-state-in-effect": "off", // Not in latest plugin
-    "react-hooks/purity": "off", // Not in latest plugin
     // @typescript-eslint rules
     "@typescript-eslint/no-explicit-any": "warn",
     "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
@@ -88,7 +93,7 @@ module.exports = [
   {
     files: ["**/*.ts?(x)"],
     languageOptions: {
-      parser: require("@typescript-eslint/parser"),
+      parser: tsParser,
       parserOptions: {
         sourceType: "module",
         project: ["./tsconfig.json"],
