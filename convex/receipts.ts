@@ -1,12 +1,57 @@
-import { action } from "./_generated/server";
+import { action, mutation, query, internalMutation } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { v, ConvexError } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
+
+const VALID_CATEGORIES = [
+  "food", "transport", "shopping", "utilities", "entertainment",
+  "medical", "housing", "personal", "education", "income", "other"
+] as const;
+
+function normalizeCategory(category: string): string {
+  const normalized = category.toLowerCase().trim();
+  return VALID_CATEGORIES.includes(normalized as typeof VALID_CATEGORIES[number])
+    ? normalized
+    : "other";
+}
+
+function validateAmount(amount: unknown): number {
+  const num = typeof amount === "number" ? amount : parseFloat(String(amount || "0"));
+  if (!Number.isFinite(num) || num < 0) return 0;
+  // Round to 2 decimal places
+  return Math.round(num * 100) / 100;
+}
+
+function validateDate(date: unknown): string | null {
+  if (!date || typeof date !== "string") return null;
+  // Validate YYYY-MM-DD format
+  const match = date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  const [, year, month, day] = match.map(Number);
+  const d = new Date(year, month - 1, day);
+  if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day) {
+    return null;
+  }
+  // Don't accept future dates > 1 day from now (allow for timezone)
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (d > tomorrow) return null;
+  return date;
+}
+
+function validateMerchant(merchant: unknown): string {
+  const str = String(merchant || "Unknown Merchant").trim();
+  return str.length > 0 ? str.slice(0, 200) : "Unknown Merchant";
+}
 
 export const parseReceipt = action({
   args: {
     base64Image: v.string(), // Base64 encoded receipt image
+    accountId: v.optional(v.string()), // Optional: which account/board this belongs to
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ receiptId: string; amount: number; merchant: string; category: string; date: string | null }> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new ConvexError("Authentication required to parse receipts");
@@ -27,6 +72,9 @@ export const parseReceipt = action({
       mimeType = match[1];
       data = match[2];
     }
+
+    // Calculate image size in bytes (approximate from base64)
+    const imageSizeBytes = Math.floor(data.length * 0.75);
 
     const prompt = `Analyze the receipt in the image. You must extract:
 1. Total amount spent (as a number, do not include currency symbols).
@@ -58,8 +106,8 @@ Do not include any formatting, markdown wrappers, or extra text. Output ONLY the
                   { text: prompt },
                   {
                     inlineData: {
-                      mimeType: mimeType,
-                      data: data,
+                      mimeType,
+                      data,
                     },
                   },
                 ],
@@ -90,17 +138,138 @@ Do not include any formatting, markdown wrappers, or extra text. Output ONLY the
 
       const parsed = JSON.parse(cleanText);
 
-      // Validate schema format manually
+      // Validate and normalize
+      const amount = validateAmount(parsed.amount);
+      const merchant = validateMerchant(parsed.merchant);
+      const category = normalizeCategory(parsed.category);
+      const date = validateDate(parsed.date);
+      const parsedAt = Date.now();
+
+      // Persist to Convex using internal mutation
+      const receiptId = await ctx.runMutation(internal.receipts.saveReceipt, {
+        userId,
+        accountId: args.accountId,
+        amount,
+        merchant,
+        category,
+        date: date ?? undefined,
+        rawGeminiResponse: cleanText,
+        imageMimeType: mimeType,
+        imageSizeBytes,
+        parsedAt,
+        geminiModel: "gemini-2.5-flash",
+      });
+
       return {
-        amount: typeof parsed.amount === "number" ? parsed.amount : (parseFloat(parsed.amount) || 0),
-        merchant: typeof parsed.merchant === "string" ? parsed.merchant : "Unknown Merchant",
-        category: typeof parsed.category === "string" ? parsed.category : "other",
-        date: typeof parsed.date === "string" ? parsed.date : null,
+        receiptId,
+        amount,
+        merchant,
+        category,
+        date: date ?? null,
       };
     } catch (error) {
       console.error("Error in parseReceipt action:", error);
       const message = error instanceof Error ? error.message : String(error);
       throw new ConvexError(`Failed to parse receipt: ${message}`);
     }
+  },
+});
+
+// Internal mutation to save receipt (called from action)
+export const saveReceipt = internalMutation({
+  args: {
+    userId: v.id("users"),
+    accountId: v.optional(v.string()),
+    amount: v.number(),
+    merchant: v.string(),
+    category: v.string(),
+    date: v.optional(v.string()),
+    rawGeminiResponse: v.optional(v.string()),
+    imageMimeType: v.string(),
+    imageSizeBytes: v.number(),
+    parsedAt: v.number(),
+    geminiModel: v.string(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("receipts", args);
+  },
+});
+
+// Query: List receipts for user (paginated, newest first)
+export const listReceipts = query({
+  args: {
+    accountId: v.optional(v.string()),
+    cursor: v.optional(v.string()), // ISO timestamp string for parsedAt
+    limit: v.optional(v.number()), // Max 50
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return { receipts: [], nextCursor: null };
+
+    const limit = Math.min(args.limit || 20, 50);
+    
+    // Query using the by_user_and_account index, ordered by parsedAt desc
+    let queryBuilder = ctx.db
+      .query("receipts")
+      .withIndex("by_user_and_account", (q) => 
+        q.eq("userId", userId).eq("accountId", args.accountId || "")
+      )
+      .order("desc");
+
+    // Fetch one extra to check if there are more
+    const receipts = await queryBuilder.take(limit + 1);
+
+    // Filter by cursor if provided
+    let filtered = receipts;
+    if (args.cursor) {
+      const cursorTime = parseInt(args.cursor);
+      if (!isNaN(cursorTime)) {
+        filtered = receipts.filter(r => r.parsedAt < cursorTime);
+      }
+    }
+
+    // Check if there are more results
+    let nextCursor: string | null = null;
+    if (filtered.length > limit) {
+      filtered = filtered.slice(0, limit);
+      const last = filtered[filtered.length - 1];
+      nextCursor = String(last.parsedAt);
+    }
+
+    return { receipts: filtered, nextCursor };
+  },
+});
+
+// Query: Get single receipt by ID (with auth check)
+export const getReceipt = query({
+  args: { receiptId: v.id("receipts") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    
+    const receipt = await ctx.db.get(args.receiptId);
+    if (!receipt || receipt.userId !== userId) {
+      return null;
+    }
+    return receipt;
+  },
+});
+
+// Mutation: Delete receipt (with auth check)
+export const deleteReceipt = mutation({
+  args: { receiptId: v.id("receipts") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new ConvexError("Authentication required");
+    }
+    
+    const receipt = await ctx.db.get(args.receiptId);
+    if (!receipt || receipt.userId !== userId) {
+      throw new ConvexError("Receipt not found or access denied");
+    }
+    
+    await ctx.db.delete(args.receiptId);
+    return { success: true };
   },
 });

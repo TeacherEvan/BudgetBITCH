@@ -169,4 +169,25 @@ export default defineSchema({
     locale: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_createdAt", ["createdAt"]),
+
+  // Parsed receipts from AI scanner — linked to user + account for audit trail.
+  receipts: defineTable({
+    userId: v.id("users"),
+    accountId: v.optional(v.string()), // optional: which account/board this belongs to
+    // Parsed fields from Gemini
+    amount: v.number(),
+    merchant: v.string(),
+    category: v.string(),
+    date: v.optional(v.string()), // YYYY-MM-DD or null
+    // Raw data for reprocessing / debugging
+    rawGeminiResponse: v.optional(v.string()),
+    imageMimeType: v.string(),
+    imageSizeBytes: v.number(),
+    // Processing metadata
+    parsedAt: v.number(),
+    geminiModel: v.string(), // e.g. "gemini-2.5-flash"
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_and_account", ["userId", "accountId"])
+    .index("by_parsedAt", ["parsedAt"]),
 });

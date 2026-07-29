@@ -303,9 +303,10 @@ flowchart TD
 | `convex/auth.config.ts` | Convex Auth configuration (Password provider)      |
 | `convex/auth.ts`     | Convex Auth server config                            |
 | `convex/http.ts`     | HTTP router (auth routes)                            |
-| `convex/schema.ts`   | Convex schema (`dailySnapshots` + `authTables`)      |
+| `convex/schema.ts`   | Convex schema (all tables including receipts)      |
 | `convex/snapshots.ts` | `upsertDailySnapshot` mutation (daily backup from SW) |
 | `convex/lib/auth.ts` | Auth helpers (`requireIdentity`, `getAuthUserId`)    |
+| `convex/receipts.ts` | Receipt scanner: parseReceipt action + list/delete queries |
 
 ### Database schema
 
@@ -319,6 +320,9 @@ flowchart TD
 - **dailySnapshots** — User daily financial snapshots with wizard profile, totals, critical expense commitment
 - **legalAgreements** — Signed legal-agreement records (TOS/privacy/cookie)
 - **cookieConsents** — Cookie-consent choices (server-recorded audit trail)
+- **pushSubscriptions** — Web Push (VAPID) subscriptions
+- **feedbackReports** — Bug reports / feedback submitted from the app
+- **receipts** — Parsed receipts from AI scanner (amount, merchant, category, date, raw Gemini response, image metadata, parsedAt)
 
 ## 7. Testing map
 
