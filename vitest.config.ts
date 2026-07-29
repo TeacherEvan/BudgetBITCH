@@ -12,7 +12,7 @@ export default defineConfig({
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx}", "tests/integration/**/*.{test,spec}.{ts,tsx}"],
     exclude: ["tests/e2e/**", "node_modules/**", ".next/**", "convex/**"],
-    threads: false,
+    pool: "forks",
   },
   resolve: {
     alias: {
