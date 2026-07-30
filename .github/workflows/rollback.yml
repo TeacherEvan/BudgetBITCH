@@ -29,6 +29,13 @@ on:
         required: false
         default: "main"
 
+concurrency:
+  group: rollback-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 env:
   NODE_VERSION: "22"
 
@@ -36,6 +43,7 @@ jobs:
   rollback:
     name: Rollback Production
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment: production
     steps:
       - name: Checkout repository

@@ -1,7 +1,6 @@
 // hooks/use-vicinity-feeds.test.tsx
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useVicinityFeeds } from '@/hooks/use-vicinity-feeds';
-import { useResolvedLocation } from '@/hooks/use-resolved-location';
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 
 // Mock useResolvedLocation

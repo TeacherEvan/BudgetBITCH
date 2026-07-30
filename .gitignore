@@ -65,3 +65,5 @@ local-db-*
 .claude/skills/convex/
 
 .hermes-cache/
+hermes_cache.py
+__pycache__/

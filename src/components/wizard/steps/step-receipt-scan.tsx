@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Camera, Upload, CheckCircle2, ArrowRight, SkipForward, Loader2 } from 'lucide-react';
+import { Camera, Upload, CheckCircle2, SkipForward, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAction } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
@@ -17,7 +17,7 @@ interface StepReceiptScanProps {
 
 export function StepReceiptScan({
   locale,
-  value,
+  value: _value,
   onChange,
   error,
   disabled = false,

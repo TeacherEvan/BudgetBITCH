@@ -62,7 +62,7 @@ export function useVicinityFeeds(locale: 'th' | 'en'): VicinityFeedResult {
       setError(null);
 
       localStorage.setItem(CACHE_KEY, JSON.stringify({ items: sorted, timestamp: Date.now(), locale }));
-    } catch (err) {
+    } catch (_err) {
       setError(locale === 'th' ? 'โหลดข่าวไม่สำเร็จ' : 'Failed to load news');
       const cached = localStorage.getItem(CACHE_KEY);
       if (cached) {

@@ -59,6 +59,7 @@ test("parseReceipt handles successful response from Gemini for authenticated use
   });
 
   expect(res).toEqual({
+    receiptId: expect.any(String),
     amount: 150.50,
     merchant: "Test Coffee Shop",
     category: "food",

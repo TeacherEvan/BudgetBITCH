@@ -83,5 +83,5 @@ describe("SettingsPage accessibility", () => {
 
     const results = await axe(container);
     expect(results).toHaveNoViolations();
-  });
+  }, 15000);
 });

@@ -67,7 +67,6 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const lat = parseFloat(searchParams.get('lat') || '');
     const lon = parseFloat(searchParams.get('lon') || '');
-    const _locale = (searchParams.get('locale') as 'th' | 'en') || 'th';
     const country = searchParams.get('country')?.toUpperCase() || null;
 
     if (isNaN(lat) || isNaN(lon)) {

@@ -53,11 +53,8 @@ npm run build
 
 ---
 
-## 🗃️ Archived Implementation Plans
+## 🗃️ Archived Audits & Analysis
 
-Completed plans from past development sprints are preserved for reference under [docs/plans/.archive/](plans/.archive/):
-- **[Code Optimization & Performance Refactoring (July 2026)](plans/.archive/2026-07-22-code-optimization.md)**: Performance refactoring for ISO date sorting, bills panel memoization, and SSR DB proxy.
-- **[Convex Auth & Snapshot Sync Fix (July 2026)](plans/.archive/2026-07-22-convex-auth-and-snapshot-sync-fix.md)**: Resolution for refresh token parsing and unauthenticated daily snapshots.
-- **[Quick Expense Receipt Scanning (July 2026)](plans/.archive/2026-07-21-quick-expense-receipt-implementation.md)**: Setup for camera receipt OCR scanner using Gemini 2.5 Flash.
-- **[Multi-board Accounts Sync (July 2026)](plans/.archive/2026-07-20-accounts.md)**: Multi-account setup with real-time sync.
-- **[Shared Couple Boards (July 2026)](plans/.archive/2026-07-19-shared-couple-boards.md)**: Implementation of couple sync engine.
+Historical audit reports and analysis documents are preserved for reference under [docs/.archive/](.archive/):
+- **[Optimization Audit (June 2026)](.archive/optimization-audit-2026-06-13.md)**: Comprehensive codebase optimization and audit findings.
+- **[Frontend Audit (April 2026)](.archive/frontend-audit-2026-04-07.md)**: Architectural analysis of frontend component boundaries.

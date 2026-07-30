@@ -13,6 +13,7 @@ export default defineConfig({
     include: ["src/**/*.{test,spec}.{ts,tsx}", "tests/integration/**/*.{test,spec}.{ts,tsx}"],
     exclude: ["tests/e2e/**", "node_modules/**", ".next/**", "convex/**"],
     pool: "forks",
+    maxWorkers: 4,
   },
   resolve: {
     alias: {

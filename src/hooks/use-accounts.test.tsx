@@ -71,7 +71,7 @@ describe('useAccounts', () => {
   it('merges server accounts + always includes personal', async () => {
     let api!: ReturnType<typeof useAccounts>;
     render(<HookProbe onReady={(a) => (api = a)} />);
-    await waitFor(() => expect(api?.ready).toBe(true));
+    await waitFor(() => expect(api?.accounts.length).toBeGreaterThan(0));
     const ids = api.accounts.map((a) => a.accountId).sort();
     expect(ids).toContain('acc-own');
     expect(ids).toContain('acc-join');

@@ -6,6 +6,10 @@ on:
     - cron: '0 4 * * 1'
   workflow_dispatch:
 
+concurrency:
+  group: update-deps-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
   pull-requests: write
@@ -14,6 +18,7 @@ jobs:
   update-dependencies:
     name: Check Updates & Security Audit
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       NEXT_PUBLIC_CONVEX_URL: https://ci-build.convex.cloud
       NEXT_PUBLIC_CONVEX_SITE_URL: https://ci-build.convex.site
@@ -65,3 +70,4 @@ jobs:
           labels: |
             dependencies
             automated
+

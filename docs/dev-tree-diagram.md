@@ -19,13 +19,15 @@ BudgetBITCH/
 │   ├── snapshots.ts                 # 📝 Mutation: upsertDailySnapshot
 │   └── tsconfig.json
 ├── docs/                            # Documentation
-│   ├── plans/                       # Design & implementation plans
-│   │   ├── .archive/                 # Completed/verified plans (badged)
-│   │   │   └── 2026-06-13-budgetbitch-complete-revamp-design.md
+│   ├── .archive/                    # Historical audits & analysis
+│   ├── CI_CD.md                     # Quality gates & CI/CD pipeline manual
+│   ├── CODEBASE_INDEX.md            # Codebase index & filesystem tree
+│   ├── FEATURE_IDEAS.md             # Feature backlog
+│   ├── README.md                    # Documentation hub map
 │   └── dev-tree-diagram.md          # THIS FILE
 ├── public/                          # Static assets
 │   ├── manifest.json                # PWA manifest
-│   └── sw.js                        # Service worker (workbox)
+│   └── sw.js                        # Custom offline service worker
 ├── scripts/                         # Build scripts
 ├── src/                             # 🎯 MAIN SOURCE CODE
 │   ├── app/                         # Next.js App Router pages

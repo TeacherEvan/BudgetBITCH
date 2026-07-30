@@ -1,7 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { haversineKm, resolveVicinityFeeds, getRegionForCountry } from './vicinity-resolver';
-import type { VicinityFeed, Tier } from './vicinity-registry';
-type VicinityFeedWithMeta = VicinityFeed & { distanceKm: number; tier: Tier };
 
 describe('vicinity-resolver', () => {
   describe('haversineKm', () => {

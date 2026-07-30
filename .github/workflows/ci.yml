@@ -20,6 +20,9 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -39,6 +42,9 @@ jobs:
   typecheck:
     name: Type Check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -58,6 +64,9 @@ jobs:
   test:
     name: Unit Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -77,6 +86,9 @@ jobs:
   convex-test:
     name: Convex Backend Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -96,6 +108,9 @@ jobs:
   build:
     name: Build (type-check + next build)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
     env:
       # Placeholder public URLs so `next build` has concrete values.
       # These are NON-SECRET and safe to expose; real values come from Vercel.
@@ -127,6 +142,9 @@ jobs:
   e2e:
     name: E2E (Playwright)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
     # Runs even if prior jobs are skipped; gates merges only when it runs and fails.
     steps:
       - name: Checkout
@@ -165,19 +183,22 @@ jobs:
           fi
           npx playwright test --reporter=line
 
-  # Surfaced but non-blocking: next-pwa (the prior source of a transitive RCE
-  # via workbox-build) has been removed in favor of a hand-written service
-  # worker, so that specific advisory no longer applies. Any remaining
-  # high-severity advisories are reviewed but do not gate every merge.
-  # Fails on any PR/push if the *intended* prod Convex deployment is not the
-  # canonical one. Runs without a real Vercel build (uses the canonical slug
-  # directly), so it catches a stale NEXT_PUBLIC_CONVEX_URL env BEFORE Vercel
-  # auto-deploys. The authoritative hard-fail still lives in scripts/
-  # check-convex-deployment.mjs as a `prebuild` on the Vercel production build,
-  # where the real NEXT_PUBLIC_CONVEX_URL env is present.
+      - name: Upload Playwright Artifacts on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
   deploy-guard:
     name: Prod Convex Deployment Guard
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -201,6 +222,9 @@ jobs:
   security-audit:
     name: Security Audit
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
     continue-on-error: true
     steps:
       - name: Checkout
@@ -221,6 +245,9 @@ jobs:
   idb-schema-guard:
     name: IndexedDB Schema Guard
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -239,3 +266,4 @@ jobs:
       # regressions (real prod bug, 2026-07-24).
       - name: Verify every USER_DATA_STORES entry is created in upgrade()
         run: node scripts/check-idb-stores.mjs
+
