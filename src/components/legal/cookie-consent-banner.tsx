@@ -110,7 +110,7 @@ export function CookieConsentBanner() {
     <div
       role="dialog"
       aria-label={copy.title}
-      className="fixed inset-x-0 bottom-0 z-50 border-t-2 border-amber-400/60 bg-zinc-950/95 px-4 py-4 backdrop-blur-xl pointer-events-none sm:px-6"
+      className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom,0px))] lg:bottom-0 z-[55] border-t-2 border-amber-400/60 bg-zinc-950/95 px-4 py-4 backdrop-blur-xl pointer-events-auto sm:px-6"
     >
       <div className="mx-auto flex max-w-4xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-white/80">

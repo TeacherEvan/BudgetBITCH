@@ -37,7 +37,7 @@ export function PushGate({ locale, isAuthenticated }: PushGateProps) {
   };
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center p-4">
+    <div className="fixed inset-x-4 bottom-[calc(72px+env(safe-area-inset-bottom,0px))] z-[55] flex justify-center p-0 sm:bottom-6 sm:right-6 sm:left-auto sm:w-auto">
       <PushPermission
         locale={locale}
         onSubscribe={async (subscription) => {
