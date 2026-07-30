@@ -171,11 +171,11 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_createdAt", ["createdAt"]),
 
-  // Parsed receipts from AI scanner — linked to user + account for audit trail.
+  // Parsed receipts from AI or scraper bot — linked to user + account for audit trail.
   receipts: defineTable({
     userId: v.id("users"),
     accountId: v.optional(v.string()), // optional: which account/board this belongs to
-    // Parsed fields from Gemini
+    // Parsed fields
     amount: v.number(),
     merchant: v.string(),
     category: v.string(),
@@ -187,8 +187,49 @@ export default defineSchema({
     // Processing metadata
     parsedAt: v.number(),
     geminiModel: v.string(), // e.g. "gemini-2.5-flash"
+    // Scraper bot fields (optional for backwards compatibility)
+    clientDraftId: v.optional(v.string()),
+    engine: v.optional(v.string()), // 'scraper-bot' | 'gemini'
+    templateId: v.optional(v.string()),
+    confidence: v.optional(v.any()),
+    evidence: v.optional(v.any()),
+    ocrText: v.optional(v.string()),
+    lineItems: v.optional(v.any()),
+    tax: v.optional(v.number()),
+    currency: v.optional(v.string()),
+    questionsAsked: v.optional(v.any()),
+    corrections: v.optional(v.any()),
+    status: v.optional(v.string()), // 'draft' | 'confirmed'
   })
     .index("by_user", ["userId"])
     .index("by_user_and_account", ["userId", "accountId"])
-    .index("by_parsedAt", ["parsedAt"]),
+    .index("by_parsedAt", ["parsedAt"])
+    .index("by_clientDraftId", ["clientDraftId"]),
+
+  // Merchant receipt layout templates
+  receiptTemplates: defineTable({
+    templateId: v.string(),
+    version: v.string(),
+    country: v.string(),
+    fingerprint: v.any(),
+    fields: v.any(),
+    currency: v.optional(v.string()),
+    vatRate: v.optional(v.number()),
+    dateOrder: v.optional(v.string()),
+    enabled: v.boolean(),
+    stats: v.optional(v.any()),
+    updatedAt: v.number(),
+  })
+    .index("by_templateId", ["templateId"])
+    .index("by_country", ["country"]),
+
+  // User-learned merchant aliases and category overrides
+  merchantAliases: defineTable({
+    userId: v.id("users"),
+    normalised: v.string(),
+    displayName: v.string(),
+    category: v.string(),
+    hits: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user_and_normalised", ["userId", "normalised"]),
 });
