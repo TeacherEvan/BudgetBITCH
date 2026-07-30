@@ -2,8 +2,8 @@ name: Dependency Updates & Security Audit
 
 on:
   schedule:
-    # Run every Monday at 04:00 UTC
-    - cron: '0 4 * * 1'
+    # Run daily at 04:00 UTC
+    - cron: '0 4 * * *'
   workflow_dispatch:
 
 concurrency:
@@ -38,6 +38,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Cache Next.js build
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
+
       - name: Run Security Audit
         run: npm audit --audit-level=moderate || true
 
@@ -49,7 +57,10 @@ jobs:
 
       - name: Verify build & tests pass with updated dependencies
         run: |
-          npm test -- --run
+          npm run lint
+          npm run typecheck
+          node scripts/check-idb-stores.mjs
+          npm test
           npm run test:convex
           npm run build
 
@@ -64,10 +75,11 @@ jobs:
 
             - Updated dependencies via `npm update`
             - Applied lockfile audit fixes via `npm audit fix`
-            - Verified unit tests, Convex tests, and Next.js build clean status.
+            - Verified linting, type-checking, IndexedDB schema guard, unit tests, Convex tests, and Next.js build clean status.
           branch: automated-dep-updates
           delete-branch: true
           labels: |
             dependencies
             automated
+
 

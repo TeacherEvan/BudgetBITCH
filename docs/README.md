@@ -53,8 +53,10 @@ npm run build
 
 ---
 
-## 🗃️ Archived Audits & Analysis
+## 🗃️ Archived Audits, Plans & Analysis
 
-Historical audit reports and analysis documents are preserved for reference under [docs/.archive/](.archive/):
+Historical audit reports, completed feature plans, and design specs are preserved for reference under [docs/.archive/](.archive/) and [docs/plans/.archive/](plans/.archive/):
+- **[GoldenSplash Particle Mechanics Plan (July 2026)](plans/.archive/2026-07-30-golden-splash-particle-enhancement.md)**: Canvas-based particle physics engine implementation plan.
+- **[GoldenSplash Particle Mechanics Design (July 2026)](plans/.archive/2026-07-30-golden-splash-particle-enhancement-design.md)**: Architectural design specification for startup particle animation.
 - **[Optimization Audit (June 2026)](.archive/optimization-audit-2026-06-13.md)**: Comprehensive codebase optimization and audit findings.
 - **[Frontend Audit (April 2026)](.archive/frontend-audit-2026-04-07.md)**: Architectural analysis of frontend component boundaries.

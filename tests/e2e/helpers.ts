@@ -20,7 +20,10 @@ export const TEST_EMAIL = process.env.E2E_TEST_EMAIL;
 export const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD;
 export const HAS_CREDS = Boolean(TEST_EMAIL && TEST_PASSWORD);
 
-// Console / page error collector. Network noise (RSS CORS, favicon) is ignored.
+// ---------------------------------------------------------------------------
+// Console / page error collector.
+// Network noise (RSS CORS, favicon, known benign messages) is filtered out.
+// ---------------------------------------------------------------------------
 export class ErrorCollector {
   readonly errors: string[] = [];
   private pageErrors: string[] = [];
@@ -59,8 +62,10 @@ export class ErrorCollector {
   }
 }
 
-// Perform a real sign-in via the password form. Skips the calling test if no
-// credentials are configured.
+// ---------------------------------------------------------------------------
+// Real sign-in via the password form.
+// Skips the calling test if no credentials are configured.
+// ---------------------------------------------------------------------------
 export async function signInReal(page: Page) {
   if (!HAS_CREDS) {
     test.skip(true, "E2E_TEST_EMAIL / E2E_TEST_PASSWORD not set");
@@ -73,8 +78,10 @@ export async function signInReal(page: Page) {
   await expect(page).toHaveURL(/\/(dashboard|wizard)/, { timeout: 20000 });
 }
 
+// ---------------------------------------------------------------------------
 // Seed localStorage so the locale picker and manifesto gate resolve
 // deterministically (manifesto marked seen to avoid blocking the dashboard).
+// ---------------------------------------------------------------------------
 export async function seedLocalStorage(page: Page, locale: "en" | "th" = "en") {
   await page.addInitScript(
     ({ locale }) => {
@@ -85,10 +92,13 @@ export async function seedLocalStorage(page: Page, locale: "en" | "th" = "en") {
   );
 }
 
-// Race-safe consent dismissal: seeds storage AND installs an in-page observer
-// that auto-clicks the privacy "Got it" and cookie "Essential only" buttons
-// whenever they appear (including the one-frame hydration flash). This keeps
-// E2E from being gated by real product overlays.
+// ---------------------------------------------------------------------------
+// Race-safe consent dismissal.
+// Seeds storage AND installs an in-page observer that auto-clicks the privacy
+// "Got it" and cookie "Essential only" buttons whenever they appear (including
+// the one-frame hydration flash). Keeps E2E from being gated by product
+// overlays without altering the real overlay logic.
+// ---------------------------------------------------------------------------
 export async function setupConsentDismissal(page: Page) {
   await page.addInitScript(() => {
     const tryDismiss = () => {
@@ -152,7 +162,9 @@ export async function setupConsentDismissal(page: Page) {
   });
 }
 
+// ---------------------------------------------------------------------------
 // Custom fixtures.
+// ---------------------------------------------------------------------------
 export const test = base.extend<{
   errors: ErrorCollector;
 }>({

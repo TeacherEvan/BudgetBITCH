@@ -35,7 +35,7 @@
     "idb": "^8.0.0",
     "lottie-react": "^2.4.1",
     "lucide-react": "^1.7.0",
-    "next": "^16.2.12",
+    "next": "^14.2.35",
     "next-intl": "^4.4.0",
     "qrcode.react": "^4.2.0",
     "react": "18.2.0",

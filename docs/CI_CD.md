@@ -74,8 +74,8 @@ Every code change must pass 9 shift-left quality gates before merging into `main
 All workflows are located in `.github/workflows/`:
 
 1. **`ci.yml` (Main CI Pipeline)**
-   - **Triggers**: `push` to `main`, `pull_request` to `main`.
-   - **Behavior**: Runs parallel jobs (`lint`, `typecheck`, `test`, `convex-test`, `idb-schema-guard`, `deploy-guard`, `build`, `e2e`, `security-audit`). Concurrency control cancels outdated runs on the same branch.
+   - **Triggers**: `push` to `main`, `pull_request` to `main`, daily schedule (`cron: '0 0 * * *'`, 00:00 UTC), and `workflow_dispatch`.
+   - **Behavior**: Runs parallel jobs (`lint`, `typecheck`, `test`, `convex-test`, `idb-schema-guard`, `deploy-guard`, `build`, `e2e`, `security-audit`). Optimized with Next.js build caching (`.next/cache`) and Playwright browser caching (`~/.cache/ms-playwright`). Concurrency control cancels outdated runs on the same branch.
 
 2. **`release-draft.yml` (Automated Tag Release)**
    - **Triggers**: `push` on tags matching `v*`.
@@ -86,9 +86,13 @@ All workflows are located in `.github/workflows/`:
    - **Inputs**: `deployment` (Target Vercel deployment URL or ID).
    - **Behavior**: Instantly promotes a previous known-good Vercel deployment back to production via `vercel rollback`. Zero rebuild required.
 
-4. **`update-dependencies.yml` (Weekly Dependency Scans)**
-   - **Triggers**: Weekly schedule (`0 4 * * 1` - Monday 04:00 UTC) and `workflow_dispatch`.
-   - **Behavior**: Runs `npm update` and `npm audit fix --package-lock-only`, verifies test/build suites, and opens an automated Pull Request.
+4. **`update-dependencies.yml` (Daily Dependency Scans & Automated PRs)**
+   - **Triggers**: Daily schedule (`cron: '0 4 * * *'`, 04:00 UTC) and `workflow_dispatch`.
+   - **Behavior**: Runs `npm update` and `npm audit fix --package-lock-only`, executes full verification gate suite (`npm run lint`, `npm run typecheck`, `node scripts/check-idb-stores.mjs`, `npm test`, `npm run test:convex`, `npm run build`), and opens an automated Pull Request with Next.js build caching.
+
+5. **`dependabot.yml` (Automated Daily Dependency Version Checks)**
+   - **Schedule**: Daily interval (`04:00` UTC) for `npm` and `github-actions` ecosystems.
+   - **Behavior**: Automatically scans for outdated package versions and workflow actions, opening targeted dependency update PRs.
 
 ---
 

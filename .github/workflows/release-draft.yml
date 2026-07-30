@@ -34,7 +34,7 @@ jobs:
 
       - name: Verify build & tests pass before release
         run: |
-          npm test -- --run
+          npm test
           npm run test:convex
           npm run build
         env:
