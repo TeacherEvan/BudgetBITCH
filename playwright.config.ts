@@ -12,8 +12,8 @@ const useLocalServer = !process.env.E2E_BASE_URL;
 // default we keep the Convex env intact so client-only auth works.
 const stripAuth = process.env.E2E_STRIP_AUTH === "true";
 const devCommand = stripAuth
-  ? "BUDGETBITCH_STRIP_AUTH_ENV=true node ./scripts/run-with-sanitized-env.mjs npm run dev -- --webpack --port 3100"
-  : "node ./scripts/run-with-sanitized-env.mjs npm run dev -- --webpack --port 3100";
+  ? "BUDGETBITCH_STRIP_AUTH_ENV=true node ./scripts/run-with-sanitized-env.mjs npm run dev -- --port 3100"
+  : "node ./scripts/run-with-sanitized-env.mjs npm run dev -- --port 3100";
 
 export default defineConfig({
   testDir: "./tests/e2e",
