@@ -46,7 +46,7 @@ export function BentoGrid({ panels, className }: BentoGridProps) {
     if (typeof window === 'undefined') return;
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
     // Intentional post-mount read of a media query (cannot be known during SSR).
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     setPrefersReducedMotion(mq.matches);
     const onChange = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
     mq.addEventListener('change', onChange);

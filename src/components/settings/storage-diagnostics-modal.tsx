@@ -46,7 +46,7 @@ export function StorageDiagnosticsModal({ isOpen, onClose, locale }: StorageDiag
 
   useEffect(() => {
     if (isOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       loadStorageInfo();
     }
   }, [isOpen]);

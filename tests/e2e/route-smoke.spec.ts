@@ -33,7 +33,6 @@ test.describe("Route smoke — unauthenticated", () => {
       const resp = await page.goto(r.path);
       expect(resp?.status()).toBeLessThan(400);
       await expect(page.getByText(r.expectText).first()).toBeVisible({ timeout: 8000 });
-      await page.waitForTimeout(800);
       errors.assertClean();
     });
   }
@@ -51,7 +50,6 @@ test.describe("Route smoke — authenticated", () => {
       const resp = await page.goto(r.path);
       expect(resp?.status()).toBeLessThan(400);
       await expect(page.getByText(r.expectText).first()).toBeVisible({ timeout: 8000 }).catch(() => {});
-      await page.waitForTimeout(800);
       errors.assertClean();
     });
   }

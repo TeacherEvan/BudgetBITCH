@@ -23,7 +23,7 @@ export function useResolvedCurrency(): CurrencyCode | null {
   useEffect(() => {
     let mounted = true;
     if (override) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setCurrency(override);
       return;
     }

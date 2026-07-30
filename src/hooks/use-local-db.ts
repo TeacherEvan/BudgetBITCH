@@ -67,83 +67,86 @@ function useDatabaseListener(callback: () => void) {
   }, [callback]);
 }
 
-// Wizard Profile
-export function useWizardProfile() {
-  const [profile, setProfile] = useState<WizardProfile | null>(null);
+/**
+ * Generic query hook for IndexedDB entities that manages state, loading,
+ * unmount safety, and event-driven re-fetching.
+ */
+function useLocalDbQuery<T>(
+  fetcher: () => Promise<T>,
+  initialValue: T
+): [T, boolean, () => void] {
+  const [data, setData] = useState<T>(initialValue);
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(() => {
+  const reload = useCallback(() => {
     let mounted = true;
-    getWizardProfile().then(p => {
-      if (mounted) {
-        setProfile(p || null);
-        setLoading(false);
-      }
-    }).catch(() => {
-      if (mounted) setLoading(false);
-    });
-    return () => { mounted = false; };
-  }, []);
+    fetcher()
+      .then((result) => {
+        if (mounted) {
+          setData(result);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [fetcher]);
 
   useEffect(() => {
-    return load();
-  }, [load]);
+    return reload();
+  }, [reload]);
 
-  useDatabaseListener(load);
+  useDatabaseListener(reload);
+
+  return [data, loading, reload];
+}
+
+/** Helper to sort entities by ISO date descending */
+function sortByDateDesc<T extends { date: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0));
+}
+
+// Wizard Profile
+export function useWizardProfile() {
+  const fetcher = useCallback(async () => (await getWizardProfile()) ?? null, []);
+  const [profile, loading, reload] = useLocalDbQuery(fetcher, null);
 
   const save = useCallback(async (newProfile: WizardProfile) => {
     await saveWizardProfile(newProfile);
-    setProfile(newProfile);
-  }, []);
+    reload();
+  }, [reload]);
 
   const clear = useCallback(async () => {
     await clearWizardProfile();
-    setProfile(null);
-  }, []);
+    reload();
+  }, [reload]);
 
   return { profile, loading, save, clear };
 }
 
 // Expenses
 export function useExpenses() {
-  const [expenses, setExpenses] = useState<ExpenseEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(() => {
-    let mounted = true;
-    getExpenses().then(e => {
-      if (mounted) {
-        setExpenses([...e].sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0)));
-        setLoading(false);
-      }
-    }).catch(() => {
-      if (mounted) setLoading(false);
-    });
-    return () => { mounted = false; };
-  }, []);
-
-  useEffect(() => {
-    return load();
-  }, [load]);
-
-  useDatabaseListener(load);
+  const fetcher = useCallback(async () => sortByDateDesc(await getExpenses()), []);
+  const [expenses, loading, reload] = useLocalDbQuery<ExpenseEntry[]>(fetcher, []);
 
   const add = useCallback(async (expense: Omit<ExpenseEntry, 'id'>) => {
     const newExpense = { ...expense, id: generateId() };
     await addExpense(newExpense);
-    setExpenses(prev => [...prev, newExpense].sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0)));
-  }, []);
+    reload();
+  }, [reload]);
 
   const update = useCallback(async (expense: ExpenseEntry) => {
     await updateExpense(expense);
-    setExpenses(prev => prev.map(e => e.id === expense.id ? expense : e)
-      .sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0)));
-  }, []);
+    reload();
+  }, [reload]);
 
   const remove = useCallback(async (id: string) => {
     await deleteExpense(id);
-    setExpenses(prev => prev.filter(e => e.id !== id));
-  }, []);
+    reload();
+  }, [reload]);
 
   const getByCategory = useCallback(async (category: ExpenseCategory) => {
     return getExpensesByCategory(category);
@@ -154,86 +157,41 @@ export function useExpenses() {
 
 // Incomes
 export function useIncomes() {
-  const [incomes, setIncomes] = useState<IncomeEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(() => {
-    let mounted = true;
-    getIncomes().then(inc => {
-      if (mounted) {
-        setIncomes([...inc].sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0)));
-        setLoading(false);
-      }
-    }).catch(() => {
-      if (mounted) setLoading(false);
-    });
-    return () => { mounted = false; };
-  }, []);
-
-  useEffect(() => {
-    return load();
-  }, [load]);
-
-  useDatabaseListener(load);
+  const fetcher = useCallback(async () => sortByDateDesc(await getIncomes()), []);
+  const [incomes, loading, reload] = useLocalDbQuery<IncomeEntry[]>(fetcher, []);
 
   const add = useCallback(async (income: Omit<IncomeEntry, 'id' | 'createdAt'>) => {
-    const newIncome = {
+    const newIncome: IncomeEntry = {
       ...income,
       id: generateId(),
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     };
     await addIncome(newIncome);
-    setIncomes(prev => [...prev, newIncome].sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0)));
-  }, []);
+    reload();
+  }, [reload]);
 
   const update = useCallback(async (income: IncomeEntry) => {
     await updateIncome(income);
-    setIncomes(prev => prev.map(i => i.id === income.id ? income : i)
-      .sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0)));
-  }, []);
+    reload();
+  }, [reload]);
 
   const remove = useCallback(async (id: string) => {
     await deleteIncome(id);
-    setIncomes(prev => prev.filter(i => i.id !== id));
-  }, []);
+    reload();
+  }, [reload]);
 
   return { incomes, loading, add, update, remove };
 }
 
 // Budgets
 export function useBudgets() {
-  const [budgets, setBudgets] = useState<BudgetCategory[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(() => {
-    let mounted = true;
-    getAllBudgets().then(b => {
-      if (mounted) {
-        setBudgets(b);
-        setLoading(false);
-      }
-    }).catch(() => {
-      if (mounted) setLoading(false);
-    });
-    return () => { mounted = false; };
-  }, []);
-
-  useEffect(() => {
-    return load();
-  }, [load]);
-
-  useDatabaseListener(load);
+  const fetcher = useCallback(async () => getAllBudgets(), []);
+  const [budgets, loading, reload] = useLocalDbQuery<BudgetCategory[]>(fetcher, []);
 
   const save = useCallback(async (budget: BudgetCategory) => {
     await saveBudgetCategory(budget);
-    setBudgets(prev => {
-      const exists = prev.find(b => b.category === budget.category);
-      if (exists) {
-        return prev.map(b => b.category === budget.category ? budget : b);
-      }
-      return [...prev, budget];
-    });
-  }, []);
+    reload();
+  }, [reload]);
 
   const get = useCallback(async (category: ExpenseCategory) => {
     return getBudgetCategory(category);
@@ -244,193 +202,110 @@ export function useBudgets() {
 
 // Bills
 export function useBills() {
-  const [bills, setBills] = useState<Bill[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(() => {
-    let mounted = true;
-    getAllBills().then(b => {
-      if (mounted) {
-        setBills(b);
-        setLoading(false);
-      }
-    }).catch(() => {
-      if (mounted) setLoading(false);
-    });
-    return () => { mounted = false; };
-  }, []);
-
-  useEffect(() => {
-    return load();
-  }, [load]);
-
-  useDatabaseListener(load);
+  const fetcher = useCallback(async () => getAllBills(), []);
+  const [bills, loading, reload] = useLocalDbQuery<Bill[]>(fetcher, []);
 
   const add = useCallback(async (bill: Bill) => {
     await addBill(bill);
-    setBills(prev => [...prev, bill]);
-  }, []);
+    reload();
+  }, [reload]);
 
   const update = useCallback(async (bill: Bill) => {
     await updateBill(bill);
-    setBills(prev => prev.map(b => b.id === bill.id ? bill : b));
-  }, []);
+    reload();
+  }, [reload]);
 
   const remove = useCallback(async (id: string) => {
     await deleteBill(id);
-    setBills(prev => prev.filter(b => b.id !== id));
-  }, []);
+    reload();
+  }, [reload]);
 
   return { bills, loading, add, update, remove };
 }
 
 // Savings Goals
 export function useSavingsGoals() {
-  const [goals, setGoals] = useState<SavingsGoal[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(() => {
-    let mounted = true;
-    getAllSavingsGoals().then(g => {
-      if (mounted) {
-        setGoals(g);
-        setLoading(false);
-      }
-    }).catch(() => {
-      if (mounted) setLoading(false);
-    });
-    return () => { mounted = false; };
-  }, []);
-
-  useEffect(() => {
-    return load();
-  }, [load]);
-
-  useDatabaseListener(load);
+  const fetcher = useCallback(async () => getAllSavingsGoals(), []);
+  const [goals, loading, reload] = useLocalDbQuery<SavingsGoal[]>(fetcher, []);
 
   const add = useCallback(async (goal: SavingsGoal) => {
     await addSavingsGoal(goal);
-    setGoals(prev => [...prev, goal]);
-  }, []);
+    reload();
+  }, [reload]);
 
   const update = useCallback(async (goal: SavingsGoal) => {
     await updateSavingsGoal(goal);
-    setGoals(prev => prev.map(g => g.id === goal.id ? goal : g));
-  }, []);
+    reload();
+  }, [reload]);
 
   const remove = useCallback(async (id: string) => {
     await deleteSavingsGoal(id);
-    setGoals(prev => prev.filter(g => g.id !== id));
-  }, []);
+    reload();
+  }, [reload]);
 
   return { goals, loading, add, update, remove };
 }
 
 // Critical Expense Commitments
 export function useCriticalExpenseCommitment(month?: string) {
-  const [commitment, setCommitment] = useState<CriticalExpenseCommitment | null>(null);
-  const [loading, setLoading] = useState(true);
-
   const targetMonth = month || new Date().toISOString().slice(0, 7);
-
-  const load = useCallback(() => {
-    let mounted = true;
-    getCriticalExpenseCommitment(targetMonth).then(c => {
-      if (mounted) {
-        setCommitment(c ?? null);
-        setLoading(false);
-      }
-    }).catch(() => {
-      if (mounted) setLoading(false);
-    });
-    return () => { mounted = false; };
-  }, [targetMonth]);
-
-  useEffect(() => {
-    return load();
-  }, [load]);
-
-  useDatabaseListener(load);
+  const fetcher = useCallback(async () => (await getCriticalExpenseCommitment(targetMonth)) ?? null, [targetMonth]);
+  const [commitment, loading, reload] = useLocalDbQuery(fetcher, null);
 
   const save = useCallback(async (newCommitment: CriticalExpenseCommitment) => {
     await saveCriticalExpenseCommitment(newCommitment);
-    setCommitment(newCommitment);
-  }, []);
+    reload();
+  }, [reload]);
 
   return { commitment, loading, save };
 }
 
 // Net Worth
 export function useNetWorth() {
-  const [snapshot, setSnapshot] = useState<NetWorthSnapshot | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(() => {
-    let mounted = true;
-    getLatestNetWorthSnapshot().then(s => {
-      if (mounted) {
-        setSnapshot(s ?? null);
-        setLoading(false);
-      }
-    }).catch(() => {
-      if (mounted) setLoading(false);
-    });
-    return () => { mounted = false; };
-  }, []);
-
-  useEffect(() => {
-    return load();
-  }, [load]);
-
-  useDatabaseListener(load);
+  const fetcher = useCallback(async () => (await getLatestNetWorthSnapshot()) ?? null, []);
+  const [snapshot, loading, reload] = useLocalDbQuery(fetcher, null);
 
   const addAsset = useCallback(async (asset: Asset) => {
     if (!snapshot) return;
     const newAssets = [...snapshot.assets, { ...asset, id: generateId() }];
-    const newSnapshot = { ...snapshot, assets: newAssets };
-    await saveNetWorthSnapshot(newSnapshot);
-    setSnapshot(newSnapshot);
-  }, [snapshot]);
+    await saveNetWorthSnapshot({ ...snapshot, assets: newAssets });
+    reload();
+  }, [snapshot, reload]);
 
   const updateAsset = useCallback(async (asset: Asset) => {
     if (!snapshot) return;
     const newAssets = snapshot.assets.map(a => a.id === asset.id ? asset : a);
-    const newSnapshot = { ...snapshot, assets: newAssets };
-    await saveNetWorthSnapshot(newSnapshot);
-    setSnapshot(newSnapshot);
-  }, [snapshot]);
+    await saveNetWorthSnapshot({ ...snapshot, assets: newAssets });
+    reload();
+  }, [snapshot, reload]);
 
   const removeAsset = useCallback(async (id: string) => {
     if (!snapshot) return;
     const newAssets = snapshot.assets.filter(a => a.id !== id);
-    const newSnapshot = { ...snapshot, assets: newAssets };
-    await saveNetWorthSnapshot(newSnapshot);
-    setSnapshot(newSnapshot);
-  }, [snapshot]);
+    await saveNetWorthSnapshot({ ...snapshot, assets: newAssets });
+    reload();
+  }, [snapshot, reload]);
 
   const addLiability = useCallback(async (liability: Liability) => {
     if (!snapshot) return;
     const newLiabilities = [...snapshot.liabilities, { ...liability, id: generateId() }];
-    const newSnapshot = { ...snapshot, liabilities: newLiabilities };
-    await saveNetWorthSnapshot(newSnapshot);
-    setSnapshot(newSnapshot);
-  }, [snapshot]);
+    await saveNetWorthSnapshot({ ...snapshot, liabilities: newLiabilities });
+    reload();
+  }, [snapshot, reload]);
 
   const updateLiability = useCallback(async (liability: Liability) => {
     if (!snapshot) return;
     const newLiabilities = snapshot.liabilities.map(l => l.id === liability.id ? liability : l);
-    const newSnapshot = { ...snapshot, liabilities: newLiabilities };
-    await saveNetWorthSnapshot(newSnapshot);
-    setSnapshot(newSnapshot);
-  }, [snapshot]);
+    await saveNetWorthSnapshot({ ...snapshot, liabilities: newLiabilities });
+    reload();
+  }, [snapshot, reload]);
 
   const removeLiability = useCallback(async (id: string) => {
     if (!snapshot) return;
     const newLiabilities = snapshot.liabilities.filter(l => l.id !== id);
-    const newSnapshot = { ...snapshot, liabilities: newLiabilities };
-    await saveNetWorthSnapshot(newSnapshot);
-    setSnapshot(newSnapshot);
-  }, [snapshot]);
+    await saveNetWorthSnapshot({ ...snapshot, liabilities: newLiabilities });
+    reload();
+  }, [snapshot, reload]);
 
   const totalAssets = snapshot?.assets.reduce((sum, a) => sum + a.value, 0) || 0;
   const totalLiabilities = snapshot?.liabilities.reduce((sum, l) => sum + l.value, 0) || 0;
@@ -453,83 +328,47 @@ export function useNetWorth() {
 
 // Subscriptions
 export function useSubscriptions() {
-  const [subscriptions, setSubscriptions] = useState<ExpenseEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(() => {
-    let mounted = true;
-    const loadSubscriptions = async () => {
-      const allExpenses = await getExpenses();
-      const subs = allExpenses.filter(e => e.category === 'subscriptions' && e.isRecurring);
-      if (mounted) {
-        setSubscriptions(subs);
-        setLoading(false);
-      }
-    };
-    loadSubscriptions();
-    return () => { mounted = false; };
+  const fetcher = useCallback(async () => {
+    const allExpenses = await getExpenses();
+    return allExpenses.filter(e => e.category === 'subscriptions' && e.isRecurring);
   }, []);
-
-  useEffect(() => {
-    return load();
-  }, [load]);
-
-  useDatabaseListener(load);
+  const [subscriptions, loading, reload] = useLocalDbQuery<ExpenseEntry[]>(fetcher, []);
 
   const add = useCallback(async (sub: Omit<ExpenseEntry, 'id'>) => {
     const newSub = { ...sub, id: generateId(), category: 'subscriptions' as const, isRecurring: true };
     await addExpense(newSub);
-    setSubscriptions(prev => [newSub, ...prev]);
-  }, []);
+    reload();
+  }, [reload]);
 
   const update = useCallback(async (sub: ExpenseEntry) => {
     await updateExpense(sub);
-    setSubscriptions(prev => prev.map(s => s.id === sub.id ? sub : s));
-  }, []);
+    reload();
+  }, [reload]);
 
   const remove = useCallback(async (id: string) => {
     await deleteExpense(id);
-    setSubscriptions(prev => prev.filter(s => s.id !== id));
-  }, []);
+    reload();
+  }, [reload]);
 
   return { subscriptions, loading, add, update, remove };
 }
 
 // Emergency Fund
 export function useEmergencyFund() {
-  const [fund, setFund] = useState<{ targetAmount: number; currentAmount: number }>({ targetAmount: 0, currentAmount: 0 });
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(() => {
-    let mounted = true;
-    const loadFund = async () => {
-      const goals = await getAllSavingsGoals();
-      const emergencyGoal = goals.find(g => g.category === 'emergency');
-      if (mounted) {
-        if (emergencyGoal) {
-          setFund({ targetAmount: emergencyGoal.targetAmount, currentAmount: emergencyGoal.currentAmount });
-        } else {
-          setFund({ targetAmount: 50000, currentAmount: 0 });
-        }
-        setLoading(false);
-      }
-    };
-    loadFund();
-    return () => { mounted = false; };
+  const fetcher = useCallback(async () => {
+    const goals = await getAllSavingsGoals();
+    const emergencyGoal = goals.find(g => g.category === 'emergency');
+    return emergencyGoal 
+      ? { targetAmount: emergencyGoal.targetAmount, currentAmount: emergencyGoal.currentAmount }
+      : { targetAmount: 50000, currentAmount: 0 };
   }, []);
-
-  useEffect(() => {
-    return load();
-  }, [load]);
-
-  useDatabaseListener(load);
+  const [fund, loading, reload] = useLocalDbQuery(fetcher, { targetAmount: 0, currentAmount: 0 });
 
   const update = useCallback(async (updates: { targetAmount?: number; currentAmount?: number }) => {
     const goals = await getAllSavingsGoals();
     const emergencyGoal = goals.find(g => g.category === 'emergency');
     
     if (!emergencyGoal) {
-      // Create new emergency fund goal
       const newGoal: SavingsGoal = {
         id: generateId(),
         name: 'Emergency Fund',
@@ -538,7 +377,6 @@ export function useEmergencyFund() {
         category: 'emergency',
       };
       await addSavingsGoal(newGoal);
-      setFund({ targetAmount: newGoal.targetAmount, currentAmount: newGoal.currentAmount });
     } else {
       const updatedGoal = { 
         ...emergencyGoal, 
@@ -546,87 +384,52 @@ export function useEmergencyFund() {
         currentAmount: updates.currentAmount ?? emergencyGoal.currentAmount
       };
       await updateSavingsGoal(updatedGoal);
-      setFund({ targetAmount: updatedGoal.targetAmount, currentAmount: updatedGoal.currentAmount });
     }
-  }, []);
+    reload();
+  }, [reload]);
 
   return { fund, loading, update };
 }
 
 // Debt Payoff
 export function useDebtPayoff() {
-  const [debts, setDebts] = useState<Debt[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(() => {
-    let mounted = true;
-    getAllDebts().then(d => {
-      if (mounted) {
-        setDebts(d);
-        setLoading(false);
-      }
-    }).catch(() => {
-      if (mounted) setLoading(false);
-    });
-    return () => { mounted = false; };
-  }, []);
-
-  useEffect(() => {
-    return load();
-  }, [load]);
-
-  useDatabaseListener(load);
+  const fetcher = useCallback(async () => getAllDebts(), []);
+  const [debts, loading, reload] = useLocalDbQuery<Debt[]>(fetcher, []);
 
   const add = useCallback(async (debt: Debt) => {
     await addDebt(debt);
-    setDebts(prev => [...prev, debt]);
-  }, []);
+    reload();
+  }, [reload]);
 
   const update = useCallback(async (debt: Debt) => {
     await updateDebt(debt);
-    setDebts(prev => prev.map(d => d.id === debt.id ? debt : d));
-  }, []);
+    reload();
+  }, [reload]);
 
   const remove = useCallback(async (id: string) => {
     await deleteDebt(id);
-    setDebts(prev => prev.filter(d => d.id !== id));
-  }, []);
+    reload();
+  }, [reload]);
 
   return { debts, loading, add, update, remove };
 }
 
 // Cash Flow Forecast
 export function useCashFlowForecast() {
-  const [forecast, setForecast] = useState<{ thirtyDays: number; sixtyDays: number; ninetyDays: number }>({ thirtyDays: 0, sixtyDays: 0, ninetyDays: 0 });
-  const [loading, setLoading] = useState(true);
+  const fetcher = useCallback(async () => {
+    const budgets = await getAllBudgets();
+    const monthlyIncome = budgets.find(b => b.category === 'savings')?.monthlyLimit || 50000;
+    const monthlyExpenses = budgets.reduce((sum, b) => sum + b.monthlyLimit, 0) - (budgets.find(b => b.category === 'savings')?.monthlyLimit || 0);
+    const monthlyNet = monthlyIncome - monthlyExpenses;
 
-  const load = useCallback(() => {
-    let mounted = true;
-    const loadForecast = async () => {
-      const [budgets] = await Promise.all([getAllBudgets()]);
-      
-      const monthlyIncome = budgets.find(b => b.category === 'savings')?.monthlyLimit || 50000;
-      const monthlyExpenses = budgets.reduce((sum, b) => sum + b.monthlyLimit, 0) - (budgets.find(b => b.category === 'savings')?.monthlyLimit || 0);
-      const monthlyNet = monthlyIncome - monthlyExpenses;
-
-      if (mounted) {
-        setForecast({ 
-          thirtyDays: monthlyNet, 
-          sixtyDays: monthlyNet * 2, 
-          ninetyDays: monthlyNet * 3 
-        });
-        setLoading(false);
-      }
+    return { 
+      thirtyDays: monthlyNet, 
+      sixtyDays: monthlyNet * 2, 
+      ninetyDays: monthlyNet * 3 
     };
-    loadForecast();
-    return () => { mounted = false; };
   }, []);
 
-  useEffect(() => {
-    return load();
-  }, [load]);
-
-  useDatabaseListener(load);
+  const [forecast, loading] = useLocalDbQuery(fetcher, { thirtyDays: 0, sixtyDays: 0, ninetyDays: 0 });
 
   return { forecast, loading };
 }

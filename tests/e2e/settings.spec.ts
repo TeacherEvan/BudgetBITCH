@@ -23,9 +23,7 @@ test.describe("Settings", () => {
     await expect(themeBtn).toBeVisible({ timeout: 8000 });
     const before = await page.evaluate(() => document.documentElement.className);
     await themeBtn.click();
-    await page.waitForTimeout(400);
-    const after = await page.evaluate(() => document.documentElement.className);
-    expect(after).not.toEqual(before);
+    await expect.poll(async () => page.evaluate(() => document.documentElement.className)).not.toEqual(before);
   });
 
   test("currency override button is selectable", async ({ page }) => {
@@ -33,7 +31,6 @@ test.describe("Settings", () => {
     const thb = page.getByRole("button", { name: /Thai Baht|บาทไทย/i });
     await expect(thb).toBeVisible({ timeout: 8000 });
     await thb.click();
-    await page.waitForTimeout(300);
     await expect(thb).toHaveClass(/border-\[#C9960C\]/);
   });
 });
