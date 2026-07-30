@@ -8,13 +8,41 @@ import { saveWizardProfile } from '@/lib/db/local-db';
 import type { CurrencyCode } from '@/lib/utils/currency';
 import { WizardProgress } from './wizard-progress';
 import { StepIncome } from './steps/step-income';
+import { StepRent } from './steps/step-rent';
+import { StepPhoneInternet } from './steps/step-phone-internet';
+import { StepHealthcare } from './steps/step-healthcare';
+import { StepTransport } from './steps/step-transport';
+import { StepEntertainment } from './steps/step-entertainment';
+import { StepSubscriptions } from './steps/step-subscriptions';
+import { StepSavingsRate } from './steps/step-savings-rate';
+import { StepRiskTolerance } from './steps/step-risk-tolerance';
 import { StepLocationConsent } from './steps/step-location-consent';
-import { StepReceiptScan } from './steps/step-receipt-scan';
 import { Button } from '@/components/ui/button';
 
-export type WizardStepId = 'income' | 'locationConsent' | 'receiptScan';
+export type WizardStepId =
+  | 'income'
+  | 'rent'
+  | 'phoneInternet'
+  | 'healthcare'
+  | 'transport'
+  | 'entertainment'
+  | 'subscriptions'
+  | 'savingsRate'
+  | 'riskTolerance'
+  | 'locationConsent';
 
-const STEPS: WizardStepId[] = ['income', 'locationConsent', 'receiptScan'];
+const STEPS: WizardStepId[] = [
+  'income',
+  'rent',
+  'phoneInternet',
+  'healthcare',
+  'transport',
+  'entertainment',
+  'subscriptions',
+  'savingsRate',
+  'riskTolerance',
+  'locationConsent',
+];
 
 interface WizardShellProps {
   locale: 'th' | 'en' | 'en-ZA' | 'en-TH' | string;
@@ -24,6 +52,7 @@ interface WizardShellProps {
 
 export function WizardShell({ locale, onComplete, isModal = false }: WizardShellProps) {
   const isThai = locale === 'th';
+  const normLocale: 'th' | 'en' = isThai ? 'th' : 'en';
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [stepValues, setStepValues] = useState<Partial<WizardProfile['answers']>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -36,7 +65,7 @@ export function WizardShell({ locale, onComplete, isModal = false }: WizardShell
   const handleNext = useCallback(async () => {
     const stepId = STEPS[currentStepIndex];
 
-    // Validation (income step requires numeric value; receiptScan is optional via skip)
+    // Validation (income step requires numeric value)
     let isEmpty = false;
     if (stepId === 'income') {
       const incomeVal = stepValues.income;
@@ -62,6 +91,14 @@ export function WizardShell({ locale, onComplete, isModal = false }: WizardShell
         locale: (['th', 'en', 'en-ZA', 'en-TH'].includes(locale) ? locale : 'en-ZA') as WizardProfile['locale'],
         answers: {
           income: stepValues.income ?? 0,
+          rent: stepValues.rent ?? 0,
+          phoneInternet: stepValues.phoneInternet ?? 0,
+          healthcare: stepValues.healthcare ?? 0,
+          transport: stepValues.transport ?? 0,
+          entertainment: stepValues.entertainment ?? 0,
+          subscriptions: stepValues.subscriptions ?? 0,
+          savingsRatePct: stepValues.savingsRatePct ?? 10,
+          riskTolerance: stepValues.riskTolerance ?? 'medium',
           locationConsent: stepValues.locationConsent ?? false,
           receiptScanned: stepValues.receiptScanned ?? false,
           currency: (locale === 'en-ZA' ? 'ZAR' : locale.includes('TH') || locale === 'th' ? 'THB' : 'USD') as CurrencyCode,
@@ -96,8 +133,88 @@ export function WizardShell({ locale, onComplete, isModal = false }: WizardShell
       case 'income':
         return (
           <StepIncome
-            locale={locale}
+            locale={normLocale}
             value={stepValues.income as number}
+            onChange={handleValueChange}
+            error={errorMessage}
+            disabled={isSubmitting}
+          />
+        );
+      case 'rent':
+        return (
+          <StepRent
+            locale={normLocale}
+            value={stepValues.rent as number}
+            onChange={handleValueChange}
+            error={errorMessage}
+            disabled={isSubmitting}
+          />
+        );
+      case 'phoneInternet':
+        return (
+          <StepPhoneInternet
+            locale={normLocale}
+            value={stepValues.phoneInternet as number}
+            onChange={handleValueChange}
+            error={errorMessage}
+            disabled={isSubmitting}
+          />
+        );
+      case 'healthcare':
+        return (
+          <StepHealthcare
+            locale={normLocale}
+            value={stepValues.healthcare as number}
+            onChange={handleValueChange}
+            error={errorMessage}
+            disabled={isSubmitting}
+          />
+        );
+      case 'transport':
+        return (
+          <StepTransport
+            locale={normLocale}
+            value={stepValues.transport as number}
+            onChange={handleValueChange}
+            error={errorMessage}
+            disabled={isSubmitting}
+          />
+        );
+      case 'entertainment':
+        return (
+          <StepEntertainment
+            locale={normLocale}
+            value={stepValues.entertainment as number}
+            onChange={handleValueChange}
+            error={errorMessage}
+            disabled={isSubmitting}
+          />
+        );
+      case 'subscriptions':
+        return (
+          <StepSubscriptions
+            locale={normLocale}
+            value={stepValues.subscriptions as number}
+            onChange={handleValueChange}
+            error={errorMessage}
+            disabled={isSubmitting}
+          />
+        );
+      case 'savingsRate':
+        return (
+          <StepSavingsRate
+            locale={normLocale}
+            value={stepValues.savingsRatePct as number}
+            onChange={handleValueChange}
+            error={errorMessage}
+            disabled={isSubmitting}
+          />
+        );
+      case 'riskTolerance':
+        return (
+          <StepRiskTolerance
+            locale={normLocale}
+            value={(stepValues.riskTolerance as 'low' | 'medium' | 'high') || 'medium'}
             onChange={handleValueChange}
             error={errorMessage}
             disabled={isSubmitting}
@@ -106,18 +223,8 @@ export function WizardShell({ locale, onComplete, isModal = false }: WizardShell
       case 'locationConsent':
         return (
           <StepLocationConsent
-            locale={locale}
+            locale={normLocale}
             value={stepValues.locationConsent as boolean}
-            onChange={handleValueChange}
-            error={errorMessage}
-            disabled={isSubmitting}
-          />
-        );
-      case 'receiptScan':
-        return (
-          <StepReceiptScan
-            locale={locale}
-            value={stepValues.receiptScanned as boolean}
             onChange={handleValueChange}
             error={errorMessage}
             disabled={isSubmitting}
@@ -129,71 +236,40 @@ export function WizardShell({ locale, onComplete, isModal = false }: WizardShell
   };
 
   return (
-    <div
-      className={
-        isModal
-          ? 'w-full max-w-lg mx-auto bg-neutral-900 border border-white/10 rounded-3xl p-6 shadow-2xl flex flex-col relative overflow-hidden'
-          : 'min-h-screen bg-black flex flex-col'
-      }
-    >
+    <div className={`w-full max-w-xl mx-auto bg-black text-white rounded-3xl border border-white/10 overflow-hidden shadow-2xl ${isModal ? 'my-auto max-h-[90vh] overflow-y-auto' : 'min-h-screen flex flex-col'}`}>
       <WizardProgress
         currentStep={currentStepIndex}
         totalSteps={STEPS.length}
-        locale={isThai ? 'th' : 'en'}
+        locale={normLocale}
       />
 
-      <main className="flex-1 flex flex-col p-2 md:p-4">
-        <div className="max-w-md mx-auto w-full flex-1 flex flex-col">
-          <div className="text-center mb-6 mt-2">
-            <h1 className="text-xl md:text-2xl font-semibold text-white">
-              {isThai ? 'ตั้งค่ากระเป๋าเงินของคุณ' : 'Setup Your Budget'}
-            </h1>
-            <p className="mt-1 text-sm text-white/70">
-              {isThai
-                ? 'เริ่มต้นใน 3 ขั้นตอนง่ายๆ'
-                : 'Get started in 3 fast, simple steps'}
-            </p>
-          </div>
+      <div className="flex-1 p-6 md:p-8 space-y-6">
+        {renderStep()}
+      </div>
 
-          <div className="flex-1 flex flex-col min-h-[220px]">{renderStep()}</div>
+      <div className="p-6 border-t border-white/10 bg-black/60 flex items-center justify-between gap-4">
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={handleBack}
+          disabled={isFirstStep || isSubmitting}
+          className="gap-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          {isThai ? 'ย้อนกลับ' : 'Back'}
+        </Button>
 
-          {errorMessage && (
-            <p className="text-center text-rose-400 text-sm mt-4" role="alert">
-              {errorMessage}
-            </p>
-          )}
-
-          <div className="flex gap-3 mt-6">
-            {!isFirstStep && (
-              <Button
-                variant="secondary"
-                onClick={handleBack}
-                disabled={isSubmitting}
-                className="flex-1"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                {isThai ? 'ย้อนกลับ' : 'Back'}
-              </Button>
-            )}
-            <Button
-              variant="primary"
-              onClick={handleNext}
-              disabled={isSubmitting}
-              isLoading={isSubmitting}
-              className="flex-1"
-            >
-              {isLastStep
-                ? isThai
-                  ? 'เสร็จสิ้น'
-                  : 'Finish'
-                : isThai
-                  ? 'ถัดไป'
-                  : 'Next'}
-              {!isLastStep && <ArrowRight className="h-4 w-4 ml-2" />}
-            </Button>
-          </div>
-        </div>
-      </main>
+        <Button
+          type="button"
+          variant="primary"
+          onClick={handleNext}
+          disabled={isSubmitting}
+          className="gap-2 bg-amber-400 text-black hover:bg-amber-300 font-semibold"
+        >
+          {isLastStep ? (isThai ? 'เสร็จสิ้น' : 'Finish') : (isThai ? 'ถัดไป' : 'Next')}
+          <ArrowRight className="w-4 h-4" />
+        </Button>
+      </div>
     </div>
   );
 }
