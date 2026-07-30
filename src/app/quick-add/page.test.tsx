@@ -43,13 +43,41 @@ vi.mock('next-intl', () => ({
 
 // Mock Convex
 const mockParseReceipt = vi.fn();
+const mockConvexMutation = vi.fn();
 vi.mock('convex/react', () => ({
   useAction: () => mockParseReceipt,
+  useMutation: () => mockConvexMutation,
+}));
+
+// Mock the deterministic receipt scraper hook (replaced the old AI action path).
+// `mockDraft` is what the hook reports back after a successful scrape.
+type MockDraft = {
+  draftId: string;
+  fields: Record<string, { value: unknown }>;
+  questions: unknown[];
+} | null;
+
+let mockDraft: MockDraft = null;
+const mockScanImage = vi.fn();
+const mockAnswerQuestion = vi.fn();
+const mockConfirmDraft = vi.fn();
+
+vi.mock('@/hooks/use-receipt-scan', () => ({
+  useReceiptScan: () => ({
+    isScanning: false,
+    progress: 0,
+    draft: mockDraft,
+    error: null,
+    scanImage: mockScanImage,
+    answerQuestion: mockAnswerQuestion,
+    confirmDraft: mockConfirmDraft,
+  }),
 }));
 
 describe('QuickAddPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockDraft = null;
   });
 
   it('renders quick add components correctly', () => {
@@ -137,44 +165,35 @@ describe('QuickAddPage', () => {
     expect(mockPush).toHaveBeenCalledWith('/dashboard');
   });
 
-  it('processes image upload file selection via camera scan and populates inputs', async () => {
-    mockParseReceipt.mockResolvedValue({
-      amount: 450,
-      merchant: 'Supermarket',
-      category: 'food',
-      date: '2026-07-21'
-    });
+  it('populates the input from a scraped receipt draft', async () => {
+    mockDraft = {
+      draftId: 'draft-1',
+      fields: {
+        total: { value: 450 },
+        merchant: { value: 'Supermarket' },
+        category: { value: 'food' },
+      },
+      questions: [],
+    };
 
     render(<QuickAddPage />);
-    
-    const file = new File(['mock-img-data'], 'receipt.jpg', { type: 'image/jpeg' });
-    const fileInput = screen.getByTestId('camera-file-input') || document.querySelector('input[type="file"]');
-    
-    if (fileInput) {
-      fireEvent.change(fileInput, { target: { files: [file] } });
-    }
 
     await waitFor(() => {
-      expect(mockParseReceipt).toHaveBeenCalledTimes(1);
       const input = screen.getByPlaceholderText('Type amount then note, e.g. 120 lunch') as HTMLInputElement;
       expect(input.value).toBe('450 Supermarket');
     });
   });
 
-  it('handles receipt parsing errors gracefully and prompts for manual entry', async () => {
-    mockParseReceipt.mockRejectedValue(new Error('AI parsing unavailable'));
-
+  it('rejects a non-image file and prompts for manual entry', async () => {
     render(<QuickAddPage />);
-    
-    const file = new File(['mock-img-data'], 'receipt.jpg', { type: 'image/jpeg' });
-    const fileInput = screen.getByTestId('camera-file-input') || document.querySelector('input[type="file"]');
-    
-    if (fileInput) {
-      fireEvent.change(fileInput, { target: { files: [file] } });
-    }
+
+    const file = new File(['not-an-image'], 'notes.txt', { type: 'text/plain' });
+    const fileInput = screen.getByTestId('camera-file-input');
+    fireEvent.change(fileInput, { target: { files: [file] } });
 
     await waitFor(() => {
-      expect(screen.getByText('AI parsing unavailable')).toBeInTheDocument();
+      expect(screen.getByText('Please select a valid image file.')).toBeInTheDocument();
     });
+    expect(mockScanImage).not.toHaveBeenCalled();
   });
 });

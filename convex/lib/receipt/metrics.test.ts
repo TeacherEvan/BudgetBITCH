@@ -15,11 +15,13 @@ function pipelineScraper(payload: OcrPayload): ScrapeResult {
 }
 
 describe('Corpus metric harness', () => {
-  test('Phase 2 metric evaluation: total accuracy >= 0.80 and avg questions <= 2.0', async () => {
+  test('Phase 5 golden metric evaluation: total >= 0.90, date >= 0.85, merchant >= 0.80, avgQuestions <= 1.2', async () => {
     const fixtures = await loadAllFixtures();
     const metrics = runCorpus(fixtures, pipelineScraper);
 
-    expect(metrics.totalAcc).toBeGreaterThanOrEqual(0.80);
-    expect(metrics.avgQuestions).toBeLessThanOrEqual(2.0);
+    expect(metrics.totalAcc).toBeGreaterThanOrEqual(0.90);
+    expect(metrics.dateAcc).toBeGreaterThanOrEqual(0.85);
+    expect(metrics.merchantAcc).toBeGreaterThanOrEqual(0.80);
+    expect(metrics.avgQuestions).toBeLessThanOrEqual(1.2);
   });
 });

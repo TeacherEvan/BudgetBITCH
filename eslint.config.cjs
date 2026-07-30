@@ -87,6 +87,7 @@ module.exports = [
       "scripts/**",
       "*.config.*",
       "public/sw.js",
+      "public/tesseract/**",
       "node_modules/**",
     ],
   },
