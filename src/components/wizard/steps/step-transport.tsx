@@ -3,32 +3,28 @@
 
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
+import { useCurrency } from '@/hooks/use-currency';
 
 interface StepTransportProps {
-  locale: 'th' | 'en';
+  locale: string;
   value: number;
   onChange: (key: 'transport', value: number) => void;
   error?: string | null;
   disabled?: boolean;
 }
 
-export function StepTransport({ locale, value, onChange, error, disabled }: StepTransportProps) {
+export function StepTransport({ value, onChange, error, disabled }: StepTransportProps) {
+  const fmt = useCurrency();
   const labels = {
-    th: {
-      title: 'ค่าเดินทาง',
-      subtitle: 'BTS/MRT รถเมล์ มอไซค์ น้ำมัน Grab/Bolt',
-      placeholder: 'เช่น 3000',
-      helper: 'ค่าเดินทางต่อเดือนรวมทุกอย่าง (บาท)',
-    },
     en: {
       title: 'Transport Cost',
       subtitle: 'BTS/MRT, bus, motorbike, fuel, Grab/Bolt',
       placeholder: 'e.g. 3000',
-      helper: 'Monthly transport total (THB)',
+      helper: 'Monthly transport total',
     },
   };
 
-  const l = labels[locale];
+  const l = labels.en;
 
   return (
     <div className="space-y-6">
@@ -61,11 +57,11 @@ export function StepTransport({ locale, value, onChange, error, disabled }: Step
           onValueChange={(v) => onChange('transport', v)}
           disabled={disabled}
           showValue
-          valueFormatter={(v) => `฿${v.toLocaleString()}`}
+          valueFormatter={(v) => fmt(v)}
         />
 
         <p className="text-xs text-white/50 text-center">
-          {locale === 'th' ? 'รวม BTS/MRT รถเมล์ มอไซน์ น้ำมัน Grab/Bolt' : 'Include BTS/MRT, bus, motorbike, fuel, Grab/Bolt'}
+          {'Include BTS/MRT, bus, motorbike, fuel, Grab/Bolt'}
         </p>
       </div>
 
@@ -87,7 +83,7 @@ export function StepTransport({ locale, value, onChange, error, disabled }: Step
                 : 'bg-white/5 text-white/70 hover:bg-white/10'
             }`}
           >
-            ฿{value.toLocaleString()}<br/>{label}
+            {fmt(value)}<br/>{label}
           </button>
         ))}
       </div>

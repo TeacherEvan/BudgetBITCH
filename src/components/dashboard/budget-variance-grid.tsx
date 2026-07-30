@@ -13,7 +13,6 @@ import {
 interface CategoryBudgetConfig {
   category: ExpenseCategory;
   nameEn: string;
-  nameTh: string;
   budgeted: number;
   actual: number;
 }
@@ -21,22 +20,22 @@ interface CategoryBudgetConfig {
 interface BudgetVarianceGridProps {
   expenses?: ExpenseEntry[];
   currency?: CurrencyCode | null;
-  locale?: 'th' | 'en';
+  locale?: string;
 }
 
-const CATEGORY_NAMES: Record<ExpenseCategory, { en: string; th: string }> = {
-  housing: { en: 'Housing & Rent', th: 'ค่าเช่า/บ้าน' },
-  debt: { en: 'Debt Payment', th: 'ชำระหนี้' },
-  food: { en: 'Dining & Food', th: 'อาหาร/ร้านอาหาร' },
-  entertainment: { en: 'Entertainment', th: 'ความบันเทิง' },
-  utilities: { en: 'Utilities', th: 'ค่าน้ำ/ไฟ' },
-  phone_internet: { en: 'Phone & Internet', th: 'โทรศัพท์/เน็ต' },
-  transport: { en: 'Transport & Fuel', th: 'เดินทาง/น้ำมัน' },
-  subscriptions: { en: 'Subscriptions', th: 'บริการรายเดือน' },
-  healthcare: { en: 'Healthcare', th: 'สุขภาพ/การรักษา' },
-  insurance: { en: 'Insurance', th: 'ประกันภัย' },
-  savings: { en: 'Savings', th: 'เงินออม' },
-  other: { en: 'Other', th: 'อื่นๆ' },
+const CATEGORY_NAMES: Record<ExpenseCategory, { en: string }> = {
+  housing: { en: 'Housing & Rent' },
+  debt: { en: 'Debt Payment' },
+  food: { en: 'Dining & Food' },
+  entertainment: { en: 'Entertainment' },
+  utilities: { en: 'Utilities' },
+  phone_internet: { en: 'Phone & Internet' },
+  transport: { en: 'Transport & Fuel' },
+  subscriptions: { en: 'Subscriptions' },
+  healthcare: { en: 'Healthcare' },
+  insurance: { en: 'Insurance' },
+  savings: { en: 'Savings' },
+  other: { en: 'Other' },
 };
 
 const DEFAULT_BUDGETS: Record<ExpenseCategory, number> = {
@@ -58,10 +57,9 @@ type SortField = 'category' | 'budgeted' | 'actual' | 'variance';
 
 export function BudgetVarianceGrid({
   expenses = [],
-  currency = 'THB',
+  currency = 'USD',
   locale = 'en',
 }: BudgetVarianceGridProps) {
-  const isTh = locale === 'th';
   const [sortField, setSortField] = useState<SortField>('variance');
   const [sortAsc, setSortAsc] = useState(true);
 
@@ -74,7 +72,6 @@ export function BudgetVarianceGrid({
     const rows: CategoryBudgetConfig[] = (Object.keys(DEFAULT_BUDGETS) as ExpenseCategory[]).map(cat => ({
       category: cat,
       nameEn: CATEGORY_NAMES[cat]?.en ?? cat,
-      nameTh: CATEGORY_NAMES[cat]?.th ?? cat,
       budgeted: DEFAULT_BUDGETS[cat],
       actual: actualMap[cat] || (DEFAULT_BUDGETS[cat] * (cat === 'housing' ? 1.0 : cat === 'food' ? 0.85 : 0.4)),
     }));
@@ -116,10 +113,10 @@ export function BudgetVarianceGrid({
           </div>
           <div>
             <h3 className="font-bold text-white text-base">
-              {isTh ? 'ตารางส่วนต่างงบประมาณ (Excel Variance Grid)' : 'Budget Variance & Health Data Bars'}
+              {'Budget Variance & Health Data Bars'}
             </h3>
             <p className="text-xs text-white/50">
-              {isTh ? 'เปรียบเทียบงบประมาณ vs รายจ่ายจริง พร้อมแถบสีเตือนภัย' : 'Budgeted vs. Actual with in-cell data bars & dynamic thresholds'}
+              {'Budgeted vs. Actual with in-cell data bars & dynamic thresholds'}
             </p>
           </div>
         </div>
@@ -133,7 +130,7 @@ export function BudgetVarianceGrid({
           }`}
         >
           {totalVariance >= 0 ? '+' : ''}
-          {formatMoney(totalVariance, currency, locale)} {isTh ? 'ส่วนต่างคงเหลือ' : 'Variance'}
+          {formatMoney(totalVariance, currency, locale)} {'Variance'}
         </div>
       </div>
 
@@ -144,29 +141,29 @@ export function BudgetVarianceGrid({
             <tr className="border-b border-white/10 text-white/50 uppercase tracking-wider text-[10px]">
               <th className="py-2.5 px-3">
                 <button type="button" onClick={() => toggleSort('category')} className="flex items-center gap-1 hover:text-white">
-                  {isTh ? 'หมวดหมู่' : 'Category'}
+                  {'Category'}
                   <ArrowUpDown className="w-3 h-3" />
                 </button>
               </th>
               <th className="py-2.5 px-3 text-right">
                 <button type="button" onClick={() => toggleSort('budgeted')} className="flex items-center gap-1 justify-end hover:text-white">
-                  {isTh ? 'งบที่ตั้งไว้' : 'Budgeted'}
+                  {'Budgeted'}
                   <ArrowUpDown className="w-3 h-3" />
                 </button>
               </th>
               <th className="py-2.5 px-3 text-right">
                 <button type="button" onClick={() => toggleSort('actual')} className="flex items-center gap-1 justify-end hover:text-white">
-                  {isTh ? 'จ่ายจริง' : 'Actual'}
+                  {'Actual'}
                   <ArrowUpDown className="w-3 h-3" />
                 </button>
               </th>
               <th className="py-2.5 px-3 text-right">
                 <button type="button" onClick={() => toggleSort('variance')} className="flex items-center gap-1 justify-end hover:text-white">
-                  {isTh ? 'ส่วนต่าง (Diff)' : 'Variance (+/-)'}
+                  {'Variance (+/-)'}
                   <ArrowUpDown className="w-3 h-3" />
                 </button>
               </th>
-              <th className="py-2.5 px-3 text-center">{isTh ? 'สถานะ / Data Bar' : 'Status & Data Bar'}</th>
+              <th className="py-2.5 px-3 text-center">{'Status & Data Bar'}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
@@ -177,22 +174,22 @@ export function BudgetVarianceGrid({
 
               let badgeColor = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
               let barColor = 'bg-emerald-400';
-              let statusLabel = isTh ? 'ปลอดภัย' : 'Safe';
+              let statusLabel = 'Safe';
 
               if (pctUsed > 100) {
                 badgeColor = 'bg-rose-500/20 text-rose-400 border-rose-500/30 animate-pulse';
                 barColor = 'bg-rose-500';
-                statusLabel = isTh ? 'เกินงบ!' : 'OVER!';
+                statusLabel = 'OVER!';
               } else if (pctUsed >= 85) {
                 badgeColor = 'bg-amber-500/20 text-amber-400 border-amber-500/30';
                 barColor = 'bg-amber-400';
-                statusLabel = isTh ? 'เฝ้าระวัง' : 'Watch';
+                statusLabel = 'Watch';
               }
 
               return (
                 <tr key={row.category} className="hover:bg-white/5 transition-colors">
                   <td className="py-2.5 px-3 font-semibold text-white">
-                    {isTh ? row.nameTh : row.nameEn}
+                    {row.nameEn}
                   </td>
                   <td className="py-2.5 px-3 text-right text-white/70">
                     {formatMoney(row.budgeted, currency, locale)}

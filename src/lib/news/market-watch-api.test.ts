@@ -26,13 +26,13 @@ describe('market-watch-api', () => {
     expect(data.items.length).toBeGreaterThan(0);
   });
 
-  it('returns actionable text for fuel in Thai locale', async () => {
-    const request = new NextRequest(new URL('http://localhost/api/news/vicinity?lat=13.7563&lon=100.5018&locale=th&country=TH'));
+  it('returns actionable text for fuel in English (default locale)', async () => {
+    const request = new NextRequest(new URL('http://localhost/api/news/vicinity?lat=13.7563&lon=100.5018&locale=en&country=TH'));
     const response = await GET(request);
     const data = await response.json();
 
     const fuelItem = data.items.find((i: { title: string; actionable?: string }) => i.title.includes('Fuel'));
-    expect(fuelItem?.actionable).toContain('เช็คราคาน้ำมัน');
+    expect(fuelItem?.actionable).toContain('Check fuel prices before filling up');
   });
 
   it('returns 400 for invalid lat/lon', async () => {

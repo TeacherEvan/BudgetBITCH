@@ -65,7 +65,7 @@ export function writeLocalSet(key: string, set: Set<string>): void {
  * already loads. No new data fetching. Pure derivation; dismissal is handled
  * by the consuming component (PriorityGuide / shell badge).
  */
-export function usePriorityAlerts(locale: 'th' | 'en'): PriorityAlert[] {
+export function usePriorityAlerts(locale: string): PriorityAlert[] {
   const { profile } = useWizardProfile();
   const { budgets, loading: budgetsLoading } = useBudgets();
   const { bills } = useBills();
@@ -80,21 +80,17 @@ export function usePriorityAlerts(locale: 'th' | 'en'): PriorityAlert[] {
       list.push({
         id: 'critical:income',
         tier: 'critical',
-        title: locale === 'th' ? 'ยังไม่ได้ตั้งค่ารายได้' : "You haven't set your income yet",
-        body: locale === 'th'
-          ? 'ไม่มีรายได้ งบประจำวันจะแสดง ₿0 โปรดตั้งค่าเพื่อเริ่มต้น'
-          : 'Without this, your daily budget shows ₿0. Set up now to begin.',
-        cta: { label: locale === 'th' ? 'ตั้งค่าเลย' : 'Set Up Now', href: '/wizard' },
+        title: "You haven't set your income yet",
+        body: 'Without this, your daily budget shows ₿0. Set up now to begin.',
+        cta: { label: 'Set Up Now', href: '/wizard' },
       });
     } else if (zeroBudgets) {
       list.push({
         id: 'critical:budgets',
         tier: 'critical',
-        title: locale === 'th' ? 'ยังไม่ได้กำหนดงบประมาณ' : 'No budgets configured',
-        body: locale === 'th'
-          ? 'ตั้งค่างบประมาณเพื่อให้ระบบแจ้งเตือนการใช้จ่ายได้'
-          : 'Configure your budgets so the system can warn you about overspending.',
-        cta: { label: locale === 'th' ? 'ตั้งค่าเลย' : 'Set Up Now', href: '/wizard' },
+        title: 'No budgets configured',
+        body: 'Configure your budgets so the system can warn you about overspending.',
+        cta: { label: 'Set Up Now', href: '/wizard' },
       });
     }
 
@@ -111,10 +107,8 @@ export function usePriorityAlerts(locale: 'th' | 'en'): PriorityAlert[] {
       list.push({
         id: 'warning:bill-due',
         tier: 'warning',
-        title: locale === 'th' ? 'บิลครบกำหนดเร็วๆ นี้' : 'Bill due within 7 days',
-        body: locale === 'th'
-          ? `${dueSoon.name} ครบกำหนดวันที่ ${dueSoon.dueDay} จำนวน ${dueSoon.amount.toLocaleString()}`
-          : `${dueSoon.name} is due on the ${dueSoon.dueDay}th (${dueSoon.amount.toLocaleString()})`,
+        title: 'Bill due within 7 days',
+        body: `${dueSoon.name} is due on the ${dueSoon.dueDay}th (${dueSoon.amount.toLocaleString()})`,
       });
     }
 
@@ -123,10 +117,8 @@ export function usePriorityAlerts(locale: 'th' | 'en'): PriorityAlert[] {
       list.push({
         id: 'info:tip',
         tier: 'info',
-        title: locale === 'th' ? 'คำแนะนำ' : 'Pro tip',
-        body: locale === 'th'
-          ? 'กดที่แผงด้านข้างเพื่อเปิด/ปิดบอร์ดที่คุณต้องการดู'
-          : 'Tap a panel in the sidebar to show or hide the boards you care about.',
+        title: 'Pro tip',
+        body: 'Tap a panel in the sidebar to show or hide the boards you care about.',
       });
     }
 
@@ -135,7 +127,7 @@ export function usePriorityAlerts(locale: 'th' | 'en'): PriorityAlert[] {
 }
 
 export function PriorityGuide() {
-  const locale = useLocale() as 'th' | 'en';
+  const locale = useLocale();
   const router = useRouter();
   const alerts = usePriorityAlerts(locale);
 
@@ -196,10 +188,10 @@ export function PriorityGuide() {
                 : 'var(--success)';
           const badge =
             alert.tier === 'critical'
-              ? (locale === 'th' ? 'สำคัญ' : 'CRITICAL')
+              ? ('CRITICAL')
               : alert.tier === 'warning'
-                ? (locale === 'th' ? 'แจ้งเตือน' : 'WARNING')
-                : (locale === 'th' ? 'ข้อมูล' : 'INFO');
+                ? ('WARNING')
+                : ('INFO');
 
           return (
             <motion.div
@@ -246,7 +238,7 @@ export function PriorityGuide() {
               </div>
               <button
                 onClick={() => dismiss(alert.id)}
-                aria-label={locale === 'th' ? 'ปิด' : 'Dismiss'}
+                aria-label={'Dismiss'}
                 className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-md text-[var(--text-muted)] hover:text-[var(--text-1)] hover:bg-white/5 transition-colors"
               >
                 <X size={16} />

@@ -6,8 +6,6 @@ import type { NewsItem } from '@/lib/types/budget';
 const parser = new Parser();
 
 const RSS_FEEDS = [
-  // Thai sources - Bangkok Post Business works
-  { url: 'https://www.bangkokpost.com/rss/data/business.xml', locale: 'th' as const, category: 'finance' as const, source: 'Bangkok Post Business' },
   // English sources - use feeds that work
   { url: 'https://feeds.bloomberg.com/markets/news.rss', locale: 'en' as const, category: 'finance' as const, source: 'Bloomberg Markets' },
   { url: 'https://www.marketwatch.com/rss/topstories', locale: 'en' as const, category: 'finance' as const, source: 'MarketWatch' },
@@ -17,20 +15,17 @@ const RSS_FEEDS = [
 function getActionableText(item: { title: string; category: string }): string | undefined {
   const lower = item.title.toLowerCase();
 
-  if (lower.includes('fuel') || lower.includes('น้ำมัน') || lower.includes('gas') || lower.includes('diesel')) {
-    return 'เช็คราคาน้ำมันก่อนเติม';
+  if (lower.includes('fuel') || lower.includes('gas') || lower.includes('diesel')) {
+    return 'Check fuel prices before filling up';
   }
-  if (lower.includes('1+1') || lower.includes('buy 1') || lower.includes('ซื้อ 1 แถม 1')) {
-    return 'เจอโปรโมชั่น 1+1 - จัดซื้อได้เลย';
+  if (lower.includes('1+1') || lower.includes('buy 1')) {
+    return 'Buy-one-get-one promo spotted - stock up';
   }
-  if (lower.includes('discount') || lower.includes('sale') || lower.includes('ลดราคา') || lower.includes('โปรโมชั่น')) {
-    return 'มีส่วนลด - พิจารณาซื้อ';
+  if (lower.includes('discount') || lower.includes('sale')) {
+    return 'Discount running - consider buying now';
   }
-  if (lower.includes('bts') || lower.includes('mrt') || lower.includes('บีทีเอส') || lower.includes('บัตรประจำเดือน')) {
-    return 'เช็คบัตรประจำเดือนประหยัดกว่าซื้อรายวัน';
-  }
-  if (lower.includes('electricity') || lower.includes('ค่าไฟ')) {
-    return 'ตรวจสอบค่าไฟ - อาจมีการปรับราคา';
+  if (lower.includes('electricity') || lower.includes('power tariff')) {
+    return 'Check your electricity tariff - rates may be changing';
   }
   return undefined;
 }
@@ -70,10 +65,8 @@ async function fetchAllNews(): Promise<NewsItem[]> {
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const localeParam = searchParams.get('locale') as 'th' | 'en' | null;
-  // Location-driven: a resolved country selects the feed locale.
-  const country = searchParams.get('country');
-  const effectiveLocale: 'th' | 'en' = country === 'TH' ? 'th' : (localeParam ?? 'en');
+  const localeParam = searchParams.get('locale') as string | null;
+  const effectiveLocale: string = localeParam ?? 'en';
 
   const now = Date.now();
 

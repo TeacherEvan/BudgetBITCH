@@ -11,7 +11,7 @@ interface CategoryPivotCardProps {
   expenses?: ExpenseEntry[];
   profile?: WizardProfile | null;
   currency?: CurrencyCode | null;
-  locale?: 'th' | 'en';
+  locale?: string;
 }
 
 type PivotMode = '50-30-20' | 'personal-vs-shared';
@@ -19,10 +19,9 @@ type PivotMode = '50-30-20' | 'personal-vs-shared';
 export function CategoryPivotCard({
   expenses = [],
   profile,
-  currency = 'THB',
+  currency = 'USD',
   locale = 'en',
 }: CategoryPivotCardProps) {
-  const isTh = locale === 'th';
   const [pivotMode, setPivotMode] = useState<PivotMode>('50-30-20');
 
   const income = profile?.answers?.income ?? 45000;
@@ -113,10 +112,10 @@ export function CategoryPivotCard({
           </div>
           <div>
             <h3 className="font-bold text-white text-base">
-              {isTh ? 'สถิติตามหมวดหมู่ (Excel Pivot Matrix)' : 'Category Pivot Matrix'}
+              {'Category Pivot Matrix'}
             </h3>
             <p className="text-xs text-white/50">
-              {isTh ? 'วิเคราะห์งบประมาณตามสูตร 50/30/20 และบัญชีคู่' : 'Multi-dimensional spending breakdown'}
+              {'Multi-dimensional spending breakdown'}
             </p>
           </div>
         </div>
@@ -143,7 +142,7 @@ export function CategoryPivotCard({
             }`}
           >
             <Users className="w-3.5 h-3.5" />
-            {isTh ? 'ส่วนตัว/บัญชีคู่' : 'Personal/Shared'}
+            {'Personal/Shared'}
           </button>
         </div>
       </div>
@@ -217,7 +216,7 @@ export function CategoryPivotCard({
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
-              <p className="text-xs text-white/50">{isTh ? 'รายจ่ายส่วนตัว' : 'Personal Expenses'}</p>
+              <p className="text-xs text-white/50">{'Personal Expenses'}</p>
               <p className="text-lg font-bold text-cyan-400 mt-1">
                 {formatMoney(partnerBreakdown.personal, currency, locale)}
               </p>
@@ -225,7 +224,7 @@ export function CategoryPivotCard({
             </div>
 
             <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
-              <p className="text-xs text-white/50">{isTh ? 'รายจ่ายบอร์ดคู่/แชร์' : 'Shared Partner Expenses'}</p>
+              <p className="text-xs text-white/50">{'Shared Partner Expenses'}</p>
               <p className="text-lg font-bold text-purple-400 mt-1">
                 {formatMoney(partnerBreakdown.shared, currency, locale)}
               </p>

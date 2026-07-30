@@ -8,11 +8,11 @@ import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
 interface AdminBugReportsProps {
-  locale?: 'th' | 'en';
+  locale?: string;
 }
 
-export function AdminBugReports({ locale = 'en' }: AdminBugReportsProps) {
-  const isThai = locale === 'th';
+export function AdminBugReports(_props: AdminBugReportsProps) {
+  void _props;
   const reports = useQuery(api.feedback.getRecent, { limit: 50 });
   const deleteReport = useMutation(api.feedback.deleteReport);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -24,7 +24,7 @@ export function AdminBugReports({ locale = 'en' }: AdminBugReportsProps) {
         <div className="flex items-center gap-3 text-amber-400 animate-pulse">
           <Bug className="w-5 h-5" />
           <span className="text-sm font-medium">
-            {isThai ? 'กำลังโหลดรายงานบั๊กสำหรับแอดมิน...' : 'Loading Admin Bug Reports...'}
+            {'Loading Admin Bug Reports...'}
           </span>
         </div>
       </Card>
@@ -52,15 +52,15 @@ export function AdminBugReports({ locale = 'en' }: AdminBugReportsProps) {
           </div>
           <div>
             <h2 className="text-sm font-bold uppercase tracking-[0.15em] text-[#C9960C]">
-              {isThai ? 'แดชบอร์ดแอดมิน — รายงานบั๊ก' : 'Admin Dashboard — Bug Reports'}
+              {'Admin Dashboard — Bug Reports'}
             </h2>
             <p className="text-xs text-white/50">
-              {isThai ? 'รายงานสำหรับ ewiebotha@gmail.com พร้อมประวัติ 20 การกระทำล่าสุด' : 'Feedback & bug logs for ewiebotha@gmail.com with last 20 action history'}
+              {'Feedback & bug logs for ewiebotha@gmail.com with last 20 action history'}
             </p>
           </div>
         </div>
         <span className="text-xs font-mono px-2.5 py-1 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-300">
-          {bugReports.length} {isThai ? 'รายการ' : 'reports'}
+          {bugReports.length} {'reports'}
         </span>
       </div>
 
@@ -68,7 +68,7 @@ export function AdminBugReports({ locale = 'en' }: AdminBugReportsProps) {
         <Card className="p-8 text-center bg-white/5 border-white/10">
           <Bug className="w-10 h-10 text-white/20 mx-auto mb-3" />
           <p className="text-sm text-white/60">
-            {isThai ? 'ยังไม่มีรายงานบั๊กในขณะนี้' : 'No bug reports submitted yet.'}
+            {'No bug reports submitted yet.'}
           </p>
         </Card>
       ) : (
@@ -76,7 +76,7 @@ export function AdminBugReports({ locale = 'en' }: AdminBugReportsProps) {
           {bugReports.map((report) => {
             const isExpanded = expandedId === report._id;
             const formattedDate = new Date(report.createdAt).toLocaleString(
-              locale === 'th' ? 'th-TH' : 'en-US',
+              'en-US',
               { dateStyle: 'medium', timeStyle: 'short' }
             );
 
@@ -118,7 +118,7 @@ export function AdminBugReports({ locale = 'en' }: AdminBugReportsProps) {
                       type="button"
                       onClick={() => handleDelete(report._id)}
                       disabled={busyId === report._id}
-                      aria-label={isThai ? 'ลบรายงาน' : 'Delete report'}
+                      aria-label={'Delete report'}
                       className="flex items-center justify-center p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-300 transition-colors disabled:opacity-40"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -130,7 +130,7 @@ export function AdminBugReports({ locale = 'en' }: AdminBugReportsProps) {
                   <div className="mt-3 p-3 rounded-xl bg-black border border-white/10 space-y-1.5">
                     <div className="flex items-center gap-2 text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2">
                       <Terminal className="w-3.5 h-3.5" />
-                      <span>{isThai ? 'ประวัติการใช้งาน 20 รายการล่าสุด:' : 'User Last 20 Action Logs:'}</span>
+                      <span>{'User Last 20 Action Logs:'}</span>
                     </div>
                     <div className="font-mono text-xs text-amber-300/90 space-y-1 max-h-48 overflow-y-auto scrollbar-thin">
                       {report.actionLogs.map((log, i) => (

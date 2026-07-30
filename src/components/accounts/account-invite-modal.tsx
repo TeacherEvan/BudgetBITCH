@@ -13,7 +13,7 @@ interface AccountInviteModalProps {
   inviteCode: string;
   inviteUrl: string;
   accountName: string;
-  locale: 'th' | 'en';
+  locale: string;
 }
 
 export function AccountInviteModal({
@@ -37,9 +37,9 @@ export function AccountInviteModal({
   };
 
   const steps = locale === 'th' ? [
-    { num: '1', text: 'คัดลอกรหัสหรือลิงก์คำเชิญสีทองด้านล่าง' },
-    { num: '2', text: 'ส่งต่อให้เพื่อน คู่รัก หรือสมาชิกครอบครัวของคุณ' },
-    { num: '3', text: 'เมื่อเปิดลิงก์และเข้าสู่ระบบ สมาชิกจะร่วมบอร์ดโดยอัตโนมัติ' }
+    { num: '1', text: 'Copy the gold invite code or link below' },
+    { num: '2', text: 'Send it to your friend, partner, or family member' },
+    { num: '3', text: 'When they open the link and sign in, they join the board automatically' }
   ] : [
     { num: '1', text: 'Copy the gold invite code or URL link below.' },
     { num: '2', text: 'Share it with your partner, family, or business partner.' },
@@ -47,15 +47,6 @@ export function AccountInviteModal({
   ];
 
   const labels = {
-    th: {
-      title: 'เชิญเข้าร่วมบัญชีร่วมกัน',
-      desc: 'ให้สมาชิกคนอื่นสแกน QR Code หรือใช้ลิงก์คำเชิญเพื่อเข้าถึงข้อมูลบอร์ดแบบเรียลไทม์:',
-      code: 'รหัสคำเชิญ',
-      copy: 'คัดลอกลิงก์',
-      copied: 'คัดลอกแล้ว!',
-      close: 'เสร็จสิ้น',
-      instructions: 'ขั้นตอนการเข้าร่วมบอร์ด:'
-    },
     en: {
       title: 'Invite to Shared Account',
       desc: 'Let other members scan this QR code or use the invite link to access real-time shared budget boards:',
@@ -67,7 +58,7 @@ export function AccountInviteModal({
     }
   };
 
-  const l = labels[locale] || labels.en;
+  const l = labels.en;
 
   return (
     <Modal
@@ -112,7 +103,7 @@ export function AccountInviteModal({
                 type="text"
                 readOnly
                 value={inviteUrl}
-                aria-label={locale === 'th' ? 'ลิงก์คำเชิญ' : 'Invite URL link'}
+                aria-label={'Invite URL link'}
                 className="flex-1 truncate rounded-xl border border-zinc-800 bg-black/60 px-3.5 py-2 font-mono text-xs text-amber-300 outline-none cursor-default"
               />
               <Button 

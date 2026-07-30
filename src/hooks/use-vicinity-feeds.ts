@@ -15,7 +15,7 @@ interface VicinityFeedResult {
 const CACHE_KEY = 'bb:vicinityNewsCache';
 const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
 
-export function useVicinityFeeds(locale: 'th' | 'en'): VicinityFeedResult {
+export function useVicinityFeeds(locale: string): VicinityFeedResult {
   const { location, country } = useResolvedLocation();
   const [items, setItems] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,7 +63,7 @@ export function useVicinityFeeds(locale: 'th' | 'en'): VicinityFeedResult {
 
       localStorage.setItem(CACHE_KEY, JSON.stringify({ items: sorted, timestamp: Date.now(), locale }));
     } catch {
-      setError(locale === 'th' ? 'โหลดข่าวไม่สำเร็จ' : 'Failed to load news');
+      setError('Failed to load news');
       const cached = localStorage.getItem(CACHE_KEY);
       if (cached) {
         const { items, timestamp } = JSON.parse(cached);

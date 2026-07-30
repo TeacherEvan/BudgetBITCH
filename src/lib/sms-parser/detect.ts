@@ -4,12 +4,6 @@
 import type { TransactionCandidate } from './types';
 
 const COUNTRY_PATTERNS: Record<string, RegExp[]> = {
-  TH: [
-    /[฿]/,                    // Thai Baht symbol
-    /\b(SCB|KBank|BBL|KTB|TCRB|BAY|TMB|KKP|CIMB)\b/i,  // Major Thai banks (removed UOB - it's Singapore)
-    /(ไทย|บาท|เงิน|โอน|ฝาก|ถอน|จ่าย|รับ)/,  // Thai keywords
-    /\d{1,3}(?:,\d{3})*(?:\.\d{2})?\s*[฿บาท]/,
-  ],
   US: [
     /USD\s*\d[\d,]*(?:\.\d{2})?/,
     /\$\s*\d[\d,]*(?:\.\d{2})?/,
@@ -163,7 +157,7 @@ export function detectCountry(text: string): string {
  * Get currency code for a country
  */
 const COUNTRY_CURRENCY: Record<string, string> = {
-  TH: 'THB', US: 'USD', SG: 'SGD', EU: 'EUR', GB: 'GBP',
+  US: 'USD', SG: 'SGD', EU: 'EUR', GB: 'GBP',
   AU: 'AUD', CA: 'CAD', HK: 'HKD', JP: 'JPY', CN: 'CNY',
   IN: 'INR', MY: 'MYR', PH: 'PHP', ID: 'IDR', VN: 'VND',
   KR: 'KRW', TW: 'TWD', AE: 'AED', SA: 'SAR', ZA: 'ZAR',

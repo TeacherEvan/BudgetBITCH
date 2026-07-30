@@ -172,24 +172,6 @@ describe('StorageDiagnosticsModal', () => {
       expect(screen.queryByTestId('request-persistence-btn')).not.toBeInTheDocument();
     });
 
-    it('renders Thai localized strings correctly when locale="th"', async () => {
-      mockGetStorageEstimate.mockResolvedValue({
-        persisted: true,
-        usage: 2048, // 2 KB
-        quota: 1048576, // 1 MB
-      });
-
-      render(<StorageDiagnosticsModal isOpen={true} onClose={mockOnClose} locale="th" />);
-
-      expect(screen.getByText('การวิเคราะห์และกู้คืนฐานข้อมูล')).toBeInTheDocument();
-      expect(screen.getByText('ปกป้องจากการลบโดยอัตโนมัติ')).toBeInTheDocument();
-
-      await waitFor(() => {
-        expect(screen.getByText('ใช้ไป: 2 KB')).toBeInTheDocument();
-      });
-
-      expect(screen.getByText('ใช่ (ปลอดภัย)')).toBeInTheDocument();
-    });
   });
 
   describe('2. Database Audit Scan', () => {
@@ -224,28 +206,6 @@ describe('StorageDiagnosticsModal', () => {
       // Verify loadStorageInfo was refreshed after audit
       expect(mockGetStorageEstimate).toHaveBeenCalledTimes(2);
       expect(mockGetLocalCheckpoints).toHaveBeenCalledTimes(2);
-    });
-
-    it('clicking "เริ่มตรวจสอบ" triggers auditAndRepairDatabase() in Thai locale', async () => {
-      mockAuditAndRepairDatabase.mockResolvedValue({
-        status: 'success',
-        logs: ['ตรวจสอบโครงสร้างข้อมูลสำเร็จ'],
-      });
-
-      render(<StorageDiagnosticsModal isOpen={true} onClose={mockOnClose} locale="th" />);
-
-      await waitFor(() => {
-        expect(mockGetStorageEstimate).toHaveBeenCalled();
-      });
-
-      const scanBtn = screen.getByRole('button', { name: 'เริ่มตรวจสอบ' });
-      fireEvent.click(scanBtn);
-
-      expect(mockAuditAndRepairDatabase).toHaveBeenCalledTimes(1);
-
-      await waitFor(() => {
-        expect(screen.getByText('ตรวจสอบโครงสร้างข้อมูลสำเร็จ')).toBeInTheDocument();
-      });
     });
 
     it('handles audit failures and displays error logs in console view', async () => {
@@ -362,25 +322,25 @@ describe('StorageDiagnosticsModal', () => {
       });
     });
 
-    it('handles localized Thai confirm dialog and success alert for local checkpoint restore', async () => {
+    it('handles localized confirm dialog and success alert for local checkpoint restore', async () => {
       mockGetLocalCheckpoints.mockResolvedValue([sampleCheckpoints[0]]);
       mockRestoreCheckpoint.mockResolvedValue(true);
 
-      render(<StorageDiagnosticsModal isOpen={true} onClose={mockOnClose} locale="th" />);
+      render(<StorageDiagnosticsModal isOpen={true} onClose={mockOnClose} locale="en" />);
 
       await waitFor(() => {
         expect(screen.getByText('Auto Snapshot')).toBeInTheDocument();
       });
 
-      const restoreBtn = screen.getByRole('button', { name: 'กู้คืน' });
+      const restoreBtn = screen.getByRole('button', { name: 'Restore' });
       fireEvent.click(restoreBtn);
 
       expect(window.confirm).toHaveBeenCalledWith(
-        'กู้คืนข้อมูลจากสแนปช็อตนี้หรือไม่? ข้อมูลปัจจุบันจะถูกเขียนทับ'
+        'Restore from this checkpoint? Current local data will be overwritten.'
       );
 
       await waitFor(() => {
-        expect(window.alert).toHaveBeenCalledWith('กู้คืนสำเร็จแล้ว!');
+        expect(window.alert).toHaveBeenCalledWith('Restored successfully!');
         expect(window.location.reload).toHaveBeenCalledTimes(1);
       });
     });

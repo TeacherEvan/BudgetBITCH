@@ -2,8 +2,7 @@
 
 import { useSyncExternalStore, useState } from "react";
 import { useAuthToken } from "@convex-dev/auth/react";
-import { useLocale } from "next-intl";
-import { shortLocale, COOKIE_POLICY_VERSION } from "@/lib/legal/versions";
+import { COOKIE_POLICY_VERSION } from "@/lib/legal/versions";
 
 const STORAGE_KEY = "budgetbitch:cookieConsent";
 
@@ -20,13 +19,6 @@ const COPY = {
     acceptAll: "Accept all",
     essentialOnly: "Essential only",
     cookiePolicy: "Cookie Policy",
-  },
-  th: {
-    title: "คุกกี้",
-    body: "เราใช้คุกกี้ที่จำเป็นเพื่อคงสถานะการเข้าสู่ระบบและจดจำการตั้งค่าของคุณ คุกกี้แบบเลือกได้ช่วยให้เราปรับปรุงแอป ดู",
-    acceptAll: "ยอมรับทั้งหมด",
-    essentialOnly: "เฉพาะที่จำเป็น",
-    cookiePolicy: "นโยบายคุกกี้",
   },
 };
 
@@ -52,9 +44,7 @@ function isBannerVisible(): boolean {
 const noopSubscribe = () => () => {};
 
 export function CookieConsentBanner() {
-  const localeRaw = useLocale();
-  const locale = shortLocale(localeRaw);
-  const copy = COPY[locale];
+  const copy = COPY.en;
   // Optional: forwarded to the relay only when a user is signed in. Anonymous
   // visitors stay anonymous (the relay leaves userId undefined).
   const authToken = useAuthToken();

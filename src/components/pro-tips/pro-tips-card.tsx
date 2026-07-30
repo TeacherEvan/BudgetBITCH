@@ -7,7 +7,7 @@ import { ProTipsModal } from './pro-tips-modal';
 import { Sparkles, ArrowRight, Lightbulb } from 'lucide-react';
 
 interface ProTipsCardProps {
-  locale: 'th' | 'en';
+  locale: string;
 }
 
 export function ProTipsCard({ locale }: ProTipsCardProps) {
@@ -31,7 +31,7 @@ export function ProTipsCard({ locale }: ProTipsCardProps) {
             <div className="flex items-center justify-between gap-2">
               <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1">
                 <Sparkles className="h-3 w-3" />
-                {locale === 'th' ? 'เคล็ดลับฉบับบอส' : 'BOSS PRO-TIP'}
+                {'BOSS PRO-TIP'}
               </span>
               <ArrowRight className="h-3.5 w-3.5 text-amber-400 opacity-60 group-hover:translate-x-1 transition-transform" />
             </div>

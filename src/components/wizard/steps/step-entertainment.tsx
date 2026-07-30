@@ -3,32 +3,28 @@
 
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
+import { useCurrency } from '@/hooks/use-currency';
 
 interface StepEntertainmentProps {
-  locale: 'th' | 'en';
+  locale: string;
   value: number;
   onChange: (key: 'entertainment', value: number) => void;
   error?: string | null;
   disabled?: boolean;
 }
 
-export function StepEntertainment({ locale, value, onChange, error, disabled }: StepEntertainmentProps) {
+export function StepEntertainment({ value, onChange, error, disabled }: StepEntertainmentProps) {
+  const fmt = useCurrency();
   const labels = {
-    th: {
-      title: 'บันเทิง / ความบันเทิง',
-      subtitle: 'หนัง คาเฟ่ กาแฟ เล่นเกม ออกไปข้างนอก ดูคอนเสิร์ต',
-      placeholder: 'เช่น 2000',
-      helper: 'เงินความบันเทิงต่อเดือน (บาท)',
-    },
     en: {
       title: 'Entertainment',
       subtitle: 'Movies, coffee, games, going out, concerts, hobbies',
       placeholder: 'e.g. 2000',
-      helper: 'Monthly entertainment budget (THB)',
+      helper: 'Monthly entertainment budget',
     },
   };
 
-  const l = labels[locale];
+  const l = labels.en;
 
   return (
     <div className="space-y-6">
@@ -61,11 +57,11 @@ export function StepEntertainment({ locale, value, onChange, error, disabled }: 
           onValueChange={(v) => onChange('entertainment', v)}
           disabled={disabled}
           showValue
-          valueFormatter={(v) => `฿${v.toLocaleString()}`}
+          valueFormatter={(v) => fmt(v)}
         />
 
         <p className="text-xs text-white/50 text-center">
-          {locale === 'th' ? 'หนัง คาเฟ่ เกม ออกไปข้างนอก ดูคอนเสิร์ต ฯลฯ' : 'Movies, coffee, games, going out, concerts, etc.'}
+          {'Movies, coffee, games, going out, concerts, etc.'}
         </p>
       </div>
 
@@ -87,7 +83,7 @@ export function StepEntertainment({ locale, value, onChange, error, disabled }: 
                 : 'bg-white/5 text-white/70 hover:bg-white/10'
             }`}
           >
-            ฿{value.toLocaleString()}<br/>{label}
+            {fmt(value)}<br/>{label}
           </button>
         ))}
       </div>

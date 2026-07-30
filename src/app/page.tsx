@@ -2,7 +2,7 @@
 'use client';
 
 import { useConvexAuth } from "@convex-dev/auth/react";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { LanguageSelectModal } from "@/components/onboarding/language-select-modal";
 import { CleanAuthCard } from "@/components/auth/clean-auth-card";
@@ -40,12 +40,27 @@ export default function Home() {
   const showLanguageModal =
     mounted && typeof window !== "undefined" && !localeChosen;
 
-  const finishLocaleSelect = (selectedLocale: 'en-ZA' | 'en-TH' | 'th' | string) => {
+  const finishLocaleSelect = (selection: { locale: string; currency: string }) => {
     try {
-      localStorage.setItem(LANGUAGE_STORAGE_KEY, selectedLocale);
+      localStorage.setItem(LANGUAGE_STORAGE_KEY, selection.locale);
       if (typeof document !== 'undefined') {
-        document.cookie = `bb-locale=${selectedLocale}; path=/; max-age=31536000; SameSite=Lax`;
+        document.cookie = `bb-locale=${selection.locale}; path=/; max-age=31536000; SameSite=Lax`;
       }
+      // Persist the chosen currency as the display-currency override so the
+      // whole app shows it from first load (Settings can change it later).
+      localStorage.setItem('bb:currencyOverride', selection.currency);
+      window.dispatchEvent(new Event('budgetbitch:currencyChanged'));
+      void (async () => {
+        try {
+          const { getSettings, saveSettings } = await import('@/lib/db/local-db');
+          const current = (await getSettings()) || {
+            preferredLocale: 'en',
+            voiceSettings: { enabled: false, rate: 1, pitch: 1 },
+            privacyDisclaimerAccepted: true,
+          };
+          await saveSettings({ ...current, preferredCurrency: selection.currency } as never);
+        } catch { /* non-fatal */ }
+      })();
     } catch {
       // noop
     }
@@ -53,16 +68,17 @@ export default function Home() {
     setSplashDismissed(true);
   };
 
-  // Once authenticated, perform clean client-side navigation to dashboard
-  useEffect(() => {
-    if (!isLoading && isAuthenticated && splashDismissed) {
-      router.push('/dashboard');
-    }
-  }, [isLoading, isAuthenticated, splashDismissed, router]);
+  // Navigation to dashboard now happens in MoneySyncLoading's onComplete (after
+  // its minimum display time), so no separate push effect is needed here.
 
   // Loading or authenticated — show Money In / Money Out Loading screen
   if (!isLoading && isAuthenticated && splashDismissed) {
-    return <MoneySyncLoading message="Connecting Money In & Money Out Engines..." />;
+    return (
+      <MoneySyncLoading
+        message="Connecting Money In & Money Out Engines..."
+        onComplete={() => router.push('/dashboard')}
+      />
+    );
   }
 
   if (mounted && !splashDismissed) {

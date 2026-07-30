@@ -12,13 +12,13 @@ import { HeaderBar } from '@/components/layout/header-bar';
 type Status = 'idle' | 'working' | 'done' | 'error';
 
 export default function JoinPage() {
-  const locale = useLocale() as 'th' | 'en';
+  const locale = useLocale();
   const params = useSearchParams();
   const router = useRouter();
   const { redeemInviteToken } = useAccounts();
   const { isLoading: authLoading, isAuthenticated } = useConvexAuth();
 
-  const handleLocaleChange = (nextLocale: 'th' | 'en') => {
+  const handleLocaleChange = (nextLocale: string) => {
     document.cookie = `bb-locale=${nextLocale}; path=/; max-age=31536000; samesite=lax`;
     router.refresh();
   };
@@ -27,7 +27,7 @@ export default function JoinPage() {
   const [status, setStatus] = useState<Status>(code ? 'working' : 'idle');
   const [error, setError] = useState<string>('');
 
-  const t = useCallback((en: string, th: string) => (locale === 'th' ? th : en), [locale]);
+  const t = useCallback((en: string) => en, []);
 
   // Invite links are opened while logged out (e.g. from a fresh browser tab).
   // Send the user to sign-in first, preserving the ?code= so they land back
@@ -55,7 +55,7 @@ export default function JoinPage() {
       } catch (e) {
         if (!active) return;
         setStatus('error');
-        setError(e instanceof Error ? e.message : t('Could not join', 'ไม่สามารถเข้าร่วมได้'));
+        setError(e instanceof Error ? e.message : t('Could not join'));
       }
     })();
     return () => {
@@ -74,18 +74,18 @@ export default function JoinPage() {
           <QrCode className="h-8 w-8" />
         </div>
         <h1 className="font-display text-2xl font-bold text-[var(--text-1)]">
-          {t('Join an account', 'เข้าร่วมบัญชี')}
+          {t('Join an account')}
         </h1>
 
         {status === 'idle' && !code && (
           <p className="mt-3 text-sm text-[var(--text-2)]">
-            {t('Open this link from a Budget-BOSS invite to join.', 'เปิดลิงก์นี้จากคำเชิญ Budget-BOSS เพื่อเข้าร่วม')}
+            {t('Open this link from a Budget-BOSS invite to join.')}
           </p>
         )}
 
         {status === 'working' && (
           <p className="mt-3 text-sm text-[var(--text-2)]">
-            {t('Joining…', 'กำลังเข้าร่วม…')}
+            {t('Joining…')}
           </p>
         )}
 
@@ -95,7 +95,7 @@ export default function JoinPage() {
               <Check className="h-5 w-5" />
             </div>
             <p className="text-sm font-medium text-[var(--text-1)]">
-              {t('You’re in! Opening your new account…', 'เข้าร่วมแล้ว! กำลังเปิดบัญชีใหม่…')}
+              {t('You’re in! Opening your new account…')}
             </p>
           </div>
         )}
@@ -111,7 +111,7 @@ export default function JoinPage() {
               onClick={() => router.push('/accounts')}
               className="rounded-xl border border-[var(--gold-border-soft)] bg-[var(--bg-surface-1)] px-4 py-2 text-sm font-medium text-[var(--text-1)] transition-colors hover:bg-[var(--bg-surface-2)]"
             >
-              {t('Go to Accounts', 'ไปที่บัญชี')}
+              {t('Go to Accounts')}
             </button>
           </div>
         )}

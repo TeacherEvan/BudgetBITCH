@@ -16,7 +16,7 @@ interface Asset {
 
 interface AssetItemProps {
   asset: Asset;
-  locale: 'th' | 'en';
+  locale: string;
   onEdit: (asset: Asset) => void;
   onDelete: (id: string) => void;
   index: number;
@@ -45,7 +45,7 @@ export function AssetItem({ asset, locale, onEdit, onDelete, index }: AssetItemP
         </motion.div>
         <div>
           <p className="font-medium text-white">{asset.name}</p>
-          <p className="text-xs text-white/60 capitalize">{typeInfo?.label[locale === 'th' ? 'th' : 'en']}</p>
+          <p className="text-xs text-white/60 capitalize">{typeInfo?.label['en']}</p>
         </div>
       </div>
       <div className="flex items-center gap-2">
@@ -55,7 +55,7 @@ export function AssetItem({ asset, locale, onEdit, onDelete, index }: AssetItemP
           whileTap={{ scale: 0.95 }}
           onClick={() => onEdit(asset)}
         >
-          <Button variant="ghost" size="sm" aria-label={locale === 'th' ? 'แก้ไข' : 'Edit'}>
+          <Button variant="ghost" size="sm" aria-label={'Edit'}>
             <Edit className="w-4 h-4" aria-hidden="true" />
           </Button>
         </motion.button>
@@ -64,7 +64,7 @@ export function AssetItem({ asset, locale, onEdit, onDelete, index }: AssetItemP
           whileTap={{ scale: 0.95 }}
           onClick={() => onDelete(asset.id)}
         >
-          <Button variant="ghost" size="sm" className="text-rose-400 hover:bg-rose-500/10" aria-label={locale === 'th' ? 'ลบ' : 'Delete'}>
+          <Button variant="ghost" size="sm" className="text-rose-400 hover:bg-rose-500/10" aria-label={'Delete'}>
             <Trash2 className="w-4 h-4" aria-hidden="true" />
           </Button>
         </motion.button>

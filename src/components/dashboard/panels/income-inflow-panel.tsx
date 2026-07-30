@@ -12,7 +12,7 @@ import { EmptyState } from './empty-state';
 import type { IncomeCategory } from '@/lib/types/budget';
 
 interface IncomeInflowPanelProps {
-  locale?: 'th' | 'en';
+  locale?: string;
 }
 
 const CATEGORY_ICONS: Record<IncomeCategory, string> = {
@@ -23,16 +23,6 @@ const CATEGORY_ICONS: Record<IncomeCategory, string> = {
   gift: '🎁',
   refund: '🔄',
   other: '✨',
-};
-
-const CATEGORY_NAMES_TH: Record<IncomeCategory, string> = {
-  salary: 'เงินเดือน',
-  freelance: 'งานอิสระ',
-  business: 'ธุรกิจ',
-  investments: 'การลงทุน',
-  gift: 'ของขวัญ',
-  refund: 'คืนเงิน',
-  other: 'อื่นๆ',
 };
 
 const CATEGORY_NAMES_EN: Record<IncomeCategory, string> = {
@@ -46,7 +36,7 @@ const CATEGORY_NAMES_EN: Record<IncomeCategory, string> = {
 };
 
 export function IncomeInflowPanel({ locale: propLocale }: IncomeInflowPanelProps) {
-  const contextLocale = useLocale() as 'th' | 'en';
+  const contextLocale = useLocale();
   const locale = propLocale || contextLocale;
   const formatCurrency = useCurrency();
   const { incomes, remove: deleteIncome, loading } = useIncomes();
@@ -65,7 +55,7 @@ export function IncomeInflowPanel({ locale: propLocale }: IncomeInflowPanelProps
       <div className="flex flex-col items-center justify-center py-16 space-y-4">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" />
         <p className="text-white/60 text-xs">
-          {locale === 'th' ? 'กำลังโหลดข้อมูลรายได้...' : 'Loading income entries...'}
+          {'Loading income entries...'}
         </p>
       </div>
     );
@@ -82,7 +72,7 @@ export function IncomeInflowPanel({ locale: propLocale }: IncomeInflowPanelProps
             </div>
             <div>
               <span className="block text-[10px] text-white/50 uppercase tracking-wider font-semibold">
-                {locale === 'th' ? 'รวมรายรับทั้งหมด' : 'Total Inflow'}
+                {'Total Inflow'}
               </span>
               <span className="text-2xl font-bold text-white font-mono">
                 {formatCurrency(totalInflow, locale)}
@@ -94,19 +84,19 @@ export function IncomeInflowPanel({ locale: propLocale }: IncomeInflowPanelProps
             className="flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-black px-3 py-1.5 rounded-xl text-xs font-semibold shadow-lg shadow-emerald-500/10 transition"
           >
             <Plus className="w-4 h-4" />
-            {locale === 'th' ? 'เพิ่มรายได้' : 'Add Income'}
+            {'Add Income'}
           </button>
         </Card>
 
         {/* Small distribution preview */}
         <Card variant="default" className="p-4 border-zinc-900/80 bg-zinc-950/20">
           <span className="block text-[10px] text-white/50 uppercase tracking-wider font-semibold mb-2">
-            {locale === 'th' ? 'การกระจายประเภทรายรับ' : 'Category Distribution'}
+            {'Category Distribution'}
           </span>
           <div className="flex flex-wrap gap-2">
             {Object.keys(categoryTotals).length === 0 ? (
               <span className="text-xs text-white/30 italic">
-                {locale === 'th' ? 'ไม่มีข้อมูล' : 'No data'}
+                {'No data'}
               </span>
             ) : (
               Object.entries(categoryTotals).map(([cat, amount]) => (
@@ -116,7 +106,7 @@ export function IncomeInflowPanel({ locale: propLocale }: IncomeInflowPanelProps
                 >
                   <span>{CATEGORY_ICONS[cat as IncomeCategory]}</span>
                   <span className="text-white/60">
-                    {locale === 'th' ? CATEGORY_NAMES_TH[cat as IncomeCategory] : CATEGORY_NAMES_EN[cat as IncomeCategory]}
+                    {CATEGORY_NAMES_EN[cat as IncomeCategory]}
                   </span>
                   <span className="text-emerald-400 font-bold">
                     {formatCurrency(amount, locale)}
@@ -132,16 +122,16 @@ export function IncomeInflowPanel({ locale: propLocale }: IncomeInflowPanelProps
       <Card variant="default" className="p-4 border-zinc-900 bg-zinc-950/10">
         <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
           <ArrowUpRight className="w-4 h-4 text-emerald-400" />
-          {locale === 'th' ? 'รายการรายรับล่าสุด' : 'Recent Income Logs'}
+          {'Recent Income Logs'}
         </h3>
 
         {incomes.length === 0 ? (
           <EmptyState
-            title={locale === 'th' ? 'ยังไม่มีรายการรายรับ' : 'No Inflow Logged Yet'}
-            description={locale === 'th' ? 'เพิ่มรายรับรายสัปดาห์หรือรายเดือนของคุณเพื่อคำนวณการใช้เงินที่แม่นยำขึ้น' : 'Log your freelance, side hustle, or salary income to see accurate disposables'}
+            title={'No Inflow Logged Yet'}
+            description={'Log your freelance, side hustle, or salary income to see accurate disposables'}
             icon={<DollarSign className="w-8 h-8 text-white/20" />}
             onAction={() => setIsAddModalOpen(true)}
-            actionLabel={locale === 'th' ? 'เพิ่มรายได้แรก' : 'Add First Income'}
+            actionLabel={'Add First Income'}
           />
         ) : (
           <div className="divide-y divide-zinc-900 border-t border-zinc-900">
@@ -164,13 +154,11 @@ export function IncomeInflowPanel({ locale: propLocale }: IncomeInflowPanelProps
                       <span>{inc.date}</span>
                       <span>•</span>
                       <span className="capitalize">
-                        {locale === 'th' ? CATEGORY_NAMES_TH[inc.category] : CATEGORY_NAMES_EN[inc.category]}
+                        {CATEGORY_NAMES_EN[inc.category]}
                       </span>
                       <span>•</span>
                       <span>
-                        {locale === 'th' 
-                          ? (inc.frequency === 'one_time' ? 'ครั้งเดียว' : 'ประจำ') 
-                          : (inc.frequency === 'one_time' ? 'One-time' : 'Recurring')}
+                        {inc.frequency === 'one_time' ? 'One-time' : 'Recurring'}
                       </span>
                     </div>
                   </div>

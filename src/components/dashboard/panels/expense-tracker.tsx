@@ -27,23 +27,23 @@ interface Expense {
   source: 'manual' | 'voice' | 'import';
 }
 
-const CATEGORIES: { value: ExpenseCategory; label: { th: string; en: string } }[] = [
-  { value: 'housing', label: { th: 'ที่อยู่อาศัย', en: 'Housing' } },
-  { value: 'transport', label: { th: 'การเดินทาง', en: 'Transport' } },
-  { value: 'food', label: { th: 'อาหาร', en: 'Food' } },
-  { value: 'utilities', label: { th: 'ค่าสาธารณูปโภค', en: 'Utilities' } },
-  { value: 'phone_internet', label: { th: 'โทรศัพท์/อินเตอร์เน็ต', en: 'Phone/Internet' } },
-  { value: 'subscriptions', label: { th: 'สมัครสมาชิก', en: 'Subscriptions' } },
-  { value: 'entertainment', label: { th: 'บันเทิง', en: 'Entertainment' } },
-  { value: 'healthcare', label: { th: 'สุขภาพ', en: 'Healthcare' } },
-  { value: 'insurance', label: { th: 'ประกันภัย', en: 'Insurance' } },
-  { value: 'debt', label: { th: 'หนี้สิน', en: 'Debt' } },
-  { value: 'savings', label: { th: 'เงินออม', en: 'Savings' } },
-  { value: 'other', label: { th: 'อื่นๆ', en: 'Other' } },
+const CATEGORIES: { value: ExpenseCategory; label: { en: string } }[] = [
+  { value: 'housing', label: { en: 'Housing' } },
+  { value: 'transport', label: { en: 'Transport' } },
+  { value: 'food', label: { en: 'Food' } },
+  { value: 'utilities', label: { en: 'Utilities' } },
+  { value: 'phone_internet', label: { en: 'Phone/Internet' } },
+  { value: 'subscriptions', label: { en: 'Subscriptions' } },
+  { value: 'entertainment', label: { en: 'Entertainment' } },
+  { value: 'healthcare', label: { en: 'Healthcare' } },
+  { value: 'insurance', label: { en: 'Insurance' } },
+  { value: 'debt', label: { en: 'Debt' } },
+  { value: 'savings', label: { en: 'Savings' } },
+  { value: 'other', label: { en: 'Other' } },
 ];
 
 interface ExpenseTrackerProps {
-  locale?: 'th' | 'en';
+  locale?: string;
 }
 
 interface FormData {
@@ -160,7 +160,7 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
 
   const categoryOptions = CATEGORIES.map(c => ({
     value: c.value,
-    label: locale === 'th' ? c.label.th : c.label.en,
+    label: c.label.en,
   }));
 
   return (
@@ -168,7 +168,7 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="text-lg font-semibold text-white flex items-center gap-2">
           <span className="text-xl">💸</span>
-          {locale === 'th' ? 'บันทึกค่าใช้จ่าย' : 'Expense Tracker'}
+          {'Expense Tracker'}
         </h3>
         <div className="flex gap-2">
           <Button
@@ -179,11 +179,11 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
             data-testid="import-csv-btn"
           >
             <FileSpreadsheet className="w-4 h-4" />
-            <span className="hidden @xs:inline">{locale === 'th' ? 'นำเข้า' : 'Import'}</span>
+            <span className="hidden @xs:inline">{'Import'}</span>
           </Button>
           <Button variant="primary" size="sm" onClick={() => { setEditingId(null); resetForm(); setShowForm(true); }} className="flex items-center">
             <Plus className="w-4 h-4 @xs:mr-1" />
-            <span className="hidden @xs:inline">{locale === 'th' ? 'เพิ่ม' : 'Add'}</span>
+            <span className="hidden @xs:inline">{'Add'}</span>
           </Button>
         </div>
       </div>
@@ -201,14 +201,14 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
           <form onSubmit={handleSubmit} className="space-y-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <Input
-                label={locale === 'th' ? 'รายการ' : 'Merchant'}
+                label={'Merchant'}
                 value={formData.merchant}
                 onChange={e => setFormData({ ...formData, merchant: e.target.value })}
-                placeholder={locale === 'th' ? 'เช่น Grab, Lotus' : 'e.g. Grab, Walmart'}
+                placeholder={'e.g. Grab, Walmart'}
                 required
               />
               <Input
-                label={locale === 'th' ? 'จำนวนเงิน' : 'Amount'}
+                label={'Amount'}
                 type="number"
                 step="0.01"
                 min="0"
@@ -218,29 +218,29 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
               />
             </div>
             <Select
-              label={locale === 'th' ? 'หมวดหมู่' : 'Category'}
+              label={'Category'}
               value={formData.category}
               onChange={e => setFormData({ ...formData, category: e.target.value as ExpenseCategory })}
               options={categoryOptions}
             />
             <Input
-              label={locale === 'th' ? 'วันที่' : 'Date'}
+              label={'Date'}
               type="date"
               value={formData.date}
               onChange={e => setFormData({ ...formData, date: e.target.value })}
             />
             <Input
-              label={locale === 'th' ? 'หมายเหตุ' : 'Note'}
+              label={'Note'}
               value={formData.note}
               onChange={e => setFormData({ ...formData, note: e.target.value })}
-              placeholder={locale === 'th' ? 'บันทึกเพิ่มเติม...' : 'Optional note...'}
+              placeholder={'Optional note...'}
             />
             <div className="flex gap-2">
               <Button type="submit" className="flex-1">
-                {editingId ? (locale === 'th' ? 'อัปเดต' : 'Update') : (locale === 'th' ? 'เพิ่ม' : 'Add')}
+                {editingId ? ('Update') : ('Add')}
               </Button>
               <Button type="button" variant="secondary" onClick={resetForm}>
-                {locale === 'th' ? 'ยกเลิก' : 'Cancel'}
+                {'Cancel'}
               </Button>
             </div>
           </form>
@@ -250,11 +250,11 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
       <div className="space-y-2">
         {loading ? (
           <div className="text-center py-8 text-white/50">
-            {locale === 'th' ? 'กำลังโหลด...' : 'Loading...'}
+            {'Loading...'}
           </div>
         ) : expenses.length === 0 ? (
           <div className="text-center py-8 text-white/50">
-            {locale === 'th' ? 'ยังไม่มีค่าใช้จ่าย เพิ่มรายการแรกได้เลย!' : 'No expenses yet. Add your first expense!'}
+            {'No expenses yet. Add your first expense!'}
           </div>
         ) : (
           <div className="space-y-2">
@@ -264,7 +264,7 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
                 const budget = categoryBudgets.get(expense.category);
                 const spent = categorySpending.get(expense.category) || 0;
                 const cat = CATEGORIES.find(c => c.value === expense.category);
-                const catLabel = locale === 'th' ? cat?.label.th : cat?.label.en;
+                const catLabel = cat?.label.en;
                 const overBudget = budget && spent > budget;
                 
                 const sourceIcon = expense.source === 'voice' ? '🎤' : 
@@ -285,13 +285,13 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
                           {sourceIcon}
                         </span>
                         {overBudget && <span className="text-xs px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400">
-                          {locale === 'th' ? 'เกินงบ' : 'Over Budget'}
+                          {'Over Budget'}
                         </span>}
                         {boardId && (
                           <button
                             type="button"
                             onClick={() => setNoteExpenseId(expense.id)}
-                            aria-label={locale === 'th' ? 'บันทึกการซื้อร่วม' : 'Shared note'}
+                            aria-label={'Shared note'}
                             className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${
                               notes[expense.id]
                                 ? 'bg-amber-400/20 text-amber-400 border-amber-400/30'
@@ -303,7 +303,7 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
                         )}
                       </div>
                       <p className="text-xs text-white/50 mt-0.5 truncate">
-                        {new Date(expense.date).toLocaleDateString(locale === 'th' ? 'th-TH' : 'en-US')} • {formatCurrency(expense.amount, locale)}
+                        {new Date(expense.date).toLocaleDateString('en-US')} • {formatCurrency(expense.amount, locale)}
                         {expense.note && ` • ${expense.note}`}
                         {notes[expense.id] && ` • 📝 ${notes[expense.id].note}`}
                       </p>

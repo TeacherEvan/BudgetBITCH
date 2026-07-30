@@ -18,14 +18,14 @@ interface CashFlowProjectionCardProps {
   monthlyIncome?: number;
   commitment?: CriticalExpenseCommitment | null;
   currency?: CurrencyCode | null;
-  locale?: 'th' | 'en';
+  locale?: string;
 }
 
 export function CashFlowProjectionCard({
   currentCashBalance = 35000,
   monthlyIncome = 45000,
   commitment,
-  currency = 'THB',
+  currency = 'USD',
   locale = 'en',
 }: CashFlowProjectionCardProps) {
   const isTh = locale === 'th';
@@ -39,16 +39,16 @@ export function CashFlowProjectionCard({
 
     // Mock scheduled events across the next 30 days
     const events: Record<number, { title: string; amount: number; isIncome?: boolean }> = {
-      5: { title: isTh ? 'ค่าน้ำ/ค่าไฟ' : 'Utilities & Water', amount: -2800 },
-      10: { title: isTh ? 'ค่าเช่า/ผ่อนบ้าน' : 'Rent / Housing', amount: -12500 },
-      15: { title: isTh ? 'เงินเดือน / Income Payday' : 'Mid-Month Salary', amount: Math.round(monthlyIncome * 0.5), isIncome: true },
-      20: { title: isTh ? 'ค่าบัตรเครดิต' : 'Credit Card Statement', amount: -6400 },
-      25: { title: isTh ? 'ค่าประกันภัย / Subscriptions' : 'Subscriptions & Insurance', amount: -1800 },
-      30: { title: isTh ? 'เงินเดือนสิ้นเดือน' : 'End-Month Salary', amount: Math.round(monthlyIncome * 0.5), isIncome: true },
+      5: { title: 'Utilities & Water', amount: -2800 },
+      10: { title: 'Rent / Housing', amount: -12500 },
+      15: { title: 'Mid-Month Salary', amount: Math.round(monthlyIncome * 0.5), isIncome: true },
+      20: { title: 'Credit Card Statement', amount: -6400 },
+      25: { title: 'Subscriptions & Insurance', amount: -1800 },
+      30: { title: 'End-Month Salary', amount: Math.round(monthlyIncome * 0.5), isIncome: true },
     };
 
     if (commitment) {
-      const label = CRITICAL_EXPENSES[commitment.expenseKey]?.[isTh ? 'labelTh' : 'labelEn'] ?? commitment.expenseKey;
+      const label = CRITICAL_EXPENSES[commitment.expenseKey]?.['labelEn'] ?? commitment.expenseKey;
       events[12] = {
         title: label,
         amount: -commitment.estimatedMonthlyCost,
@@ -93,10 +93,10 @@ export function CashFlowProjectionCard({
           </div>
           <div>
             <h3 className="font-bold text-white text-base">
-              {isTh ? 'ประมาณการกระแสเงินสด 30 วัน' : '30-Day Cash Flow Schedule'}
+              {'30-Day Cash Flow Schedule'}
             </h3>
             <p className="text-xs text-white/50">
-              {isTh ? 'คำนวณเงินคงเหลือตามกำหนดชำระรายจ่าย' : 'Excel-grade daily balance roll-forward & overdraft guard'}
+              {'Excel-grade daily balance roll-forward & overdraft guard'}
             </p>
           </div>
         </div>
@@ -110,7 +110,7 @@ export function CashFlowProjectionCard({
               viewMode === 'timeline' ? 'bg-amber-400 text-black font-semibold' : 'text-white/60 hover:text-white'
             }`}
           >
-            {isTh ? 'กราฟ' : 'Graph'}
+            {'Graph'}
           </button>
           <button
             type="button"
@@ -119,7 +119,7 @@ export function CashFlowProjectionCard({
               viewMode === 'schedule' ? 'bg-amber-400 text-black font-semibold' : 'text-white/60 hover:text-white'
             }`}
           >
-            {isTh ? 'รายการ' : 'List'}
+            {'List'}
           </button>
         </div>
       </div>
@@ -130,9 +130,7 @@ export function CashFlowProjectionCard({
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             <span>
-              {isTh
-                ? `เตือน: มีวันเงินเหลือต่ำกว่า 5,000 ${currency} (${lowBalanceDays.length} วัน)`
-                : `Low Water Mark Warning: Balance drops below 5,000 ${currency} on ${lowBalanceDays.length} days.`}
+              {`Low Water Mark Warning: Balance drops below 5,000 ${currency} on ${lowBalanceDays.length} days.`}
             </span>
           </div>
           <span className="font-bold text-rose-300">Min: {formatMoney(minBalance, currency, locale)}</span>
@@ -192,17 +190,17 @@ export function CashFlowProjectionCard({
           {/* Key Summary Stats */}
           <div className="grid grid-cols-3 gap-3 text-center">
             <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
-              <p className="text-[10px] text-white/50">{isTh ? 'ยอดปัจจุบัน' : 'Start Balance'}</p>
+              <p className="text-[10px] text-white/50">{'Start Balance'}</p>
               <p className="text-xs font-bold text-white mt-0.5">{formatMoney(currentCashBalance, currency, locale)}</p>
             </div>
             <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
-              <p className="text-[10px] text-white/50">{isTh ? 'จุดต่ำสุดใน 30 วัน' : 'Lowest 30D Balance'}</p>
+              <p className="text-[10px] text-white/50">{'Lowest 30D Balance'}</p>
               <p className={`text-xs font-bold mt-0.5 ${minBalance < 5000 ? 'text-rose-400' : 'text-emerald-400'}`}>
                 {formatMoney(minBalance, currency, locale)}
               </p>
             </div>
             <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
-              <p className="text-[10px] text-white/50">{isTh ? 'ยอดคาดการณ์สิ้นเดือน' : 'Projected End Balance'}</p>
+              <p className="text-[10px] text-white/50">{'Projected End Balance'}</p>
               <p className="text-xs font-bold text-amber-400 mt-0.5">
                 {formatMoney(projection[projection.length - 1].balance, currency, locale)}
               </p>
@@ -241,7 +239,7 @@ export function CashFlowProjectionCard({
                       {formatMoney(p.amount ?? 0, currency, locale)}
                     </p>
                     <p className="text-[10px] text-white/50">
-                      {isTh ? 'คงเหลือ: ' : 'After: '}
+                      {'After: '}
                       {formatMoney(p.balance, currency, locale)}
                     </p>
                   </div>

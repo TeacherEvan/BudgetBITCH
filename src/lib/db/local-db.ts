@@ -69,7 +69,7 @@ export interface BudgetBITCHDB extends DBSchema {
   settings: {
     key: string;
     value: {
-      preferredLocale: 'th' | 'en';
+      preferredLocale: string;
       voiceSettings: { enabled: boolean; rate: number; pitch: number };
       privacyDisclaimerAccepted: boolean;
     };
@@ -399,7 +399,7 @@ export async function addNewsItem(item: NewsItem): Promise<void> {
   await db.put('newsCache', item);
 }
 
-export async function getNewsByLocale(locale: 'th' | 'en'): Promise<NewsItem[]> {
+export async function getNewsByLocale(locale: string): Promise<NewsItem[]> {
   const db = await getDB();
   return db.getAllFromIndex('newsCache', 'by-locale', locale);
 }
@@ -433,7 +433,7 @@ export async function getLocationCache(): Promise<LocationCache | undefined> {
 
 // Settings
 export async function saveSettings(settings: { 
-  preferredLocale: 'th' | 'en'; 
+  preferredLocale: string; 
   voiceSettings: { enabled: boolean; rate: number; pitch: number };
   privacyDisclaimerAccepted: boolean;
 }): Promise<void> {
@@ -442,7 +442,7 @@ export async function saveSettings(settings: {
 }
 
 export async function getSettings(): Promise<{ 
-  preferredLocale: 'th' | 'en'; 
+  preferredLocale: string; 
   voiceSettings: { enabled: boolean; rate: number; pitch: number };
   privacyDisclaimerAccepted: boolean;
 } | undefined> {

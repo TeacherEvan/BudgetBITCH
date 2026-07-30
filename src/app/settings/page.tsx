@@ -36,7 +36,7 @@ import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { Bug } from 'lucide-react';
 
-type SettingsLocale = 'th' | 'en';
+type SettingsLocale = string;
 
 export default function SettingsPage() {
   const localeRaw = useLocale();
@@ -81,13 +81,13 @@ export default function SettingsPage() {
               <button
                 type="button"
                 onClick={() => router.push('/dashboard')}
-                aria-label={locale === 'th' ? 'กลับ' : 'Back'}
+                aria-label={'Back'}
                 className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-white/70 transition-colors hover:border-[rgba(201,150,12,0.4)] hover:text-[#E8B020]"
               >
                 <ArrowLeft className="h-5 w-5" />
               </button>
               <h1 className="text-xl font-bold text-white">
-                {locale === 'th' ? 'ตั้งค่า' : 'Settings'}
+                {'Settings'}
               </h1>
             </div>
             <Button
@@ -97,7 +97,7 @@ export default function SettingsPage() {
               className="flex items-center gap-1.5 border-rose-500/30 text-rose-400 hover:bg-rose-500/10 hover:text-rose-300"
             >
               <LogOut className="h-4 w-4" />
-              <span>{locale === 'th' ? 'ออกจากระบบ' : 'Sign Out'}</span>
+              <span>{'Sign Out'}</span>
             </Button>
           </div>
 
@@ -108,14 +108,14 @@ export default function SettingsPage() {
           >
             {(
               [
-                { id: 'general', label: { en: 'General', th: 'ทั่วไป' }, icon: <Globe className="w-3.5 h-3.5" /> },
-                { id: 'profile', label: { en: 'Profile', th: 'โปรไฟล์' }, icon: <User className="w-3.5 h-3.5" /> },
-                { id: 'display', label: { en: 'Display', th: 'การแสดงผล' }, icon: <Palette className="w-3.5 h-3.5" /> },
-                { id: 'news', label: { en: 'News', th: 'ข่าวสาร' }, icon: <Newspaper className="w-3.5 h-3.5" /> },
-                { id: 'preferences', label: { en: 'Preferences', th: 'การตั้งค่า' }, icon: <Settings className="w-3.5 h-3.5" /> },
-                { id: 'data', label: { en: 'Data', th: 'ข้อมูล' }, icon: <Download className="w-3.5 h-3.5" /> },
-                { id: 'shared', label: { en: 'Shared Board', th: 'บอร์ดคู่' }, icon: <Users className="w-3.5 h-3.5" /> },
-                { id: 'privacy', label: { en: 'Privacy', th: 'ความเป็นส่วนตัว' }, icon: <Shield className="w-3.5 h-3.5" /> },
+                { id: 'general', label: { en: 'General' }, icon: <Globe className="w-3.5 h-3.5" /> },
+                { id: 'profile', label: { en: 'Profile' }, icon: <User className="w-3.5 h-3.5" /> },
+                { id: 'display', label: { en: 'Display' }, icon: <Palette className="w-3.5 h-3.5" /> },
+                { id: 'news', label: { en: 'News' }, icon: <Newspaper className="w-3.5 h-3.5" /> },
+                { id: 'preferences', label: { en: 'Preferences' }, icon: <Settings className="w-3.5 h-3.5" /> },
+                { id: 'data', label: { en: 'Data' }, icon: <Download className="w-3.5 h-3.5" /> },
+                { id: 'shared', label: { en: 'Shared Board' }, icon: <Users className="w-3.5 h-3.5" /> },
+                { id: 'privacy', label: { en: 'Privacy' }, icon: <Shield className="w-3.5 h-3.5" /> },
               ] as const
             ).map((tab) => (
               <a
@@ -124,7 +124,7 @@ export default function SettingsPage() {
                 className="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-white/60 transition-colors hover:border-[rgba(201,150,12,0.4)] hover:text-[#E8B020] flex-shrink-0"
               >
                 {tab.icon}
-                {tab.label[locale]}
+                {tab.label.en}
               </a>
             ))}
           </nav>
@@ -168,13 +168,11 @@ export default function SettingsPage() {
           {/* Feedback / Bug report section */}
           <section id="settings-feedback" className="scroll-mt-24">
             <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#C9960C] mb-4">
-              {locale === 'th' ? 'รายงานบั๊ก / แจ้งปัญหา' : 'Report Bug & Feedback'}
+              {'Report Bug & Feedback'}
             </h2>
             <div className="p-4 rounded-2xl border border-white/10 bg-white/5 space-y-3">
               <p className="text-sm text-white/60">
-                {locale === 'th'
-                  ? 'พบบั๊กหรือมีปัญหาการใช้งาน? รายงานถึงแดชบอร์ดแอดมินในแอปพร้อมแนบประวัติ 20 รายการล่าสุด'
-                  : 'Found a bug or issue? Report to the in-app admin dashboard with attached 20 action logs.'}
+                {'Found a bug or issue? Report to the in-app admin dashboard with attached 20 action logs.'}
               </p>
               <Button
                 variant="primary"
@@ -182,7 +180,7 @@ export default function SettingsPage() {
                 onClick={() => setShowBugModal(true)}
               >
                 <Bug className="w-4 h-4" />
-                {locale === 'th' ? 'รายงานบั๊ก (แนบ 20 Action Logs)' : 'Report Bug (with 20 Action Logs)'}
+                {'Report Bug (with 20 Action Logs)'}
               </Button>
             </div>
           </section>
@@ -199,16 +197,14 @@ export default function SettingsPage() {
           <section className="pt-6">
             <div className="p-4 rounded-2xl border border-white/10 bg-white/5 space-y-3">
               <p className="text-sm text-white/60">
-                {locale === 'th'
-                  ? 'ปิดแอป (ใช้เมื่อเปิดในโหมด PWA/สแตนด์อโลน)'
-                  : 'Close the app (useful in PWA / standalone mode where the window close control is hidden).'}
+                {'Close the app (useful in PWA / standalone mode where the window close control is hidden).'}
               </p>
               <Button
                 variant="secondary"
                 className="w-full gap-2 justify-center"
                 onClick={() => window.close()}
               >
-                {locale === 'th' ? 'ปิดแอป' : 'Close App'}
+                {'Close App'}
               </Button>
             </div>
           </section>

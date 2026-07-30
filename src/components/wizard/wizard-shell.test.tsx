@@ -8,6 +8,7 @@ import { getLocaleMessages } from '@/i18n/messages';
 
 vi.mock('@/lib/db/local-db', () => ({
   saveWizardProfile: vi.fn().mockResolvedValue(undefined),
+  getLocationCache: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('convex/react', () => ({

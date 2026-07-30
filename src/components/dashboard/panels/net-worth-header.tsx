@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { useCurrency } from '@/hooks/use-currency';
 
 interface NetWorthHeaderProps {
-  locale: 'th' | 'en';
+  locale: string;
   totalAssets: number;
   totalLiabilities: number;
   netWorth: number;
@@ -27,7 +27,7 @@ export function NetWorthHeader({ locale, totalAssets, totalLiabilities, netWorth
         transition={{ delay: 0.05 }}
         className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 p-4"
       >
-        <p className="text-sm text-emerald-400">{locale === 'th' ? 'รวมทรัพย์สิน' : 'Total Assets'}</p>
+        <p className="text-sm text-emerald-400">{'Total Assets'}</p>
         <p className="text-2xl font-bold font-mono text-white">{formatCurrency(totalAssets, locale)}</p>
       </motion.div>
       <motion.div
@@ -36,7 +36,7 @@ export function NetWorthHeader({ locale, totalAssets, totalLiabilities, netWorth
         transition={{ delay: 0.1 }}
         className="rounded-xl border border-rose-400/30 bg-rose-400/10 p-4"
       >
-        <p className="text-sm text-rose-400">{locale === 'th' ? 'รวมหนี้สิน' : 'Total Liabilities'}</p>
+        <p className="text-sm text-rose-400">{'Total Liabilities'}</p>
         <p className="text-2xl font-bold font-mono text-white">{formatCurrency(totalLiabilities, locale)}</p>
       </motion.div>
       <motion.div
@@ -45,7 +45,7 @@ export function NetWorthHeader({ locale, totalAssets, totalLiabilities, netWorth
         transition={{ delay: 0.15 }}
         className={`rounded-xl p-4 ${isPositive ? 'bg-emerald-400/10 border-emerald-400/30' : 'bg-rose-400/10 border-rose-400/30'}`}
       >
-        <p className="text-sm text-amber-400">{locale === 'th' ? 'มูลค่าสุทธิ' : 'Net Worth'}</p>
+        <p className="text-sm text-amber-400">{'Net Worth'}</p>
         <p className={`text-2xl font-bold font-mono ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
           {isPositive ? '+' : ''}{formatCurrency(netWorth, locale)}
         </p>

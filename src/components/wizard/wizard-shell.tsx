@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { WizardProfile } from '@/lib/types/budget';
 import { saveWizardProfile } from '@/lib/db/local-db';
 import type { CurrencyCode } from '@/lib/utils/currency';
+import { useCurrencyOverride } from '@/hooks/use-currency-override';
 import { WizardProgress } from './wizard-progress';
 import { StepIncome } from './steps/step-income';
 import { StepRent } from './steps/step-rent';
@@ -45,14 +46,14 @@ const STEPS: WizardStepId[] = [
 ];
 
 interface WizardShellProps {
-  locale: 'th' | 'en' | 'en-ZA' | 'en-TH' | string;
+  locale: string;
   onComplete: () => void;
   isModal?: boolean;
 }
 
 export function WizardShell({ locale, onComplete, isModal = false }: WizardShellProps) {
-  const isThai = locale === 'th';
-  const normLocale: 'th' | 'en' = isThai ? 'th' : 'en';
+  const normLocale: string = 'en';
+  const { override: currencyOverride } = useCurrencyOverride();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [stepValues, setStepValues] = useState<Partial<WizardProfile['answers']>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -75,7 +76,7 @@ export function WizardShell({ locale, onComplete, isModal = false }: WizardShell
     }
 
     if (isEmpty) {
-      setErrorMessage(isThai ? 'กรุณากรอกข้อมูลก่อนดำเนินต่อ' : 'Please fill in this step');
+      setErrorMessage('Please fill in this step');
       return;
     }
 
@@ -88,7 +89,7 @@ export function WizardShell({ locale, onComplete, isModal = false }: WizardShell
         completed: true,
         completedAt: new Date().toISOString(),
         version: 1,
-        locale: (['th', 'en', 'en-ZA', 'en-TH'].includes(locale) ? locale : 'en-ZA') as WizardProfile['locale'],
+        locale: ((['th', 'en', 'en-ZA'] as string[]).includes(locale) ? locale : 'en') as WizardProfile['locale'],
         answers: {
           income: stepValues.income ?? 0,
           rent: stepValues.rent ?? 0,
@@ -101,7 +102,7 @@ export function WizardShell({ locale, onComplete, isModal = false }: WizardShell
           riskTolerance: stepValues.riskTolerance ?? 'medium',
           locationConsent: stepValues.locationConsent ?? false,
           receiptScanned: stepValues.receiptScanned ?? false,
-          currency: (locale === 'en-ZA' ? 'ZAR' : locale.includes('TH') || locale === 'th' ? 'THB' : 'USD') as CurrencyCode,
+          currency: (stepValues.currency ?? currencyOverride ?? (locale === 'en-ZA' ? 'ZAR' : 'USD')) as CurrencyCode,
           ...stepValues,
         },
       };
@@ -111,7 +112,7 @@ export function WizardShell({ locale, onComplete, isModal = false }: WizardShell
     } else {
       setCurrentStepIndex(prev => prev + 1);
     }
-  }, [currentStepIndex, stepValues, isLastStep, locale, isThai, onComplete]);
+  }, [currentStepIndex, stepValues, isLastStep, locale, onComplete]);
 
   const handleBack = useCallback(() => {
     if (!isFirstStep) {
@@ -256,7 +257,7 @@ export function WizardShell({ locale, onComplete, isModal = false }: WizardShell
           className="gap-2"
         >
           <ArrowLeft className="w-4 h-4" />
-          {isThai ? 'ย้อนกลับ' : 'Back'}
+          {'Back'}
         </Button>
 
         <Button
@@ -266,7 +267,7 @@ export function WizardShell({ locale, onComplete, isModal = false }: WizardShell
           disabled={isSubmitting}
           className="gap-2 bg-amber-400 text-black hover:bg-amber-300 font-semibold"
         >
-          {isLastStep ? (isThai ? 'เสร็จสิ้น' : 'Finish') : (isThai ? 'ถัดไป' : 'Next')}
+          {isLastStep ? ('Finish') : ('Next')}
           <ArrowRight className="w-4 h-4" />
         </Button>
       </div>

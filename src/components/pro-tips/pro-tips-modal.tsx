@@ -11,10 +11,10 @@ interface ProTipsModalProps {
   tip: ProTip | null;
   isOpen: boolean;
   onClose: () => void;
-  locale: 'th' | 'en';
+  locale: string;
 }
 
-export function ProTipsModal({ tip, isOpen, onClose, locale }: ProTipsModalProps) {
+export function ProTipsModal({ tip, isOpen, onClose}: ProTipsModalProps) {
   if (!tip) return null;
 
   const renderIllustration = () => {
@@ -118,7 +118,7 @@ export function ProTipsModal({ tip, isOpen, onClose, locale }: ProTipsModalProps
 
         <div className="pt-4 flex justify-end">
           <Button variant="secondary" onClick={onClose} className="w-full sm:w-auto text-xs py-2 px-4 h-auto">
-            {locale === 'th' ? 'ปิดหน้านี้' : 'Close Details'}
+            {'Close Details'}
           </Button>
         </div>
       </div>

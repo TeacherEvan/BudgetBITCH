@@ -277,7 +277,7 @@ describe('AccountsView', () => {
       fireEvent.click(screen.getByRole('button', { name: /^create$/i }));
     });
 
-    const errorBanner = screen.getByText(/กรุณาเข้าสู่ระบบก่อนสร้างบัญชีร่วม/i);
+    const errorBanner = screen.getByText(/Please sign in to create or share accounts/i);
     expect(errorBanner).toBeTruthy();
     expect(errorBanner.className).toContain('border-rose-500/30');
   });

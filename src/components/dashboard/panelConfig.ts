@@ -13,19 +13,19 @@ export type PanelKey =
   | 'debt' 
   | 'forecast';
 
-export const PANEL_CONFIG: Record<PanelKey, { label: { th: string; en: string }; icon: string }> = {
-  daily_budget: { label: { th: 'งบประมาณรายวัน', en: 'Daily Budget' }, icon: '📅' },
-  expenses: { label: { th: 'ค่าใช้จ่าย', en: 'Expenses' }, icon: '💸' },
-  inflow: { label: { th: 'รายรับ', en: 'Inflow / Income' }, icon: '💵' },
-  budget: { label: { th: 'งบประมาณ', en: 'Budget' }, icon: '📊' },
-  budgetAlerts: { label: { th: 'การแจ้งเตือน', en: 'Budget Alerts' }, icon: '🔔' },
-  bills: { label: { th: 'บิล/บิลล์', en: 'Bills' }, icon: '📋' },
-  goals: { label: { th: 'เป้าหมาย', en: 'Goals' }, icon: '🎯' },
-  netWorth: { label: { th: 'มูลค่าสุทธิ', en: 'Net Worth' }, icon: '💰' },
-  subscriptions: { label: { th: 'สมัครสมาชิก', en: 'Subscriptions' }, icon: '📺' },
-  emergency: { label: { th: 'เงินสำรอง', en: 'Emergency' }, icon: '🛡️' },
-  debt: { label: { th: 'หนี้สิน', en: 'Debt' }, icon: '📉' },
-  forecast: { label: { th: 'พยากรณ์', en: 'Forecast' }, icon: '🔮' },
+export const PANEL_CONFIG: Record<PanelKey, { label: { en: string }; icon: string }> = {
+  daily_budget: { label: { en: 'Daily Budget' }, icon: '📅' },
+  expenses: { label: { en: 'Expenses' }, icon: '💸' },
+  inflow: { label: { en: 'Inflow / Income' }, icon: '💵' },
+  budget: { label: { en: 'Budget' }, icon: '📊' },
+  budgetAlerts: { label: { en: 'Budget Alerts' }, icon: '🔔' },
+  bills: { label: { en: 'Bills' }, icon: '📋' },
+  goals: { label: { en: 'Goals' }, icon: '🎯' },
+  netWorth: { label: { en: 'Net Worth' }, icon: '💰' },
+  subscriptions: { label: { en: 'Subscriptions' }, icon: '📺' },
+  emergency: { label: { en: 'Emergency' }, icon: '🛡️' },
+  debt: { label: { en: 'Debt' }, icon: '📉' },
+  forecast: { label: { en: 'Forecast' }, icon: '🔮' },
 };
 
 export const PANEL_ORDER: PanelKey[] = [
@@ -53,7 +53,7 @@ export const EXCEL_TABS: { key: ExcelTab; label: string; icon: string; color: st
 ];
 
 export const createPanelConfigs = (
-  locale: 'th' | 'en',
+  locale: string,
   onSetup?: () => void
 ) => {
   // Lazy import to avoid circular deps

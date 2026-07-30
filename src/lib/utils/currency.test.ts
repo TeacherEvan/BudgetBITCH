@@ -66,8 +66,8 @@ describe('currencyFromLocation', () => {
 });
 
 describe('formatMoney', () => {
-  it('formats THB with symbol under th locale', () => {
-    expect(formatMoney(12500, 'THB', 'th')).toBe('฿12,500');
+  it('formats THB with symbol under en locale', () => {
+    expect(formatMoney(12500, 'THB', 'en')).toBe('THB\u00a012,500');
   });
 
   it('formats USD with symbol under en locale', () => {
@@ -76,7 +76,7 @@ describe('formatMoney', () => {
 
   it('formats null currency as plain grouped numerals (no symbol)', () => {
     expect(formatMoney(12500, null, 'en')).toBe('12,500');
-    expect(formatMoney(12500, null, 'th')).toBe('12,500');
+    expect(formatMoney(12500, null, 'de')).toBe('12.500');
   });
 
   it('formats negative amounts with symbol', () => {
@@ -86,11 +86,10 @@ describe('formatMoney', () => {
 
 describe('formatCurrency (legacy locale helper)', () => {
   it('honors explicit currency param when provided', () => {
-    expect(formatCurrency(100, 'th', 'THB')).toBe('฿100');
+    expect(formatCurrency(100, 'en', 'THB')).toBe('THB\u00a0100');
   });
 
-  it('falls back to th->THB / en->USD when no currency given', () => {
-    expect(formatCurrency(100, 'th')).toBe('฿100');
+  it('falls back to USD when no currency given', () => {
     expect(formatCurrency(100, 'en')).toBe('$100');
   });
 

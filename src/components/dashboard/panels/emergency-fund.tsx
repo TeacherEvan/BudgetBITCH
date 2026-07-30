@@ -14,7 +14,7 @@ import { useCurrency } from '@/hooks/use-currency';
 import { EmergencyFundSkeleton } from './emergency-fund-skeleton';
 
 interface EmergencyFundProps {
-  locale?: 'th' | 'en';
+  locale?: string;
 }
 
 interface FormData {
@@ -93,7 +93,7 @@ export function EmergencyFund({ locale = 'en' }: EmergencyFundProps) {
         >
           <Button variant="primary" size="sm">
             <Plus className="w-4 h-4 mr-1" />
-            {locale === 'th' ? 'ตั้งเป้า' : 'Set Target'}
+            {'Set Target'}
           </Button>
         </motion.button>
       </div>
@@ -118,7 +118,7 @@ export function EmergencyFund({ locale = 'en' }: EmergencyFundProps) {
             transition={{ delay: 0.15 }}
             className="text-sm text-white/60"
           >
-            {locale === 'th' ? 'เป้าหมาย' : 'Target'}
+            {'Target'}
           </motion.p>
           <motion.p
             initial={{ opacity: 0, y: 5 }}
@@ -134,7 +134,7 @@ export function EmergencyFund({ locale = 'en' }: EmergencyFundProps) {
             transition={{ delay: 0.25 }}
             className="text-sm text-white/60"
           >
-            {locale === 'th' ? 'ปัจจุบัน' : 'Current'}: {formatCurrency(fund.currentAmount, locale)}
+            {'Current'}: {formatCurrency(fund.currentAmount, locale)}
           </motion.p>
           <motion.p
             initial={{ opacity: 0 }}
@@ -142,7 +142,7 @@ export function EmergencyFund({ locale = 'en' }: EmergencyFundProps) {
             transition={{ delay: 0.3 }}
             className="text-sm text-white/60"
           >
-            {locale === 'th' ? 'เหลือ' : 'Remaining'}: {formatCurrency(remaining, locale)}
+            {'Remaining'}: {formatCurrency(remaining, locale)}
           </motion.p>
           {isComplete && (
             <motion.div
@@ -151,7 +151,7 @@ export function EmergencyFund({ locale = 'en' }: EmergencyFundProps) {
               className="flex items-center gap-2 mt-2 text-emerald-400"
             >
               <CheckCircle className="w-5 h-5" aria-hidden="true" />
-              <span className="font-medium">{locale === 'th' ? 'บรรลุเป้าหมายแล้ว!' : 'Goal Achieved!'}</span>
+              <span className="font-medium">{'Goal Achieved!'}</span>
             </motion.div>
           )}
         </div>
@@ -163,7 +163,7 @@ export function EmergencyFund({ locale = 'en' }: EmergencyFundProps) {
         transition={{ delay: 0.2 }}
       >
         <Card className="p-4" variant="default">
-          <h4 className="font-semibold text-white mb-3">{locale === 'th' ? 'เพิ่มเงินเข้ากองทุน' : 'Add to Fund'}</h4>
+          <h4 className="font-semibold text-white mb-3">{'Add to Fund'}</h4>
           <div className="grid gap-3 sm:grid-cols-3">
             {[
               { amount: 1000, variant: 'secondary' as const },
@@ -191,21 +191,21 @@ export function EmergencyFund({ locale = 'en' }: EmergencyFundProps) {
       <Modal
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}
-        title={locale === 'th' ? 'ตั้งเป้ากองทุนสำรอง' : 'Set Emergency Fund Target'}
+        title={'Set Emergency Fund Target'}
         size="md"
         closeOnEscape
         closeOnOverlayClick
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
-            label={locale === 'th' ? 'ชื่อกองทุน' : 'Fund Name'}
+            label={'Fund Name'}
             value={formData.name}
             onChange={e => setFormData({ ...formData, name: e.target.value })}
             required
             autoFocus
           />
           <Input
-            label={locale === 'th' ? 'เป้าหมายจำนวนเงิน' : 'Target Amount'}
+            label={'Target Amount'}
             type="number"
             step="0.01"
             min="0"
@@ -214,7 +214,7 @@ export function EmergencyFund({ locale = 'en' }: EmergencyFundProps) {
             required
           />
           <Input
-            label={locale === 'th' ? 'จำนวนปัจจุบัน' : 'Current Amount'}
+            label={'Current Amount'}
             type="number"
             step="0.01"
             min="0"
@@ -223,10 +223,10 @@ export function EmergencyFund({ locale = 'en' }: EmergencyFundProps) {
           />
           <div className="flex gap-2 pt-2">
             <Button type="button" variant="secondary" onClick={() => setIsFormOpen(false)} className="flex-1">
-              {locale === 'th' ? 'ยกเลิก' : 'Cancel'}
+              {'Cancel'}
             </Button>
             <Button type="submit" className="flex-1">
-              {locale === 'th' ? 'บันทึก' : 'Save'}
+              {'Save'}
             </Button>
           </div>
         </form>

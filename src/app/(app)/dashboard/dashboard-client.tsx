@@ -28,11 +28,12 @@ const MANIFESTO_KEY = 'bb:manifesto-v1';
 export function DashboardClient({ wizardCompleted: initialWizardCompleted }: DashboardClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const locale = useLocale() as 'th' | 'en';
+  const locale = useLocale();
   
   const { profile, loading: profileLoading } = useWizardProfile();
   const [wizardCompleted, setWizardCompleted] = useState(initialWizardCompleted);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingDismissed, setLoadingDismissed] = useState(false);
   const [budgetsInitialized, setBudgetsInitialized] = useState(false);
   const [wizardForced, setWizardForced] = useState(false);
 
@@ -67,7 +68,7 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
   useAccountSync();
 
   const handleLocaleChange = useCallback(
-    (nextLocale: 'th' | 'en') => {
+    (nextLocale: string) => {
       document.cookie = `bb-locale=${nextLocale}; path=/; max-age=31536000; samesite=lax`;
       router.refresh();
     },
@@ -134,6 +135,7 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
     (async () => {
       try {
         console.log('Restoring completed wizard profile and settings from Convex snapshot...');
+        setLoadingDismissed(false);
         setIsLoading(true);
         
         // Restore wizard profile
@@ -176,8 +178,10 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
     router.refresh();
   }, [router]);
 
-  if (isLoading || profileLoading) {
-    return <MoneySyncLoading locale={locale} />;
+  // Hold the loading overlay for its minimum display time even if data resolves
+  // instantly — prevents the snap/jump flicker on fast loads.
+  if ((isLoading || profileLoading) && !loadingDismissed) {
+    return <MoneySyncLoading locale={locale} onComplete={() => setLoadingDismissed(true)} />;
   }
 
   return (

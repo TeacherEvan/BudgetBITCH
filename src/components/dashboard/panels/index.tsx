@@ -17,7 +17,7 @@ import { CategoryPivotCard } from '../category-pivot-card';
 import { BentoGrid, type PanelConfig } from '../bento-grid';
 import type { WizardProfile } from '@/lib/types/budget';
 
-export const buildPanels = (locale: 'th' | 'en', onSetup?: () => void): PanelConfig[] => [
+export const buildPanels = (locale: string, onSetup?: () => void): PanelConfig[] => [
   { id: 'daily_budget', title: 'Daily Budget', children: <DailyDisposableHero locale={locale} onSetup={onSetup} /> },
   { id: 'expenses', title: 'Expenses', children: <ExpenseTracker /> },
   { id: 'inflow', title: 'Income Inflow', children: <IncomeInflowPanel /> },
@@ -32,10 +32,10 @@ export const buildPanels = (locale: 'th' | 'en', onSetup?: () => void): PanelCon
   { id: 'forecast', title: 'Forecast', children: <CashFlowForecast /> },
 ];
 
-export const buildExcelPanels = (locale: 'th' | 'en', profile: WizardProfile | null): PanelConfig[] => [
-  { id: 'variance', title: 'Variance Grid', children: <BudgetVarianceGrid locale={locale} currency={profile?.answers?.currency ?? 'THB'} /> },
-  { id: 'cashflow', title: '30D Cash Flow', children: <CashFlowProjectionCard locale={locale} currency={profile?.answers?.currency ?? 'THB'} currentCashBalance={35000} monthlyIncome={profile?.answers?.income ?? 45000} /> },
-  { id: 'pivot', title: '50/30/20 Matrix', children: <CategoryPivotCard locale={locale} currency={profile?.answers?.currency ?? 'THB'} profile={profile} /> },
+export const buildExcelPanels = (locale: string, profile: WizardProfile | null): PanelConfig[] => [
+  { id: 'variance', title: 'Variance Grid', children: <BudgetVarianceGrid locale={locale} currency={profile?.answers?.currency ?? 'USD'} /> },
+  { id: 'cashflow', title: '30D Cash Flow', children: <CashFlowProjectionCard locale={locale} currency={profile?.answers?.currency ?? 'USD'} currentCashBalance={35000} monthlyIncome={profile?.answers?.income ?? 45000} /> },
+  { id: 'pivot', title: '50/30/20 Matrix', children: <CategoryPivotCard locale={locale} currency={profile?.answers?.currency ?? 'USD'} profile={profile} /> },
 ];
 
 export { BentoGrid, type PanelConfig };

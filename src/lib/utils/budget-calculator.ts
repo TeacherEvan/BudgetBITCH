@@ -141,7 +141,7 @@ export function calculateBudgetFromWizard(profile: WizardProfile): BudgetCalcula
  * user really spent (from IndexedDB) from the planned disposable pool, so the
  * hero reflects reality instead of a stale snapshot.
  *
- * Without this, a returning user who logs ฿4,000 of expenses sees an identical
+ * Without this, a returning user who logs 4,000 of expenses sees an identical
  * hero and concludes "the app isn't tracking me" — the #1 source of confusion.
  */
 export interface ReconciledBudget {

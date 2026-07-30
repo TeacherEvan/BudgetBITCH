@@ -8,12 +8,6 @@ import { ShieldCheck } from 'lucide-react';
 const STORAGE_KEY = 'budgetbitch:privacyDisclaimerWeek';
 
 const LABELS = {
-  th: {
-    title: 'ความเป็นส่วนตัวของคุณ คือคำมั่นสัญญาของเรา',
-    body: 'ไม่มีข้อมูลส่วนตัวใดออกจากโทรศัพท์ของคุณ ข้อมูลส่วนตัวทั้งหมดถูกเข้ารหัสก่อนถึงเซิร์ฟเวอร์ของเรา',
-    learnMore: 'เรียนรู้วิธีที่ข้อมูลของคุณปลอดภัย →',
-    dismiss: 'รับทราบ',
-  },
   en: {
     title: 'Your privacy, our promise',
     body: 'No personal information leaves your phone. All private data is encrypted before it ever reaches our servers.',
@@ -58,8 +52,8 @@ function getClientSnapshot(): boolean {
   }
 }
 
-export function WeeklyPrivacyDisclaimer({ locale }: { locale: 'th' | 'en' }) {
-  const l = LABELS[locale];
+export function WeeklyPrivacyDisclaimer() {
+  const l = LABELS.en;
   const storedOpen = useSyncExternalStore(
     subscribeToStorage,
     getClientSnapshot,

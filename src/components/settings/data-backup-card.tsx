@@ -36,7 +36,7 @@ const RESET_PRESERVE = [
 ];
 
 interface DataBackupCardProps {
-  locale: 'th' | 'en';
+  locale: string;
   lastSync: string | null;
   setLastSync: (time: string) => void;
   clearProfile?: () => void;
@@ -245,7 +245,7 @@ export function DataBackupCard({
       await executeDataImport(data);
     } catch (err: unknown) {
       console.error('Decryption/Import failed:', err);
-      setImportErrorMessage(locale === 'th' ? 'รหัสผ่านไม่ถูกต้อง หรือไฟล์เสียหาย' : 'Incorrect password or corrupted file');
+      setImportErrorMessage('Incorrect password or corrupted file');
       setImportStatus('error');
     }
   };
@@ -267,44 +267,6 @@ export function DataBackupCard({
   };
 
   const l = {
-    th: {
-      dataSection: 'ข้อมูล',
-      privacySection: 'ความเป็นส่วนตัว',
-      exportData: 'ส่งออกข้อมูล (JSON)',
-      importData: 'นำเข้าข้อมูล (JSON)',
-      exportDesc: 'ดาวน์โหลดข้อมูลทั้งหมดเป็นไฟล์ JSON',
-      importDesc: 'นำเข้าข้อมูลจากไฟล์ JSON',
-      exportSuccess: 'ส่งออกสำเร็จ',
-      importSuccess: 'นำเข้าข้อมูลสำเร็จ',
-      importError: 'ไฟล์ไม่ถูกต้อง',
-      syncNow: 'ซิงค์ตอนนี้',
-      syncing: 'กำลังซิงค์...',
-      syncSuccess: 'ซิงค์ข้อมูลสำเร็จ',
-      syncError: 'ซิงค์ล้มเหลว',
-      neverSynced: 'ยังไม่เคยซิงค์',
-      syncDesc: 'ซิงค์โปรไฟล์และสแนปช็อตของคุณไปยังระบบคลาวด์ (ไม่ใช่บอร์ดคู่)',
-      resetData: 'ล้างข้อมูลทั้งหมด',
-      resetConfirmTitle: 'ยืนยันการล้างข้อมูล',
-      resetConfirmBody: 'ลบข้อมูลทั้งหมด: โปรไฟล์, ค่าใช้จ่าย, งบประมาณ, เป้าหมาย ฯลฯ จะไม่สามารถกู้คืนได้',
-      resetConfirmCancel: 'ยกเลิก',
-      resetConfirmDestructive: 'ลบข้อมูลทั้งหมด',
-      privacyDisclaimer: 'ข้อความยอมรับความเป็นส่วนตัว',
-      privacyBody: 'เราใช้ข้อมูลตำแหน่งของคุณ เพื่อแสดงราคาน้ำมัน บิลล์ และโปรโมชั่นใกล้คุณเท่านั้น ไม่ได้เก็บหรือขายข้อมูลให้บุคคลที่สาม ไม่มีการติดตาม และไม่ใช้เพื่อการตลาดใดๆ',
-      criticalExpense: 'ค่าใช้จ่ายที่ต้องลด',
-      committed: 'ยอมรับแล้ว',
-      notCommitted: 'ยังไม่ได้เลือก',
-      password: 'รหัสผ่าน',
-      changePassword: 'เปลี่ยนรหัสผ่าน',
-      passwordDesc: 'รีเซ็ตรหัสผ่านด้วยลิงก์ในหน้า sign-in หรือใช้ฟอร์มด้านล่าง',
-      encryptBackup: 'เข้ารหัสไฟล์สำรองข้อมูล',
-      enterPassword: 'ป้อนรหัสผ่านสำรองข้อมูล',
-      diagnosticsTitle: 'ความสมบูรณ์และวิเคราะห์หน่วยความจำ',
-      diagnosticsDesc: 'ตรวจสอบพื้นที่การจัดเก็บ สภาพระบบ และสแนปช็อตกู้คืนระบบ',
-      diagnosticsBtn: 'การวิเคราะห์และกู้คืน',
-      importPasswordTitle: 'ต้องการรหัสผ่านเพื่อนำเข้าข้อมูล',
-      importPasswordDesc: 'ข้อมูลสำรองนี้ถูกเข้ารหัส กรุณาป้อนรหัสผ่านที่ตั้งค่าไว้เพื่อถอดรหัสและนำเข้าข้อมูล',
-      submit: 'ตกลง',
-    },
     en: {
       dataSection: 'Data',
       privacySection: 'Privacy',
@@ -343,7 +305,7 @@ export function DataBackupCard({
       importPasswordDesc: 'This backup file is encrypted. Enter the backup password to decrypt and restore.',
       submit: 'Submit',
     },
-  }[locale];
+  }.en;
 
   return (
     <>
@@ -425,13 +387,13 @@ export function DataBackupCard({
             <div>
               <div className="flex items-center gap-3 mb-3">
                 <Download className="w-5 h-5 text-amber-400" />
-                <h3 className="font-semibold text-white">{locale === 'th' ? 'ส่งออกข้อมูล (CSV)' : 'Export Data (CSV)'}</h3>
+                <h3 className="font-semibold text-white">{'Export Data (CSV)'}</h3>
               </div>
-              <p className="text-sm text-white/50 mb-4">{locale === 'th' ? 'ดาวน์โหลดค่าใช้จ่าย รายรับ และงบประมาณเป็นไฟล์ CSV' : 'Download expenses, incomes and budgets as a CSV file'}</p>
+              <p className="text-sm text-white/50 mb-4">{'Download expenses, incomes and budgets as a CSV file'}</p>
             </div>
             <div>
               <Button variant="secondary" onClick={handleExportCsv} className="w-full" disabled={csvExporting}>
-                {csvExporting ? (locale === 'th' ? 'กำลังส่งออก...' : 'Exporting...') : (locale === 'th' ? 'ส่งออก CSV' : 'Export CSV')}
+                {csvExporting ? ('Exporting...') : ('Export CSV')}
               </Button>
             </div>
           </Card>
@@ -462,7 +424,7 @@ export function DataBackupCard({
               </div>
               <span className="text-xs text-white/50">
                 {lastSync
-                  ? format(new Date(lastSync), locale === 'th' ? 'd MMM yyyy HH:mm' : 'MMM d, yyyy HH:mm')
+                  ? format(new Date(lastSync), 'MMM d, yyyy HH:mm')
                   : l.neverSynced}
               </span>
             </div>
@@ -516,9 +478,7 @@ export function DataBackupCard({
             {commitment && profile && (
               <div className="bg-black/30 rounded-xl p-3 text-sm">
                 <p className="text-white/70">
-                  {locale === 'th'
-                    ? `คุณเลือกลด: ${commitment.expenseKey} | ประหยัดต่อเดือน: ${formatMoney(commitment.estimatedMonthlyCost, override ?? profile.answers.currency ?? 'THB', 'th')}`
-                    : `You chose: ${commitment.expenseKey} | Monthly savings: ${formatMoney(commitment.estimatedMonthlyCost, override ?? profile.answers.currency ?? 'THB', 'en')}`}
+                  {`You chose: ${commitment.expenseKey} | Monthly savings: ${formatMoney(commitment.estimatedMonthlyCost, override ?? profile.answers.currency ?? 'USD', 'en')}`}
                 </p>
               </div>
             )}

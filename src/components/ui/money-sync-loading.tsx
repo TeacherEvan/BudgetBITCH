@@ -6,32 +6,36 @@ import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, Wallet, RefreshCw, ShieldCheck } from 'lucide-react';
 
 interface MoneySyncLoadingProps {
-  locale?: 'th' | 'en';
+  locale?: string;
   message?: string;
+  minDurationMs?: number;
   onComplete?: () => void;
 }
 
-const MIN_DISPLAY_DURATION = 10000; // 10 seconds minimum display time
+const DEFAULT_MIN_DURATION_MS = 5000; // 5 seconds minimum display time (floor)
 
-export function MoneySyncLoading({ locale = 'en', message, onComplete }: MoneySyncLoadingProps) {
-  const isThai = locale === 'th';
+export function MoneySyncLoading({
+  message,
+  minDurationMs = DEFAULT_MIN_DURATION_MS,
+  onComplete,
+}: MoneySyncLoadingProps) {
 
   // Keep latest onComplete in a ref so the timer effect does NOT reset (and the
-  // 10s duration does not restart) when the parent re-renders with a new inline callback.
-    const onCompleteRef = useRef(onComplete);
-    useEffect(() => {
-      onCompleteRef.current = onComplete;
-    }, [onComplete]);
+  // minimum duration does not restart) when the parent re-renders with a new inline callback.
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       onCompleteRef.current?.();
-    }, MIN_DISPLAY_DURATION);
+    }, minDurationMs);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [minDurationMs]);
 
-  const statusText = message || (isThai ? 'คำนวณรายรับ & รายจ่าย...' : 'Calculating Money In & Money Out...');
+  const statusText = message || ('Calculating Money In & Money Out...');
 
   return (
     <div
@@ -42,10 +46,10 @@ export function MoneySyncLoading({ locale = 'en', message, onComplete }: MoneySy
       className="fixed inset-0 z-[120] flex flex-col items-center justify-center bg-[#080600]/95 text-white backdrop-blur-2xl px-4 py-8 select-none overflow-hidden"
     >
       {/* Background Gold Ambient Glows */}
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-amber-500/10 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-amber-500/20 blur-[140px] pointer-events-none" />
 
       {/* Main Glassmorphism Card */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, scale: 0.92, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
@@ -55,21 +59,21 @@ export function MoneySyncLoading({ locale = 'en', message, onComplete }: MoneySy
         <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
           <span className="flex items-center gap-1.5 text-xs font-black uppercase tracking-widest text-amber-400">
             <RefreshCw className="h-4 w-4 animate-spin text-amber-400" />
-            <span>{isThai ? 'กำลังซิงค์กระแสเงิน' : 'MONEY FLOW ENGINE'}</span>
+            <span>{'MONEY FLOW ENGINE'}</span>
           </span>
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
             <ShieldCheck className="h-3 w-3" />
-            <span>{isThai ? 'เรียลไทม์' : 'SECURE LIVE'}</span>
+            <span>{'SECURE LIVE'}</span>
           </span>
         </div>
 
         {/* Headline / Message */}
         <div className="space-y-1">
           <h3 className="text-lg md:text-xl font-black uppercase tracking-wide text-white font-space-grotesk">
-            {message || (isThai ? 'คำนวณรายรับ & รายจ่าย...' : 'Calculating Money In & Money Out...')}
+            {message || ('Calculating Money In & Money Out...')}
           </h3>
           <p className="text-xs text-zinc-400">
-            {isThai ? 'กำลังจัดสรรงบประมาณคงเหลือสุทธิอย่างเที่ยงตรง' : 'Synchronizing inflows, fixed expenses, and net disposable funds'}
+            {'Synchronizing inflows, fixed expenses, and net disposable funds'}
           </p>
         </div>
 
@@ -80,7 +84,7 @@ export function MoneySyncLoading({ locale = 'en', message, onComplete }: MoneySy
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 flex items-center gap-1">
                 <TrendingUp className="h-3.5 w-3.5" />
-                <span>{isThai ? 'เงินเข้า (MONEY IN)' : 'MONEY IN'}</span>
+                <span>{'MONEY IN'}</span>
               </span>
             </div>
             <div className="text-xl md:text-2xl font-black font-mono text-emerald-300">
@@ -92,7 +96,7 @@ export function MoneySyncLoading({ locale = 'en', message, onComplete }: MoneySy
               </motion.span>
             </div>
             <div className="mt-2 w-full h-1 bg-zinc-900 rounded-full overflow-hidden">
-              <motion.div 
+              <motion.div
                 className="h-full bg-emerald-400"
                 initial={{ width: '0%' }}
                 animate={{ width: '100%' }}
@@ -100,7 +104,7 @@ export function MoneySyncLoading({ locale = 'en', message, onComplete }: MoneySy
               />
             </div>
             <p className="mt-2 text-[9px] text-emerald-400/80 font-mono truncate">
-              {isThai ? 'ซิงค์ช่องทางรายรับ' : 'Inflow Streams Ready'}
+              {'Inflow Streams Ready'}
             </p>
           </div>
 
@@ -109,7 +113,7 @@ export function MoneySyncLoading({ locale = 'en', message, onComplete }: MoneySy
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-1">
                 <TrendingDown className="h-3.5 w-3.5" />
-                <span>{isThai ? 'เงินออก (MONEY OUT)' : 'MONEY OUT'}</span>
+                <span>{'MONEY OUT'}</span>
               </span>
             </div>
             <div className="text-xl md:text-2xl font-black font-mono text-amber-300">
@@ -121,7 +125,7 @@ export function MoneySyncLoading({ locale = 'en', message, onComplete }: MoneySy
               </motion.span>
             </div>
             <div className="mt-2 w-full h-1 bg-zinc-900 rounded-full overflow-hidden">
-              <motion.div 
+              <motion.div
                 className="h-full bg-amber-400"
                 initial={{ width: '0%' }}
                 animate={{ width: '85%' }}
@@ -129,7 +133,7 @@ export function MoneySyncLoading({ locale = 'en', message, onComplete }: MoneySy
               />
             </div>
             <p className="mt-2 text-[9px] text-amber-400/80 font-mono truncate">
-              {isThai ? 'ตรวจสอบรายจ่ายคงที่' : 'Expenses & Bills Balanced'}
+              {'Expenses & Bills Balanced'}
             </p>
           </div>
         </div>
@@ -139,14 +143,14 @@ export function MoneySyncLoading({ locale = 'en', message, onComplete }: MoneySy
           <div className="flex items-center justify-between text-xs">
             <span className="font-bold text-amber-300 flex items-center gap-1.5">
               <Wallet className="h-4 w-4 text-amber-400" />
-              <span>{isThai ? 'เงินคงเหลือสุทธิ (FUNDS AVAILABLE)' : 'FUNDS AVAILABLE (NET)'}</span>
+              <span>{'FUNDS AVAILABLE (NET)'}</span>
             </span>
             <span className="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-500/20 px-2 py-0.5 rounded border border-emerald-500/30">
               100% ACCURATE
             </span>
           </div>
           <div className="w-full h-2 bg-black/60 rounded-full overflow-hidden p-0.5 border border-amber-400/20">
-            <motion.div 
+            <motion.div
               className="h-full bg-gradient-to-r from-amber-300 to-yellow-500 rounded-full"
               initial={{ width: '10%' }}
               animate={{ width: ['10%', '90%', '100%'] }}

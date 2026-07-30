@@ -16,12 +16,10 @@ interface StepReceiptScanProps {
 }
 
 export function StepReceiptScan({
-  locale,
   onChange,
   error,
   disabled = false,
 }: StepReceiptScanProps) {
-  const isThai = locale === 'th';
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { isScanning, progress, draft, scanImage, answerQuestion, confirmDraft } = useReceiptScan();
@@ -38,14 +36,12 @@ export function StepReceiptScan({
 
     img.onload = async () => {
       try {
-        await scanImage(img, isThai ? 'TH' : 'ZA');
+        await scanImage(img, 'ZA');
         onChange('receiptScanned', true);
       } catch (err) {
         console.error('Receipt scan error:', err);
         setScanError(
-          isThai
-            ? 'ไม่สามารถอ่านใบเสร็จได้ กรุณาลองใหม่อีกครั้งหรือกดข้าม'
-            : 'Could not parse receipt. Please try another image or skip.'
+          'Could not parse receipt. Please try another image or skip.'
         );
       } finally {
         URL.revokeObjectURL(url);
@@ -74,12 +70,10 @@ export function StepReceiptScan({
           <Camera className="w-8 h-8 text-amber-400" />
         </div>
         <h2 className="text-xl font-semibold text-white">
-          {isThai ? 'สแกนใบเสร็จแรกของคุณ' : 'Scan Your First Receipt'}
+          {'Scan Your First Receipt'}
         </h2>
         <p className="mt-1 text-sm text-white/70">
-          {isThai
-            ? 'ถ่ายรูปหรืออัปโหลดใบเสร็จ ระบบจะสกัดข้อมูลรายจ่ายให้อัตโนมัติ'
-            : 'Snap a photo or upload a receipt to extract expense details automatically.'}
+          {'Snap a photo or upload a receipt to extract expense details automatically.'}
         </p>
       </div>
 
@@ -100,7 +94,7 @@ export function StepReceiptScan({
               <div className="py-6 flex flex-col items-center gap-3">
                 <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
                 <p className="text-sm font-medium text-white">
-                  {isThai ? `กำลังวิเคราะห์ใบเสร็จ (${Math.round(progress * 100)}%)...` : `Analyzing receipt (${Math.round(progress * 100)}%)...`}
+                  {`Analyzing receipt (${Math.round(progress * 100)}%)...`}
                 </p>
               </div>
             ) : (
@@ -113,7 +107,7 @@ export function StepReceiptScan({
                   disabled={disabled || isScanning}
                 >
                   <Upload className="w-5 h-5" />
-                  {isThai ? 'ถ่ายรูป / อัปโหลดใบเสร็จ' : 'Take Photo / Upload Receipt'}
+                  {'Take Photo / Upload Receipt'}
                 </Button>
               </div>
             )}
@@ -129,7 +123,7 @@ export function StepReceiptScan({
               data-testid="skip-receipt-btn"
             >
               <SkipForward className="w-4 h-4" />
-              {isThai ? 'ข้ามขั้นตอน (ป้อนรายจ่ายด้วยตนเอง)' : 'Skip for now (enter manually later)'}
+              {'Skip for now (enter manually later)'}
             </Button>
           </div>
         </div>
@@ -137,26 +131,26 @@ export function StepReceiptScan({
         <div className="bg-white/5 border border-amber-400/30 rounded-2xl p-5 space-y-3 text-left">
           <div className="flex items-center gap-2 text-amber-400 font-medium">
             <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
-            <span>{isThai ? 'สแกนสำเร็จ!' : 'Receipt Scanned Successfully!'}</span>
+            <span>{'Receipt Scanned Successfully!'}</span>
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-sm text-white/80 pt-2 border-t border-white/10">
             <div>
-              <span className="text-xs text-white/40 block">{isThai ? 'ร้านค้า' : 'Merchant'}</span>
+              <span className="text-xs text-white/40 block">{'Merchant'}</span>
               <span className="font-semibold">{scanResult.merchant}</span>
             </div>
             <div>
-              <span className="text-xs text-white/40 block">{isThai ? 'จำนวนเงิน' : 'Amount'}</span>
+              <span className="text-xs text-white/40 block">{'Amount'}</span>
               <span className="font-semibold text-amber-400">
                 {scanResult.amount.toFixed(2)}
               </span>
             </div>
             <div>
-              <span className="text-xs text-white/40 block">{isThai ? 'หมวดหมู่' : 'Category'}</span>
+              <span className="text-xs text-white/40 block">{'Category'}</span>
               <span className="capitalize">{scanResult.category}</span>
             </div>
             <div>
-              <span className="text-xs text-white/40 block">{isThai ? 'วันที่' : 'Date'}</span>
+              <span className="text-xs text-white/40 block">{'Date'}</span>
               <span>{scanResult.date || 'Today'}</span>
             </div>
           </div>
@@ -167,7 +161,7 @@ export function StepReceiptScan({
             className="w-full mt-2"
             onClick={() => fileInputRef.current?.click()}
           >
-            {isThai ? 'สแกนอีกใบ' : 'Scan Another Receipt'}
+            {'Scan Another Receipt'}
           </Button>
         </div>
       )}

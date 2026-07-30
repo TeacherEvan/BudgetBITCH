@@ -21,22 +21,12 @@ const COPY = {
     iosTitle: 'Install on iOS',
     iosBody: 'Tap the Share button in Safari, then select "Add to Home Screen".',
   },
-  th: {
-    title: 'ติดตั้ง Budget Boss',
-    body: 'เพิ่มไปยังหน้าจอโฮมเพื่อเข้าถึงอย่างรวดเร็ว ใช้งานออฟไลน์ และความเป็นส่วนตัวแบบเต็มจอ',
-    installBtn: 'ติดตั้งแอป',
-    dismissBtn: 'ไว้ทีหลัง',
-    closeBtn: 'ปิด',
-    iosTitle: 'วิธีติดตั้งบน iOS',
-    iosBody: 'แตะปุ่มแชร์ใน Safari จากนั้นเลือก "เพิ่มไปยังหน้าจอโฮม"',
-  },
 } as const;
 
 export function PWAInstallPrompt({
-  locale = 'en',
   onDismiss,
 }: {
-  locale?: 'th' | 'en';
+  locale?: string;
   onDismiss?: () => void;
 }) {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -111,7 +101,7 @@ export function PWAInstallPrompt({
   if (isStandalone || isDismissed) return null;
   if (!deferredPrompt && !isIOS) return null;
 
-  const copy = COPY[locale === 'th' ? 'th' : 'en'];
+  const copy = COPY['en'];
 
   return (
     <div

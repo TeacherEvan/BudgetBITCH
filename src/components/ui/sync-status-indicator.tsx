@@ -8,10 +8,10 @@ import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
 interface SyncStatusIndicatorProps {
-  locale: 'th' | 'en';
+  locale: string;
 }
 
-export function SyncStatusIndicator({ locale }: SyncStatusIndicatorProps) {
+export function SyncStatusIndicator({ }: SyncStatusIndicatorProps) {
   const [online, setOnline] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
   const [counts, setCounts] = useState({ accounts: 0, couple: 0, offline: 0 });
@@ -129,20 +129,6 @@ export function SyncStatusIndicator({ locale }: SyncStatusIndicatorProps) {
   };
 
   const labels = {
-    th: {
-      status: 'สถานะการซิงค์',
-      online: 'ออนไลน์',
-      offline: 'ออฟไลน์ (เซฟข้อมูลในเครื่อง)',
-      sharedAccounts: 'บัญชีร่วมกัน',
-      coupleBoard: 'บอร์ดคู่รัก',
-      offlineSnapshots: 'สำรองข้อมูลความปลอดภัย',
-      synced: 'ซิงค์เรียบร้อย ✓',
-      pending: 'รออัปโหลด {n} รายการ ⏳',
-      explanation: 'ข้อมูลของคุณจะถูกบันทึกลงในเครื่องทันที และจะอัปโหลดไปยังระบบคลาวด์โดยอัตโนมัติเมื่อออนไลน์ เพื่อให้ปลอดภัยและรวดเร็วเสมอ',
-      manageAccounts: 'จัดการบัญชี',
-      syncNow: 'ซิงค์ตอนนี้',
-      syncing: 'กำลังซิงค์...',
-    },
     en: {
       status: 'Sync Status',
       online: 'Online',
@@ -159,13 +145,13 @@ export function SyncStatusIndicator({ locale }: SyncStatusIndicatorProps) {
     },
   };
 
-  const l = labels[locale];
+  const l = labels.en;
 
   const statusWord = !online
-    ? (locale === 'th' ? 'ออฟไลน์' : 'Offline')
+    ? ('Offline')
     : pendingCount > 0
-      ? (locale === 'th' ? 'กำลังซิงค์' : 'Syncing')
-      : (locale === 'th' ? 'ซิงค์แล้ว' : 'Synced');
+      ? ('Syncing')
+      : ('Synced');
 
   return (
     <div className="relative" ref={ref}>
@@ -190,7 +176,7 @@ export function SyncStatusIndicator({ locale }: SyncStatusIndicatorProps) {
           <Cloud className="h-3.5 w-3.5" />
         )}
         <span className="hidden sm:inline">
-          {!online ? (locale === 'th' ? 'ออฟไลน์' : 'Offline') : pendingCount > 0 ? (locale === 'th' ? 'กำลังซิงค์...' : 'Syncing...') : (locale === 'th' ? 'ซิงค์แล้ว' : 'Synced')}
+          {!online ? ('Offline') : pendingCount > 0 ? ('Syncing...') : ('Synced')}
         </span>
         <ChevronDown className="h-3 w-3 opacity-60" />
       </button>
@@ -211,7 +197,7 @@ export function SyncStatusIndicator({ locale }: SyncStatusIndicatorProps) {
                   : 'bg-amber-500/20 text-amber-400 animate-pulse'
               }`}
             >
-              {online ? (locale === 'th' ? 'ออนไลน์' : 'Online') : (locale === 'th' ? 'ออฟไลน์' : 'Offline')}
+              {online ? ('Online') : ('Offline')}
             </span>
           </div>
 
@@ -245,22 +231,22 @@ export function SyncStatusIndicator({ locale }: SyncStatusIndicatorProps) {
               <div className="flex items-center justify-between text-[11px]">
                 <span className="text-white/60 font-medium flex items-center gap-1">
                   <Users className="h-3.5 w-3.5 text-amber-400" />
-                  <span>{locale === 'th' ? 'บัญชีบอส' : 'BOSS Identity'}</span>
+                  <span>{'BOSS Identity'}</span>
                 </span>
                 <span className="text-zinc-300 font-semibold truncate max-w-[140px]">
-                  {profile?.displayName || (locale === 'th' ? 'ผู้ใช้นามแฝง' : 'Authed Session')}
+                  {profile?.displayName || ('Authed Session')}
                 </span>
               </div>
               <div className="flex items-center justify-between text-[11px]">
-                <span className="text-white/60 font-medium">{locale === 'th' ? 'เครื่องที่เปิดใช้งาน' : 'Connected Devices'}</span>
+                <span className="text-white/60 font-medium">{'Connected Devices'}</span>
                 <span className="text-amber-400 font-bold bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20 text-[9px] uppercase tracking-wider">
-                  {locale === 'th' ? '2 เครื่องออนไลน์' : '2 Active Sessions'}
+                  {'2 Active Sessions'}
                 </span>
               </div>
               <div className="text-[10px] space-y-1 pl-1 text-left">
                 <div className="flex items-center gap-1.5 text-zinc-400">
                   <Monitor className="h-3 w-3 text-emerald-400 shrink-0" />
-                  <span className="truncate">{currentDevice} ({locale === 'th' ? 'เครื่องนี้' : 'This device'})</span>
+                  <span className="truncate">{currentDevice} ({'This device'})</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-zinc-400">
                   <Smartphone className="h-3 w-3 text-amber-400/70 shrink-0" />

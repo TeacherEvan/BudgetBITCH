@@ -11,7 +11,7 @@ import { useAccounts } from '@/hooks/use-accounts';
 import { umbrellaLabel } from '@/lib/types/accounts';
 
 interface AccountSwitcherProps {
-  locale: 'th' | 'en';
+  locale: string;
 }
 
 export function AccountSwitcher({ locale }: AccountSwitcherProps) {
@@ -43,15 +43,15 @@ export function AccountSwitcher({ locale }: AccountSwitcherProps) {
     // For shared accounts, show the user's displayName if available
     if (account.displayName) return account.displayName;
     // Fallback to role-based label
-    if (account.role === 'owner') return locale === 'th' ? 'เจ้าของ' : 'Owner';
-    return locale === 'th' ? 'สมาชิก' : 'Member';
+    if (account.role === 'owner') return 'Owner';
+    return 'Member';
   };
 
   return (
     <div className="relative" ref={ref}>
       <button
         type="button"
-        aria-label={locale === 'th' ? `สลับบัญชี: ${active.name}` : `Switch account: ${active.name}`}
+        aria-label={`Switch account: ${active.name}`}
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-center gap-3 rounded-xl border border-[var(--gold-border-strong)] bg-[var(--gold-base)]/10 p-3 text-left transition-colors hover:bg-[var(--gold-base)]/20"
@@ -61,7 +61,7 @@ export function AccountSwitcher({ locale }: AccountSwitcherProps) {
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--gold-bright)]">
-            {locale === 'th' ? 'บัญชีที่ใช้งาน' : 'Active account'}
+            {'Active account'}
           </p>
           <p className="truncate text-sm font-semibold text-[var(--text-1)]">
             {active.name}
@@ -86,8 +86,8 @@ export function AccountSwitcher({ locale }: AccountSwitcherProps) {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-[var(--text-1)]">{a.name}</p>
                 <p className="truncate text-xs text-[var(--text-2)]">
-                  {umbrellaLabel(a.umbrella, locale)}
-                  {a.displayName ? ` · ${a.displayName}` : a.role === 'member' ? (locale === 'th' ? ' · สมาชิก' : ' · Member') : ''}
+                  {umbrellaLabel(a.umbrella)}
+                  {a.displayName ? ` · ${a.displayName}` : a.role === 'member' ? (' · Member') : ''}
                 </p>
               </div>
               {a.accountId === currentAccountId && <Check className="h-4 w-4 text-[var(--gold-bright)]" />}
@@ -99,7 +99,7 @@ export function AccountSwitcher({ locale }: AccountSwitcherProps) {
             className="flex w-full items-center gap-3 border-t border-[var(--gold-border-soft)] px-3 py-2.5 text-left text-sm font-medium text-[var(--gold-bright)] transition-colors hover:bg-[var(--gold-base)]/15"
           >
             <Plus className="h-4 w-4" />
-            {locale === 'th' ? 'จัดการบัญชีทั้งหมด' : 'Manage all accounts'}
+            {'Manage all accounts'}
           </Link>
         </div>
       )}

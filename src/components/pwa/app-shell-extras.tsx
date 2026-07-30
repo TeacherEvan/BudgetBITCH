@@ -9,13 +9,13 @@ import { PWAInstallPrompt } from '@/components/pwa/install-prompt';
 /**
  * Client-only mounts for privacy, PWA install, and push surfaces.
  */
-export function AppShellExtras({ locale }: { locale: 'th' | 'en' }) {
+export function AppShellExtras({ locale }: { locale: string }) {
   const auth = useConvexAuth();
   const isAuthenticated = auth?.isAuthenticated ?? false;
 
   return (
     <>
-      <WeeklyPrivacyDisclaimer locale={locale} />
+      <WeeklyPrivacyDisclaimer />
       <PushGate locale={locale} isAuthenticated={isAuthenticated} />
       <PWAInstallPrompt locale={locale} />
     </>

@@ -506,6 +506,18 @@
     }
   }
 
+  /* User toggle: disable the shimmer/sheen animation entirely. */
+  html.bb-shimmer-off .bb-btn-edge::after,
+  html.bb-shimmer-off .bb-button-primary::after,
+  html.bb-shimmer-off .bb-button-secondary::after,
+  html.bb-shimmer-off .bb-button-ghost::after,
+  html.bb-shimmer-off button:not(.bb-btn-edge)::after {
+    animation: none !important;
+    opacity: 0 !important;
+    display: none !important;
+  }
+
+
   .bb-link-card {
     border: 1px solid var(--border-neutral);
     border-radius: var(--radius-card);

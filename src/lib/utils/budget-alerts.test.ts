@@ -92,15 +92,15 @@ describe('generateBudgetAlerts', () => {
     expect(alerts.map((a) => a.type)).toEqual(['critical', 'warning', 'success']);
   });
 
-  it('renders Thai labels under th locale', () => {
+  it('renders English labels under en locale', () => {
     const alerts = generateBudgetAlerts(
       budgets,
       [expense('housing', 12000)],
-      'th',
+      'en',
       'THB',
     );
     const critical = alerts.find((a) => a.type === 'critical');
-    expect(critical!.message).toContain('ที่อยู่อาศัย');
+    expect(critical!.message).toContain('Housing');
   });
 });
 

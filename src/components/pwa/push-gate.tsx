@@ -9,7 +9,7 @@ import { PushPermission } from './push-permission';
 const ASKED_KEY = 'budgetbitch:pushAsked';
 
 interface PushGateProps {
-  locale: 'th' | 'en';
+  locale: string;
   isAuthenticated: boolean;
 }
 

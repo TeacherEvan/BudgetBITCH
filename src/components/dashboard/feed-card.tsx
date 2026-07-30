@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import { ExternalLink, Fuel, TrendingUp, Zap, ShoppingBag, AlertCircle } from 'lucide-react';
 import { NewsItem } from '@/lib/types/budget';
 import { format } from 'date-fns';
-import { th } from 'date-fns/locale';
 
 const CATEGORY_ICONS = {
   finance: <TrendingUp className="w-5 h-5 text-amber-400" />,
@@ -15,22 +14,22 @@ const CATEGORY_ICONS = {
   deals: <ShoppingBag className="w-5 h-5 text-amber-400" />,
 };
 
-const CATEGORY_LABELS: Record<NewsItem['category'], { th: string; en: string }> = {
-  finance: { th: 'การเงิน', en: 'Finance' },
-  economy: { th: 'เศรษฐกิจ', en: 'Economy' },
-  local: { th: 'ท้องถิ่น', en: 'Local' },
-  eco_tips: { th: 'เคล็ดลับ', en: 'Tips' },
-  fuel: { th: 'น้ำมัน', en: 'Fuel' },
-  deals: { th: 'โปรโมชั่น', en: 'Deals' },
+const CATEGORY_LABELS: Record<NewsItem['category'], { en: string }> = {
+  finance: { en: 'Finance' },
+  economy: { en: 'Economy' },
+  local: { en: 'Local' },
+  eco_tips: { en: 'Tips' },
+  fuel: { en: 'Fuel' },
+  deals: { en: 'Deals' },
 };
 
 interface FeedCardProps {
   item: NewsItem;
-  locale: 'th' | 'en';
+  locale: string;
   index: number;
 }
 
-export function FeedCard({ item, locale, index }: FeedCardProps) {
+export function FeedCard({ item, index }: FeedCardProps) {
   const isActionable = !!item.actionable;
 
   return (
@@ -57,13 +56,13 @@ export function FeedCard({ item, locale, index }: FeedCardProps) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="text-xs font-medium text-amber-400 uppercase">
-              {CATEGORY_LABELS[item.category][locale]}
+              {CATEGORY_LABELS[item.category].en}
             </span>
             <span className="text-xs text-white/40">
               {format(
                 new Date(item.pubDate),
-                locale === 'th' ? 'd MMM yyyy' : 'MMM d, yyyy',
-                { locale: locale === 'th' ? th : undefined }
+                'MMM d, yyyy',
+                {}
               )}
             </span>
           </div>
@@ -93,7 +92,7 @@ export function FeedCard({ item, locale, index }: FeedCardProps) {
               rel="noopener noreferrer"
               className="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1"
             >
-              {locale === 'th' ? 'อ่านต่อ' : 'Read more'}
+              {'Read more'}
               <ExternalLink className="w-3 h-3" />
             </a>
           </div>

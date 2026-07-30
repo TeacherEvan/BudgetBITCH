@@ -2,7 +2,6 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { Plus, Minus, Camera, Save, ArrowLeft, Loader2, Check, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,20 +11,6 @@ import { ReceiptVerifySheet } from '@/components/receipt/receipt-verify-sheet';
 import { type ExpenseCategory, type IncomeCategory } from '@/lib/types/budget';
 
 const labels = {
-  th: {
-    title: 'เพิ่มรายการด่วน',
-    placeholder: 'พิมพ์จำนวนเงินตามด้วยรายละเอียด เช่น 120 ข้าวเที่ยง',
-    camera: 'สแกนใบเสร็จ',
-    save: 'บันทึก',
-    scanning: 'กำลังวิเคราะห์ใบเสร็จ...',
-    successAdded: 'บันทึกค่าใช้จ่ายสำเร็จ!',
-    successIncome: 'ปรับเพิ่มรายได้สำเร็จ!',
-    failed: 'เกิดข้อผิดพลาดในการบันทึก!',
-    invalidAmount: 'กรุณาป้อนจำนวนเงินที่ถูกต้อง',
-    back: 'ย้อนกลับ',
-    expense: 'ค่าใช้จ่าย (-)',
-    income: 'รายได้ (+)',
-  },
   en: {
     title: 'Quick Add',
     placeholder: 'Type amount then note, e.g. 120 lunch',
@@ -44,24 +29,23 @@ const labels = {
 
 const mapCategory = (cat: string): ExpenseCategory => {
   const normalized = cat.toLowerCase().replace(/[\s_-]+/g, '');
-  if (normalized.includes('food') || normalized.includes('dining') || normalized.includes('restaurant') || normalized.includes('กิน')) return 'food';
-  if (normalized.includes('transport') || normalized.includes('taxi') || normalized.includes('ride') || normalized.includes('fuel') || normalized.includes('car') || normalized.includes('รถ')) return 'transport';
-  if (normalized.includes('utilities') || normalized.includes('electricity') || normalized.includes('water') || normalized.includes('ไฟ')) return 'utilities';
-  if (normalized.includes('housing') || normalized.includes('rent') || normalized.includes('mortgage') || normalized.includes('บ้าน')) return 'housing';
-  if (normalized.includes('phone') || normalized.includes('internet') || normalized.includes('telecom') || normalized.includes('เน็ต')) return 'phone_internet';
+  if (normalized.includes('food') || normalized.includes('dining') || normalized.includes('restaurant')) return 'food';
+  if (normalized.includes('transport') || normalized.includes('taxi') || normalized.includes('ride') || normalized.includes('fuel') || normalized.includes('car')) return 'transport';
+  if (normalized.includes('utilities') || normalized.includes('electricity') || normalized.includes('water')) return 'utilities';
+  if (normalized.includes('housing') || normalized.includes('rent') || normalized.includes('mortgage')) return 'housing';
+  if (normalized.includes('phone') || normalized.includes('internet') || normalized.includes('telecom')) return 'phone_internet';
   if (normalized.includes('sub') || normalized.includes('netflix') || normalized.includes('spotify')) return 'subscriptions';
-  if (normalized.includes('entertainment') || normalized.includes('movie') || normalized.includes('game') || normalized.includes('เกม')) return 'entertainment';
-  if (normalized.includes('health') || normalized.includes('medical') || normalized.includes('doctor') || normalized.includes('hospital') || normalized.includes('ยา')) return 'healthcare';
-  if (normalized.includes('insurance') || normalized.includes('ประกัน')) return 'insurance';
-  if (normalized.includes('debt') || normalized.includes('loan') || normalized.includes('ดอกเบี้ย')) return 'debt';
-  if (normalized.includes('savings') || normalized.includes('invest') || normalized.includes('ออม')) return 'savings';
+  if (normalized.includes('entertainment') || normalized.includes('movie') || normalized.includes('game')) return 'entertainment';
+  if (normalized.includes('health') || normalized.includes('medical') || normalized.includes('doctor') || normalized.includes('hospital')) return 'healthcare';
+  if (normalized.includes('insurance')) return 'insurance';
+  if (normalized.includes('debt') || normalized.includes('loan')) return 'debt';
+  if (normalized.includes('savings') || normalized.includes('invest')) return 'savings';
   return 'other';
 };
 
 export default function QuickAddPage() {
-  const locale = useLocale() as 'th' | 'en';
   const router = useRouter();
-  const l = labels[locale];
+  const l = labels.en;
 
   const { add: addExpense } = useExpenses();
   const { add: addIncome } = useIncomes();
@@ -131,7 +115,7 @@ export default function QuickAddPage() {
         // Record Expense
         await addExpense({
           amount: amountVal,
-          merchant: noteVal || (locale === 'th' ? 'รายการด่วน' : 'Quick Expense'),
+          merchant: noteVal || ('Quick Expense'),
           category: detectedCategory,
           date: new Date().toISOString().split('T')[0],
           source: 'manual',
@@ -142,7 +126,7 @@ export default function QuickAddPage() {
         // Record Income Log
         await addIncome({
           amount: amountVal,
-          source: noteVal || (locale === 'th' ? 'รายได้ด่วน' : 'Quick Income'),
+          source: noteVal || ('Quick Income'),
           category: incomeCategory,
           frequency: 'one_time',
           date: new Date().toISOString().split('T')[0],
@@ -211,7 +195,7 @@ export default function QuickAddPage() {
       try {
         setLoading(true);
         setToast({ show: true, message: l.scanning, type: 'success' });
-        await scanImage(img, locale === 'th' ? 'TH' : 'ZA');
+        await scanImage(img, 'ZA');
       } catch (err) {
         console.error("Receipt scanning failed:", err);
         setToast({
@@ -301,20 +285,20 @@ export default function QuickAddPage() {
         {!isExpense && (
           <div className="mb-6 space-y-1.5">
             <label className="text-[10px] uppercase font-bold text-white/50 tracking-wider">
-              {locale === 'th' ? 'ประเภทรายรับ' : 'Income Category'}
+              {'Income Category'}
             </label>
             <select
               value={incomeCategory}
               onChange={(e) => setIncomeCategory(e.target.value as IncomeCategory)}
               className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-2xl text-sm focus:outline-none focus:border-emerald-500/50 text-white outline-none"
             >
-              <option value="salary" className="bg-[#0a0a0a]">💵 {locale === 'th' ? 'เงินเดือน' : 'Salary'}</option>
-              <option value="freelance" className="bg-[#0a0a0a]">💻 {locale === 'th' ? 'งานอิสระ' : 'Freelance'}</option>
-              <option value="business" className="bg-[#0a0a0a]">🏢 {locale === 'th' ? 'ธุรกิจ' : 'Business'}</option>
-              <option value="investments" className="bg-[#0a0a0a]">📈 {locale === 'th' ? 'การลงทุน' : 'Investments'}</option>
-              <option value="gift" className="bg-[#0a0a0a]">🎁 {locale === 'th' ? 'ของขวัญ' : 'Gift'}</option>
-              <option value="refund" className="bg-[#0a0a0a]">🔄 {locale === 'th' ? 'คืนเงิน' : 'Refund'}</option>
-              <option value="other" className="bg-[#0a0a0a]">✨ {locale === 'th' ? 'อื่นๆ' : 'Other'}</option>
+              <option value="salary" className="bg-[#0a0a0a]">💵 {'Salary'}</option>
+              <option value="freelance" className="bg-[#0a0a0a]">💻 {'Freelance'}</option>
+              <option value="business" className="bg-[#0a0a0a]">🏢 {'Business'}</option>
+              <option value="investments" className="bg-[#0a0a0a]">📈 {'Investments'}</option>
+              <option value="gift" className="bg-[#0a0a0a]">🎁 {'Gift'}</option>
+              <option value="refund" className="bg-[#0a0a0a]">🔄 {'Refund'}</option>
+              <option value="other" className="bg-[#0a0a0a]">✨ {'Other'}</option>
             </select>
           </div>
         )}

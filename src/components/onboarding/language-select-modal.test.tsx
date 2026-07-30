@@ -11,61 +11,40 @@ describe('LanguageSelectModal', () => {
     mockOnComplete.mockClear();
   });
 
-  it('renders USA, France, and China country flag choices when open', () => {
+  it('renders welcome copy when open', () => {
     render(<LanguageSelectModal isOpen={true} onComplete={mockOnComplete} />);
-    
-    expect(screen.getByText('United States')).toBeInTheDocument();
-    expect(screen.getByText('France')).toBeInTheDocument();
-    expect(screen.getByText('China (中国)')).toBeInTheDocument();
     expect(screen.getByText('Welcome to Budget Boss')).toBeInTheDocument();
-    expect(screen.getByText('Choose your country & language to get started')).toBeInTheDocument();
+    expect(screen.getByText('Choose your language & currency to get started')).toBeInTheDocument();
+    expect(screen.getByText('Plan first. Panic less.')).toBeInTheDocument();
   });
 
-  it('renders flag emojis for all 3 country choices (USA 🇺🇸, France 🇫🇷, China 🇨🇳)', () => {
+  it('renders all six language options', () => {
     render(<LanguageSelectModal isOpen={true} onComplete={mockOnComplete} />);
-    
-    expect(screen.getByText('🇺🇸')).toBeInTheDocument();
-    expect(screen.getByText('🇫🇷')).toBeInTheDocument();
-    expect(screen.getByText('🇨🇳')).toBeInTheDocument();
+    expect(screen.getByText('English')).toBeInTheDocument();
+    expect(screen.getByText('Español')).toBeInTheDocument();
+    expect(screen.getByText('Français')).toBeInTheDocument();
+    expect(screen.getByText('Deutsch')).toBeInTheDocument();
+    expect(screen.getByText('Português')).toBeInTheDocument();
+    expect(screen.getByText('中文')).toBeInTheDocument();
   });
 
-  it('calls onComplete with "en" when United States button clicked', () => {
+  it('defaults to English + USD and completes both', () => {
     render(<LanguageSelectModal isOpen={true} onComplete={mockOnComplete} />);
-    
-    fireEvent.click(screen.getByRole('button', { name: /United States/i }));
-    
-    expect(mockOnComplete).toHaveBeenCalledTimes(1);
-    expect(mockOnComplete).toHaveBeenCalledWith('en');
+    fireEvent.click(screen.getByRole('button', { name: /Get Started/i }));
+    expect(mockOnComplete).toHaveBeenCalledWith({ locale: 'en', currency: 'USD' });
   });
 
-  it('calls onComplete with "fr" when France button clicked', () => {
+  it('completes with a selected language and currency', () => {
     render(<LanguageSelectModal isOpen={true} onComplete={mockOnComplete} />);
-    
-    fireEvent.click(screen.getByRole('button', { name: /France/i }));
-    
-    expect(mockOnComplete).toHaveBeenCalledTimes(1);
-    expect(mockOnComplete).toHaveBeenCalledWith('fr');
-  });
-
-  it('calls onComplete with "zh" when China button clicked', () => {
-    render(<LanguageSelectModal isOpen={true} onComplete={mockOnComplete} />);
-    
-    fireEvent.click(screen.getByRole('button', { name: /China/i }));
-    
-    expect(mockOnComplete).toHaveBeenCalledTimes(1);
-    expect(mockOnComplete).toHaveBeenCalledWith('zh');
+    fireEvent.click(screen.getByRole('button', { name: /Français/i }));
+    fireEvent.change(screen.getByLabelText('Select currency'), { target: { value: 'EUR' } });
+    fireEvent.click(screen.getByRole('button', { name: /Get Started/i }));
+    expect(mockOnComplete).toHaveBeenCalledWith({ locale: 'fr', currency: 'EUR' });
   });
 
   it('does not render when isOpen is false', () => {
     render(<LanguageSelectModal isOpen={false} onComplete={mockOnComplete} />);
-    
     expect(screen.queryByText('Welcome to Budget Boss')).not.toBeInTheDocument();
     expect(mockOnComplete).not.toHaveBeenCalled();
-  });
-
-  it('shows tagline "Plan first. Panic less."', () => {
-    render(<LanguageSelectModal isOpen={true} onComplete={mockOnComplete} />);
-    
-    expect(screen.getByText('Plan first. Panic less.')).toBeInTheDocument();
   });
 });

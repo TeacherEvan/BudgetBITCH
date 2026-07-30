@@ -12,7 +12,7 @@ interface ImportCsvModalProps {
   onClose: () => void;
   /** Called with the parsed (valid) rows once the user confirms. */
   onImport: (rows: ParsedExpense[]) => void;
-  locale?: 'th' | 'en';
+  locale?: string;
 }
 
 const COPY = {
@@ -32,26 +32,10 @@ const COPY = {
     sample: 'Sample: date,merchant,amount,category,note',
     close: 'Close',
   },
-  th: {
-    title: 'นำเข้ารายจ่าย (CSV)',
-    desc: 'อัปโหลดรายการจากธนาคาร ตรวจหาคอลัมน์อัตโนมัติ (วันที่, รายการ, จำนวนเงิน, หมวดหมู่, หมายเหตุ)',
-    choose: 'เลือกไฟล์ CSV',
-    orPaste: 'หรือวางข้อความ CSV',
-    parse: 'ดูตัวอย่างและนำเข้า',
-    previewTitle: 'ตัวอย่าง',
-    valid: 'แถวที่ใช้ได้',
-    errors: 'แถวที่ข้าม',
-    confirm: 'นำเข้า',
-    cancel: 'ยกเลิก',
-    empty: 'ยังไม่มีไฟล์',
-    errorHeader: 'บางแถวถูกข้าม:',
-    sample: 'ตัวอย่าง: date,merchant,amount,category,note',
-    close: 'ปิด',
-  },
 };
 
-export function ImportCsvModal({ isOpen, onClose, onImport, locale = 'en' }: ImportCsvModalProps) {
-  const t = COPY[locale];
+export function ImportCsvModal({ isOpen, onClose, onImport = () => {} }: ImportCsvModalProps) {
+  const t = COPY.en;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState('');
   const [result, setResult] = useState<ReturnType<typeof parseImport> | null>(null);
@@ -148,7 +132,7 @@ export function ImportCsvModal({ isOpen, onClose, onImport, locale = 'en' }: Imp
                 <ul className="space-y-0.5">
                   {result.errors.slice(0, 10).map((e, i) => (
                     <li key={i}>
-                      {locale === 'th' ? 'บรรทัด' : 'Line'} {e.line}: {e.reason}
+                      {'Line'} {e.line}: {e.reason}
                     </li>
                   ))}
                 </ul>

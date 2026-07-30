@@ -13,20 +13,12 @@ import emptyNoItemsAnimation from '@/animations/empty-coin-jar.json';
 import errorAnimation from '@/animations/error-signal-lost.json';
 import refreshAnimation from '@/animations/refresh-coin-drop.json';
 
-const BUDGET_TIPS_TH = [
-  '💡 เติมน้ำมันวันพุธ-พฤหัส ราคามักถูกกว่า',
-  '💡 ซื้อ 1 แถม 1 = ลด 50% ต่อชิ้น คุ้มกว่าลดราคา 30%',
-  '💡 บัตรประจำเดือน BTS/MRT ประหยัดกว่าตั๋วเดี่ยว 30%+',
-  '💡 เช็คราคาน้ำมัน PTT/Shell/Bangchak ก่อนเติมทุกครั้ง',
-  '💡 ใช้ PromptPay จ่ายบิลบางแห่งมีส่วนลด 1-2%',
-];
-
 const BUDGET_TIPS_EN = [
-  '💡 Fill up Wed-Thu — fuel prices often dip mid-week',
+  '💡 Fill up mid-week — fuel prices often dip Wed-Thu',
   '💡 Buy 1 Get 1 = 50% off per unit, beats 30% off',
-  '💡 Monthly BTS/MRT pass saves 30%+ vs single tickets',
-  '💡 Check PTT/Shell/Bangchak prices before every fill',
-  '💡 Some bills give 1-2% off via PromptPay',
+  '💡 A monthly transit pass saves 30%+ vs single tickets',
+  '💡 Compare fuel-station prices before every fill',
+  '💡 Some billers give a discount for instant bank payments',
 ];
 
 const containerVariants = {
@@ -48,10 +40,10 @@ const itemVariants = {
   exit: { opacity: 0, y: -20, scale: 0.95, transition: { duration: 0.15 } },
 };
 
-export function AnimatedFeedList({ locale }: { locale: 'th' | 'en' }) {
+export function AnimatedFeedList({ locale }: { locale: string }) {
   const { items, loading, error, lastUpdated, refresh } = useVicinityFeeds(locale);
   const { requestLocation } = useResolvedLocation();
-  const tips = locale === 'th' ? BUDGET_TIPS_TH : BUDGET_TIPS_EN;
+  const tips = BUDGET_TIPS_EN;
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [, setRefreshProgress] = useState(0);
   const startYRef = useRef(0);
@@ -95,13 +87,13 @@ export function AnimatedFeedList({ locale }: { locale: 'th' | 'en' }) {
       <div className="space-y-4 text-center py-8">
         <Lottie animationData={emptyLocationAnimation} loop style={{ height: 160 }} />
         <p className="text-white/60 text-sm">
-          {locale === 'th' ? 'อนุญาตตำแหน่งเพื่อดูข่าวใกล้ตัวคุณ' : 'Enable location for nearby news'}
+          {'Enable location for nearby news'}
         </p>
         <button
           onClick={async () => { await requestLocation(); }}
           className="bb-button-primary mt-2 cursor-pointer"
         >
-          {locale === 'th' ? 'เปิดตำแหน่ง' : 'Enable Location'}
+          {'Enable Location'}
         </button>
       </div>
     );
@@ -113,10 +105,10 @@ export function AnimatedFeedList({ locale }: { locale: 'th' | 'en' }) {
       <div className="space-y-4 text-center py-8">
         <Lottie animationData={emptyNoItemsAnimation} loop style={{ height: 140 }} />
         <p className="text-white/50 text-sm">
-          {locale === 'th' ? 'ยังไม่มีข่าวในพื้นที่นี้' : 'No local updates yet'}
+          {'No local updates yet'}
         </p>
         <button onClick={refresh} className="bb-button-secondary text-sm">
-          {locale === 'th' ? 'ลองใหม่' : 'Try again'}
+          {'Try again'}
         </button>
       </div>
     );
@@ -132,7 +124,7 @@ export function AnimatedFeedList({ locale }: { locale: 'th' | 'en' }) {
           Last updated: {lastUpdated ? new Date(lastUpdated).toLocaleTimeString() : 'Never'}
         </p>
         <button onClick={refresh} className="bb-button-primary">
-          {locale === 'th' ? 'ลองอีกครั้ง' : 'Retry'}
+          {'Retry'}
         </button>
       </div>
     );
@@ -166,7 +158,7 @@ export function AnimatedFeedList({ locale }: { locale: 'th' | 'en' }) {
 
       {lastUpdated && (
         <p className="text-center text-white/30 text-xs mt-4">
-          {locale === 'th' ? 'อัปเดต' : 'Updated'} {new Date(lastUpdated).toLocaleTimeString()}
+          {'Updated'} {new Date(lastUpdated).toLocaleTimeString()}
         </p>
       )}
     </motion.div>

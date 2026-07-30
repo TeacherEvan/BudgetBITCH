@@ -15,7 +15,7 @@ import { EmptyState } from './empty-state';
 import type { ExpenseEntry } from '@/lib/types/budget';
 
 interface SubscriptionsProps {
-  locale?: 'th' | 'en';
+  locale?: string;
 }
 
 interface SubscriptionFormData {
@@ -34,8 +34,8 @@ const initialFormData: SubscriptionFormData = {
   paymentMethod: 'credit_card',
 };
 
-const categoryOptions = (locale: 'th' | 'en') => [
-  { value: 'streaming', label: locale === 'th' ? 'สตรีมมิง' : 'Streaming' },
+const categoryOptions = () => [
+  { value: 'streaming', label: 'Streaming' },
   { value: 'music', label: 'Music' },
   { value: 'software', label: 'Software' },
   { value: 'gaming', label: 'Gaming' },
@@ -43,9 +43,9 @@ const categoryOptions = (locale: 'th' | 'en') => [
   { value: 'other', label: 'Other' },
 ];
 
-const cycleOptions = (locale: 'th' | 'en') => [
-  { value: 'monthly', label: locale === 'th' ? 'รายเดือน' : 'Monthly' },
-  { value: 'yearly', label: locale === 'th' ? 'รายปี' : 'Yearly' },
+const cycleOptions = () => [
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'yearly', label: 'Yearly' },
 ];
 
 const paymentOptions = [
@@ -175,9 +175,9 @@ export function Subscriptions({ locale = 'en' }: SubscriptionsProps) {
       {subscriptions.length === 0 ? (
         <EmptyState
           icon={<Tv className="w-8 h-8" aria-hidden="true" />}
-          title={locale === 'th' ? 'ยังไม่มีการสมัครสมาชิก' : 'No subscriptions yet'}
-          description={locale === 'th' ? 'เริ่มต้นโดยเพิ่มสมาชิกแรกของคุณ' : 'Get started by adding your first subscription'}
-          actionLabel={locale === 'th' ? 'เพิ่มสมาชิก' : 'Add Subscription'}
+          title={'No subscriptions yet'}
+          description={'Get started by adding your first subscription'}
+          actionLabel={'Add Subscription'}
           onAction={openForm}
         />
       ) : (
@@ -223,7 +223,7 @@ export function Subscriptions({ locale = 'en' }: SubscriptionsProps) {
                   whileTap={{ scale: 0.95 }}
                   onClick={() => handleEdit(sub)}
                 >
-                  <Button variant="ghost" size="sm" aria-label={locale === 'th' ? 'แก้ไข' : 'Edit'}>
+                  <Button variant="ghost" size="sm" aria-label={'Edit'}>
                     <Edit className="w-4 h-4" aria-hidden="true" />
                   </Button>
                 </motion.button>
@@ -232,7 +232,7 @@ export function Subscriptions({ locale = 'en' }: SubscriptionsProps) {
                   whileTap={{ scale: 0.95 }}
                   onClick={() => handleDelete(sub.id)}
                 >
-                  <Button variant="ghost" size="sm" className="text-rose-400 hover:bg-rose-500/10" aria-label={locale === 'th' ? 'ลบ' : 'Delete'}>
+                  <Button variant="ghost" size="sm" className="text-rose-400 hover:bg-rose-500/10" aria-label={'Delete'}>
                     <Trash2 className="w-4 h-4" aria-hidden="true" />
                   </Button>
                 </motion.button>
@@ -246,23 +246,23 @@ export function Subscriptions({ locale = 'en' }: SubscriptionsProps) {
       <Modal
         isOpen={isFormOpen}
         onClose={resetForm}
-        title={editingId ? (locale === 'th' ? 'แก้ไขสมาชิก' : 'Edit Subscription') : (locale === 'th' ? 'เพิ่มสมาชิกใหม่' : 'Add Subscription')}
+        title={editingId ? ('Edit Subscription') : ('Add Subscription')}
         size="md"
         closeOnEscape
         closeOnOverlayClick
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
-            label={locale === 'th' ? 'ชื่อบริการ' : 'Service Name'}
+            label={'Service Name'}
             value={formData.name}
             onChange={e => setFormData({ ...formData, name: e.target.value })}
-            placeholder={locale === 'th' ? 'เช่น Netflix, Spotify' : 'e.g. Netflix, Spotify'}
+            placeholder={'e.g. Netflix, Spotify'}
             required
             autoFocus
           />
           <div className="grid gap-3 sm:grid-cols-2">
             <Input
-              label={locale === 'th' ? 'จำนวนเงิน' : 'Amount'}
+              label={'Amount'}
               type="number"
               step="0.01"
               min="0"
@@ -274,7 +274,7 @@ export function Subscriptions({ locale = 'en' }: SubscriptionsProps) {
               label="Cycle"
               value={formData.cycle}
               onChange={e => setFormData({ ...formData, cycle: e.target.value as 'monthly' | 'yearly' })}
-              options={cycleOptions(locale).map(c => ({ value: c.value, label: c.label }))}
+              options={cycleOptions().map(c => ({ value: c.value, label: c.label }))}
             />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -282,7 +282,7 @@ export function Subscriptions({ locale = 'en' }: SubscriptionsProps) {
               label="Category"
               value={formData.category}
               onChange={e => setFormData({ ...formData, category: e.target.value as 'streaming' | 'music' | 'software' | 'gaming' | 'cloud' | 'other' })}
-              options={categoryOptions(locale).map(c => ({ value: c.value, label: c.label }))}
+              options={categoryOptions().map(c => ({ value: c.value, label: c.label }))}
             />
             <Select
               label="Payment Method"
@@ -293,10 +293,10 @@ export function Subscriptions({ locale = 'en' }: SubscriptionsProps) {
           </div>
           <div className="flex gap-2 pt-2">
             <Button type="button" variant="secondary" onClick={resetForm} className="flex-1">
-              {locale === 'th' ? 'ยกเลิก' : 'Cancel'}
+              {'Cancel'}
             </Button>
             <Button type="submit" className="flex-1">
-              {editingId ? (locale === 'th' ? 'อัปเดต' : 'Update') : (locale === 'th' ? 'เพิ่ม' : 'Add')}
+              {editingId ? ('Update') : ('Add')}
             </Button>
           </div>
         </form>

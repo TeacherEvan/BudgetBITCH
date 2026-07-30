@@ -2,7 +2,7 @@ import type { NewsItem } from '@/lib/types/budget';
 
 export interface VicinityFeed {
   url: string;
-  locale: 'th' | 'en';
+  locale: string;
   category: NewsItem['category'];
   source: string;
   center: { lat: number; lon: number };
@@ -24,22 +24,22 @@ export const TIERED_FEED_REGISTRY: {
 } = {
   city: [
     // Bangkok example
-    { url: 'https://www.bangkokpost.com/rss/data/business.xml', locale: 'th', category: 'finance', source: 'Bangkok Post Business', center: { lat: 13.7563, lon: 100.5018 }, radiusKm: 30, priority: 1, reliability: 0.95 },
-    { url: 'https://englishnews.thaipbs.or.th/rss', locale: 'th', category: 'local', source: 'Thai PBS', center: { lat: 13.7563, lon: 100.5018 }, radiusKm: 30, priority: 2, reliability: 0.9 },
+    { url: 'https://www.bangkokpost.com/rss/data/business.xml', locale: 'en', category: 'finance', source: 'Bangkok Post Business', center: { lat: 13.7563, lon: 100.5018 }, radiusKm: 30, priority: 1, reliability: 0.95 },
+    { url: 'https://englishnews.thaipbs.or.th/rss', locale: 'en', category: 'local', source: 'Thai PBS', center: { lat: 13.7563, lon: 100.5018 }, radiusKm: 30, priority: 2, reliability: 0.9 },
     // Add: PTT/PTTOR fuel price RSS if available, BTS/MRT alerts
   ],
   province: [
     // Bangkok Metro provinces
-    { url: 'https://www.bangkokpost.com/rss/data/business.xml', locale: 'th', category: 'local', source: 'Nonthaburi News', center: { lat: 13.8591, lon: 100.5216 }, radiusKm: 25, priority: 1, reliability: 0.7 },
-    { url: 'https://www.bangkokpost.com/rss/data/business.xml', locale: 'th', category: 'local', source: 'Samut Prakan Daily', center: { lat: 13.5991, lon: 100.5968 }, radiusKm: 25, priority: 2, reliability: 0.7 },
+    { url: 'https://www.bangkokpost.com/rss/data/business.xml', locale: 'en', category: 'local', source: 'Nonthaburi News', center: { lat: 13.8591, lon: 100.5216 }, radiusKm: 25, priority: 1, reliability: 0.7 },
+    { url: 'https://www.bangkokpost.com/rss/data/business.xml', locale: 'en', category: 'local', source: 'Samut Prakan Daily', center: { lat: 13.5991, lon: 100.5968 }, radiusKm: 25, priority: 2, reliability: 0.7 },
   ],
   country: {
     TH: [
-      { url: 'https://www.bangkokpost.com/rss/data/business.xml', locale: 'th', category: 'finance', source: 'Bangkok Post Business', center: { lat: 13.7563, lon: 100.5018 }, radiusKm: 1000, priority: 1, reliability: 0.95 },
-      { url: 'https://www.bangkokpost.com/rss/data/general.xml', locale: 'th', category: 'local', source: 'Bangkok Post', center: { lat: 13.7563, lon: 100.5018 }, radiusKm: 1000, priority: 2, reliability: 0.95 },
-      { url: 'https://englishnews.thaipbs.or.th/rss', locale: 'th', category: 'local', source: 'Thai PBS', center: { lat: 13.7563, lon: 100.5018 }, radiusKm: 1000, priority: 3, reliability: 0.9 },
-      { url: 'https://www.pptvhd36.com/rss', locale: 'th', category: 'local', source: 'PPTV', center: { lat: 13.7563, lon: 100.5018 }, radiusKm: 1000, priority: 4, reliability: 0.8 },
-      { url: 'https://www.pttplc.com/rss/th/news.xml', locale: 'th', category: 'fuel', source: 'PTT News', center: { lat: 13.7563, lon: 100.5018 }, radiusKm: 1000, priority: 5, reliability: 0.85 },
+      { url: 'https://www.bangkokpost.com/rss/data/business.xml', locale: 'en', category: 'finance', source: 'Bangkok Post Business', center: { lat: 13.7563, lon: 100.5018 }, radiusKm: 1000, priority: 1, reliability: 0.95 },
+      { url: 'https://www.bangkokpost.com/rss/data/general.xml', locale: 'en', category: 'local', source: 'Bangkok Post', center: { lat: 13.7563, lon: 100.5018 }, radiusKm: 1000, priority: 2, reliability: 0.95 },
+      { url: 'https://englishnews.thaipbs.or.th/rss', locale: 'en', category: 'local', source: 'Thai PBS', center: { lat: 13.7563, lon: 100.5018 }, radiusKm: 1000, priority: 3, reliability: 0.9 },
+      { url: 'https://www.pptvhd36.com/rss', locale: 'en', category: 'local', source: 'PPTV', center: { lat: 13.7563, lon: 100.5018 }, radiusKm: 1000, priority: 4, reliability: 0.8 },
+      { url: 'https://www.pttplc.com/rss/th/news.xml', locale: 'en', category: 'fuel', source: 'PTT News', center: { lat: 13.7563, lon: 100.5018 }, radiusKm: 1000, priority: 5, reliability: 0.85 },
     ],
     ZA: [
       { url: 'https://feeds.news24.com/articles/fin24/rss', locale: 'en', category: 'finance', source: 'Fin24 Business', center: { lat: -26.2041, lon: 28.0473 }, radiusKm: 2000, priority: 1, reliability: 0.95 },

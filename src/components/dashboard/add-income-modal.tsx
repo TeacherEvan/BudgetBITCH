@@ -12,25 +12,25 @@ import { Plus } from 'lucide-react';
 interface AddIncomeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  locale: 'th' | 'en';
+  locale: string;
 }
 
-const CATEGORIES: { value: IncomeCategory; labelEn: string; labelTh: string; icon: string }[] = [
-  { value: 'salary', labelEn: 'Salary', labelTh: 'เงินเดือน', icon: '💵' },
-  { value: 'freelance', labelEn: 'Freelance', labelTh: 'งานอิสระ', icon: '💻' },
-  { value: 'business', labelEn: 'Business', labelTh: 'ธุรกิจ', icon: '🏢' },
-  { value: 'investments', labelEn: 'Investments', labelTh: 'การลงทุน', icon: '📈' },
-  { value: 'gift', labelEn: 'Gift', labelTh: 'ของขวัญ', icon: '🎁' },
-  { value: 'refund', labelEn: 'Refund', labelTh: 'คืนเงิน', icon: '🔄' },
-  { value: 'other', labelEn: 'Other', labelTh: 'อื่นๆ', icon: '✨' },
+const CATEGORIES: { value: IncomeCategory; labelEn: string; icon: string }[] = [
+  { value: 'salary', labelEn: 'Salary', icon: '💵' },
+  { value: 'freelance', labelEn: 'Freelance', icon: '💻' },
+  { value: 'business', labelEn: 'Business', icon: '🏢' },
+  { value: 'investments', labelEn: 'Investments', icon: '📈' },
+  { value: 'gift', labelEn: 'Gift', icon: '🎁' },
+  { value: 'refund', labelEn: 'Refund', icon: '🔄' },
+  { value: 'other', labelEn: 'Other', icon: '✨' },
 ];
 
-const FREQUENCIES: { value: IncomeFrequency; labelEn: string; labelTh: string }[] = [
-  { value: 'one_time', labelEn: 'One-Time', labelTh: 'ครั้งเดียว' },
-  { value: 'weekly', labelEn: 'Weekly', labelTh: 'รายสัปดาห์' },
-  { value: 'biweekly', labelEn: 'Bi-Weekly', labelTh: 'ทุก 2 สัปดาห์' },
-  { value: 'monthly', labelEn: 'Monthly', labelTh: 'รายเดือน' },
-  { value: 'yearly', labelEn: 'Yearly', labelTh: 'รายปี' },
+const FREQUENCIES: { value: IncomeFrequency; labelEn: string; }[] = [
+  { value: 'one_time', labelEn: 'One-Time' },
+  { value: 'weekly', labelEn: 'Weekly' },
+  { value: 'biweekly', labelEn: 'Bi-Weekly' },
+  { value: 'monthly', labelEn: 'Monthly' },
+  { value: 'yearly', labelEn: 'Yearly' },
 ];
 
 export function AddIncomeModal({ isOpen, onClose, locale }: AddIncomeModalProps) {
@@ -60,7 +60,7 @@ export function AddIncomeModal({ isOpen, onClose, locale }: AddIncomeModalProps)
 
       await addIncome({
         amount: parsedAmount,
-        source: source.trim() || (locale === 'th' ? 'รายได้' : 'Income'),
+        source: source.trim() || ('Income'),
         category,
         frequency,
         date,
@@ -114,8 +114,8 @@ export function AddIncomeModal({ isOpen, onClose, locale }: AddIncomeModalProps)
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={locale === 'th' ? 'เพิ่มรายได้' : 'Add Income'}
-      description={locale === 'th' ? 'กรอกรายละเอียดเพื่อบันทึกกระแสเงินสดขาเข้า' : 'Log your cash inflow with all details'}
+      title={'Add Income'}
+      description={'Log your cash inflow with all details'}
       size="md"
       showCloseButton={true}
     >
@@ -123,7 +123,7 @@ export function AddIncomeModal({ isOpen, onClose, locale }: AddIncomeModalProps)
         {/* Amount input */}
         <div className="space-y-1.5">
           <label htmlFor="income-amount-input" className="text-xs font-semibold text-emerald-400 uppercase tracking-wider block">
-            {locale === 'th' ? 'จำนวนเงิน' : 'Amount'}
+            {'Amount'}
           </label>
           <div className="relative">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-lg font-bold text-white/50">
@@ -145,7 +145,7 @@ export function AddIncomeModal({ isOpen, onClose, locale }: AddIncomeModalProps)
         {/* Source / Description */}
         <div className="space-y-1.5">
           <label htmlFor="income-source-input" className="text-xs font-semibold text-white/70 uppercase tracking-wider block">
-            {locale === 'th' ? 'แหล่งที่มา / ผู้จ่าย' : 'Source / Payer'}
+            {'Source / Payer'}
           </label>
           <Input
             id="income-source-input"
@@ -153,7 +153,7 @@ export function AddIncomeModal({ isOpen, onClose, locale }: AddIncomeModalProps)
             required
             value={source}
             onChange={(e) => setSource(e.target.value)}
-            placeholder={locale === 'th' ? 'เช่น เงินเดือนประจำ, งานฟรีแลนซ์' : 'e.g. Monthly Salary, Freelance project'}
+            placeholder={'e.g. Monthly Salary, Freelance project'}
             className="bg-[#0d0d14]/70 border-zinc-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 rounded-xl placeholder:text-white/20"
           />
         </div>
@@ -161,7 +161,7 @@ export function AddIncomeModal({ isOpen, onClose, locale }: AddIncomeModalProps)
         {/* Category Pick grid */}
         <div className="space-y-1.5">
           <label id="income-category-label" className="text-xs font-semibold text-white/70 uppercase tracking-wider block">
-            {locale === 'th' ? 'ประเภทรายได้' : 'Category'}
+            {'Category'}
           </label>
           <div role="group" aria-labelledby="income-category-label" className="grid grid-cols-4 gap-1.5">
             {CATEGORIES.map((cat) => (
@@ -178,7 +178,7 @@ export function AddIncomeModal({ isOpen, onClose, locale }: AddIncomeModalProps)
               >
                 <span className="text-lg">{cat.icon}</span>
                 <span className="truncate max-w-full text-[10px]">
-                  {locale === 'th' ? cat.labelTh : cat.labelEn}
+                  {cat.labelEn}
                 </span>
               </button>
             ))}
@@ -189,7 +189,7 @@ export function AddIncomeModal({ isOpen, onClose, locale }: AddIncomeModalProps)
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label htmlFor="income-frequency-select" className="text-xs font-semibold text-white/70 uppercase tracking-wider block">
-              {locale === 'th' ? 'ความถี่' : 'Frequency'}
+              {'Frequency'}
             </label>
             <select
               id="income-frequency-select"
@@ -199,7 +199,7 @@ export function AddIncomeModal({ isOpen, onClose, locale }: AddIncomeModalProps)
             >
               {FREQUENCIES.map((f) => (
                 <option key={f.value} value={f.value} className="bg-[#0d0d14]">
-                  {locale === 'th' ? f.labelTh : f.labelEn}
+                  {f.labelEn}
                 </option>
               ))}
             </select>
@@ -207,7 +207,7 @@ export function AddIncomeModal({ isOpen, onClose, locale }: AddIncomeModalProps)
 
           <div className="space-y-1.5">
             <label htmlFor="income-date-input" className="text-xs font-semibold text-white/70 uppercase tracking-wider block">
-              {locale === 'th' ? 'วันที่ได้รับ' : 'Date Received'}
+              {'Date Received'}
             </label>
             <Input
               id="income-date-input"
@@ -224,7 +224,7 @@ export function AddIncomeModal({ isOpen, onClose, locale }: AddIncomeModalProps)
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block">
-              {locale === 'th' ? 'หักภาษี ณ ที่จ่าย (ถ้ามี)' : 'Tax Deducted (Optional)'}
+              {'Tax Deducted (Optional)'}
             </label>
             <Input
               type="number"
@@ -238,13 +238,13 @@ export function AddIncomeModal({ isOpen, onClose, locale }: AddIncomeModalProps)
 
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block">
-              {locale === 'th' ? 'บันทึกย่อ' : 'Note (Optional)'}
+              {'Note (Optional)'}
             </label>
             <Input
               type="text"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder={locale === 'th' ? 'เช่น โบนัสพิเศษ' : 'e.g. Quarter bonus'}
+              placeholder={'e.g. Quarter bonus'}
               className="bg-[#0d0d14]/70 border-zinc-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 rounded-xl placeholder:text-white/20"
             />
           </div>
@@ -260,9 +260,7 @@ export function AddIncomeModal({ isOpen, onClose, locale }: AddIncomeModalProps)
               className="w-4 h-4 border border-zinc-800 bg-[#0d0d14] accent-emerald-500 rounded cursor-pointer"
             />
             <span>
-              {locale === 'th'
-                ? 'บวกเพิ่มเข้าสู่ประมาณการรายได้หลักรายเดือนอัตโนมัติ'
-                : 'Add to base monthly profile income estimate'}
+              {'Add to base monthly profile income estimate'}
             </span>
           </label>
         )}
@@ -275,7 +273,7 @@ export function AddIncomeModal({ isOpen, onClose, locale }: AddIncomeModalProps)
             className="flex-1 border-zinc-850 hover:bg-white/5 rounded-xl py-2"
             onClick={onClose}
           >
-            {locale === 'th' ? 'ยกเลิก' : 'Cancel'}
+            {'Cancel'}
           </Button>
           <Button
             type="submit"
@@ -287,7 +285,7 @@ export function AddIncomeModal({ isOpen, onClose, locale }: AddIncomeModalProps)
             ) : (
               <>
                 <Plus className="w-4 h-4" />
-                {locale === 'th' ? 'บันทึก' : 'Save Income'}
+                {'Save Income'}
               </>
             )}
           </Button>

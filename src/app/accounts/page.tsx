@@ -6,7 +6,7 @@ import { AccountsView } from '@/components/accounts/accounts-view';
 import { RequireAuth } from '@/components/auth/require-auth';
 
 export default function AccountsPage() {
-  const locale = useLocale() as 'th' | 'en';
+  const locale = useLocale();
   return (
     <RequireAuth>
       <AccountsView locale={locale} />

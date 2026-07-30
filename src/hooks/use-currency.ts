@@ -75,8 +75,8 @@ export function useResolvedCountry(): string | null {
  * When the location is unresolved, amounts render as plain grouped numerals
  * (no symbol).
  */
-export function useCurrency(): (amount: number, locale?: 'th' | 'en') => string {
+export function useCurrency(): (amount: number, locale?: string) => string {
   const currency = useResolvedCurrency();
-  return (amount: number, locale: 'th' | 'en' = 'en') =>
+  return (amount: number, locale: string = 'en') =>
     formatMoney(amount, currency, locale);
 }

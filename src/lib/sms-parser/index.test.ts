@@ -14,14 +14,6 @@ import {
 import type { ParsedSMSResult } from './types';
 
 describe('detectCountry', () => {
-  it('detects Thailand from baht symbol and bank names', () => {
-    expect(detectCountry('SCB แจ้งยอดฝาก 1,000.00 บาท จาก 123456')).toBe('TH');
-    expect(detectCountry('KPLUS แจ้งยอดโอน 500.00 บาท')).toBe('TH');
-    expect(detectCountry('BBL แจ้งยอดจ่าย 1,200.00 บาท')).toBe('TH');
-    expect(detectCountry('KTB แจ้งยอดซื้อ 350.00 บาท')).toBe('TH');
-    expect(detectCountry('1,500.00 บาท ที่ LOTUS')).toBe('TH');
-  });
-
   it('detects US from $ and bank names', () => {
     expect(detectCountry('CHASE: Your card ending in 1234 was charged $45.67 at STARBUCKS')).toBe('US');
     expect(detectCountry('Bank of America Alert: $123.45 purchase at TARGET')).toBe('US');
@@ -68,7 +60,6 @@ describe('normalizeAmount', () => {
     expect(normalizeAmount('£100')).toBe(100);
     expect(normalizeAmount('¥5000')).toBe(5000);
     expect(normalizeAmount('₹1,234.56')).toBe(1234.56);
-    expect(normalizeAmount('฿1,000.00')).toBe(1000);
   });
 
   it('handles comma as decimal separator', () => {
@@ -164,7 +155,6 @@ describe('looksLikeBankSMS', () => {
   it('returns true for bank-like SMS', () => {
     expect(looksLikeBankSMS('CHASE: $45.67 at STARBUCKS')).toBe(true);
     expect(looksLikeBankSMS('You spent $23.45 at TARGET')).toBe(true);
-    expect(looksLikeBankSMS('SCB แจ้งยอดฝาก 1,000 บาท')).toBe(true);
     expect(looksLikeBankSMS('Transfer to John $100')).toBe(true);
   });
 
@@ -176,18 +166,6 @@ describe('looksLikeBankSMS', () => {
 });
 
 describe('parseSMS', () => {
-  it('parses Thai SCB SMS', () => {
-    const text = 'SCB แจ้งยอดฝาก 1,000.00 บาท จาก 123456 30/01/2567 10:30';
-    const result = parseSMS(text, 'share-target');
-    expect(result.candidates.length).toBeGreaterThan(0);
-    const c = result.candidates[0];
-    expect(c.amount).toBe(1000);
-    expect(c.currency).toBe('THB');
-    expect(c.merchant).toContain('123456');
-    expect(c.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(c.confidence).toBeGreaterThan(0.5);
-  });
-
   it('parses US Chase SMS', () => {
     const text = 'CHASE: Your card ending in 1234 was charged $45.67 at STARBUCKS on 01/15';
     const result = parseSMS(text, 'share-target');

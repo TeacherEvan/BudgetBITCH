@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ManifestoInterstitialProps {
-  locale: "th" | "en";
+  locale: string;
   onDone: () => void;
 }
 
@@ -102,7 +102,7 @@ export function ManifestoInterstitial({ locale, onDone }: ManifestoInterstitialP
             className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-[#080600] overflow-hidden"
             aria-modal="true"
             role="dialog"
-            aria-label={locale === "th" ? "ข้อความสำคัญก่อนเริ่มใช้งาน" : "Important message before you begin"}
+            aria-label={"Important message before you begin"}
           >
             {/* Scanline cinema texture */}
             <div
@@ -138,13 +138,13 @@ export function ManifestoInterstitial({ locale, onDone }: ManifestoInterstitialP
                 </div>
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#C9960C] mb-0.5">
-                    {locale === "th" ? "ก่อนเริ่มต้น — อ่านสิ่งนี้" : "Before you begin — read this"}
+                    {"Before you begin — read this"}
                   </p>
                   <h1
                     className="text-2xl md:text-3xl font-bold text-[#F8F3E8] tracking-tight"
                     style={{ fontFamily: "var(--font-display)" }}
                   >
-                    {locale === "th" ? "คุยกันตรงๆ" : "Serious Talk"}
+                    {"Serious Talk"}
                   </h1>
                 </div>
               </div>
@@ -198,7 +198,7 @@ export function ManifestoInterstitial({ locale, onDone }: ManifestoInterstitialP
                     animation: ctaUnlocked ? "bb-cta-pulse 1.8s ease-in-out infinite" : "none",
                   }}
                 >
-                  {locale === "th" ? "[ รับทราบ. เริ่มใช้งาน ]" : "[ I UNDERSTAND. LET'S GO. ]"}
+                  {"[ I UNDERSTAND. LET'S GO. ]"}
                 </motion.button>
               </div>
             </div>

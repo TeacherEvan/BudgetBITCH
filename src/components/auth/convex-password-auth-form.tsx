@@ -4,8 +4,6 @@ import { useAuthActions, useAuthToken } from "@convex-dev/auth/react";
 import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
 import { useState } from "react";
-import { useLocale } from "next-intl";
-import { shortLocale } from "@/lib/legal/versions";
 import { TERMS_VERSION, PRIVACY_VERSION } from "@/lib/legal/versions";
 import { flushOfflineQueue } from "@/lib/convex/sync-snapshots";
 
@@ -25,11 +23,6 @@ const LEGAL_COPY = {
     terms: "Terms of Service",
     privacy: "Privacy Policy",
   },
-  th: {
-    acceptTerms: "ฉันได้อ่านและยอมรับ{terms}และ{privacy}",
-    terms: "ข้อกำหนดการให้บริการ",
-    privacy: "นโยบายความเป็นส่วนตัว",
-  },
 };
 
 export function ConvexPasswordAuthForm({
@@ -42,9 +35,7 @@ export function ConvexPasswordAuthForm({
 }: ConvexPasswordAuthFormProps) {
   const { signIn } = useAuthActions();
   const router = useRouter();
-  const localeRaw = useLocale();
-  const locale = shortLocale(localeRaw);
-  const legalCopy = LEGAL_COPY[locale];
+  const legalCopy = LEGAL_COPY.en;
   const authToken = useAuthToken();
 
   const [error, setError] = useState<string | null>(null);
@@ -63,18 +54,14 @@ export function ConvexPasswordAuthForm({
 
       if (password !== confirmPassword) {
         setError(
-          locale === "th"
-            ? "รหัสผ่านไม่ตรงกัน กรุณาตรวจสอบอีกครั้ง"
-            : "Passwords do not match. Please try again.",
+          "Passwords do not match. Please try again.",
         );
         return;
       }
 
       if (!acceptedTerms) {
         setError(
-          locale === "th"
-            ? "กรุณายอมรับข้อกำหนดการให้บริการและนโยบายความเป็นส่วนตัว"
-            : "Please accept the Terms of Service and Privacy Policy.",
+          "Please accept the Terms of Service and Privacy Policy.",
         );
         return;
       }
@@ -211,13 +198,13 @@ export function ConvexPasswordAuthForm({
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
       {flow === "signUp" ? (
         <label className="grid gap-2 text-sm font-semibold text-white" htmlFor={`${flow}-name`}>
-          {locale === "th" ? "ชื่อที่แสดง (ไม่บังคับ)" : "Display Name (Optional)"}
+          {"Display Name (Optional)"}
           <input
             id={`${flow}-name`}
             name="name"
             type="text"
             autoComplete="name"
-            placeholder={locale === "th" ? "เช่น Evan" : "e.g. Evan"}
+            placeholder={"e.g. Evan"}
             className="rounded-2xl border border-white/15 bg-black/25 px-4 py-3 text-base text-white outline-none transition focus:border-(--accent-strong) focus:ring-2 focus:ring-(--accent-strong)/35"
           />
         </label>
@@ -247,7 +234,7 @@ export function ConvexPasswordAuthForm({
       </label>
       {flow === "signUp" ? (
         <label className="grid gap-2 text-sm font-semibold text-white" htmlFor={`${flow}-confirm-password`}>
-          {locale === "th" ? "ยืนยันรหัสผ่าน" : "Repeat Password"}
+          {"Repeat Password"}
           <input
             id={`${flow}-confirm-password`}
             name="confirmPassword"
@@ -271,15 +258,11 @@ export function ConvexPasswordAuthForm({
             required
           />
           <span>
-            {locale === "th"
-              ? legalCopy.acceptTerms
-                  .replace("{terms}", legalCopy.terms)
-                  .replace("{privacy}", legalCopy.privacy)
-              : "I have read and accept the "}
-            {locale === "th" ? null : termsLink}
-            {locale === "th" ? null : " and "}
-            {locale === "th" ? null : privacyLink}
-            {locale === "th" ? null : "."}
+            {"I have read and accept the "}
+            {termsLink}
+            {" and "}
+            {privacyLink}
+            {"."}
           </span>
         </label>
       ) : null}

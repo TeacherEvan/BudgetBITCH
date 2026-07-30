@@ -1,10 +1,8 @@
 "use client";
 
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useLocale } from "next-intl";
 import type { FormEvent } from "react";
 import { useState } from "react";
-import { shortLocale } from "@/lib/legal/versions";
 
 const COPY = {
   en: {
@@ -16,15 +14,6 @@ const COPY = {
     sent: "If that email exists, a reset code is on its way. Check your inbox (and spam).",
     backToSignIn: "Back to sign in",
     generic: "Could not send the reset email. Please try again.",
-  },
-  th: {
-    title: "รีเซ็ตรหัสผ่าน",
-    description: "ป้อนอีเมลของบัญชี Budget-BOSS ของคุณ เราจะส่งรหัสรีเซ็ตให้",
-    emailLabel: "ที่อยู่อีเมล",
-    submit: "ส่งรหัสรีเซ็ต",
-    sent: "หากอีเมลนี้มีในระบบ รหัสรีเซ็ตจะถูกส่งไปแล้ว ตรวจสอบกล่องจดหมาย (และสแปม)",
-    backToSignIn: "กลับไปหน้าเข้าสู่ระบบ",
-    generic: "ไม่สามารถส่งอีเมลรีเซ็ตได้ โปรดลองอีกครั้ง",
   },
   zh: {
     title: "重置密码",
@@ -43,9 +32,7 @@ type ForgotPasswordFormProps = {
 
 export function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) {
   const { signIn } = useAuthActions();
-  const localeRaw = useLocale();
-  const locale = shortLocale(localeRaw) as keyof typeof COPY;
-  const copy = COPY[locale];
+  const copy = COPY.en;
 
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);

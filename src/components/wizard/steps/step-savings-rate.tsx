@@ -4,20 +4,15 @@
 import { Slider } from '@/components/ui/slider';
 
 interface StepSavingsRateProps {
-  locale: 'th' | 'en';
+  locale: string;
   value: number;
   onChange: (key: 'savingsRatePct', value: number) => void;
   error?: string | null;
   disabled?: boolean;
 }
 
-export function StepSavingsRate({ locale, value, onChange, disabled }: StepSavingsRateProps) {
+export function StepSavingsRate({ value, onChange, disabled }: StepSavingsRateProps) {
   const labels = {
-    th: {
-      title: 'อัตราการออม',
-      subtitle: 'เปอร์เซ็นต์ของรายได้ที่อยากออมต่อเดือน',
-      helper: 'เปอร์เซ็นต์รายได้ที่จะออม (0-50%)',
-    },
     en: {
       title: 'Savings Rate',
       subtitle: 'Percentage of income to save each month',
@@ -25,7 +20,7 @@ export function StepSavingsRate({ locale, value, onChange, disabled }: StepSavin
     },
   };
 
-  const l = labels[locale];
+  const l = labels.en;
 
   return (
     <div className="space-y-6">
@@ -54,9 +49,7 @@ export function StepSavingsRate({ locale, value, onChange, disabled }: StepSavin
         />
 
         <p className="text-xs text-white/50 text-center">
-          {locale === 'th' 
-            ? 'เลื่อนเพื่อเลือกเปอร์เซ็นต์ที่ต้องการออม' 
-            : 'Slide to choose savings percentage'}
+          {'Slide to choose savings percentage'}
         </p>
       </div>
 

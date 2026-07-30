@@ -31,22 +31,6 @@ describe('PWAInstallPrompt', () => {
     expect(screen.getByText('Install Budget Boss')).toBeInTheDocument();
   });
 
-  it('renders Thai copy when locale=th', () => {
-    render(<PWAInstallPrompt locale="th" />);
-
-    const event = new Event('beforeinstallprompt');
-    Object.assign(event, {
-      prompt: vi.fn().mockResolvedValue(undefined),
-      userChoice: Promise.resolve({ outcome: 'accepted' }),
-    });
-
-    act(() => {
-      fireEvent(window, event);
-    });
-
-    expect(screen.getByText('ติดตั้ง Budget Boss')).toBeInTheDocument();
-  });
-
   it('dismisses prompt when close button is clicked and remembers choice', () => {
     render(<PWAInstallPrompt locale="en" />);
 

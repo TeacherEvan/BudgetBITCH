@@ -5,12 +5,6 @@ import { useState } from 'react';
 import { Bell, BellOff } from 'lucide-react';
 
 const LABELS = {
-  th: {
-    title: 'เปิดการแจ้งเตือน?',
-    body: 'รับการแจ้งเตือนงบประจำวันและการเตือน',
-    allow: 'อนุญาต',
-    later: 'ไว้ทีหลัง',
-  },
   en: {
     title: 'Enable notifications?',
     body: 'Get budget alerts and daily reminders',
@@ -25,13 +19,13 @@ interface PushSubscriptionInput {
 }
 
 interface PushPermissionProps {
-  locale: 'th' | 'en';
+  locale: string;
   onSubscribe: (subscription: PushSubscriptionInput) => void | Promise<void>;
   onClose: () => void;
 }
 
-export function PushPermission({ locale, onSubscribe, onClose }: PushPermissionProps) {
-  const l = LABELS[locale];
+export function PushPermission({ onSubscribe, onClose }: PushPermissionProps) {
+  const l = LABELS.en;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

@@ -56,12 +56,12 @@ vi.mock('@/components/launch/golden-splash', () => {
 });
 
 vi.mock('@/components/onboarding/language-select-modal', () => ({
-  LanguageSelectModal: ({ isOpen, onComplete }: { isOpen: boolean; onComplete: (locale: string) => void }) =>
+  LanguageSelectModal: ({ isOpen, onComplete }: { isOpen: boolean; onComplete: (selection: { locale: string; currency: string }) => void }) =>
     isOpen ? (
       <div data-testid="language-modal" role="dialog">
-        <button onClick={() => onComplete('en')}>United States</button>
-        <button onClick={() => onComplete('fr')}>France</button>
-        <button onClick={() => onComplete('zh')}>China</button>
+        <button onClick={() => onComplete({ locale: 'en', currency: 'USD' })}>United States</button>
+        <button onClick={() => onComplete({ locale: 'fr', currency: 'EUR' })}>France</button>
+        <button onClick={() => onComplete({ locale: 'zh', currency: 'CNY' })}>China</button>
       </div>
     ) : null,
 }));
