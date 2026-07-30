@@ -29,7 +29,6 @@ export function useDisplayPrefs() {
 
   // Hydrate from localStorage after mount — post-mount only, avoids SSR mismatch.
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setGraphTypeState(readStorage(GRAPH_TYPE_KEY, DEFAULTS.graphType, ['bar', 'donut', 'pie', 'line'] as const));
     setAccentColorState(readStorage(ACCENT_COLOR_KEY, DEFAULTS.accentColor, ['gold', 'amber', 'emerald'] as const));
   }, []);

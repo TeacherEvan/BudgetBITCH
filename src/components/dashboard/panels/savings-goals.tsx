@@ -21,7 +21,6 @@ export function SavingsGoals({ locale = 'en' }: SavingsGoalsProps) {
   const formatCurrency = useCurrency();
 
   const { goals, add, update, remove, loading } = useSavingsGoals();
-  // eslint-disable-next-line react-hooks/purity
   const now = useMemo(() => Date.now(), []);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);

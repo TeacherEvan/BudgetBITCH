@@ -100,7 +100,6 @@ export function useSharedBoard(): UseSharedBoard {
   }, [boardId]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     checkActiveStatus();
   }, [checkActiveStatus]);
 

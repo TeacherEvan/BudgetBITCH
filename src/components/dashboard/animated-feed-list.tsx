@@ -51,7 +51,7 @@ export function AnimatedFeedList({ locale }: { locale: 'th' | 'en' }) {
   const { items, loading, error, lastUpdated, refresh } = useVicinityFeeds(locale);
   const tips = locale === 'th' ? BUDGET_TIPS_TH : BUDGET_TIPS_EN;
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [refreshProgress, setRefreshProgress] = useState(0);
+  const [, setRefreshProgress] = useState(0);
   const startYRef = useRef(0);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {

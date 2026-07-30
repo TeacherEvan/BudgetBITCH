@@ -23,7 +23,6 @@ export function ThemeProvider({ children, defaultTheme = 'amber' }: { children: 
     let initial = defaultTheme;
     if (stored) {
       initial = stored;
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTheme(stored);
     } else if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) {
       initial = 'dark';

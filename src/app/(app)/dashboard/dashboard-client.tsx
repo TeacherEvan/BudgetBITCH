@@ -43,7 +43,6 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
     let seen = false;
     try { seen = localStorage.getItem(MANIFESTO_KEY) === '1'; } catch { /* ignore */ }
     // Intentional post-mount check; keeps SSR HTML minimal and avoids hydration mismatch.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!seen) setShowManifesto(true);
   }, []);
 
