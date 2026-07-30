@@ -1,7 +1,198 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useState, useRef } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+
+export type ParticleType = 'gold-dust' | 'coin' | 'sparkle';
+
+export interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  maxLife: number;
+  size: number;
+  opacity: number;
+  rotation: number;
+  rotVel: number;
+  kind: ParticleType;
+  color: string;
+  seed: number;
+  active?: boolean;
+}
+
+export function drawGoldDust(ctx: CanvasRenderingContext2D, p: Particle) {
+  const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+  grad.addColorStop(0, `rgba(245, 215, 66, ${p.opacity})`);
+  grad.addColorStop(1, `rgba(201, 150, 12, 0)`);
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+export function drawCoin(ctx: CanvasRenderingContext2D, p: Particle) {
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.rotate(p.rotation);
+  const squish = Math.abs(Math.cos(p.rotation));
+  ctx.scale(1, Math.max(0.1, squish));
+  
+  const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, p.size);
+  grad.addColorStop(0, `rgba(245, 215, 66, ${p.opacity})`);
+  grad.addColorStop(0.8, `rgba(201, 150, 12, ${p.opacity})`);
+  grad.addColorStop(1, `rgba(130, 90, 5, ${p.opacity})`);
+  ctx.fillStyle = grad;
+  
+  ctx.beginPath();
+  ctx.arc(0, 0, p.size, 0, Math.PI * 2);
+  ctx.fill();
+  
+  ctx.strokeStyle = `rgba(255, 255, 255, ${p.opacity * 0.5})`;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  if (p.size > 8) {
+    ctx.fillStyle = `rgba(8, 6, 0, ${p.opacity * 0.7})`;
+    ctx.font = `bold ${p.size * 1.1}px sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("€", 0, 0);
+  }
+  ctx.restore();
+}
+
+export function drawSparkle(ctx: CanvasRenderingContext2D, p: Particle) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.translate(p.x, p.y);
+  ctx.rotate(p.rotation);
+  
+  const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, p.size * 2);
+  grad.addColorStop(0, `rgba(245, 215, 66, ${p.opacity * 0.4})`);
+  grad.addColorStop(1, 'rgba(245, 215, 66, 0)');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(0, 0, p.size * 2, 0, Math.PI * 2);
+  ctx.fill();
+  
+  ctx.fillStyle = `rgba(255, 245, 215, ${p.opacity})`;
+  ctx.beginPath();
+  const rOuter = p.size;
+  ctx.moveTo(0, -rOuter);
+  ctx.quadraticCurveTo(0, 0, rOuter, 0);
+  ctx.quadraticCurveTo(0, 0, 0, rOuter);
+  ctx.quadraticCurveTo(0, 0, -rOuter, 0);
+  ctx.quadraticCurveTo(0, 0, 0, -rOuter);
+  ctx.closePath();
+  ctx.fill();
+  
+  ctx.restore();
+}
+
+export function spawnParticle(
+  kind: ParticleType,
+  w: number,
+  h: number,
+  fromCenter: boolean = false
+): Particle {
+  const seed = Math.random();
+  let maxLife = 0;
+  let size = 0;
+  let rotation = Math.random() * Math.PI * 2;
+  let rotVel = 0;
+  let color = '#FFFFFF';
+  let x = 0;
+  let y = 0;
+  let vx = 0;
+  let vy = 0;
+
+  if (kind === 'gold-dust') {
+    maxLife = 60 + Math.random() * 40;
+    size = 2 + Math.random() * 3;
+    rotVel = (Math.random() - 0.5) * 0.05;
+    color = '#F5D742';
+
+    if (fromCenter) {
+      x = w / 2 + (Math.random() - 0.5) * 40;
+      y = h / 2 + (Math.random() - 0.5) * 40;
+    } else {
+      x = Math.random() * w;
+      y = h + Math.random() * 20;
+    }
+    vx = (Math.random() - 0.5) * 1.5;
+    vy = -2 - Math.random() * 2;
+  } else if (kind === 'coin') {
+    maxLife = 100 + Math.random() * 60;
+    size = 6 + Math.random() * 6;
+    rotVel = (Math.random() - 0.5) * 0.1;
+    color = '#C9960C';
+
+    if (fromCenter) {
+      x = w / 2;
+      y = h / 2;
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 2 + Math.random() * 4;
+      vx = Math.cos(angle) * speed;
+      vy = Math.sin(angle) * speed - 2;
+    } else {
+      x = Math.random() * w;
+      y = h + Math.random() * 20;
+      vx = (Math.random() - 0.5) * 2;
+      vy = -3 - Math.random() * 3;
+    }
+  } else {
+    maxLife = 50 + Math.random() * 30;
+    size = 3 + Math.random() * 5;
+    rotVel = (Math.random() - 0.5) * 0.2;
+    color = '#FFFFFF';
+
+    if (fromCenter) {
+      x = w / 2;
+      y = h / 2;
+    } else {
+      x = Math.random() * w;
+      y = Math.random() * h;
+    }
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1.5 + Math.random() * 3;
+    vx = Math.cos(angle) * speed;
+    vy = Math.sin(angle) * speed;
+  }
+
+  return {
+    x,
+    y,
+    vx,
+    vy,
+    life: 0,
+    maxLife,
+    size,
+    opacity: 0,
+    rotation,
+    rotVel,
+    kind,
+    color,
+    seed,
+    active: true,
+  };
+}
+
+export const POOL_SIZE = 120;
+
+export function acquireParticle(pool: Particle[]): Particle | null {
+  const p = pool.find((item) => !item.active);
+  if (p) {
+    p.active = true;
+    return p;
+  }
+  return null;
+}
+
+export function releaseParticle(pool: Particle[], p: Particle) {
+  p.active = false;
+}
 
 interface GoldenSplashProps {
   onProceed: () => void;
@@ -12,7 +203,7 @@ function Particle({ style, char }: { style: React.CSSProperties; char: string })
   return (
     <span
       aria-hidden="true"
-      className="pointer-events-none absolute bottom-0 text-amber-400/30 text-xl md:text-2xl font-black opacity-0 select-none"
+      className="pointer-events-none absolute bottom-0 text-amber-400/5 text-xl md:text-2xl font-black opacity-0 select-none"
       style={style}
     >
       {char}
@@ -30,7 +221,7 @@ const PARTICLES = Array.from({ length: 16 }, (_, i) => {
       left: `${4 + i * 6.2}%`,
       animationDelay: `${(i * 0.22).toFixed(2)}s`,
       animationDuration: `${3.2 + (i % 4) * 0.5}s`,
-      animationName: "bb-particle-float",
+      animationName: "bb-particle-float-v2",
       animationTimingFunction: "ease-out",
       animationIterationCount: "infinite",
     } as React.CSSProperties,
@@ -75,6 +266,157 @@ export function GoldenSplash({ onProceed }: GoldenSplashProps) {
   const [phase, setPhase] = useState<"reckoning" | "statement" | "invitation">("reckoning");
   const [ready, setReady] = useState(false);
 
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
+
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const prefersReducedMotion = useReducedMotion();
+
+  useEffect(() => {
+    if (prefersReducedMotion) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let animationFrameId: number;
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+
+    const resize = () => {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      ctx.scale(dpr, dpr);
+    };
+
+    window.addEventListener("resize", resize);
+    resize();
+
+    // Populate pool of 120 particles
+    const pool: Particle[] = Array.from({ length: POOL_SIZE }, () => ({
+      x: 0,
+      y: 0,
+      vx: 0,
+      vy: 0,
+      life: 0,
+      maxLife: 0,
+      size: 0,
+      opacity: 0,
+      rotation: 0,
+      rotVel: 0,
+      kind: "gold-dust",
+      color: "#FFFFFF",
+      seed: 0,
+      active: false,
+    }));
+
+    let frameCount = 0;
+    let lastPhase = phaseRef.current;
+
+    const tick = () => {
+      if (document.hidden) {
+        animationFrameId = requestAnimationFrame(tick);
+        return;
+      }
+
+      ctx.clearRect(0, 0, width, height);
+
+      // Phase transition checks and bursts
+      const currentPhase = phaseRef.current;
+      if (lastPhase !== currentPhase) {
+        if (currentPhase === "statement") {
+          // When moving to 'statement', spawn 15 coins and 20 sparkles from the screen center.
+          for (let i = 0; i < 15; i++) {
+            const p = acquireParticle(pool);
+            if (p) {
+              Object.assign(p, spawnParticle("coin", width, height, true));
+            }
+          }
+          for (let i = 0; i < 20; i++) {
+            const p = acquireParticle(pool);
+            if (p) {
+              Object.assign(p, spawnParticle("sparkle", width, height, true));
+            }
+          }
+        } else if (currentPhase === "invitation") {
+          // When moving to 'invitation', spawn 10 sparkles from the logo position (approx center horizontally, 30% down from the top).
+          for (let i = 0; i < 10; i++) {
+            const p = acquireParticle(pool);
+            if (p) {
+              Object.assign(p, spawnParticle("sparkle", width, height, true));
+              p.x = width / 2;
+              p.y = height * 0.3;
+            }
+          }
+        }
+        lastPhase = currentPhase;
+      }
+
+      // Spawn logic: spawns gold-dust from the bottom continuously (every 3 frames, max 60 active)
+      frameCount++;
+      if (frameCount % 3 === 0) {
+        const activeDustCount = pool.filter(p => p.active && p.kind === 'gold-dust').length;
+        if (activeDustCount < 60) {
+          const p = acquireParticle(pool);
+          if (p) {
+            const spawned = spawnParticle('gold-dust', width, height, false);
+            Object.assign(p, spawned);
+          }
+        }
+      }
+
+      // Physics, Update, Draw, and Recycle loop
+      for (const p of pool) {
+        if (!p.active) continue;
+
+        p.life++;
+        if (p.life >= p.maxLife) {
+          releaseParticle(pool, p);
+          continue;
+        }
+
+        const t = p.life / p.maxLife;
+        p.opacity = Math.sin(t * Math.PI); // easeInOut-ish opacity
+
+        // Physics: gravity, wind/turbulence, rotation, rotVel, life/maxLife
+        if (p.kind === 'gold-dust') {
+          p.vy += 0.01;
+          p.vx += Math.sin(p.life * 0.05 + p.seed * 10) * 0.08;
+        } else if (p.kind === 'coin') {
+          p.vy += 0.15;
+          p.vx += Math.sin(p.life * 0.02 + p.seed * 5) * 0.02;
+        } else {
+          p.vx *= 0.98;
+          p.vy *= 0.98;
+        }
+
+        p.x += p.vx;
+        p.y += p.vy;
+        p.rotation += p.rotVel;
+
+        if (p.kind === 'gold-dust') {
+          drawGoldDust(ctx, p);
+        } else if (p.kind === 'coin') {
+          drawCoin(ctx, p);
+        } else if (p.kind === 'sparkle') {
+          drawSparkle(ctx, p);
+        }
+      }
+
+      animationFrameId = requestAnimationFrame(tick);
+    };
+
+    tick();
+
+    return () => {
+      window.removeEventListener("resize", resize);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [prefersReducedMotion]);
+
   useEffect(() => {
     const t1 = setTimeout(() => setPhase("statement"), 400);
     const t2 = setTimeout(() => setPhase("invitation"), 1800);
@@ -90,7 +432,7 @@ export function GoldenSplash({ onProceed }: GoldenSplashProps) {
     <>
       {/* Particle float keyframes injected via style tag */}
       <style>{`
-        @keyframes bb-particle-float {
+        @keyframes bb-particle-float-v2 {
           0%   { transform: translateY(0) scale(0.6) rotate(0deg); opacity: 0; }
           15%  { opacity: 0.6; }
           80%  { opacity: 0.4; }
@@ -114,6 +456,15 @@ export function GoldenSplash({ onProceed }: GoldenSplashProps) {
         data-testid="golden-splash"
         className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#080600] text-[#F8F3E8] overflow-hidden select-none"
       >
+        { !prefersReducedMotion && (
+          <canvas
+            ref={canvasRef}
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ zIndex: 1 }}
+          />
+        ) }
+
         {/* Floating Money & Gold Particles */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           {PARTICLES.map((p) => (

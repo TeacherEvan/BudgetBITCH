@@ -8,9 +8,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   allowedDevOrigins: ["127.0.0.1"],
-  turbopack: {
-    root: __dirname,
-  },
 };
 
 // NOTE: PWA is handled by the hand-written public/sw.js (registered in
