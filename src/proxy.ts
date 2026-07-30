@@ -1,6 +1,24 @@
 import { clerkMiddleware } from '@clerk/nextjs/server';
+import { NextResponse, type NextRequest, type NextFetchEvent } from 'next/server';
 
-export default clerkMiddleware();
+const hasClerkKeys = Boolean(
+  process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
+  !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.includes('replace_me')
+);
+
+const clerkHandler = clerkMiddleware();
+
+export default function middleware(req: NextRequest, evt: NextFetchEvent) {
+  if (!hasClerkKeys) {
+    return NextResponse.next();
+  }
+  try {
+    return clerkHandler(req, evt);
+  } catch (error) {
+    console.error('[Middleware Error]:', error);
+    return NextResponse.next();
+  }
+}
 
 export const config = {
   matcher: [
