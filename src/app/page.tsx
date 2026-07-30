@@ -76,13 +76,21 @@ export default function Home() {
     );
   }
 
+  // After splash screen animation: show country flags language modal BEFORE the login/sign-up card
+  if (showLanguageModal) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <LanguageSelectModal
+          isOpen={true}
+          onComplete={finishLocaleSelect}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="relative">
       <CleanAuthCard initialFlow="signIn" redirectTo="/dashboard" />
-      <LanguageSelectModal
-        isOpen={showLanguageModal}
-        onComplete={finishLocaleSelect}
-      />
     </div>
   );
 }
