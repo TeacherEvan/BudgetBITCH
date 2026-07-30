@@ -106,6 +106,18 @@ export interface BudgetBITCHDB extends DBSchema {
     key: string;
     value: number;
   };
+  // Offline receipt scraper drafts queue
+  receiptDrafts: {
+    key: string; // clientDraftId
+    value: {
+      clientDraftId: string;
+      payload: unknown;
+      result: unknown;
+      answers?: Record<string, string>;
+      confirmed?: boolean;
+      createdAt: number;
+    };
+  };
 }
 
 const DB_NAME = 'budgetbitch';
@@ -218,6 +230,7 @@ export async function getDB(): Promise<IDBPDatabase<BudgetBITCHDB>> {
       if (!db.objectStoreNames.contains('localAccounts')) db.createObjectStore('localAccounts');
       if (!db.objectStoreNames.contains('bbMeta')) db.createObjectStore('bbMeta');
       if (!db.objectStoreNames.contains('localWrites')) db.createObjectStore('localWrites');
+      if (!db.objectStoreNames.contains('receiptDrafts')) db.createObjectStore('receiptDrafts');
 
       // Version-specific migrations
       if (oldVersion > 0 && oldVersion < 3) {
@@ -739,4 +752,5 @@ export * from './stores/expenses-store';
 export * from './stores/snapshots-store';
 export * from './stores/accounts-store';
 export * from './stores/incomes-store';
+export * from './stores/receipt-drafts-store';
 
