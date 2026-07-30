@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter, Space_Grotesk } from 'next/font/google';
+import { Inter, Space_Grotesk, Roboto_Mono } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { ConvexClientProvider } from '@/components/providers/convex-client-provider';
@@ -38,6 +38,12 @@ const spaceGrotesk = Space_Grotesk({
   display: 'swap',
 });
 
+const robotoMono = Roboto_Mono({
+  variable: '--font-roboto-mono',
+  subsets: ['latin'],
+  display: 'swap',
+});
+
 export const metadata: Metadata = {
   title: 'BudgetBITCH — Cinematic Privacy-First Budgeting',
   description: 'Track money in, money out, net worth, and budget goals with end-to-end local privacy and couple sync.',
@@ -60,7 +66,7 @@ export default async function RootLayout({
   const messages = getLocaleMessages(rawLocale);
 
   return (
-    <html lang={locale} suppressHydrationWarning className={`${inter.variable} ${spaceGrotesk.variable} antialiased`}>
+    <html lang={locale} suppressHydrationWarning className={`${inter.variable} ${spaceGrotesk.variable} ${robotoMono.variable} antialiased`}>
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="manifest" href="/manifest.json" />

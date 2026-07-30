@@ -44,8 +44,18 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
   const [excelTab, setExcelTab] = useState<'standard' | 'variance' | 'cashflow' | 'pivot'>('standard');
 
   // Location determines Market Watch availability (location-specific feeds only)
-  const { location } = useResolvedLocation();
+  const { location, requestLocation } = useResolvedLocation();
   const hasLocation = location !== null;
+  const [requestingLoc, setRequestingLoc] = useState(false);
+
+  const handleRequestLocation = async () => {
+    setRequestingLoc(true);
+    try {
+      await requestLocation();
+    } finally {
+      setRequestingLoc(false);
+    }
+  };
 
 
   // T5: direction-aware panel transitions. Direction is decided in the
@@ -172,15 +182,19 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
               </button>
             ) : (
               <button
+                type="button"
                 data-testid="market-watch-location-locked"
-                disabled
-                className="xl:hidden flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3 text-left cursor-not-allowed opacity-60"
+                disabled={requestingLoc}
+                onClick={handleRequestLocation}
+                className="xl:hidden flex w-full items-center gap-3 rounded-xl border border-sky-400/30 bg-sky-400/10 p-3 text-left transition-colors hover:bg-sky-400/20 cursor-pointer disabled:opacity-50"
                 aria-label={locale === 'th' ? 'เปิดการใช้งานตำแหน่งที่ตั้งเพื่อดู Market Watch' : 'Enable location to use Market Watch'}
               >
                 <span className="text-2xl" aria-hidden="true">📍</span>
                 <div className="flex-1 text-left min-w-0">
                   <p className="text-sm font-medium text-[var(--text-1)] truncate">
-                    {locale === 'th' ? 'เปิดการใช้งานตำแหน่งที่ตั้ง' : 'Enable Location'}
+                    {requestingLoc
+                      ? (locale === 'th' ? 'กำลังขอตำแหน่ง...' : 'Requesting location...')
+                      : (locale === 'th' ? 'เปิดการใช้งานตำแหน่งที่ตั้ง' : 'Enable Location')}
                   </p>
                   <p className="text-xs text-[var(--text-2)]">
                     {locale === 'th' ? 'จำเป็นสำหรับข่าวและราคาน้ำมันในพื้นที่' : 'Required for local news & fuel'}
@@ -380,14 +394,20 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
             </button>
           ) : (
             <button
+              type="button"
               data-testid="market-watch-location-locked"
-              disabled
-              className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3 text-left cursor-not-allowed opacity-60"
+              disabled={requestingLoc}
+              onClick={handleRequestLocation}
+              className="flex w-full items-center gap-3 rounded-xl border border-sky-400/30 bg-sky-400/10 p-3 text-left transition-colors hover:bg-sky-400/20 cursor-pointer disabled:opacity-50"
               aria-label={locale === 'th' ? 'เปิดการใช้งานตำแหน่งที่ตั้งเพื่อดู Market Watch' : 'Enable location to use Market Watch'}
             >
               <span className="text-2xl" aria-hidden="true">📍</span>
               <div className="min-w-0">
-                <p className="font-medium text-[var(--text-1)] truncate">{locale === 'th' ? 'เปิดการใช้งานตำแหน่งที่ตั้ง' : 'Enable Location'}</p>
+                <p className="font-medium text-[var(--text-1)] truncate">
+                  {requestingLoc
+                    ? (locale === 'th' ? 'กำลังขอตำแหน่ง...' : 'Requesting location...')
+                    : (locale === 'th' ? 'เปิดการใช้งานตำแหน่งที่ตั้ง' : 'Enable Location')}
+                </p>
               </div>
             </button>
           )}

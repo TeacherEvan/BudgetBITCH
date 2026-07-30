@@ -210,7 +210,7 @@ describe('SettingsPage', () => {
   it('navigates to /dashboard via router (no full reload) when re-running the wizard', () => {
     renderWithProviders(<SettingsPage />);
     fireEvent.click(screen.getByRole('button', { name: /re-run setup wizard/i }));
-    expect(mockRouter.push).toHaveBeenCalledWith('/dashboard');
+    expect(mockRouter.push).toHaveBeenCalledWith('/dashboard?redo=true');
     expect(window.location.pathname).not.toBe('/dashboard');
   });
 

@@ -96,9 +96,12 @@ export function AccountSettingsCard({
           type="button"
           onClick={() => {
             clearProfile?.();
-            router.push('/dashboard');
+            if (typeof window !== 'undefined') {
+              sessionStorage.setItem('bb:wizard-redo', '1');
+            }
+            router.push('/dashboard?redo=true');
           }}
-          className="flex w-full items-center gap-2 rounded-xl border border-[rgba(201,150,12,0.3)] bg-[rgba(201,150,12,0.08)] px-4 py-3 text-sm font-medium text-[#E8B020] transition-colors hover:bg-[rgba(201,150,12,0.15)]"
+          className="flex w-full items-center gap-2 rounded-xl border border-[rgba(201,150,12,0.3)] bg-[rgba(201,150,12,0.08)] px-4 py-3 text-sm font-medium text-[#E8B020] transition-colors hover:bg-[rgba(201,150,12,0.15)] cursor-pointer"
         >
           🔄 {locale === 'th' ? 'เริ่มวิซาร์ดตั้งค่าใหม่อีกครั้ง' : 'Re-run Setup Wizard'}
         </button>

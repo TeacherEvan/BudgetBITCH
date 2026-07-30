@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Lottie from 'lottie-react';
 import { useVicinityFeeds } from '@/hooks/use-vicinity-feeds';
+import { useResolvedLocation } from '@/hooks/use-resolved-location';
 import { FeedCard } from './feed-card';
 import { BudgetTipSkeleton } from './budget-tip-skeleton';
 import loadingAnimation from '@/animations/loading-gold-shimmer.json';
@@ -49,6 +50,7 @@ const itemVariants = {
 
 export function AnimatedFeedList({ locale }: { locale: 'th' | 'en' }) {
   const { items, loading, error, lastUpdated, refresh } = useVicinityFeeds(locale);
+  const { requestLocation } = useResolvedLocation();
   const tips = locale === 'th' ? BUDGET_TIPS_TH : BUDGET_TIPS_EN;
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [, setRefreshProgress] = useState(0);
@@ -96,8 +98,8 @@ export function AnimatedFeedList({ locale }: { locale: 'th' | 'en' }) {
           {locale === 'th' ? 'อนุญาตตำแหน่งเพื่อดูข่าวใกล้ตัวคุณ' : 'Enable location for nearby news'}
         </p>
         <button
-          onClick={() => navigator.geolocation.getCurrentPosition(() => {})}
-          className="bb-button-primary mt-2"
+          onClick={async () => { await requestLocation(); }}
+          className="bb-button-primary mt-2 cursor-pointer"
         >
           {locale === 'th' ? 'เปิดตำแหน่ง' : 'Enable Location'}
         </button>

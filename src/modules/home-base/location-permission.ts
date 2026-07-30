@@ -2,6 +2,8 @@ import {
   lookupReverseGeocodeCandidate,
   normalizeReverseGeocodeLabel,
 } from "./reverse-geocode-label";
+import { saveLocationCache } from "@/lib/db/local-db";
+import type { LocationCache } from "@/lib/types/budget";
 
 export type GeolocationPermissionState = "granted" | "prompt" | "denied" | "unsupported";
 
@@ -146,4 +148,41 @@ export async function detectHomeBaseFromCurrentArea(
   } catch {
     return { status: "unavailable" };
   }
+}
+
+export async function requestAndPersistLocation(): Promise<LocationCache | null> {
+  const result = await detectHomeBaseFromCurrentArea();
+  if (result.status === 'success') {
+    const pos = await requestCurrentPosition();
+    const lat = pos.status === 'success' ? pos.coordinates.latitude : 0;
+    const lon = pos.status === 'success' ? pos.coordinates.longitude : 0;
+
+    const payload: LocationCache = {
+      lat,
+      lon,
+      city: result.homeBase.city,
+      province: result.homeBase.region,
+      country: result.homeBase.countryCode,
+      timestamp: Date.now(),
+      timezone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC',
+    };
+    await saveLocationCache(payload);
+    return payload;
+  } else {
+    const pos = await requestCurrentPosition();
+    if (pos.status === 'success') {
+      const payload: LocationCache = {
+        lat: pos.coordinates.latitude,
+        lon: pos.coordinates.longitude,
+        city: '',
+        province: '',
+        country: null,
+        timestamp: Date.now(),
+        timezone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC',
+      };
+      await saveLocationCache(payload);
+      return payload;
+    }
+  }
+  return null;
 }

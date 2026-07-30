@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { DashboardShell } from '@/components/dashboard/dashboard-shell';
 import { WizardShell } from '@/components/wizard/wizard-shell';
@@ -26,6 +26,7 @@ const MANIFESTO_KEY = 'bb:manifesto-v1';
 
 export function DashboardClient({ wizardCompleted: initialWizardCompleted }: DashboardClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const locale = useLocale() as 'th' | 'en';
   
   const { profile, loading: profileLoading } = useWizardProfile();
@@ -33,6 +34,16 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
   const [isLoading, setIsLoading] = useState(false);
   const [budgetsInitialized, setBudgetsInitialized] = useState(false);
   const [wizardForced, setWizardForced] = useState(false);
+
+  // Check if wizard redo was explicitly requested via Settings or URL parameter
+  const isRedo = searchParams?.get('redo') === 'true' || (typeof window !== 'undefined' && sessionStorage.getItem('bb:wizard-redo') === '1');
+
+  useEffect(() => {
+    if (isRedo) {
+      setWizardForced(true);
+      setWizardCompleted(false);
+    }
+  }, [isRedo]);
 
   const latestSnapshot = useQuery(api.snapshots.getLatestSnapshot);
 
@@ -106,7 +117,7 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
 
   // Restore session snapshot upon login if local profile is uncompleted
   useEffect(() => {
-    if (profileLoading) return;
+    if (profileLoading || wizardForced || isRedo) return;
     if (profile && profile.completed) return; // already completed locally
     if (latestSnapshot === undefined || latestSnapshot === null) return; // loading or no snapshot
 
@@ -142,14 +153,18 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
         setIsLoading(false);
       }
     })();
-  }, [profile, profileLoading, latestSnapshot, checkWizardStatus, router]);
+  }, [profile, profileLoading, latestSnapshot, checkWizardStatus, wizardForced, isRedo, router]);
 
   const handleWizardComplete = useCallback(async () => {
     setWizardCompleted(true);
     setWizardForced(false);
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('bb:wizard-redo');
+    }
     // Push the completed profile snapshot to Convex immediately
     await syncDailySnapshot();
     await new Promise(resolve => setTimeout(resolve, 300));
+    router.replace('/dashboard');
     router.refresh();
   }, [router]);
 
