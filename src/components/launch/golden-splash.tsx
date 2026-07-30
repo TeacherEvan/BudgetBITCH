@@ -100,7 +100,7 @@ export function spawnParticle(
   const seed = Math.random();
   let maxLife = 0;
   let size = 0;
-  let rotation = Math.random() * Math.PI * 2;
+  const rotation = Math.random() * Math.PI * 2;
   let rotVel = 0;
   let color = '#FFFFFF';
   let x = 0;

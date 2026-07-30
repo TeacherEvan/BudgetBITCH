@@ -67,3 +67,6 @@ local-db-*
 .hermes-cache/
 hermes_cache.py
 __pycache__/
+
+# clerk configuration (can include secrets)
+/.clerk/

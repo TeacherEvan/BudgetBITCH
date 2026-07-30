@@ -3,6 +3,8 @@ import Parser from 'rss-parser';
 import { resolveVicinityFeeds, VicinityFeedWithMeta } from '@/lib/news/vicinity-resolver';
 import type { NewsItem } from '@/lib/types/budget';
 
+export const dynamic = 'force-dynamic';
+
 const parser = new Parser();
 
 function getActionableText(item: { title: string; category: string }, locale: 'th' | 'en'): string | undefined {

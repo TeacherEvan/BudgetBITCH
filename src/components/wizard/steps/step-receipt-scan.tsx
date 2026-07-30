@@ -17,7 +17,6 @@ interface StepReceiptScanProps {
 
 export function StepReceiptScan({
   locale,
-  value: _value,
   onChange,
   error,
   disabled = false,

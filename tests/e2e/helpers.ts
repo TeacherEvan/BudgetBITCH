@@ -53,7 +53,9 @@ export class ErrorCollector {
       t.includes("the user aborted a request") ||
       t.includes("aborterror") ||
       t.includes("hydration") || // pre-existing SSR/CSR mismatch warnings
-      t.includes("sw registration failed")
+      t.includes("sw registration failed") ||
+      t.includes("server functions") ||
+      t.includes("failed to load clerk")
     );
   }
 

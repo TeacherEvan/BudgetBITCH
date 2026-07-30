@@ -9,12 +9,14 @@ vi.mock('@/hooks/use-vicinity-feeds');
 // Mock Lottie properly - default export is the Lottie component
 vi.mock('lottie-react', () => ({
   __esModule: true,
-  default: ({ animationData: _animationData, ...props }: { animationData: unknown; [key: string]: unknown }) => (
-    <div data-testid="lottie-animation" {...props} />
-  ),
-  Lottie: ({ animationData: _animationData, ...props }: { animationData: unknown; [key: string]: unknown }) => (
-    <div data-testid="lottie-animation" {...props} />
-  ),
+  default: ({ animationData, ...props }: { animationData?: unknown; [key: string]: unknown }) => {
+    void animationData;
+    return <div data-testid="lottie-animation" {...props} />;
+  },
+  Lottie: ({ animationData, ...props }: { animationData?: unknown; [key: string]: unknown }) => {
+    void animationData;
+    return <div data-testid="lottie-animation" {...props} />;
+  },
   LottiePlayer: () => null,
   useLottie: () => null,
   useLottieInteractivity: () => null,

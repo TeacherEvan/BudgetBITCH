@@ -15,7 +15,7 @@
 //    clean, not tolerate a hard-coded noise budget. If specific known errors
 //    are acceptable, add them to the ErrorCollector.isIgnorable() allowlist.
 //  - Screenshots still written to dogfood-output/ for audit record-keeping.
-import { test, expect, signInReal, seedLocalStorage, HAS_CREDS, ErrorCollector } from "./helpers";
+import { test, expect, signInReal, HAS_CREDS, ErrorCollector } from "./helpers";
 import fs from "fs";
 import path from "path";
 
