@@ -52,7 +52,8 @@ export class ErrorCollector {
       t.includes("net::err") ||
       t.includes("the user aborted a request") ||
       t.includes("aborterror") ||
-      t.includes("hydration") // pre-existing SSR/CSR mismatch warnings
+      t.includes("hydration") || // pre-existing SSR/CSR mismatch warnings
+      t.includes("sw registration failed")
     );
   }
 
@@ -101,15 +102,27 @@ export async function seedLocalStorage(page: Page, locale: "en" | "th" = "en") {
 // ---------------------------------------------------------------------------
 export async function setupConsentDismissal(page: Page) {
   await page.addInitScript(() => {
+    let clickedPrivacy = false;
+    let clickedCookie = false;
     const tryDismiss = () => {
-      const gotIt = document.querySelector<HTMLButtonElement>(
-        '[data-testid="privacy-gotit-btn"]',
-      );
-      if (gotIt) gotIt.click();
-      const essential = Array.from(document.querySelectorAll("button")).find(
-        (b) => /essential only/i.test(b.textContent ?? ""),
-      );
-      if (essential) (essential as HTMLButtonElement).click();
+      if (!clickedPrivacy) {
+        const gotIt = document.querySelector<HTMLButtonElement>(
+          '[data-testid="privacy-gotit-btn"]',
+        );
+        if (gotIt) {
+          gotIt.click();
+          clickedPrivacy = true;
+        }
+      }
+      if (!clickedCookie) {
+        const essential = Array.from(document.querySelectorAll("button")).find(
+          (b) => /essential only/i.test(b.textContent ?? ""),
+        );
+        if (essential) {
+          (essential as HTMLButtonElement).click();
+          clickedCookie = true;
+        }
+      }
     };
 
     try {

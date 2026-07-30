@@ -47,6 +47,7 @@ test.describe("Auth entry (anonymous)", () => {
     page,
   }) => {
     await page.goto("/sign-in");
+    await page.waitForLoadState("networkidle").catch(() => {});
     await page.getByRole("button", { name: /forgot password/i }).click();
     await expect(
       page.getByRole("heading", { name: /reset your password/i }),
@@ -64,6 +65,7 @@ test.describe("Auth entry (anonymous)", () => {
 
   test("forgot-password back link returns to sign-in", async ({ page }) => {
     await page.goto("/sign-in");
+    await page.waitForLoadState("networkidle").catch(() => {});
     await page.getByRole("button", { name: /forgot password/i }).click();
     await expect(
       page.getByRole("heading", { name: /reset your password/i }),

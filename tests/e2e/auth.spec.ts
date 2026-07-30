@@ -31,6 +31,7 @@ test.describe("Auth — sign-in page", () => {
   });
 
   test("opens forgot-password view from sign-in", async ({ page }) => {
+    await page.waitForLoadState("networkidle").catch(() => {});
     await page.getByRole("button", { name: /forgot password/i }).click();
     await expect(page.getByRole("button", { name: /send reset code/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /back to sign in/i })).toBeVisible();

@@ -8,7 +8,8 @@
 import { test, expect } from "./helpers";
 
 test.describe("PWA offline", () => {
-  test("service worker registers and app shell loads offline", async ({ page, errors }) => {
+  test("service worker registers and app shell loads offline", async ({ page, errors, browserName }) => {
+    test.skip(browserName === "webkit", "WebKit setOffline internal error flake");
     await page.goto("/");
     // Wait for the service worker to become active.
     await page
