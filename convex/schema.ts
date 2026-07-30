@@ -165,6 +165,7 @@ export default defineSchema({
     message: v.string(),
     email: v.optional(v.string()),
     context: v.optional(v.string()),
+    actionLogs: v.optional(v.array(v.string())),
     userAgent: v.optional(v.string()),
     locale: v.optional(v.string()),
     createdAt: v.number(),

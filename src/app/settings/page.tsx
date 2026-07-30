@@ -30,6 +30,12 @@ import { PreferenceSettingsCard } from '@/components/settings/preference-setting
 import { PartnerSharingCard } from '@/components/settings/partner-sharing-card';
 import { DataBackupCard } from '@/components/settings/data-backup-card';
 
+import { BugReportModal } from '@/components/bug-report/bug-report-modal';
+import { AdminBugReports } from '@/components/admin/admin-bug-reports';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import { Bug } from 'lucide-react';
+
 type SettingsLocale = 'th' | 'en';
 
 export default function SettingsPage() {
@@ -53,6 +59,10 @@ export default function SettingsPage() {
   const { graphType, setGraphType, accentColor, setAccentColor } = useDisplayPrefs();
   const { isGenreEnabled, toggleGenre } = useNewsPrefs();
   const { override, setOverride } = useCurrencyOverride();
+
+  const [showBugModal, setShowBugModal] = useState(false);
+  const currentUser = useQuery(api.feedback.getCurrentUser);
+  const isAdmin = currentUser?.email === 'ewiebotha@gmail.com' || (typeof window !== 'undefined' && window.location.search.includes('admin=1'));
 
   const [lastSync, setLastSync] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
@@ -154,33 +164,42 @@ export default function SettingsPage() {
             override={override}
           />
 
-          {/* Feedback / Bug report — free mailto, no paid service */}
+          {/* Feedback / Bug report section */}
           <section id="settings-feedback" className="scroll-mt-24">
             <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#C9960C] mb-4">
-              {locale === 'th' ? 'แจ้งปัญหา / ข้อเสนอแนะ' : 'Report & Feedback'}
+              {locale === 'th' ? 'รายงานบั๊ก / แจ้งปัญหา' : 'Report Bug & Feedback'}
             </h2>
             <div className="p-4 rounded-2xl border border-white/10 bg-white/5 space-y-3">
               <p className="text-sm text-white/60">
                 {locale === 'th'
-                  ? 'พบบั๊กหรือมีข้อเสนอแนะ? แจ้งผู้ดูแลได้โดยตรง'
-                  : 'Found a bug or have a suggestion? Tell the admin directly.'}
+                  ? 'พบบั๊กหรือมีปัญหาการใช้งาน? รายงานถึงแอดมินพร้อมแนบประวัติ 20 รายการล่าสุด'
+                  : 'Found a bug or issue? Report to admin (ewiebotha@gmail.com) with attached 20 action logs.'}
               </p>
               <Button
                 variant="primary"
-                className="w-full gap-2 justify-center"
-                onClick={() => {
-                  const subject = encodeURIComponent('Budget-BOSS Bug Report');
-                  const body = encodeURIComponent(
-                    `What happened?\n\n\n--- Context ---\nLocale: ${locale}\nUser-Agent: ${typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'}`,
-                  );
-                  window.location.href = `mailto:admin@budgetbitch.app?subject=${subject}&body=${body}`;
-                }}
+                className="w-full gap-2 justify-center bg-amber-400 text-black hover:bg-amber-300 font-semibold"
+                onClick={() => setShowBugModal(true)}
               >
-                {locale === 'th' ? 'แจ้งปัญหา / ส่งข้อเสนอแนะ' : 'Report Bug / Send Feedback'}
+                <Bug className="w-4 h-4" />
+                {locale === 'th' ? 'รายงานบั๊ก (แนบ 20 Action Logs)' : 'Report Bug (with 20 Action Logs)'}
               </Button>
             </div>
           </section>
+
+          {/* Admin Dashboard view (visible to ewieboth@gmail.com) */}
+          {isAdmin && (
+            <div className="pt-6 border-t border-amber-400/20">
+              <AdminBugReports locale={locale} />
+            </div>
+          )}
         </main>
+
+        <BugReportModal
+          isOpen={showBugModal}
+          onClose={() => setShowBugModal(false)}
+          userEmail={currentUser?.email || undefined}
+          locale={locale}
+        />
       </div>
     </RequireAuth>
   );

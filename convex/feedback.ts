@@ -5,7 +5,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
-const ADMIN_EMAIL = process.env.FEEDBACK_ADMIN_EMAIL ?? "admin@budgetbitch.app";
+const ADMIN_EMAIL = process.env.FEEDBACK_ADMIN_EMAIL ?? "ewiebotha@gmail.com";
 const RESEND_FROM =
   process.env.AUTH_EMAIL_FROM ?? "BudgetBITCH <onboarding@resend.dev>";
 
@@ -15,6 +15,7 @@ export const report = mutation({
     message: v.string(),
     email: v.optional(v.string()),
     context: v.optional(v.string()),
+    actionLogs: v.optional(v.array(v.string())),
     userAgent: v.optional(v.string()),
     locale: v.optional(v.string()),
   },
@@ -25,6 +26,7 @@ export const report = mutation({
       message: args.message,
       email: args.email ?? undefined,
       context: args.context ?? undefined,
+      actionLogs: args.actionLogs ?? undefined,
       userAgent: args.userAgent ?? undefined,
       locale: args.locale ?? undefined,
       createdAt: Date.now(),
@@ -52,6 +54,11 @@ export const report = mutation({
               "",
               args.message,
               "",
+              "--- User Action Logs (Last 20) ---",
+              args.actionLogs && args.actionLogs.length > 0
+                ? args.actionLogs.join("\n")
+                : "(no logs captured)",
+              "",
               "--- Context ---",
               args.context ?? "(none)",
             ].join("\n"),
@@ -75,5 +82,18 @@ export const getRecent = query({
       .order("desc")
       .take(args.limit ?? 20);
     return rows;
+  },
+});
+
+export const getCurrentUser = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    return {
+      email: identity.email ?? null,
+      name: identity.name ?? null,
+      tokenIdentifier: identity.tokenIdentifier,
+    };
   },
 });
