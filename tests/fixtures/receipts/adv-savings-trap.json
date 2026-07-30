@@ -1,0 +1,150 @@
+{
+  "id": "adv-savings-trap",
+  "payload": {
+    "lines": [
+      {
+        "text": "Savings Trap",
+        "conf": 90,
+        "y": 20,
+        "words": [
+          {
+            "text": "Savings",
+            "conf": 90,
+            "bbox": [
+              10,
+              20,
+              40,
+              40
+            ]
+          },
+          {
+            "text": "Trap",
+            "conf": 90,
+            "bbox": [
+              50,
+              20,
+              80,
+              40
+            ]
+          }
+        ]
+      },
+      {
+        "text": "30/03/2026",
+        "conf": 90,
+        "y": 40,
+        "words": [
+          {
+            "text": "30/03/2026",
+            "conf": 90,
+            "bbox": [
+              10,
+              40,
+              40,
+              60
+            ]
+          }
+        ]
+      },
+      {
+        "text": "TOTAL SAVINGS R 120.00",
+        "conf": 90,
+        "y": 60,
+        "words": [
+          {
+            "text": "TOTAL",
+            "conf": 90,
+            "bbox": [
+              10,
+              60,
+              40,
+              80
+            ]
+          },
+          {
+            "text": "SAVINGS",
+            "conf": 90,
+            "bbox": [
+              50,
+              60,
+              80,
+              80
+            ]
+          },
+          {
+            "text": "R",
+            "conf": 90,
+            "bbox": [
+              90,
+              60,
+              120,
+              80
+            ]
+          },
+          {
+            "text": "120.00",
+            "conf": 90,
+            "bbox": [
+              130,
+              60,
+              160,
+              80
+            ]
+          }
+        ]
+      },
+      {
+        "text": "TOTAL R 340.00",
+        "conf": 90,
+        "y": 80,
+        "words": [
+          {
+            "text": "TOTAL",
+            "conf": 90,
+            "bbox": [
+              10,
+              80,
+              40,
+              100
+            ]
+          },
+          {
+            "text": "R",
+            "conf": 90,
+            "bbox": [
+              50,
+              80,
+              80,
+              100
+            ]
+          },
+          {
+            "text": "340.00",
+            "conf": 90,
+            "bbox": [
+              90,
+              80,
+              120,
+              100
+            ]
+          }
+        ]
+      }
+    ],
+    "width": 320,
+    "height": 400,
+    "lang": "eng",
+    "engine": "tesseract.js@6",
+    "capturedAt": 1774000000000,
+    "countryHint": "ZA",
+    "currencyHint": "ZAR"
+  },
+  "expected": {
+    "total": 340,
+    "date": "2026-03-30",
+    "merchant": "Savings Trap",
+    "currency": "ZAR",
+    "category": "shopping",
+    "tax": 44.35
+  }
+}

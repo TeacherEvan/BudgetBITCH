@@ -1,0 +1,93 @@
+{
+  "id": "adv-ambiguous-date",
+  "payload": {
+    "lines": [
+      {
+        "text": "Ambiguous Store",
+        "conf": 90,
+        "y": 20,
+        "words": [
+          {
+            "text": "Ambiguous",
+            "conf": 90,
+            "bbox": [
+              10,
+              20,
+              40,
+              40
+            ]
+          },
+          {
+            "text": "Store",
+            "conf": 90,
+            "bbox": [
+              50,
+              20,
+              80,
+              40
+            ]
+          }
+        ]
+      },
+      {
+        "text": "03/04/25",
+        "conf": 90,
+        "y": 40,
+        "words": [
+          {
+            "text": "03/04/25",
+            "conf": 90,
+            "bbox": [
+              10,
+              40,
+              40,
+              60
+            ]
+          }
+        ]
+      },
+      {
+        "text": "TOTAL 45.00",
+        "conf": 90,
+        "y": 60,
+        "words": [
+          {
+            "text": "TOTAL",
+            "conf": 90,
+            "bbox": [
+              10,
+              60,
+              40,
+              80
+            ]
+          },
+          {
+            "text": "45.00",
+            "conf": 90,
+            "bbox": [
+              50,
+              60,
+              80,
+              80
+            ]
+          }
+        ]
+      }
+    ],
+    "width": 320,
+    "height": 400,
+    "lang": "eng",
+    "engine": "tesseract.js@6",
+    "capturedAt": 1774000000000,
+    "countryHint": "US",
+    "currencyHint": "USD"
+  },
+  "expected": {
+    "total": 45,
+    "date": "2025-04-03",
+    "merchant": "Ambiguous Store",
+    "currency": "USD",
+    "category": "shopping",
+    "tax": 0
+  }
+}
