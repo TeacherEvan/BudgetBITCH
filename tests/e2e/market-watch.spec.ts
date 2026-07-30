@@ -26,7 +26,7 @@ async function signedInTh(page: import("@playwright/test").Page) {
 async function openMarketWatch(page: import("@playwright/test").Page) {
   await page.goto("/dashboard");
   await expect(
-    page.getByText(/budget|bitch|daily|disposable/i, { exact: false }),
+    page.getByRole("heading", { name: /budget-boss/i }).first(),
   ).toBeVisible({ timeout: 8000 });
   const btn = page.getByTestId("market-watch-trigger").first();
   await expect(btn).toBeVisible({ timeout: 8000 });

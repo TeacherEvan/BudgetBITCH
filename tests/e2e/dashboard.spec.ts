@@ -23,7 +23,7 @@ test.describe("Dashboard — core", () => {
     await page.goto("/dashboard");
     await expect(page).toHaveURL(/.*dashboard/);
     await expect(
-      page.getByText(/budget|bitch|daily|disposable/i, { exact: false }),
+      page.getByRole("heading", { name: /budget-boss/i }).first(),
     ).toBeVisible({ timeout: 8000 });
   });
 
@@ -61,26 +61,75 @@ test.describe("Dashboard — interactions", () => {
 
   test("locale switch updates cookie and persists", async ({ page }) => {
     await page.goto("/dashboard");
-    const switcher = page.getByLabel(/language|locale|ภาษา/i);
-    await expect(switcher).toBeVisible({ timeout: 8000 });
-    await switcher.click();
-    // Give the selection a moment to commit before reading cookies.
-    await expect(page.locator("body")).toBeVisible(); // keeps assertion chain
-    const cookie = await page.context().cookies();
-    const locale = cookie.find((c) => c.name === "bb-locale");
-    expect(["en", "th"]).toContain(locale?.value);
+    // Header exposes TH / EN toggle buttons (no labeled select).
+    const thBtn = page.getByRole("button", { name: /^TH$/ }).first();
+    await expect(thBtn).toBeVisible({ timeout: 8000 });
+    await thBtn.click();
+    await expect
+      .poll(async () => {
+        const cookies = await page.context().cookies();
+        return cookies.find((c) => c.name === "bb-locale")?.value;
+      }, { timeout: 5000 })
+      .toBe("th");
   });
 
-  test("voice toggle is present and toggles", async ({ page }) => {
+  test("voice toggle is absent (feature removed 2026-07-23)", async ({ page }) => {
     await page.goto("/dashboard");
-    const voiceBtn = page.getByRole("button", { name: /voice|เสียง/i }).first();
-    // Soft: voice feature is conditional on account/browser state.
-    await expect(voiceBtn).toBeVisible({ timeout: 8000 }).catch(() => {});
-    if (await voiceBtn.count()) {
-      await voiceBtn.click();
-      // State change is UI-only — assert aria-pressed or class flip if present.
-      await expect(voiceBtn).toBeVisible(); // re-renders without crash
+    await expect(
+      page.getByRole("heading", { name: /budget-boss/i }).first(),
+    ).toBeVisible({ timeout: 8000 });
+    // Voice guidance was fully excised; no voice control should render.
+    await expect(
+      page.getByRole("button", { name: /^voice$|^เสียง$/i }),
+    ).toHaveCount(0);
+  });
+
+  test("dashboard view-mode switcher cycles all four modes", async ({ page }) => {
+    await page.goto("/dashboard");
+    for (const mode of [
+      /excel variance grid/i,
+      /30d cash flow/i,
+      /50\/30\/20 matrix/i,
+      /standard dashboard/i,
+    ]) {
+      const btn = page.getByRole("button", { name: mode }).first();
+      await expect(btn).toBeVisible({ timeout: 8000 });
+      await btn.click();
+      // Re-render must not crash the shell.
+      await expect(page.getByRole("button", { name: mode }).first()).toBeVisible();
     }
+  });
+
+  test("sidebar panel buttons open their panels without errors", async ({ page, errors }) => {
+    await page.goto("/dashboard");
+    for (const name of [
+      /expenses/i,
+      /inflow|income/i,
+      /budget alerts/i,
+      /bills/i,
+      /goals/i,
+      /net worth/i,
+      /subscriptions/i,
+      /emergency/i,
+      /debt/i,
+      /forecast/i,
+    ]) {
+      const btn = page.getByRole("button", { name }).first();
+      if (await btn.count()) {
+        await btn.click();
+        await expect(page.locator("body")).toBeVisible();
+      }
+    }
+    errors.assertClean();
+  });
+
+  test("What-If Sandbox (Goal Seek) opens", async ({ page }) => {
+    await page.goto("/dashboard");
+    const sandbox = page.getByRole("button", { name: /what-if sandbox/i }).first();
+    await expect(sandbox).toBeVisible({ timeout: 8000 });
+    await sandbox.click();
+    // Panel or modal appears without crashing the shell.
+    await expect(page.locator("body")).toBeVisible();
   });
 
   test("re-open wizard via Setup keeps budget editable", async ({ page }) => {

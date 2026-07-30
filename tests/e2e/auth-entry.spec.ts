@@ -23,10 +23,10 @@ test.describe("Auth entry (anonymous)", () => {
 
   test("sign-in page renders email + password fields", async ({ page }) => {
     await page.goto("/sign-in");
-    await expect(page.getByLabel(/email address/i)).toBeVisible({
+    await expect(page.getByLabel(/email \/ username/i)).toBeVisible({
       timeout: 8000,
     });
-    await expect(page.getByLabel(/password/i)).toBeVisible();
+    await expect(page.getByLabel(/^password/i)).toBeVisible();
     await expect(
       page.getByRole("button", { name: /sign in$/i }),
     ).toBeVisible();
@@ -71,7 +71,7 @@ test.describe("Auth entry (anonymous)", () => {
       page.getByRole("heading", { name: /reset your password/i }),
     ).toBeVisible({ timeout: 8000 });
     await page.getByRole("button", { name: /back to sign in/i }).click();
-    await expect(page.getByLabel(/email address/i)).toBeVisible({
+    await expect(page.getByLabel(/email \/ username/i)).toBeVisible({
       timeout: 8000,
     });
   });

@@ -2,9 +2,9 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { useWizardProfile } from '@/hooks/use-local-db';
+import { useWizardProfile, useExpenses } from '@/hooks/use-local-db';
 import { useCurrency } from '@/hooks/use-currency';
-import { calculateBudgetFromWizard } from '@/lib/utils/budget-calculator';
+import { reconcileBudgetWithExpenses } from '@/lib/utils/budget-calculator';
 import { motion } from 'framer-motion';
 import { AddIncomeModal } from './add-income-modal';
 
@@ -69,12 +69,13 @@ function LiveClock({ locale }: { locale: 'th' | 'en' }) {
 export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProps) {
   const formatCurrency = useCurrency();
   const { profile } = useWizardProfile();
+  const { expenses } = useExpenses();
   const [isAddIncomeOpen, setIsAddIncomeOpen] = useState(false);
 
   const calculation = useMemo(() => {
     if (!profile || !profile.completed) return null;
-    return calculateBudgetFromWizard(profile);
-  }, [profile]);
+    return reconcileBudgetWithExpenses(profile, expenses);
+  }, [profile, expenses]);
 
   const daysLeft = useMemo(() => {
     const today = new Date();
@@ -121,10 +122,11 @@ export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProp
     );
   }
 
-  const { dailyDisposable, income, totalFixedExpenses, savingsTarget, remainingDisposable } = calculation;
+  const { income, totalFixedExpenses, savingsTarget, spentThisMonth, remainingDisposable, dailyRemaining, spentPct, isOverBudget } = calculation;
 
-  const usagePercentage = income > 0 ? Math.max(0, Math.min(100, Math.round(((income - remainingDisposable) / income) * 100))) : 0;
-  
+  // spentPct already clamped 0..100 in the reconciler; drive bar + color from it.
+  const usagePercentage = spentPct;
+
   // Decide usage bar color class based on percent
   let barColorClass = "bg-[var(--gold-bright)]";
   if (usagePercentage >= 95) {
@@ -156,29 +158,29 @@ export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProp
           <LiveClock locale={locale} />
         </div>
         
-        {/* Main large figure with CountUp */}
+        {/* Main large figure with CountUp — the LIVE daily figure after real spending */}
         <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 sm:gap-4 mb-5 sm:mb-6">
           <div
             className={`text-[2.5rem] leading-[1.05] sm:text-5xl md:text-7xl font-bold font-mono tracking-tight break-words max-w-full bb-mono ${
-              dailyDisposable === 0 ? "text-[var(--danger)] bb-shake" : "text-[var(--gold-bright)]"
+              dailyRemaining === 0 || isOverBudget ? "text-[var(--danger)] bb-shake" : "text-[var(--gold-bright)]"
             }`}
           >
-            <CountUp value={dailyDisposable} formatter={(val) => formatCurrency(Math.round(val), locale)} />
+            <CountUp value={dailyRemaining} formatter={(val) => formatCurrency(Math.round(val), locale)} />
           </div>
 
           <div className="flex flex-row sm:flex-col sm:items-end items-center justify-between gap-2 rounded-xl border border-[var(--gold-border-soft)] bg-black/30 px-3 py-2 shrink-0">
             <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--gold-muted)]">
-              {locale === 'th' ? 'เงินคงเหลือใช้ได้' : 'Funds Available'}
+              {locale === 'th' ? 'ใช้จริงเดือนนี้' : 'Spent This Month'}
             </span>
-            <span className="text-base sm:text-lg md:text-xl font-bold font-mono text-emerald-400">
-              {formatCurrency(remainingDisposable, locale)}
+            <span className="text-base sm:text-lg md:text-xl font-bold font-mono text-rose-400">
+              {formatCurrency(spentThisMonth, locale)}
             </span>
           </div>
         </div>
 
-        {/* Usage bar */}
+        {/* Usage bar — % of planned disposable already used */}
         <div className="w-full flex items-center justify-between text-xs text-[var(--text-muted)] mb-2 font-mono">
-          <span>{locale === 'th' ? 'การจัดสรรงบประมาณ' : 'Budget Allocation'}</span>
+          <span>{locale === 'th' ? 'ใช้งบประมาณแล้ว' : 'Budget Used'}</span>
           <span className={`${usagePercentage >= 95 ? "text-[var(--danger)]" : usagePercentage >= 80 ? "text-[var(--warning)]" : "text-[var(--gold-bright)]"}`}>
             ({usagePercentage}%)
           </span>
@@ -203,10 +205,10 @@ export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProp
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 border-t border-[var(--gold-border-soft)] pt-4 text-xs font-medium">
           <div>
             <span className="block text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-0.5">
-              {locale === 'th' ? 'ใช้ได้ทั้งหมด' : 'Funds Avail.'}
+              {locale === 'th' ? 'เหลือได้วันนี้' : 'Left Today'}
             </span>
             <span className="text-emerald-400 font-semibold font-mono">
-              {formatCurrency(remainingDisposable, locale)}
+              {formatCurrency(dailyRemaining, locale)}
             </span>
           </div>
           <div>
@@ -246,11 +248,13 @@ export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProp
 
         {/* Footer date anchor */}
         <div className="flex items-center gap-1.5 mt-4 text-[11px] text-[var(--text-muted)] font-medium">
-          <span className={`w-1.5 h-1.5 rounded-full ${dailyDisposable === 0 ? "bg-[var(--danger)] animate-pulse" : "bg-[var(--success)]"}`} />
+          <span className={`w-1.5 h-1.5 rounded-full ${isOverBudget ? "bg-[var(--danger)] animate-pulse" : "bg-[var(--success)]"}`} />
           <span>
-            {locale === 'th'
-              ? `เหลืออีก ${daysLeft} วันในเดือน${monthName}`
-              : `${daysLeft} days left in ${monthName}`}
+            {isOverBudget
+              ? (locale === 'th' ? `เกินงบเดือนนี้แล้ว ${formatCurrency(Math.abs(remainingDisposable), locale)}` : `Over budget by ${formatCurrency(Math.abs(remainingDisposable), locale)}`)
+              : (locale === 'th'
+                ? `เหลืออีก ${daysLeft} วันในเดือน${monthName}`
+                : `${daysLeft} days left in ${monthName}`)}
           </span>
         </div>
       </div>

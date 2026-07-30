@@ -51,7 +51,9 @@ async function openDeleteDialog(
     .getByRole("button", { name: /delete|ลบ/i })
     .first()
     .click();
-  const dialog = page.getByRole("dialog");
+  // Scope to the delete-confirmation dialog by its accessible name so other
+  // dialogs (push gate, install prompt) can never cause a strict-mode clash.
+  const dialog = page.getByRole("dialog", { name: /delete account|ลบบัญชี/i });
   await expect(dialog).toBeVisible({ timeout: 4000 });
   return dialog;
 }

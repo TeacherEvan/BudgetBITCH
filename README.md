@@ -69,10 +69,10 @@ npm run ci
 - `src/lib/auth/routes.ts` centralizes protected path prefixes and auth route constants used by route protection
 - `src/modules/**` contains business/domain logic grouped by capability; currently `src/modules/budgeting/` (budget math) and `src/modules/home-base/` (root board orchestration)
 - `src/components/**` holds the primary UI surfaces: `accounts/` (multi-board + sync), `auth/`, `dashboard/`, `i18n/`, `launch/` (splash, manifesto gate), `layout/` (header bar), `legal/` (consent banner, footer, legal pages), `mobile/`, `onboarding/` (language select), `pwa/` (install prompt + register), `providers/`, `shared-board/`, `start-smart/` (Money Survival Blueprint panels), `ui/`, `welcome/`, `wizard/`
-- `src/hooks/**` holds custom hooks: `use-accounts`, `use-account-sync`, `use-critical-expense`, `use-currency`, `use-display-prefs`, `use-haptic`, `use-local-db`, `use-news-prefs`, `use-shared-board`, `use-voice`
+- `src/hooks/**` holds custom hooks: `use-accounts`, `use-account-sync`, `use-critical-expense`, `use-currency`, `use-display-prefs`, `use-haptic`, `use-local-db`, `use-news-prefs`, `use-shared-board`
 - `src/lib/**`: `auth/`, `convex/` (HTTP client, snapshot sync), `db/` (IndexedDB wrapper), `http/`, `legal/`, `news/` (RSS fetcher), `types/`, `utils/`, `animation/`, `colors/`
 - `src/lib/convex/sync-snapshots.ts` handles the local→Convex daily snapshot sync and offline queue flush
-- `tests/e2e/**` currently holds `dogfood.spec.ts`, which exercises the signed-in root gate path.
+- `tests/e2e/**` holds the Playwright suite (26 spec files) covering auth, wizard onboarding, dashboard panels/view modes, settings (exports, sync, password change, bug report), storage diagnostics & recovery, Market Watch, shared boards, accounts, PWA/offline, i18n, security headers, and route smoke tests. See "Verification" below.
 
 ## Auth-first root flow
 
@@ -88,7 +88,7 @@ npm run ci
 3. Create or link a Convex deployment with Convex Auth enabled, then set `CONVEX_DEPLOYMENT`, `NEXT_PUBLIC_CONVEX_URL`, `CONVEX_SITE_URL`, and `SITE_URL` (see Environment variables).
 4. Mirror the same Convex variables in Vercel before shipping preview or production deployments.
 5. Start development with `npm run dev`.
-9. For browser tests, keep the Playwright web server on its dedicated webpack path. `playwright.config.ts` now starts `npm run dev -- --webpack --port 3100` through `scripts/run-with-sanitized-env.mjs`, with server reuse disabled, so local auth values do not change the auth-root test behavior and Turbopack does not hang on the first `/` request.
+9. For browser tests, keep the Playwright web server on its dedicated dev-server path. `playwright.config.ts` starts `npm run dev -- --port 3100` through `scripts/run-with-sanitized-env.mjs`. By default the Convex env is kept intact so client-only auth works; set `E2E_STRIP_AUTH=true` to replicate the stripped CI pipeline, or `E2E_BASE_URL` to target an already-running deployment.
 
 ## Verification
 
@@ -105,9 +105,9 @@ Deploy-time verification note:
 
 Current browser-test note:
 
-- `npm run test:e2e` uses a dedicated webpack-backed dev server on port `3100` with server reuse disabled so the suite does not attach to a hanging Turbopack process.
-- The Playwright web server strips local auth env on purpose so signed-out welcome coverage and the non-production signed-in fallback stay deterministic even when `.env.local` contains real dev keys.
-- Playwright coverage currently lives in `tests/e2e/dogfood.spec.ts` (signed-in root gate path). The welcome-auth/smoke split described in older notes is not present in this slice.
+- `npm run test:e2e` uses a dedicated dev server on port `3100` (local runs reuse an existing server; CI does not) so the suite stays deterministic.
+- Authenticated flows need real credentials: set `E2E_TEST_EMAIL` / `E2E_TEST_PASSWORD`. Tests that require auth skip cleanly when unset, so the suite stays green in CI without secrets.
+- Coverage spans 26 spec files under `tests/e2e/`, including `diagnostics.spec.ts` (the Settings → Data → "Diagnostics & Recovery" modal: quota/usage, integrity scan, manual checkpoint creation, persistent-storage request) and the 3-step wizard (`wizard.spec.ts`).
 
 For deeper orientation, start with `docs/CODEBASE_INDEX.md`.
 

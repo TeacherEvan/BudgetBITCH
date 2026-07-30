@@ -26,8 +26,8 @@ test.describe("Mobile shell", () => {
 
   test("auth pages reachable on mobile viewport", async ({ page }) => {
     await page.goto("/sign-in");
-    await expect(page.getByLabel(/email address/i)).toBeVisible({ timeout: 8000 });
-    await expect(page.getByLabel(/password/i)).toBeVisible();
+    await expect(page.getByLabel(/email \/ username/i)).toBeVisible({ timeout: 8000 });
+    await expect(page.getByLabel(/^password/i)).toBeVisible();
     // Buttons must be large enough to tap (min 44 px — WCAG 2.5.5).
     const submitBtn = page.getByRole("button", { name: /sign in/i });
     await expect(submitBtn).toBeVisible();

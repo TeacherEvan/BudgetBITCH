@@ -74,8 +74,9 @@ export async function signInReal(page: Page) {
     test.skip(true, "E2E_TEST_EMAIL / E2E_TEST_PASSWORD not set");
   }
   await page.goto("/sign-in");
-  await page.getByLabel(/email address/i).fill(TEST_EMAIL!);
-  await page.getByLabel(/password/i).fill(TEST_PASSWORD!);
+  // Label on the live form is "Email / Username" (clean-auth-card.tsx).
+  await page.getByLabel(/email/i).fill(TEST_EMAIL!);
+  await page.getByLabel(/^password/i).fill(TEST_PASSWORD!);
   await page.getByRole("button", { name: /sign in$/i }).click();
   // Land on dashboard or wizard once authenticated.
   await expect(page).toHaveURL(/\/(dashboard|wizard)/, { timeout: 20000 });
@@ -90,6 +91,10 @@ export async function seedLocalStorage(page: Page, locale: "en" | "th" = "en") {
     ({ locale }) => {
       localStorage.setItem("budgetbitch:locale", locale);
       localStorage.setItem("bb:manifesto-v1", "1");
+      // Suppress the push-notification permission gate (asked-once flag).
+      localStorage.setItem("budgetbitch:pushAsked", "1");
+      // Suppress the PWA install prompt for this session.
+      sessionStorage.setItem("budgetbitch:pwaDismissed", "true");
     },
     { locale },
   );
@@ -104,6 +109,13 @@ export async function seedLocalStorage(page: Page, locale: "en" | "th" = "en") {
 // ---------------------------------------------------------------------------
 export async function setupConsentDismissal(page: Page) {
   await page.addInitScript(() => {
+    // Suppress push-permission gate + PWA install prompt in every test.
+    try {
+      localStorage.setItem("budgetbitch:pushAsked", "1");
+      sessionStorage.setItem("budgetbitch:pwaDismissed", "true");
+    } catch {
+      /* ignore */
+    }
     let clickedPrivacy = false;
     let clickedCookie = false;
     const tryDismiss = () => {
@@ -154,7 +166,7 @@ export async function setupConsentDismissal(page: Page) {
     // visibility logic; this CSS exists only in the test browser.)
     const style = document.createElement("style");
     style.textContent =
-      '[data-testid="privacy-disclaimer"],[aria-label="Cookies"]{display:none!important;}';
+      '[data-testid="privacy-disclaimer"],[aria-label="Cookies"],[data-testid="push-permission"]{display:none!important;}';
 
     // addInitScript runs before documentElement exists on first navigation, so
     // appending synchronously throws "Cannot read properties of null". Guard on

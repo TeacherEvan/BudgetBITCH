@@ -344,9 +344,20 @@ Useful anchors (representative files that exist):
 
 ### E2E tests
 
+26 spec files under `tests/e2e/` share `helpers.ts` (real sign-in via `E2E_TEST_EMAIL`/`E2E_TEST_PASSWORD`, consent dismissal, error collector). Highlights:
+
 | File                                      | Coverage                               |
 | ----------------------------------------- | -------------------------------------- |
 | `tests/e2e/dogfood.spec.ts`               | Signed-in root gate path (auth-first entry) |
+| `tests/e2e/auth.spec.ts`, `auth-entry.spec.ts` | Sign-in/sign-up forms, route guards |
+| `tests/e2e/wizard.spec.ts`                | 3-step onboarding (income → location consent → receipt scan) |
+| `tests/e2e/dashboard.spec.ts`             | Shell render, view modes, sidebar panels, What-If Sandbox, locale switch |
+| `tests/e2e/settings.spec.ts`              | Theme/currency, JSON+CSV export, Sync Now, change password, bug report, anchor nav |
+| `tests/e2e/diagnostics.spec.ts`           | Storage Diagnostics & Recovery modal: quota, integrity scan, manual checkpoint, persistence request |
+| `tests/e2e/market-watch.spec.ts`          | Location-gated vicinity feeds |
+| `tests/e2e/accounts.spec.ts`, `shared-board.spec.ts`, `join.spec.ts` | Multi-account boards, couple sync, invite redemption |
+| `tests/e2e/pwa-offline.spec.ts`, `pwa-webview.spec.ts`, `share-target.spec.ts` | PWA install/offline/webview/share-target |
+| `tests/e2e/i18n.spec.ts`, `security.spec.ts`, `route-smoke.spec.ts`, `legal-pages.spec.ts` | Localization, headers/CSP, route smoke, legal pages |
 
 ## 8. Non-primary subtree note
 

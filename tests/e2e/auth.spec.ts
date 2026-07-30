@@ -17,8 +17,8 @@ test.describe("Auth — sign-in page", () => {
   test("renders the Budget-BOSS sign-in card", async ({ page }) => {
     await expect(page.getByText("Budget-BOSS").first()).toBeVisible();
     await expect(page.getByRole("heading", { name: /welcome back/i })).toBeVisible();
-    await expect(page.getByLabel(/email address/i)).toBeVisible();
-    await expect(page.getByLabel(/password/i)).toBeVisible();
+    await expect(page.getByLabel(/email \/ username/i)).toBeVisible();
+    await expect(page.getByLabel(/^password/i)).toBeVisible();
     await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
   });
 
@@ -52,8 +52,8 @@ test.describe("Auth — sign-in page", () => {
   (HAS_CREDS ? test : test.skip)(
     "real sign-in succeeds and lands on dashboard",
     async ({ page }) => {
-      await page.getByLabel(/email address/i).fill(TEST_EMAIL!);
-      await page.getByLabel(/password/i).fill(TEST_PASSWORD!);
+      await page.getByLabel(/email \/ username/i).fill(TEST_EMAIL!);
+      await page.getByLabel(/^password/i).fill(TEST_PASSWORD!);
       await page.getByRole("button", { name: /sign in$/i }).click();
       await expect(page).toHaveURL(/\/(dashboard|wizard)/, { timeout: 15000 });
     },
@@ -64,8 +64,8 @@ test.describe("Auth — sign-up page", () => {
   test("renders create-account form", async ({ page }) => {
     await page.goto("/sign-up");
     await expect(page.getByRole("heading", { name: /create account/i })).toBeVisible();
-    await expect(page.getByLabel(/email address/i)).toBeVisible();
-    await expect(page.getByLabel(/password/i)).toBeVisible();
+    await expect(page.getByLabel(/email \/ username/i)).toBeVisible();
+    await expect(page.getByLabel(/^password/i)).toBeVisible();
   });
 });
 

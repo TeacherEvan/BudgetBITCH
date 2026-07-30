@@ -21,6 +21,7 @@ vi.mock('@/hooks/use-local-db', () => ({
   useWizardProfile: () => ({ profile: null, loading: false }),
   useBudgets: () => ({ budgets: [], loading: false, save: vi.fn(), get: vi.fn() }),
   useBills: () => ({ bills: [], loading: false, add: vi.fn(), update: vi.fn(), remove: vi.fn() }),
+  useExpenses: () => ({ expenses: [], loading: false, add: vi.fn(), remove: vi.fn(), update: vi.fn() }),
 }));
 
 vi.mock('@/hooks/use-critical-expense', () => ({
