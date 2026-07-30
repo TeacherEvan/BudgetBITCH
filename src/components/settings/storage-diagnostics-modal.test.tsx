@@ -9,12 +9,16 @@ const mockGetStorageEstimate = vi.fn();
 const mockGetLocalCheckpoints = vi.fn();
 const mockRestoreCheckpoint = vi.fn();
 const mockAuditAndRepairDatabase = vi.fn();
+const mockRequestPersistentStorage = vi.fn();
+const mockCreateLocalCheckpoint = vi.fn();
 
 vi.mock('@/lib/db/local-db', () => ({
   getStorageEstimate: (...args: unknown[]) => mockGetStorageEstimate(...args),
   getLocalCheckpoints: (...args: unknown[]) => mockGetLocalCheckpoints(...args),
   restoreCheckpoint: (...args: unknown[]) => mockRestoreCheckpoint(...args),
   auditAndRepairDatabase: (...args: unknown[]) => mockAuditAndRepairDatabase(...args),
+  requestPersistentStorage: (...args: unknown[]) => mockRequestPersistentStorage(...args),
+  createLocalCheckpoint: (...args: unknown[]) => mockCreateLocalCheckpoint(...args),
 }));
 
 // Mock cloud snapshot restore utility
@@ -61,6 +65,8 @@ describe('StorageDiagnosticsModal', () => {
     });
     mockRestoreCheckpoint.mockResolvedValue(true);
     mockRestoreFromCloudSnapshot.mockResolvedValue(true);
+    mockRequestPersistentStorage.mockResolvedValue(true);
+    mockCreateLocalCheckpoint.mockResolvedValue(undefined);
     mockUseQuery.mockReturnValue([]);
     mockConvexQuery.mockResolvedValue(null);
 
@@ -126,6 +132,44 @@ describe('StorageDiagnosticsModal', () => {
       expect(badge).toBeInTheDocument();
       expect(badge.className).toContain('bg-rose-400/20');
       expect(badge.className).toContain('text-rose-400');
+    });
+
+    it('shows "Request Protection" button only when unpersisted, and clicking it calls requestPersistentStorage + refreshes status', async () => {
+      mockGetStorageEstimate.mockResolvedValue({
+        persisted: false,
+        usage: 0,
+        quota: 2147483648,
+      });
+
+      render(<StorageDiagnosticsModal isOpen={true} onClose={mockOnClose} locale="en" />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('request-persistence-btn')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByTestId('request-persistence-btn'));
+
+      await waitFor(() => {
+        expect(mockRequestPersistentStorage).toHaveBeenCalledTimes(1);
+        // Status refreshed after the request
+        expect(mockGetStorageEstimate).toHaveBeenCalledTimes(2);
+      });
+    });
+
+    it('hides "Request Protection" button when storage is already persisted', async () => {
+      mockGetStorageEstimate.mockResolvedValue({
+        persisted: true,
+        usage: 1024,
+        quota: 1048576,
+      });
+
+      render(<StorageDiagnosticsModal isOpen={true} onClose={mockOnClose} locale="en" />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Yes (Secure)')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByTestId('request-persistence-btn')).not.toBeInTheDocument();
     });
 
     it('renders Thai localized strings correctly when locale="th"', async () => {
@@ -235,6 +279,24 @@ describe('StorageDiagnosticsModal', () => {
 
       await waitFor(() => {
         expect(screen.getByText('No local checkpoints saved')).toBeInTheDocument();
+      });
+    });
+
+    it('clicking "+ Create Checkpoint Now" calls createLocalCheckpoint and refreshes the list', async () => {
+      mockGetLocalCheckpoints.mockResolvedValue([]);
+
+      render(<StorageDiagnosticsModal isOpen={true} onClose={mockOnClose} locale="en" />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('create-checkpoint-btn')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByTestId('create-checkpoint-btn'));
+
+      await waitFor(() => {
+        expect(mockCreateLocalCheckpoint).toHaveBeenCalledWith('Manual Checkpoint');
+        // List refreshed after creation
+        expect(mockGetLocalCheckpoints).toHaveBeenCalledTimes(2);
       });
     });
 

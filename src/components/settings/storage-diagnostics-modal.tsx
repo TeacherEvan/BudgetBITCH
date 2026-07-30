@@ -10,7 +10,9 @@ import {
   getStorageEstimate, 
   getLocalCheckpoints, 
   restoreCheckpoint, 
-  auditAndRepairDatabase 
+  auditAndRepairDatabase,
+  requestPersistentStorage,
+  createLocalCheckpoint,
 } from '@/lib/db/local-db';
 import { restoreFromCloudSnapshot } from '@/lib/convex/sync-snapshots';
 import { Shield, Database, Activity } from 'lucide-react';
@@ -33,6 +35,8 @@ export function StorageDiagnosticsModal({ isOpen, onClose, locale }: StorageDiag
   const [auditStatus, setAuditStatus] = useState<'idle' | 'running' | 'success' | 'failed'>('idle');
   const [restoringCheckpoint, setRestoringCheckpoint] = useState<number | null>(null);
   const [restoringCloud, setRestoringCloud] = useState<string | null>(null);
+  const [requestingPersist, setRequestingPersist] = useState(false);
+  const [creatingCheckpoint, setCreatingCheckpoint] = useState(false);
 
   // Fetch Convex cloud snapshots list
   const cloudSnapshots = useQuery(api.snapshots.listCloudSnapshots) ?? [];
@@ -49,6 +53,26 @@ export function StorageDiagnosticsModal({ isOpen, onClose, locale }: StorageDiag
       loadStorageInfo();
     }
   }, [isOpen]);
+
+  const handleRequestPersistence = async () => {
+    setRequestingPersist(true);
+    try {
+      await requestPersistentStorage();
+      await loadStorageInfo();
+    } finally {
+      setRequestingPersist(false);
+    }
+  };
+
+  const handleCreateCheckpoint = async () => {
+    setCreatingCheckpoint(true);
+    try {
+      await createLocalCheckpoint(locale === 'th' ? 'สแนปช็อตด้วยตนเอง' : 'Manual Checkpoint');
+      await loadStorageInfo();
+    } finally {
+      setCreatingCheckpoint(false);
+    }
+  };
 
   const handleRunAudit = async () => {
     setAuditStatus('running');
@@ -137,6 +161,10 @@ export function StorageDiagnosticsModal({ isOpen, onClose, locale }: StorageDiag
       restoring: 'กำลังกู้คืน...',
       usageText: 'ใช้ไป',
       close: 'ปิด',
+      requestPersist: 'ขอการปกป้องข้อมูล',
+      requesting: 'กำลังขอ...',
+      createCheckpoint: '+ สร้างสแนปช็อตตอนนี้',
+      creating: 'กำลังสร้าง...',
     },
     en: {
       title: 'Database Diagnostics & Recovery',
@@ -157,6 +185,10 @@ export function StorageDiagnosticsModal({ isOpen, onClose, locale }: StorageDiag
       restoring: 'Restoring...',
       usageText: 'Used',
       close: 'Close',
+      requestPersist: 'Request Protection',
+      requesting: 'Requesting...',
+      createCheckpoint: '+ Create Checkpoint Now',
+      creating: 'Creating...',
     },
   }[locale];
 
@@ -192,6 +224,18 @@ export function StorageDiagnosticsModal({ isOpen, onClose, locale }: StorageDiag
               {storageInfo.persisted ? l.yes : l.no}
             </span>
           </div>
+          {!storageInfo.persisted && (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="w-full"
+              onClick={handleRequestPersistence}
+              disabled={requestingPersist}
+              data-testid="request-persistence-btn"
+            >
+              {requestingPersist ? l.requesting : l.requestPersist}
+            </Button>
+          )}
         </div>
 
         {/* 2. Database Audit Tool */}
@@ -224,7 +268,18 @@ export function StorageDiagnosticsModal({ isOpen, onClose, locale }: StorageDiag
 
         {/* 3. Local Checkpoints */}
         <div className="space-y-3">
-          <h3 className="text-amber-400 font-semibold border-b border-white/10 pb-1.5">{l.checkpointTitle}</h3>
+          <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
+            <h3 className="text-amber-400 font-semibold">{l.checkpointTitle}</h3>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleCreateCheckpoint}
+              disabled={creatingCheckpoint}
+              data-testid="create-checkpoint-btn"
+            >
+              {creatingCheckpoint ? l.creating : l.createCheckpoint}
+            </Button>
+          </div>
           {localCheckpoints.length === 0 ? (
             <p className="text-white/40 italic">{l.noCheckpoints}</p>
           ) : (
