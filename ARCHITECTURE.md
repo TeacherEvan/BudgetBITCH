@@ -58,7 +58,7 @@ This repository is a single Next.js + Convex codebase: the **BudgetBITCH app** a
   - `utils/` — `cn`, `compound-calculator`, `currency`, `thai-category-mapper`
   - `animation/` — Animation presets
   - `colors/` — Theme color tokens
-- `src/middleware.ts` — Convex Auth Next.js middleware (protects `/dashboard`, `/settings`, `/wizard`, `/api/v1/auth/bootstrap`). Note: `src/lib/auth/routes.ts` defines `AUTH_ROUTES.continue = "/auth/continue"`, but no page implements that route and it is not in the protected prefixes; post-auth users land on `/dashboard`.
+- `src/middleware.ts` — (Removed) Auth protection is handled client-side via `<RequireAuth />` and `src/lib/auth/routes.ts` with `localStorage` token storage for webview compatibility. Note: `src/lib/auth/routes.ts` defines `AUTH_ROUTES.continue = "/auth/continue"`, but no page implements that route and it is not in the protected prefixes; post-auth users land on `/dashboard`.
 - `src/test/` — Test setup, smoke test
 - `src/types/` — TypeScript declarations (Next PWA, Speech API)
 - `convex/` — Convex backend
@@ -104,7 +104,7 @@ The root app is auth-first, local-first PWA:
 
 - Keep route logic thin; move business rules into `src/components/` or `src/lib/`.
 - Keep UI reusable and scan-friendly in `src/components/**`.
-- Keep auth and redirect safety centralized through `src/middleware.ts`, `src/lib/auth/routes.ts`, and shared auth helpers under `src/lib/auth/**`.
+- Keep auth and redirect safety centralized through `src/lib/auth/routes.ts` and shared auth helpers under `src/lib/auth/**`.
 - Local-first: write to IndexedDB immediately, sync to Convex asynchronously.
 - Use Convex realtime for live updates where needed (auth state, snapshots).
 

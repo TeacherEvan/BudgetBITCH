@@ -42,7 +42,7 @@ npm run ci
 - Privacy shield disclosures and consent helpers
 - i18n (English + Thai) via next-intl
 
-> Not in this slice (no routes or components exist): Learn!, Jobs hub, Connected Finance integrations, provider connection hub, workspace roles, audit log, notification fanout, email templates. The i18n catalog and a middleware test still reference legacy `/api/v1/learn` and `/api/v1/jobs` paths; those API routes are not implemented.
+> Not in this slice (no routes or components exist): Learn!, Jobs hub, Connected Finance integrations, provider connection hub, workspace roles, audit log, notification fanout, email templates. The i18n catalog still references legacy `/api/v1/learn` and `/api/v1/jobs` paths; those API routes are not implemented.
 
 ## Tech stack
 
@@ -79,7 +79,7 @@ npm run ci
 - `/` is the auth-first gate: signed-out visitors stay on the welcome window, signed-in visitors without a completed launch profile move into the launch wizard, and signed-in visitors with a completed launch profile land on the root board.
 - `/sign-in`, `/sign-up`, `/forgot-password`, and `/reset` keep only sanitized in-app `redirectTo` targets.
 - After sign-in, the post-auth bootstrap resolves any missing local user/workspace records, then lands on `/dashboard` (the wizard runs for users without a completed launch profile).
-- `src/middleware.ts` protects the shared product surface by reading the centralized prefixes in `src/lib/auth/routes.ts`. Signed-out browser routes redirect to `/sign-in`.
+- Client-side `<RequireAuth />` wrapper and route guard helpers (`src/lib/auth/routes.ts`) protect shared product surfaces. Tokens live in `localStorage` for in-app webview support (e.g., LINE, WhatsApp).
 
 ## Local setup
 

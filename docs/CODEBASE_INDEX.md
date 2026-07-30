@@ -95,7 +95,6 @@ flowchart TD
 │   ├── modules/
 │   │   ├── budgeting/
 │   │   └── home-base/
-│   ├── middleware.ts
 │   ├── test/
 │   └── types/
 ├── convex/
@@ -118,7 +117,7 @@ flowchart TD
 | App shell        | `src/app/layout.tsx`               | Global layout and top-level app wrapper                                          |
 | Root auth gate   | `src/app/page.tsx`                | Auth-first root gate for welcome, launch wizard, or landing board                |
 | Auth bootstrap   | `src/lib/auth/routes.ts` (`continue`) | `routes.ts` defines `AUTH_ROUTES.continue = "/auth/continue"`, but no page implementation exists yet; post-auth users land on `/dashboard` |
-| Route protection | `src/middleware.ts`                | Protected-surface handling for `/dashboard`, `/settings`, `/wizard`, and protected `/api/v1/auth/bootstrap` routes |
+| Client auth guard | `src/lib/auth/route-guard.ts`     | Protected-surface handling and route guard logic for `/dashboard`, `/settings`, `/wizard`, and `/api/v1/auth/bootstrap` |
 | Auth route map   | `src/lib/auth/routes.ts`           | Centralized auth route constants and protected-path prefix rules                 |
 | Root config      | `next.config.ts`                   | Next.js runtime config, including dev origin allowance                           |
 | Data model       | `convex/schema.ts`                 | Canonical schema for `dailySnapshots` + `authTables`                             |
@@ -334,7 +333,6 @@ flowchart TD
 Useful anchors (representative files that exist):
 
 - `src/app/page.test.tsx`
-- `src/middleware.test.ts`
 - `src/components/welcome/welcome-window.test.tsx`
 - `src/components/dashboard/dashboard-shell.test.tsx`
 - `src/components/dashboard/panels/budget-ring.test.tsx`

@@ -55,14 +55,29 @@ export function ConvexPasswordAuthForm({
     event.preventDefault();
     setError(null);
 
-    // Sign-up requires explicit acceptance of Terms + Privacy.
-    if (flow === "signUp" && !acceptedTerms) {
-      setError(
-        locale === "th"
-          ? "กรุณายอมรับข้อกำหนดการให้บริการและนโยบายความเป็นส่วนตัว"
-          : "Please accept the Terms of Service and Privacy Policy.",
-      );
-      return;
+    // Sign-up requires password match check and explicit acceptance of Terms + Privacy.
+    if (flow === "signUp") {
+      const formDataCheck = new FormData(event.currentTarget);
+      const password = formDataCheck.get("password") as string;
+      const confirmPassword = formDataCheck.get("confirmPassword") as string;
+
+      if (password !== confirmPassword) {
+        setError(
+          locale === "th"
+            ? "รหัสผ่านไม่ตรงกัน กรุณาตรวจสอบอีกครั้ง"
+            : "Passwords do not match. Please try again.",
+        );
+        return;
+      }
+
+      if (!acceptedTerms) {
+        setError(
+          locale === "th"
+            ? "กรุณายอมรับข้อกำหนดการให้บริการและนโยบายความเป็นส่วนตัว"
+            : "Please accept the Terms of Service and Privacy Policy.",
+        );
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -194,6 +209,19 @@ export function ConvexPasswordAuthForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+      {flow === "signUp" ? (
+        <label className="grid gap-2 text-sm font-semibold text-white" htmlFor={`${flow}-name`}>
+          {locale === "th" ? "ชื่อที่แสดง (ไม่บังคับ)" : "Display Name (Optional)"}
+          <input
+            id={`${flow}-name`}
+            name="name"
+            type="text"
+            autoComplete="name"
+            placeholder={locale === "th" ? "เช่น Evan" : "e.g. Evan"}
+            className="rounded-2xl border border-white/15 bg-black/25 px-4 py-3 text-base text-white outline-none transition focus:border-(--accent-strong) focus:ring-2 focus:ring-(--accent-strong)/35"
+          />
+        </label>
+      ) : null}
       <label className="grid gap-2 text-sm font-semibold text-white" htmlFor={`${flow}-email`}>
         {emailLabel}
         <input
@@ -217,6 +245,20 @@ export function ConvexPasswordAuthForm({
           className="rounded-2xl border border-white/15 bg-black/25 px-4 py-3 text-base text-white outline-none transition focus:border-(--accent-strong) focus:ring-2 focus:ring-(--accent-strong)/35"
         />
       </label>
+      {flow === "signUp" ? (
+        <label className="grid gap-2 text-sm font-semibold text-white" htmlFor={`${flow}-confirm-password`}>
+          {locale === "th" ? "ยืนยันรหัสผ่าน" : "Repeat Password"}
+          <input
+            id={`${flow}-confirm-password`}
+            name="confirmPassword"
+            type="password"
+            autoComplete="new-password"
+            minLength={8}
+            required
+            className="rounded-2xl border border-white/15 bg-black/25 px-4 py-3 text-base text-white outline-none transition focus:border-(--accent-strong) focus:ring-2 focus:ring-(--accent-strong)/35"
+          />
+        </label>
+      ) : null}
 
       {flow === "signUp" ? (
         <label className="mt-1 flex items-start gap-3 rounded-2xl border border-white/10 bg-black/20 px-3 py-3 text-sm text-white/80">

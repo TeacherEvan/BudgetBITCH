@@ -63,7 +63,7 @@ export function CleanAuthCard({ initialFlow, redirectTo = "/dashboard" }: CleanA
           flow={flow}
           redirectTo={redirectTo}
           submitLabel={flow === "signIn" ? "Sign In" : "Sign Up"}
-          emailLabel="Email address"
+          emailLabel="Email / Username"
           passwordLabel="Password"
           helperText=""
         />

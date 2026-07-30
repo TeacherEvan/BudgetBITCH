@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import './globals.css';
-import { ClerkProvider, SignInButton, SignUpButton, SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { ConvexClientProvider } from '@/components/providers/convex-client-provider';
 import { SharedBoardSync } from '@/components/shared-board/shared-board-sync';
@@ -16,12 +15,6 @@ import { NextIntlClientProvider } from 'next-intl';
 import { cookies } from 'next/headers';
 import { resolveLocale, getLocaleMessages, localeCookieName } from '@/i18n/messages';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
-
-function Show({ when, children }: { when: 'signed-in' | 'signed-out'; children: React.ReactNode }) {
-  if (when === 'signed-in') return <SignedIn>{children}</SignedIn>;
-  if (when === 'signed-out') return <SignedOut>{children}</SignedOut>;
-  return null;
-}
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -73,36 +66,23 @@ export default async function RootLayout({
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body className="flex min-h-screen flex-col bg-black text-white">
-        <ClerkProvider>
-          <header className="flex items-center justify-between p-4 border-b border-white/10">
-            <Show when="signed-out">
-              <div className="flex items-center gap-4">
-                <SignInButton />
-                <SignUpButton />
-              </div>
-            </Show>
-            <Show when="signed-in">
-              <UserButton />
-            </Show>
-          </header>
-          <ErrorBoundary>
-            <ConvexClientProvider>
-              <NextIntlClientProvider messages={messages} locale={locale}>
-                <ThemeProvider>
-                  <SharedBoardSync />
-                  <AccountSyncMount />
-                  <PWARegister />
-                  <PWAInstallPrompt locale={locale} />
-                  <AppShellExtras locale={locale} />
-                  <WebViewBanner />
-                  {children}
-                  <SiteFooter />
-                  <CookieConsentBanner />
-                </ThemeProvider>
-              </NextIntlClientProvider>
-            </ConvexClientProvider>
-          </ErrorBoundary>
-        </ClerkProvider>
+        <ErrorBoundary>
+          <ConvexClientProvider>
+            <NextIntlClientProvider messages={messages} locale={locale}>
+              <ThemeProvider>
+                <SharedBoardSync />
+                <AccountSyncMount />
+                <PWARegister />
+                <PWAInstallPrompt locale={locale} />
+                <AppShellExtras locale={locale} />
+                <WebViewBanner />
+                {children}
+                <SiteFooter />
+                <CookieConsentBanner />
+              </ThemeProvider>
+            </NextIntlClientProvider>
+          </ConvexClientProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

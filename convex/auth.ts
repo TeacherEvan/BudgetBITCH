@@ -33,7 +33,12 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [
     Password({
       profile(params) {
-        return { email: normalizePasswordEmail(params.email) };
+        const email = normalizePasswordEmail(params.email);
+        const name = typeof params.name === "string" && params.name.trim() ? params.name.trim() : undefined;
+        return {
+          email,
+          ...(name ? { name } : {}),
+        };
       },
       reset: Email({
         id: "resend",

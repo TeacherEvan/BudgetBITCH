@@ -253,13 +253,9 @@ public/manifest.json.map
 
 ---
 
-## Known Gaps (verified 2026-07-19)
+## Known Gaps (verified 2026-07-31)
 
-- **`middleware.ts` → `proxy.ts`**: Next.js 16.2 deprecates the `middleware.ts`
-  convention in favor of `proxy.ts`. The root `src/middleware.ts` still works
-  (warning only). `@convex-dev/auth@0.0.92` does **not** yet export a `proxy`
-  variant of `convexAuthNextjsMiddleware`, so do not rename the file/export until
-  the auth library adds proxy support. Tracked, not a code change.
+- **Client-Side Auth Storage**: `src/middleware.ts`, `src/proxy.ts`, and legacy Clerk integration were removed. Convex Auth tokens are managed client-side and persisted in `localStorage` (`createSanitizedStorage` in `convex-client-provider.tsx`) to support restricted in-app mobile webviews (LINE, WhatsApp, Kakao) that strip or block HTTP cookies.
 - **Multiple lockfiles warning**: previously the nested `budgetbitch/`
   prototype subtree triggered Next's "additional lockfiles" build warning.
   That subtree was removed on 2026-07-20, so the warning no longer applies.

@@ -95,4 +95,34 @@ describe("ConvexPasswordAuthForm", () => {
 
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
   });
+
+  it("validates that repeat password matches on sign up", async () => {
+    render(
+      <ConvexPasswordAuthForm
+        flow="signUp"
+        redirectTo="/dashboard"
+        submitLabel="Sign Up"
+        emailLabel="Email / Username"
+        passwordLabel="Password"
+        helperText=""
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/email \/ username/i), {
+      target: { value: "newuser@example.com" },
+    });
+    fireEvent.change(screen.getByLabelText(/^password$/i), {
+      target: { value: "password123" },
+    });
+    fireEvent.change(screen.getByLabelText(/repeat password/i), {
+      target: { value: "password999" },
+    });
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: /sign up/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/passwords do not match/i)).toBeTruthy();
+    });
+    expect(signInMock).not.toHaveBeenCalled();
+  });
 });
