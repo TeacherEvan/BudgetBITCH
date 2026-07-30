@@ -7,8 +7,8 @@ import { useRouter } from 'next/navigation';
 import { Plus, Minus, Camera, Save, ArrowLeft, Loader2, Check, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useExpenses, useWizardProfile, useIncomes } from '@/hooks/use-local-db';
-import { useAction } from 'convex/react';
-import { api } from '../../../convex/_generated/api';
+import { useReceiptScan } from '@/hooks/use-receipt-scan';
+import { ReceiptVerifySheet } from '@/components/receipt/receipt-verify-sheet';
 import { type ExpenseCategory, type IncomeCategory } from '@/lib/types/budget';
 
 const labels = {
@@ -67,10 +67,7 @@ export default function QuickAddPage() {
   const { add: addIncome } = useIncomes();
   const { profile, save: saveProfile } = useWizardProfile();
   
-  // useAction must be called unconditionally to satisfy the Rules of Hooks.
-  // The app is always wrapped in a ConvexProvider, so this is safe at render
-  // time; offline failures surface as rejected promises handled below.
-  const parseReceiptAction = useAction(api.receipts.parseReceipt);
+  const { isScanning, progress, draft, scanImage, answerQuestion, confirmDraft } = useReceiptScan();
 
   // UI States
   const [isExpense, setIsExpense] = useState(true);
@@ -96,6 +93,19 @@ export default function QuickAddPage() {
       return () => clearTimeout(timer);
     }
   }, [toast.show]);
+
+  // Sync scanned draft fields to input box
+  useEffect(() => {
+    if (draft && draft.fields) {
+      setIsExpense(true);
+      const amtVal = draft.fields.total?.value ?? 0;
+      const merchVal = draft.fields.merchant?.value ?? '';
+      const catVal = (draft.fields.category?.value as string) ?? 'other';
+
+      setInputText(`${amtVal} ${merchVal}`.trim());
+      setDetectedCategory(mapCategory(catVal));
+    }
+  }, [draft]);
 
   // Handle manual input save
   const handleSave = async () => {
@@ -195,25 +205,13 @@ export default function QuickAddPage() {
       if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
-    reader.onloadend = async () => {
-      const base64String = reader.result as string;
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = async () => {
       try {
-        const parsed = await parseReceiptAction({ base64Image: base64String });
-        
-        // Auto populate values
-        setIsExpense(true); // Receipts are always expenses
-        setDetectedCategory(mapCategory(parsed?.category || 'other'));
-        
-        // Construct visual text: amount + merchant
-        const amountStr = (parsed?.amount ?? 0).toString();
-        const merchantStr = parsed?.merchant || '';
-        setInputText(`${amountStr} ${merchantStr}`.trim());
-
-        setToast({
-          show: true,
-          message: locale === 'th' ? `สแกนใบเสร็จสำเร็จ! ${parsed?.amount ?? 0} บาท` : `Successfully scanned! ${parsed?.amount ?? 0}`,
-          type: 'success'
-        });
+        setLoading(true);
+        setToast({ show: true, message: l.scanning, type: 'success' });
+        await scanImage(img, locale === 'th' ? 'TH' : 'ZA');
       } catch (err) {
         console.error("Receipt scanning failed:", err);
         setToast({
@@ -223,12 +221,11 @@ export default function QuickAddPage() {
         });
       } finally {
         setLoading(false);
-        // Clear file input
+        URL.revokeObjectURL(url);
         if (fileInputRef.current) fileInputRef.current.value = '';
       }
     };
-
-    reader.readAsDataURL(file);
+    img.src = url;
   };
 
   return (
@@ -380,6 +377,14 @@ export default function QuickAddPage() {
           </div>
         </div>
       )}
+
+      {/* Receipt Verification Bottom Sheet */}
+      <ReceiptVerifySheet
+        isOpen={Boolean(draft && draft.questions && draft.questions.length > 0)}
+        questions={draft?.questions ?? []}
+        onAnswer={answerQuestion}
+        onClose={() => confirmDraft()}
+      />
     </div>
   );
 }
