@@ -13,7 +13,7 @@ interface BeforeInstallPromptEvent extends Event {
 
 const COPY = {
   en: {
-    title: 'Install BudgetBITCH',
+    title: 'Install Budget Boss',
     body: 'Add to your home screen for quick offline access, instant load, and full screen privacy.',
     installBtn: 'Install App',
     dismissBtn: 'Not Now',
@@ -22,7 +22,7 @@ const COPY = {
     iosBody: 'Tap the Share button in Safari, then select "Add to Home Screen".',
   },
   th: {
-    title: 'ติดตั้ง BudgetBITCH',
+    title: 'ติดตั้ง Budget Boss',
     body: 'เพิ่มไปยังหน้าจอโฮมเพื่อเข้าถึงอย่างรวดเร็ว ใช้งานออฟไลน์ และความเป็นส่วนตัวแบบเต็มจอ',
     installBtn: 'ติดตั้งแอป',
     dismissBtn: 'ไว้ทีหลัง',

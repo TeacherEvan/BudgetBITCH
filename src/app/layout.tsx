@@ -44,13 +44,13 @@ const robotoMono = Roboto_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'BudgetBITCH — Cinematic Privacy-First Budgeting',
+  title: 'Budget Boss — Cinematic Privacy-First Budgeting',
   description: 'Track money in, money out, net worth, and budget goals with end-to-end local privacy and couple sync.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'BudgetBITCH',
+    title: 'Budget Boss',
   },
 };
 

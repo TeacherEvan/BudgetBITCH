@@ -34,7 +34,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   private handleReport = () => {
     const { error } = this.state;
     const context = error ? `${error.name}: ${error.message}\n${error.stack ?? ''}` : '';
-    const subject = encodeURIComponent('BudgetBITCH Bug Report');
+    const subject = encodeURIComponent('Budget Boss Bug Report');
     const body = encodeURIComponent(
       `What happened?\n\n\n--- Technical context (auto-captured) ---\n${context}\n\nUser-Agent: ${typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'}`,
     );

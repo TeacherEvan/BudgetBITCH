@@ -1,6 +1,6 @@
 {
-  "name": "Budget-BOSS",
-  "short_name": "Budget-BOSS",
+  "name": "Budget Boss",
+  "short_name": "Budget Boss",
   "description": "Plan first. Panic less. A privacy-first budgeting app with multi-currency and offline support.",
   "start_url": "/",
   "display": "standalone",

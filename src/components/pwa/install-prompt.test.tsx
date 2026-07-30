@@ -28,7 +28,7 @@ describe('PWAInstallPrompt', () => {
     });
 
     expect(screen.getByTestId('pwa-install-prompt')).toBeInTheDocument();
-    expect(screen.getByText('Install BudgetBITCH')).toBeInTheDocument();
+    expect(screen.getByText('Install Budget Boss')).toBeInTheDocument();
   });
 
   it('renders Thai copy when locale=th', () => {
@@ -44,7 +44,7 @@ describe('PWAInstallPrompt', () => {
       fireEvent(window, event);
     });
 
-    expect(screen.getByText('ติดตั้ง BudgetBITCH')).toBeInTheDocument();
+    expect(screen.getByText('ติดตั้ง Budget Boss')).toBeInTheDocument();
   });
 
   it('dismisses prompt when close button is clicked and remembers choice', () => {

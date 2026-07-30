@@ -17,7 +17,7 @@ describe('LanguageSelectModal', () => {
     expect(screen.getByText('United States')).toBeInTheDocument();
     expect(screen.getByText('France')).toBeInTheDocument();
     expect(screen.getByText('China (中国)')).toBeInTheDocument();
-    expect(screen.getByText('Welcome to BudgetBITCH')).toBeInTheDocument();
+    expect(screen.getByText('Welcome to Budget Boss')).toBeInTheDocument();
     expect(screen.getByText('Choose your country & language to get started')).toBeInTheDocument();
   });
 
@@ -59,7 +59,7 @@ describe('LanguageSelectModal', () => {
   it('does not render when isOpen is false', () => {
     render(<LanguageSelectModal isOpen={false} onComplete={mockOnComplete} />);
     
-    expect(screen.queryByText('Welcome to BudgetBITCH')).not.toBeInTheDocument();
+    expect(screen.queryByText('Welcome to Budget Boss')).not.toBeInTheDocument();
     expect(mockOnComplete).not.toHaveBeenCalled();
   });
 
