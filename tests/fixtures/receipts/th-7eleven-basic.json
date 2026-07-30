@@ -1,0 +1,73 @@
+{
+  "id": "th-7eleven-basic",
+  "payload": {
+    "lines": [
+      {
+        "text": "7-ELEVEN SILOM ROAD",
+        "conf": 92,
+        "y": 20,
+        "words": [
+          { "text": "7-ELEVEN", "conf": 94, "bbox": [10, 20, 90, 40] },
+          { "text": "SILOM", "conf": 91, "bbox": [100, 20, 150, 40] },
+          { "text": "ROAD", "conf": 91, "bbox": [160, 20, 210, 40] }
+        ]
+      },
+      {
+        "text": "TAX INVOICE (ABB)",
+        "conf": 88,
+        "y": 45,
+        "words": [
+          { "text": "TAX", "conf": 90, "bbox": [10, 45, 40, 60] },
+          { "text": "INVOICE", "conf": 88, "bbox": [50, 45, 110, 60] },
+          { "text": "(ABB)", "conf": 86, "bbox": [120, 45, 160, 60] }
+        ]
+      },
+      {
+        "text": "DATE 20/03/2026 18:45",
+        "conf": 91,
+        "y": 70,
+        "words": [
+          { "text": "DATE", "conf": 93, "bbox": [10, 70, 50, 85] },
+          { "text": "20/03/2026", "conf": 91, "bbox": [60, 70, 150, 85] },
+          { "text": "18:45", "conf": 89, "bbox": [160, 70, 200, 85] }
+        ]
+      },
+      {
+        "text": "MEIJI MILK 450ML ฿ 26.00",
+        "conf": 89,
+        "y": 100,
+        "words": [
+          { "text": "MEIJI", "conf": 91, "bbox": [10, 100, 50, 115] },
+          { "text": "MILK", "conf": 90, "bbox": [60, 100, 100, 115] },
+          { "text": "450ML", "conf": 88, "bbox": [110, 100, 160, 115] },
+          { "text": "฿", "conf": 90, "bbox": [220, 100, 230, 115] },
+          { "text": "26.00", "conf": 86, "bbox": [240, 100, 290, 115] }
+        ]
+      },
+      {
+        "text": "TOTAL ฿ 26.00",
+        "conf": 92,
+        "y": 140,
+        "words": [
+          { "text": "TOTAL", "conf": 94, "bbox": [10, 140, 60, 160] },
+          { "text": "฿", "conf": 93, "bbox": [220, 140, 230, 160] },
+          { "text": "26.00", "conf": 89, "bbox": [240, 140, 290, 160] }
+        ]
+      }
+    ],
+    "width": 320,
+    "height": 350,
+    "lang": "eng",
+    "engine": "tesseract.js@6",
+    "capturedAt": 1774028700000,
+    "countryHint": "TH",
+    "currencyHint": "THB"
+  },
+  "expected": {
+    "total": 26.00,
+    "date": "2026-03-20",
+    "merchant": "7-ELEVEN SILOM ROAD",
+    "currency": "THB",
+    "category": "groceries"
+  }
+}
