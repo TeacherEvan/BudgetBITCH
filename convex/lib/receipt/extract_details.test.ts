@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { loadAllFixtures } from '../../../tests/fixtures/receipts';
-import { detectCurrency, extractLineItems, extractTax } from './extract-details';
+import { detectCurrency, extractLineItems, extractTax } from './extract_details';
 import { normalisePayload } from './normalise';
 
 describe('Line items, tax, and currency extractors', () => {

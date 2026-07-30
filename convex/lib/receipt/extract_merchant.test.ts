@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { loadAllFixtures } from '../../../tests/fixtures/receipts';
-import { extractMerchant } from './extract-merchant';
+import { extractMerchant } from './extract_merchant';
 import { normalisePayload } from './normalise';
 
 describe('Merchant extractor', () => {

@@ -7,12 +7,13 @@ const hasConvexUrl = !!process.env.NEXT_PUBLIC_CONVEX_URL;
 const steps = [
   { name: '1/8 Linting (ESLint)', cmd: 'npm', args: ['run', 'lint'] },
   { name: '2/8 Type Checking (tsc)', cmd: 'npm', args: ['run', 'typecheck'] },
-  { name: '3/8 IndexedDB Schema Guard', cmd: 'node', args: ['scripts/check-idb-stores.mjs'] },
-  { name: '4/8 Unit & Component Tests (Vitest)', cmd: 'npm', args: ['test'] },
-  { name: '5/8 Convex Backend Tests', cmd: 'npm', args: ['run', 'test:convex'] },
-  { name: '6/8 Production Build (Next.js)', cmd: 'npm', args: ['run', 'build'] },
-  { name: '7/8 Security Audit (npm audit)', cmd: 'npm', args: ['audit', '--audit-level=high'], skipLocal: true },
-  { name: '8/8 Deploy Guard (Convex URL check)', cmd: 'node', args: ['scripts/check-convex-deployment.mjs'], skipLocal: !hasConvexUrl && !isCI },
+  { name: '3/9 IndexedDB Schema Guard', cmd: 'node', args: ['scripts/check-idb-stores.mjs'] },
+  { name: '4/9 Convex Import Resolution Guard', cmd: 'node', args: ['scripts/check-convex-imports.mjs'], skipLocal: true },
+  { name: '5/9 Unit & Component Tests (Vitest)', cmd: 'npm', args: ['test'] },
+  { name: '6/9 Convex Backend Tests', cmd: 'npm', args: ['run', 'test:convex'] },
+  { name: '7/9 Production Build (Next.js)', cmd: 'npm', args: ['run', 'build'] },
+  { name: '8/9 Security Audit (npm audit)', cmd: 'npm', args: ['audit', '--audit-level=high'], skipLocal: true },
+  { name: '9/9 Deploy Guard (Convex URL check)', cmd: 'node', args: ['scripts/check-convex-deployment.mjs'], skipLocal: !hasConvexUrl && !isCI },
 ];
 
 console.log('\n======================================================');

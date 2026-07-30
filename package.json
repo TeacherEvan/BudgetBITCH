@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit",
     "check:idb": "node scripts/check-idb-stores.mjs",
     "check:convex": "node scripts/check-convex-deployment.mjs",
+    "check:convex-imports": "node scripts/check-convex-imports.mjs",
     "test": "vitest run",
     "test:convex": "vitest run --config convex/vitest.config.ts",
     "postinstall": "node scripts/copy-tesseract-assets.mjs",

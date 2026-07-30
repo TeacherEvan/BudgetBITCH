@@ -1,8 +1,8 @@
 import { calculateFieldConfidence } from './confidence';
 import { extractDate } from './dates';
-import { detectCurrency, extractLineItems, extractTax } from './extract-details';
-import { extractMerchant } from './extract-merchant';
-import { extractTotal } from './extract-total';
+import { detectCurrency, extractLineItems, extractTax } from './extract_details';
+import { extractMerchant } from './extract_merchant';
+import { extractTotal } from './extract_total';
 import { matchTemplate } from './fingerprint';
 import { normalisePayload } from './normalise';
 import { generateQuestions } from './questions';

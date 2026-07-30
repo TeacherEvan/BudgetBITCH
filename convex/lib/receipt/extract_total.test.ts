@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { loadAllFixtures } from '../../../tests/fixtures/receipts';
-import { extractTotal } from './extract-total';
+import { extractTotal } from './extract_total';
 import { normalisePayload } from './normalise';
 
 describe('Total extractor with anchor and geometry rules', () => {

@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'vitest';
 import { loadAllFixtures } from '../../../tests/fixtures/receipts';
-import { detectCurrency, extractTax } from './extract-details';
-import { extractMerchant } from './extract-merchant';
-import { extractTotal } from './extract-total';
+import { detectCurrency, extractTax } from './extract_details';
+import { extractMerchant } from './extract_merchant';
+import { extractTotal } from './extract_total';
 import { extractDate } from './dates';
 import { scrape } from './engine';
 import { runCorpus } from './metrics';
