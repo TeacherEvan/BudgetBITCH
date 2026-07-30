@@ -4,6 +4,7 @@
   "description": "Plan first. Panic less. A privacy-first budgeting app with multi-currency and offline support.",
   "start_url": "/",
   "display": "standalone",
+  "display_override": ["minimal-ui", "standalone"],
   "background_color": "#0a0a0a",
   "theme_color": "#d4a843",
   "orientation": "portrait-primary",

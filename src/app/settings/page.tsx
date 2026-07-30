@@ -62,7 +62,8 @@ export default function SettingsPage() {
 
   const [showBugModal, setShowBugModal] = useState(false);
   const currentUser = useQuery(api.feedback.getCurrentUser);
-  const isAdmin = currentUser?.email === 'ewiebotha@gmail.com' || (typeof window !== 'undefined' && window.location.search.includes('admin=1'));
+  const amAdmin = useQuery(api.feedback.isAdmin);
+  const isAdmin = amAdmin === true;
 
   const [lastSync, setLastSync] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
@@ -172,8 +173,8 @@ export default function SettingsPage() {
             <div className="p-4 rounded-2xl border border-white/10 bg-white/5 space-y-3">
               <p className="text-sm text-white/60">
                 {locale === 'th'
-                  ? 'พบบั๊กหรือมีปัญหาการใช้งาน? รายงานถึงแอดมินพร้อมแนบประวัติ 20 รายการล่าสุด'
-                  : 'Found a bug or issue? Report to admin (ewiebotha@gmail.com) with attached 20 action logs.'}
+                  ? 'พบบั๊กหรือมีปัญหาการใช้งาน? รายงานถึงแดชบอร์ดแอดมินในแอปพร้อมแนบประวัติ 20 รายการล่าสุด'
+                  : 'Found a bug or issue? Report to the in-app admin dashboard with attached 20 action logs.'}
               </p>
               <Button
                 variant="primary"
@@ -192,6 +193,25 @@ export default function SettingsPage() {
               <AdminBugReports locale={locale} />
             </div>
           )}
+
+          {/* Close / Exit (handy in PWA / standalone mode where the browser
+              close button is hidden) */}
+          <section className="pt-6">
+            <div className="p-4 rounded-2xl border border-white/10 bg-white/5 space-y-3">
+              <p className="text-sm text-white/60">
+                {locale === 'th'
+                  ? 'ปิดแอป (ใช้เมื่อเปิดในโหมด PWA/สแตนด์อโลน)'
+                  : 'Close the app (useful in PWA / standalone mode where the window close control is hidden).'}
+              </p>
+              <Button
+                variant="secondary"
+                className="w-full gap-2 justify-center"
+                onClick={() => window.close()}
+              >
+                {locale === 'th' ? 'ปิดแอป' : 'Close App'}
+              </Button>
+            </div>
+          </section>
         </main>
 
         <BugReportModal

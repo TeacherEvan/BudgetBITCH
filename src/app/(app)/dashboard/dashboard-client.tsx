@@ -11,6 +11,7 @@ import { useWizardProfile } from '@/hooks/use-local-db';
 import { useAccountSync } from '@/hooks/use-account-sync';
 import { initializeBudgetsFromWizard } from '@/lib/utils/budget-calculator';
 import { getWizardProfile, saveWizardProfile, saveCriticalExpenseCommitment } from '@/lib/db/local-db';
+import { logUserAction } from '@/lib/utils/action-logger';
 import { useQuery } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
 import type { CriticalExpenseKey } from '@/lib/types/budget';
@@ -117,6 +118,12 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
 
   // Restore session snapshot upon login if local profile is uncompleted
   useEffect(() => {
+    // While the wizard overlay is actually on screen, never let a snapshot
+    // restore flip wizardCompleted out from under the user (the first-launch
+    // z-order collision: manifesto + wizard both true at once).
+    const wizardShowing = !wizardCompleted || wizardForced;
+    if (wizardShowing) return;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     if (profileLoading || wizardForced || isRedo) return;
     if (profile && profile.completed) return; // already completed locally
     if (latestSnapshot === undefined || latestSnapshot === null) return; // loading or no snapshot
@@ -161,6 +168,7 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('bb:wizard-redo');
     }
+    logUserAction('Wizard completed');
     // Push the completed profile snapshot to Convex immediately
     await syncDailySnapshot();
     await new Promise(resolve => setTimeout(resolve, 300));
@@ -186,7 +194,7 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
       />
       
       {(!wizardCompleted || wizardForced) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
           <WizardShell
             locale={locale}
             onComplete={handleWizardComplete}

@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { Plus, Users, ArrowRightLeft, LogOut, Trash2, RefreshCw } from 'lucide-react';
 import { useConvexAuth } from '@convex-dev/auth/react';
+import { logUserAction } from '@/lib/utils/action-logger';
 import { useAccounts } from '@/hooks/use-accounts';
 import { useAccountSync } from '@/hooks/use-account-sync';
 import { useExpenses, useIncomes } from '@/hooks/use-local-db';
@@ -138,7 +139,7 @@ export function AccountsView({ locale, onLocaleChange }: AccountsViewProps) {
           </div>
           <div className="flex items-center gap-2">
             {currentAccountId !== 'personal' && activeAccount && (
-              <Button variant="secondary" onClick={() => void syncNow()} disabled={syncing || !ready}>
+              <Button variant="secondary" onClick={() => { logUserAction(`Manual sync (${currentAccountId})`); void syncNow(); }} disabled={syncing || !ready}>
                 <RefreshCw className={`mr-1.5 h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
                 {syncing ? t('Syncing…', 'กำลังซิงค์…') : t('Sync now', 'ซิงค์ตอนนี้')}
               </Button>
@@ -232,13 +233,13 @@ export function AccountsView({ locale, onLocaleChange }: AccountsViewProps) {
 
                   <div className="mt-3 flex flex-wrap gap-2">
                     {!isActive && a.accountId !== 'personal' && (
-                      <Button variant="secondary" onClick={() => switchTo(a.accountId)}>
+                      <Button variant="secondary" onClick={() => { logUserAction(`Switch account -> ${a.accountId}`); switchTo(a.accountId); }}>
                         <ArrowRightLeft className="mr-1.5 h-4 w-4" />
                         {t('Open', 'เปิด')}
                       </Button>
                     )}
                     {a.accountId === 'personal' && (
-                      <Button variant="secondary" onClick={() => switchTo('personal')} disabled={isActive}>
+                      <Button variant="secondary" onClick={() => { logUserAction('Switch account -> personal'); switchTo('personal'); }} disabled={isActive}>
                         {t('Open', 'เปิด')}
                       </Button>
                     )}

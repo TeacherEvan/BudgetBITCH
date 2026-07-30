@@ -470,7 +470,7 @@ export async function clearAllData(): Promise<void> {
     'wizardProfile', 'expenses', 'incomes', 'budgets', 'bills', 'savingsGoals',
     'netWorthSnapshots', 'debts', 'criticalExpenseCommitments', 'newsCache',
     'locationCache', 'settings',
-    'accountsData', 'localAccounts', 'bbMeta',
+    'accountsData', 'localAccounts', 'bbMeta', 'localWrites',
   ] as const;
   const activeStores = db.objectStoreNames
     ? stores.filter((store) => db.objectStoreNames.contains(store))
@@ -481,6 +481,22 @@ export async function clearAllData(): Promise<void> {
     await tx.objectStore(store).clear();
   }
   await tx.done;
+}
+
+/**
+ * Tombstone written by the "Reset All Data" flow. `AccountSyncMount` reads this
+ * before auto-restoring a cloud snapshot and refuses to restore any snapshot
+ * taken before the reset — otherwise a reset that empties the local board would
+ * immediately re-pull the "deleted" data back from the cloud.
+ */
+export const RESET_TOMBSTONE_KEY = 'bb:lastResetAt';
+
+export async function markResetTombstone(): Promise<void> {
+  try {
+    localStorage.setItem(RESET_TOMBSTONE_KEY, String(Date.now()));
+  } catch {
+    // localStorage may be unavailable (private mode); best-effort only.
+  }
 }
 
 export async function clearAllUserData(): Promise<void> {

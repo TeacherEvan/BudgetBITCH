@@ -30,7 +30,7 @@ describe('Tesseract Web Worker wrapper', () => {
 
     const payload = await runOcrScan(canvas, {
       countryHint: 'ZA',
-      createWorkerFn: mockCreateWorker as any,
+      createWorkerFn: mockCreateWorker,
     });
 
     expect(payload).toBeDefined();

@@ -4,10 +4,22 @@
 
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 const ADMIN_EMAIL = process.env.FEEDBACK_ADMIN_EMAIL ?? "ewiebotha@gmail.com";
-const RESEND_FROM =
-  process.env.AUTH_EMAIL_FROM ?? "BudgetBITCH <onboarding@resend.dev>";
+
+/**
+ * The report mutation is intentionally open to anonymous users so anyone can
+ * file a bug without an account. Reads and deletes, however, are admin-only —
+ * a report row contains the submitter's userAgent and action logs, which must
+ * never be readable by other users.
+ */
+async function assertAdmin(ctx: any) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity || identity.email !== ADMIN_EMAIL) {
+    throw new Error("Not authorized to access bug reports.");
+  }
+}
 
 export const report = mutation({
   args: {
@@ -31,44 +43,6 @@ export const report = mutation({
       locale: args.locale ?? undefined,
       createdAt: Date.now(),
     });
-
-    // Email admin (best-effort; never block the user on email failure)
-    const apiKey = process.env.RESEND_API_KEY ?? "";
-    if (apiKey) {
-      try {
-        await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
-            from: RESEND_FROM,
-            to: [ADMIN_EMAIL],
-            subject: `[BudgetBITCH] ${args.type === "bug" ? "Bug" : "Feedback"} report`,
-            text: [
-              `Type: ${args.type}`,
-              `From: ${args.email ?? "anonymous"}`,
-              `Locale: ${args.locale ?? "unknown"}`,
-              `User-Agent: ${args.userAgent ?? "unknown"}`,
-              "",
-              args.message,
-              "",
-              "--- User Action Logs (Last 20) ---",
-              args.actionLogs && args.actionLogs.length > 0
-                ? args.actionLogs.join("\n")
-                : "(no logs captured)",
-              "",
-              "--- Context ---",
-              args.context ?? "(none)",
-            ].join("\n"),
-          }),
-        });
-      } catch {
-        // Swallow — report is persisted regardless
-      }
-    }
-
     return { reportId };
   },
 });
@@ -76,12 +50,21 @@ export const report = mutation({
 export const getRecent = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
+    await assertAdmin(ctx);
     const rows = await ctx.db
       .query("feedbackReports")
       .withIndex("by_createdAt")
       .order("desc")
       .take(args.limit ?? 20);
     return rows;
+  },
+});
+
+export const deleteReport = mutation({
+  args: { reportId: v.id("feedbackReports") },
+  handler: async (ctx, args) => {
+    await assertAdmin(ctx);
+    await ctx.db.delete(args.reportId);
   },
 });
 
@@ -95,5 +78,18 @@ export const getCurrentUser = query({
       name: identity.name ?? null,
       tokenIdentifier: identity.tokenIdentifier,
     };
+  },
+});
+
+/**
+ * Server-verified admin check. Replaces the previous client-side
+ * `currentUser?.email === ADMIN_EMAIL` gate (which also had an `admin=1` URL
+ * bypass) — authorization must live in the backend, not in a React prop.
+ */
+export const isAdmin = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    return Boolean(identity && identity.email === ADMIN_EMAIL);
   },
 });

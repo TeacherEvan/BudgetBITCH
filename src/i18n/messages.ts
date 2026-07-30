@@ -535,11 +535,7 @@ export const localeMessages = {
           oneClickRevoke: "One-click revoke: Use one-click revoke if your trust model changes.",
         },
       },
-      gemini: {
-        eyebrow: "Gemini Setup",
-        title: "Connect Gemini",
-        description: "Use the official Google AI Studio route first. Safety details stay below.",
-      },
+
       perplexity: {
         eyebrow: "Perplexity Setup",
         title: "Connect Perplexity",
@@ -1155,11 +1151,7 @@ export const localeMessages = {
           oneClickRevoke: "เพิกถอนในคลิกเดียว: ใช้การเพิกถอนแบบคลิกเดียวหากโมเดลความเชื่อถือของคุณเปลี่ยนไป",
         },
       },
-      gemini: {
-        eyebrow: "การตั้งค่า Gemini",
-        title: "เชื่อมต่อ Gemini",
-        description: "ใช้เส้นทาง Google AI Studio ทางการก่อน รายละเอียดความปลอดภัยอยู่ด้านล่าง",
-      },
+
       perplexity: {
         eyebrow: "การตั้งค่า Perplexity",
         title: "เชื่อมต่อ Perplexity",

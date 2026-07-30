@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
+import type { Id } from '../../convex/_generated/dataModel';
 import { preprocessImage } from '../lib/receipt/preprocess';
 import { runOcrScan } from '../lib/receipt/ocr-worker';
 import { scrapeOffline } from '../lib/receipt/engine-client';
@@ -69,7 +70,7 @@ export function useReceiptScan() {
       try {
         if (typeof navigator !== 'undefined' && navigator.onLine) {
           const updated = await answerMutation({
-            draftId: draft.draftId as any,
+            draftId: draft.draftId as Id<'receipts'>,
             answers,
           });
           setDraft((prev) => (prev ? { ...prev, ...updated } : null));
@@ -88,7 +89,7 @@ export function useReceiptScan() {
       try {
         if (typeof navigator !== 'undefined' && navigator.onLine) {
           await confirmMutation({
-            draftId: draft.draftId as any,
+            draftId: draft.draftId as Id<'receipts'>,
             overrides,
           });
         }

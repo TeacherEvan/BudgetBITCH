@@ -1,6 +1,19 @@
 import { createWorker, OEM } from 'tesseract.js';
 import type { OcrLine, OcrPayload, OcrWord } from '../../../convex/lib/receipt/types';
 
+/** Minimal shape of the tesseract.js recognize() result we consume. */
+type TesseractWord = {
+  text?: string;
+  confidence?: number;
+  bbox?: { x0?: number; y0?: number; x1?: number; y1?: number };
+};
+type TesseractLine = {
+  text?: string;
+  confidence?: number;
+  words?: TesseractWord[];
+};
+type TesseractRecognizeResult = { data: { lines?: TesseractLine[] } };
+
 export type OcrScanOptions = {
   countryHint?: string;
   currencyHint?: string;
@@ -27,16 +40,16 @@ export async function runOcrScan(
     },
   });
 
-  const res = await worker.recognize(canvas);
+  const res = (await worker.recognize(canvas)) as unknown as TesseractRecognizeResult;
   await worker.terminate();
 
   const rawLines = res.data.lines ?? [];
-  const lines: OcrLine[] = rawLines.map((l: any, idx: number) => {
+  const lines: OcrLine[] = rawLines.map((l: TesseractLine, idx: number) => {
     const text = l.text ? l.text.trim() : '';
     const conf = typeof l.confidence === 'number' ? l.confidence : 80;
     const y = l.words?.[0]?.bbox?.y0 ?? idx * 20;
 
-    const words: OcrWord[] = (l.words ?? []).map((w: any) => ({
+    const words: OcrWord[] = (l.words ?? []).map((w: TesseractWord) => ({
       text: w.text ? w.text.trim() : '',
       conf: typeof w.confidence === 'number' ? w.confidence : conf,
       bbox: [

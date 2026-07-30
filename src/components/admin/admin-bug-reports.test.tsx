@@ -16,6 +16,7 @@ const mockReports = [
 
 vi.mock('convex/react', () => ({
   useQuery: () => mockReports,
+  useMutation: () => vi.fn(),
 }));
 
 describe('AdminBugReports', () => {

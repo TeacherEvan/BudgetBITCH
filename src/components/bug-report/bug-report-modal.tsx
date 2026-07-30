@@ -30,7 +30,8 @@ export function BugReportModal({
   const [submitted, setSubmitted] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  // Read once per render for the preview; the actual submit reads a fresh buffer
+  // at send time (see handleSubmit) so it captures activity up to the click.
   const actionLogs = getUserActionLogs();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,6 +43,10 @@ export function BugReportModal({
 
     setError(null);
     setSubmitting(true);
+
+    // Read the action log buffer at send time (not during render) so it reflects
+    // the actual session activity and avoids an SSR/CSR hydration mismatch.
+    const actionLogs = getUserActionLogs();
 
     try {
       await reportMutation({
@@ -86,8 +91,8 @@ export function BugReportModal({
           </h3>
           <p className="text-sm text-white/70 max-w-sm mx-auto">
             {isThai
-              ? 'ขอบคุณที่แจ้งปัญหา รายงานพร้อมประวัติการใช้งาน 20 รายการล่าสุดถูกส่งถึงแอดมินแล้ว'
-              : 'Thank you. Your notes and last 20 feature action logs have been sent to admin dashboard.'}
+              ? 'ขอบคุณที่แจ้งปัญหา รายงานพร้อมประวัติการใช้งาน 20 รายการล่าสุดถูกส่งไปยังแดชบอร์ดแอดมินแล้ว'
+              : 'Thank you. Your notes and last 20 feature action logs have been sent to the admin dashboard.'}
           </p>
         </div>
       ) : (
@@ -96,12 +101,12 @@ export function BugReportModal({
             <Bug className="w-5 h-5 flex-shrink-0 mt-0.5" />
             <div>
               <p className="font-semibold text-amber-200">
-                {isThai ? 'ส่งรายงานตรงถึงแอดมิน (ewiebotha@gmail.com)' : 'Direct Admin Report (ewiebotha@gmail.com)'}
+                {isThai ? 'รายงานแจ้งไปยังแดชบอร์ดแอดมินในแอป' : 'Reports go to the in-app Admin Dashboard'}
               </p>
               <p className="text-amber-300/80 mt-0.5 leading-relaxed">
                 {isThai
-                  ? 'ระบบจะแนบประวัติการใช้งาน 20 รายการล่าสุดของคุณโดยอัตโนมัติเพื่อช่วยในการแก้ไขปัญหา'
-                  : 'Automatically attaches your last 20 feature actions & process logs to help debug fast.'}
+                  ? 'ระบบจะแนบประวัติการใช้งาน 20 รายการล่าสุดของคุณโดยอัตโนมัติเพื่อช่วยในการแก้ไขปัญหา (ไม่มีอีเมล)'
+                  : 'Automatically attaches your last 20 feature actions & process logs to help debug fast (no email is sent).'}
               </p>
             </div>
           </div>

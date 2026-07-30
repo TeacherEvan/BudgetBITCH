@@ -26,7 +26,9 @@ import {
 import {
   getCurrentAccountId,
   getLocalAccount,
+  saveLocalAccount,
 } from "@/lib/db/accountStorage";
+import { PERSONAL_ACCOUNT_ID, UmbrellaKey } from "@/lib/types/accounts";
 import { BOARD_CHANGED_EVENT } from "@/lib/types/budget";
 
 const BOARD_QUEUE_KEY = "budgetbitch:accountBoardQueue";
@@ -82,6 +84,14 @@ export function useAccountSync(): UseAccountSync {
     boardId && isAuthenticated ? { boardId } : "skip"
   );
   const pushBoard = useMutation(api.accounts.pushAccountBoard);
+  // Listing of the user's accounts (with server boardId) — used as a fallback
+  // when the local accounts cache hasn't been populated yet (e.g. on the
+  // dashboard, where useAccounts() isn't mounted). Without this, boardId can
+  // resolve to null and every auto-push is silently dropped.
+  const myAccounts = useQuery(
+    api.accounts.listMyAccounts,
+    isAuthenticated ? {} : "skip"
+  );
 
   // Guard so a reactive re-fire of getAccountBoard (e.g. our own push echoed
   // back) doesn't re-apply an already-applied board and clobber local edits.
@@ -94,14 +104,44 @@ export function useAccountSync(): UseAccountSync {
   const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingRef = useRef(false);
 
-  // Resolve the active account's boardId from local storage.
+  // Resolve the active account's boardId from local storage, falling back to
+  // the Convex account listing when the local cache is empty.
   const resolveActiveBoard = useCallback(async () => {
     const accountId = await getCurrentAccountId();
+    if (accountId === PERSONAL_ACCOUNT_ID) {
+      boardIdRef.current = "personal";
+      setBoardId("personal");
+      return;
+    }
+
     const meta = await getLocalAccount(accountId);
-    const activeBid = meta?.boardId ?? (accountId === "personal" ? "personal" : null);
-    boardIdRef.current = activeBid;
-    setBoardId(activeBid);
-  }, []);
+    if (meta?.boardId) {
+      boardIdRef.current = meta.boardId;
+      setBoardId(meta.boardId);
+      return;
+    }
+
+    // Local cache miss — ask the server for this account's boardId.
+    const remote = (myAccounts as Array<{ accountId: string; boardId: string | null }> | undefined)
+      ?.find((a) => a.accountId === accountId);
+    if (remote?.boardId) {
+      // Cache it locally so subsequent resolves are instant.
+      await saveLocalAccount({
+        accountId,
+        umbrella: "personal" as UmbrellaKey,
+        name: accountId,
+        boardId: remote.boardId,
+        inviteCode: null,
+        role: "member",
+      });
+      boardIdRef.current = remote.boardId;
+      setBoardId(remote.boardId);
+      return;
+    }
+
+    boardIdRef.current = null;
+    setBoardId(null);
+  }, [myAccounts]);
 
   useEffect(() => {
     let cancelled = false;

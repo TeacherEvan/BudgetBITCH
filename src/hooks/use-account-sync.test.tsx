@@ -34,6 +34,25 @@ vi.mock('convex/react', () => ({
   },
 }));
 
+// Separate mock that returns a listMyAccounts result so we can test the
+// "local cache empty but server has the boardId" fallback.
+const myAccountsResult: unknown[] = [];
+vi.mock('convex/react', () => ({
+  useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
+  useConvex: () => ({
+    query: async () => null,
+  }),
+  useMutation: () => pushBoard,
+  useQuery: (ref: { __name__?: string } | string, args: unknown) => {
+    if (args === 'skip') return undefined;
+    // listMyAccounts takes no args ({}); getAccountBoard takes { boardId }.
+    if (args && typeof args === 'object' && Object.keys(args).length === 0) {
+      return myAccountsResult;
+    }
+    return queryResults.getBoard ?? null;
+  },
+}));
+
 import { useAccountSync } from './use-account-sync';
 
 function HookProbe() {
@@ -305,5 +324,37 @@ describe('useAccountSync', () => {
     expect(pushBoard).toHaveBeenCalledTimes(1);
     const call = (pushBoard.mock.calls[0] as unknown[])[0] as { boardId: string };
     expect(call.boardId).toBe('personal');
+  });
+
+  it('auto-pushes a shared account even when localAccounts is empty (dashboard case)', async () => {
+    // Active account is a shared account, but localAccounts has NO entry for it
+    // — this is the exact dashboard scenario where the bug dropped every push.
+    await setCurrentAccountId('acc-family');
+    // Explicitly leave the local accounts cache empty.
+    await clearAllData();
+    await setCurrentAccountId('acc-family');
+    myAccountsResult.length = 0;
+    myAccountsResult.push({
+      accountId: 'acc-family',
+      boardId: 'board_family',
+      umbrella: 'family',
+      name: 'Family',
+      role: 'owner',
+    });
+
+    render(<HookProbe />);
+    // Allow resolveActiveBoard to hit the listMyAccounts fallback.
+    await act(async () => {
+      await sleep(250);
+    });
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT));
+      await sleep(1000);
+    });
+
+    expect(pushBoard).toHaveBeenCalledTimes(1);
+    const call = (pushBoard.mock.calls[0] as unknown[])[0] as { boardId: string };
+    expect(call.boardId).toBe('board_family');
   });
 });

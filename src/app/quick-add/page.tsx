@@ -67,7 +67,7 @@ export default function QuickAddPage() {
   const { add: addIncome } = useIncomes();
   const { profile, save: saveProfile } = useWizardProfile();
   
-  const { isScanning, progress, draft, scanImage, answerQuestion, confirmDraft } = useReceiptScan();
+  const { draft, scanImage, answerQuestion, confirmDraft } = useReceiptScan();
 
   // UI States
   const [isExpense, setIsExpense] = useState(true);

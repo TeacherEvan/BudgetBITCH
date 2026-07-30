@@ -7,7 +7,8 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
-import { USER_DATA_STORES, clearAllUserData, getDB, createLocalCheckpoint } from '@/lib/db/local-db';
+import { USER_DATA_STORES, clearAllData, markResetTombstone, getDB, createLocalCheckpoint } from '@/lib/db/local-db';
+import { logUserAction } from '@/lib/utils/action-logger';
 import { createBackupPayload, parseAndValidateBackup, type BackupData } from '@/lib/db/backup-schema';
 import { encryptBackup, decryptBackup } from '@/lib/db/crypto-backup';
 import { formatMoney } from '@/lib/utils/currency';
@@ -31,6 +32,7 @@ const RESET_PRESERVE = [
   'bb-locale',
   'budgetbitch:offlineQueue',
   'budgetbitch:boardQueue',
+  'bb:lastResetAt',
 ];
 
 interface DataBackupCardProps {
@@ -102,7 +104,12 @@ export function DataBackupCard({
 
   const handleResetConfirm = async () => {
     setResetOpen(false);
-    await clearAllUserData();
+    logUserAction('Reset all data');
+    // Full wipe: clears active board, all account stashes, account listing,
+    // account pointer, and LWW write-clocks. `markResetTombstone` then stops
+    // AccountSyncMount from re-pulling the "deleted" cloud snapshot back.
+    await clearAllData();
+    await markResetTombstone();
     clearProfile?.();
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i);

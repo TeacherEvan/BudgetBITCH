@@ -2,9 +2,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Bug, Terminal, ChevronDown, ChevronUp, User, Calendar, ShieldCheck } from 'lucide-react';
+import { Bug, Terminal, ChevronDown, ChevronUp, User, Calendar, ShieldCheck, Trash2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
 interface AdminBugReportsProps {
@@ -14,7 +14,9 @@ interface AdminBugReportsProps {
 export function AdminBugReports({ locale = 'en' }: AdminBugReportsProps) {
   const isThai = locale === 'th';
   const reports = useQuery(api.feedback.getRecent, { limit: 50 });
+  const deleteReport = useMutation(api.feedback.deleteReport);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   if (reports === undefined) {
     return (
@@ -30,6 +32,16 @@ export function AdminBugReports({ locale = 'en' }: AdminBugReportsProps) {
   }
 
   const bugReports = reports.filter((r) => r.type === 'bug');
+
+  const handleDelete = async (id: string) => {
+    if (busyId) return;
+    setBusyId(id);
+    try {
+      await deleteReport({ reportId: id as never });
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   return (
     <section id="admin-bug-reports" className="scroll-mt-24 space-y-4">
@@ -90,17 +102,28 @@ export function AdminBugReports({ locale = 'en' }: AdminBugReportsProps) {
                     </p>
                   </div>
 
-                  {report.actionLogs && report.actionLogs.length > 0 && (
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {report.actionLogs && report.actionLogs.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setExpandedId(isExpanded ? null : report._id)}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-400/10 hover:bg-amber-400/20 border border-amber-400/20 text-xs text-amber-300 font-mono transition-colors"
+                      >
+                        <Terminal className="w-3.5 h-3.5" />
+                        <span>{report.actionLogs.length} logs</span>
+                        {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      </button>
+                    )}
                     <button
                       type="button"
-                      onClick={() => setExpandedId(isExpanded ? null : report._id)}
-                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-400/10 hover:bg-amber-400/20 border border-amber-400/20 text-xs text-amber-300 font-mono transition-colors flex-shrink-0"
+                      onClick={() => handleDelete(report._id)}
+                      disabled={busyId === report._id}
+                      aria-label={isThai ? 'ลบรายงาน' : 'Delete report'}
+                      className="flex items-center justify-center p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-300 transition-colors disabled:opacity-40"
                     >
-                      <Terminal className="w-3.5 h-3.5" />
-                      <span>{report.actionLogs.length} logs</span>
-                      {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
-                  )}
+                  </div>
                 </div>
 
                 {isExpanded && report.actionLogs && (

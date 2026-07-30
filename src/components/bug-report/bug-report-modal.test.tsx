@@ -24,7 +24,7 @@ describe('BugReportModal', () => {
     render(<BugReportModal isOpen={true} onClose={mockOnClose} userEmail="test@example.com" />);
 
     expect(screen.getByText('Report a Bug')).toBeInTheDocument();
-    expect(screen.getByText(/ewiebotha@gmail.com/i)).toBeInTheDocument();
+    expect(screen.getByText(/Reports go to the in-app Admin Dashboard/i)).toBeInTheDocument();
     expect(screen.getByText(/Attached Action Logs \(2 entries\)/i)).toBeInTheDocument();
   });
 

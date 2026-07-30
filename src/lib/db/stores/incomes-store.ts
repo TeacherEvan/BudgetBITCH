@@ -1,22 +1,29 @@
 import type { IncomeEntry, IncomeCategory } from '@/lib/types/budget';
 import { getDB, afterBoardMutation } from '../local-db';
+import { logUserAction } from '@/lib/utils/action-logger';
+import { getCurrentMember } from '../current-member';
 
 export async function addIncome(income: IncomeEntry): Promise<void> {
+  if (!income.createdByName) income.createdByName = getCurrentMember() ?? 'Personal';
   const db = await getDB();
   await db.add('incomes', income);
   await afterBoardMutation('incomes', income.id);
+  logUserAction(`Add income ${income.category} ${income.amount} (${income.source || 'n/a'})`);
 }
 
 export async function updateIncome(income: IncomeEntry): Promise<void> {
+  if (!income.createdByName) income.createdByName = getCurrentMember() ?? 'Personal';
   const db = await getDB();
   await db.put('incomes', income);
   await afterBoardMutation('incomes', income.id);
+  logUserAction(`Update income ${income.category} ${income.amount}`);
 }
 
 export async function deleteIncome(id: string): Promise<void> {
   const db = await getDB();
   await db.delete('incomes', id);
   await afterBoardMutation('incomes', id);
+  logUserAction(`Delete income ${id}`);
 }
 
 export async function getIncomes(): Promise<IncomeEntry[]> {

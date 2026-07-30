@@ -1,5 +1,5 @@
 // Feature: Quick Add — MANUAL amount+note entry only.
-// EXCLUDED: receipt camera capture and parseReceipt (per directive). We never
+// EXCLUDED: receipt camera capture / on-device OCR scraper (per directive). We never
 // click the scan button, upload a file, or call the receipts action.
 import { test, expect, signInReal, seedLocalStorage, HAS_CREDS } from "./helpers";
 
