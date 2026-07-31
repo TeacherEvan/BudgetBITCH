@@ -267,8 +267,10 @@ export async function queueOfflineSnapshot(data: SyncSnapshotArgs) {
   }
 }
 
+let isFlushingQueue = false;
+
 export async function flushOfflineQueue() {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || isFlushingQueue) return;
 
   const convex = getConvexClient();
   if (!convex) {
@@ -281,6 +283,7 @@ export async function flushOfflineQueue() {
     return;
   }
 
+  isFlushingQueue = true;
   try {
     const db = await getDB();
     const items = await db.getAll('syncQueue');
@@ -306,6 +309,8 @@ export async function flushOfflineQueue() {
     }
   } catch (err) {
     console.error('Failed to read syncQueue from IndexedDB:', err);
+  } finally {
+    isFlushingQueue = false;
   }
 }
 

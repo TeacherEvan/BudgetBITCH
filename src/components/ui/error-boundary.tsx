@@ -38,7 +38,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     const body = encodeURIComponent(
       `What happened?\n\n\n--- Technical context (auto-captured) ---\n${context}\n\nUser-Agent: ${typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'}`,
     );
-    const mailto = `mailto:admin@budgetbitch.app?subject=${subject}&body=${body}`;
+    const mailto = `mailto:support@budgetboss.app?subject=${subject}&body=${body}`;
     window.open(mailto, '_blank');
   };
 
