@@ -3,7 +3,7 @@
 // each report (no paid crash service). Reports are also persisted for triage.
 
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, type QueryCtx, type MutationCtx } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
 const ADMIN_EMAIL = process.env.FEEDBACK_ADMIN_EMAIL ?? "ewiebotha@gmail.com";
@@ -14,7 +14,7 @@ const ADMIN_EMAIL = process.env.FEEDBACK_ADMIN_EMAIL ?? "ewiebotha@gmail.com";
  * a report row contains the submitter's userAgent and action logs, which must
  * never be readable by other users.
  */
-async function assertAdmin(ctx: any) {
+async function assertAdmin(ctx: QueryCtx | MutationCtx) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity || identity.email !== ADMIN_EMAIL) {
     throw new Error("Not authorized to access bug reports.");

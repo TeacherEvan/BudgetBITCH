@@ -1,4 +1,5 @@
 import { getDB } from '../local-db';
+import type { BoardSnapshot } from '@/lib/types/budget';
 
 export const ACCOUNTS_DATA_STORE = 'accountsData';
 export const LOCAL_ACCOUNTS_STORE = 'localAccounts';
@@ -6,8 +7,7 @@ export const CURRENT_ACCOUNT_KEY = 'bb:currentAccount';
 
 export interface StashedAccount {
   accountId: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  snapshot: any;
+  snapshot: BoardSnapshot;
   stashedAt: number;
 }
 

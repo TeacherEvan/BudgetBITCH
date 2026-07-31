@@ -221,7 +221,8 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_templateId", ["templateId"])
-    .index("by_country", ["country"]),
+    .index("by_country", ["country"])
+    .index("by_enabled", ["enabled"]),
 
   // User-learned merchant aliases and category overrides
   merchantAliases: defineTable({

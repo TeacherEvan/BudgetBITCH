@@ -40,11 +40,7 @@ export function CleanAuthCard({ initialFlow, redirectTo = "/dashboard" }: CleanA
       >
         {/* Header section */}
         <div className="flex items-center justify-between mb-6">
-          <span className="text-xl font-bold uppercase tracking-[0.2em]" style={{
-            background: "linear-gradient(90deg, #FFD700, #FFF9C4)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-          }}>
+          <span className="text-xl font-bold uppercase tracking-[0.2em] bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-100 bg-clip-text text-transparent">
             Budget Boss
           </span>
         </div>

@@ -208,7 +208,7 @@ export interface LocationCache {
 export interface BoardSnapshot {
   wizardProfile: WizardProfile | null;
   expenses: ExpenseEntry[];
-  incomes: IncomeEntry[];
+  incomes?: IncomeEntry[];
   budgets: BudgetCategory[];
   bills: Bill[];
   savingsGoals: SavingsGoal[];

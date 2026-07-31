@@ -8,10 +8,11 @@ import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 
  
+import type { UseSharedBoard } from '@/hooks/use-shared-board';
+
 interface PartnerSharingCardProps {
   locale: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  shared: any;
+  shared: UseSharedBoard;
 }
 
 export function PartnerSharingCard({ shared }: PartnerSharingCardProps) {

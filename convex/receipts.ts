@@ -1,5 +1,6 @@
 import { action, mutation, query, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
+import type { Doc } from "./_generated/dataModel";
 import { v, ConvexError } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { scrape as scrapeEngine } from "./lib/receipt/engine";
@@ -488,11 +489,10 @@ export const templateSnapshot = query({
 
     const templates = await ctx.db
       .query("receiptTemplates")
-      .withIndex("by_templateId")
-      .filter((q) => q.eq(q.field("enabled"), true))
+      .withIndex("by_enabled", (q) => q.eq("enabled", true))
       .collect();
 
-    let aliases: any[] = [];
+    let aliases: Doc<"merchantAliases">[] = [];
     if (userId) {
       aliases = await ctx.db
         .query("merchantAliases")
