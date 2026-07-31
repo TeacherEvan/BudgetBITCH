@@ -1,7 +1,7 @@
 // components/dashboard/currency-converter-card.tsx
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { RefreshCw, ArrowRight } from 'lucide-react';
 import type { CurrencyCode } from '@/lib/utils/currency';
 import { CURRENCY_SELECT_OPTIONS } from './currency-options';
@@ -16,7 +16,8 @@ interface Rates {
   [code: string]: number;
 }
 
-const FRANKFURTER = 'https://api.frankfurter.app/latest';
+// Canonical Frankfurter endpoint (api.frankfurter.app now 301-redirects here).
+const FRANKFURTER = 'https://api.frankfurter.dev/v1/latest';
 
 // In-memory cache so repeated refreshes don't hammer the API.
 let ratesCache: { ts: number; rates: Rates } | null = null;
@@ -72,6 +73,12 @@ export function CurrencyConverterCard({ baseCurrency, amount = 100 }: CurrencyCo
       setLoading(false);
     }
   }, [from, to, value, fetchRates]);
+
+  // Convert on mount and whenever the inputs change, so the card is never
+  // stuck showing an em-dash until the user manually hits Update.
+  useEffect(() => {
+    void convert();
+  }, [convert]);
 
   const fmt = (n: number, code: CurrencyCode) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: code, maximumFractionDigits: 2 }).format(n);
