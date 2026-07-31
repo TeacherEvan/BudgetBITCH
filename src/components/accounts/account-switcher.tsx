@@ -14,7 +14,9 @@ interface AccountSwitcherProps {
   locale: string;
 }
 
-export function AccountSwitcher({ locale }: AccountSwitcherProps) {
+// `locale` is retained for call-site compatibility (dashboard-shell passes it);
+// the underlying umbrella labels are now locale-independent, so it is unused here.
+export function AccountSwitcher({ locale: _locale }: AccountSwitcherProps) {
   const { accounts, currentAccountId, switchTo } = useAccounts();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
