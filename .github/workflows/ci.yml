@@ -20,6 +20,13 @@ concurrency:
 permissions:
   contents: read
 
+# Force Node-20-targeted actions (checkout@v4, setup-node@v4) onto the runner's
+# Node 24 so the "Node.js 20 is deprecated" annotation doesn't become a hard
+# failure when GitHub removes Node 20. Do NOT also set
+# ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION — the two together warn.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   lint:
     name: Lint

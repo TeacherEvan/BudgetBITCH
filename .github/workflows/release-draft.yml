@@ -12,6 +12,10 @@ concurrency:
 permissions:
   contents: write
 
+# Force Node-20-targeted actions onto the runner's Node 24 (see ci.yml note).
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   release:
     name: Create Release Draft

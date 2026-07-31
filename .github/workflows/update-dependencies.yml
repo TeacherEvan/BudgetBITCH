@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
       NEXT_PUBLIC_CONVEX_URL: https://ci-build.convex.cloud
       NEXT_PUBLIC_CONVEX_SITE_URL: https://ci-build.convex.site
       NEXT_PUBLIC_APP_URL: http://localhost:3000
