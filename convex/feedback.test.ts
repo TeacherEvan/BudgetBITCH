@@ -21,6 +21,7 @@ function withAdminEnv(t: ReturnType<typeof convexTest>) {
 describe("feedback:getRecent authorization", () => {
   let t: ReturnType<typeof convexTest>;
   beforeEach(() => {
+    process.env.FEEDBACK_ADMIN_EMAIL = "ewiebotha@gmail.com";
     t = convexTest(schema, modules);
   });
 
@@ -60,6 +61,7 @@ describe("feedback:getRecent authorization", () => {
 describe("feedback:delete", () => {
   let t: ReturnType<typeof convexTest>;
   beforeEach(() => {
+    process.env.FEEDBACK_ADMIN_EMAIL = "ewiebotha@gmail.com";
     t = convexTest(schema, modules);
   });
 

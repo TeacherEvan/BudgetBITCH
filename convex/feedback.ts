@@ -6,7 +6,15 @@ import { v } from "convex/values";
 import { mutation, query, type QueryCtx, type MutationCtx } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
-const ADMIN_EMAIL = process.env.FEEDBACK_ADMIN_EMAIL ?? "ewiebotha@gmail.com";
+/**
+ * Admin authorization is driven entirely by the FEEDBACK_ADMIN_EMAIL Convex env
+ * var. There is deliberately NO hardcoded fallback: if the var is unset, admin
+ * access is refused rather than silently granted to a baked-in address. Set it
+ * in the Convex dashboard (prod + preview) to the admin's verified email.
+ */
+function getAdminEmail(): string | undefined {
+  return process.env.FEEDBACK_ADMIN_EMAIL;
+}
 
 /**
  * The report mutation is intentionally open to anonymous users so anyone can
@@ -15,8 +23,9 @@ const ADMIN_EMAIL = process.env.FEEDBACK_ADMIN_EMAIL ?? "ewiebotha@gmail.com";
  * never be readable by other users.
  */
 async function assertAdmin(ctx: QueryCtx | MutationCtx) {
+  const adminEmail = getAdminEmail();
   const identity = await ctx.auth.getUserIdentity();
-  if (!identity || identity.email !== ADMIN_EMAIL) {
+  if (!adminEmail || !identity || identity.email !== adminEmail) {
     throw new Error("Not authorized to access bug reports.");
   }
 }
@@ -85,11 +94,13 @@ export const getCurrentUser = query({
  * Server-verified admin check. Replaces the previous client-side
  * `currentUser?.email === ADMIN_EMAIL` gate (which also had an `admin=1` URL
  * bypass) — authorization must live in the backend, not in a React prop.
+ * Mirrors assertAdmin: admin-ness is derived purely from FEEDBACK_ADMIN_EMAIL.
  */
 export const isAdmin = query({
   args: {},
   handler: async (ctx) => {
+    const adminEmail = getAdminEmail();
     const identity = await ctx.auth.getUserIdentity();
-    return Boolean(identity && identity.email === ADMIN_EMAIL);
+    return Boolean(adminEmail && identity && identity.email === adminEmail);
   },
 });
