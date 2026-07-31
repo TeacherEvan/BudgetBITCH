@@ -75,6 +75,9 @@ It overrides training-data assumptions. Key rules:
 - Node-only actions need `"use node";` at the top and live in their own file
   (e.g. `convex/pushSend.ts`).
 - Backend tests use `convex-test` + vitest (`npm run test:convex`).
+- HTTP endpoints live in `convex/http.ts` and use `httpAction` + `http.route(...)`.
+  The LINE receipt-bot webhook (`/line/webhook`) is HMAC-verified and resolves
+  the owning user from the `lineUsers` table, never trusting a client-supplied id.
 
 Convex agent skills can be reinstalled with `npx convex ai-files install`.
 

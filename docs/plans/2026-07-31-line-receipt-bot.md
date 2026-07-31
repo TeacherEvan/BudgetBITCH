@@ -230,6 +230,12 @@ import { useLineLink } from "./use-line-link";
 
 ---
 
-## Improvements discovered during build (append here)
+## Improvements discovered during build
 
-- _(subagents append real findings, e.g. convex-test HTTP API shape, saveReceipt signature patch)_
+- **convex-test HTTP API:** There is NO `executeHttp` helper. The webhook test calls the route directly via `t.fetch("/line/webhook", { method, headers, body })` (the `convex-test` `TestConvex` instance exposes `.fetch`). Use that, not a hypothetical `executeHttp`.
+- **`saveReceipt` arg shape:** `convex/receipts.ts` `saveReceipt` internal mutation takes `userId: v.id("users")` and inserts `args` verbatim into the `receipts` table. To tag LINE ingests, `source: v.optional(v.string())` was added to its args AND to the `receipts` schema (`source` field). The webhook's `parseLineReceipt` passes `userId` as a real `Id<"users">` resolved from the `lineUsers` mapping.
+- **`lineUsers.userId` typing:** must be `v.id("users")` (not `v.string()`) to match `saveReceipt`/`receipts.userId`. Corrected in commit `e100667`.
+- **Scope discipline:** subagents over-reached (edited `receipts.ts` validators, committed Tasks 2/4/5 together). The `normalizeCategory/validateAmount/validateDate/validateMerchant` exports from `receipts.ts` are now required by `convex/line.ts` — keep them exported.
+- **LIFF SDK:** loaded dynamically from `https://static.line-systems.com/libs/liff/2.25.0/sdk.js` (no `@line/liff` dependency in package.json; do not add one). `liff.login()` is required when `!liff.isLoggedIn()` before `getProfile()`.
+- **Webhook always 200:** returns 200 on bad/invalid signature, non-image events, unlinked users, and missing token — LINE retries on non-2xx, so we never surface 4xx/5xx from the webhook.
+- **OPEN items still unresolved (need real bot source to close):** exact bot host/event shape, reply copy back to chat, multi-account default, LIFF channel provisioning, large-image size cap.
