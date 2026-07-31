@@ -10,6 +10,7 @@ import {
   getCriticalExpenseCommitment,
   getDB,
   USER_DATA_STORES,
+  RESET_TOMBSTONE_KEY,
 } from '@/lib/db/local-db';
 import { calculateNetWorthBaseline } from '@/lib/utils/budget-calculator';
 import type { WizardProfile } from '@/lib/types/budget';
@@ -335,9 +336,29 @@ if (typeof window !== 'undefined') {
 /**
  * Restores local IndexedDB stores from a Convex cloud snapshot payload.
  */
-export async function restoreFromCloudSnapshot(snapshot: CloudSnapshot): Promise<boolean> {
+export async function restoreFromCloudSnapshot(
+  snapshot: CloudSnapshot,
+  opts: { force?: boolean } = {}
+): Promise<boolean> {
   if (!snapshot || !snapshot.fullBackupData) {
     console.warn('[Sync] Cannot restore: Snapshot contains no backup data');
+    return false;
+  }
+
+  // Honor the "Reset all data" tombstone. A reset wipes local stores but the
+  // cloud snapshot can still carry the deleted data; without this guard the
+  // auto-restore (AccountSyncMount) would silently re-inject the very entries
+  // the user just wiped. Centralize the check HERE so the auto path is always
+  // protected. The manual "Restore from cloud" button passes force:true — it is
+  // an explicit user choice to recover data, so it may override the tombstone.
+  const resetAt = Number(
+    typeof window !== 'undefined'
+      ? localStorage.getItem(RESET_TOMBSTONE_KEY) || '0'
+      : '0'
+  );
+  const snapshotTime = (snapshot as { createdAt?: number }).createdAt ?? 0;
+  if (!opts.force && resetAt > 0 && snapshotTime > 0 && snapshotTime <= resetAt) {
+    console.log('[Sync] Skipping cloud restore: snapshot predates last reset.');
     return false;
   }
   // Single-flight guard: the latestSnapshot query can re-fire (the host effect's

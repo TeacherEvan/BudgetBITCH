@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useAccounts } from '@/hooks/use-accounts';
 import type { WizardProfile } from '@/lib/types/budget';
 import type { CurrencyOverride } from '@/hooks/use-currency-override';
+import { PendingDeletesInbox } from '@/components/shared-board/pending-deletes-inbox';
 
 interface AccountSettingsCardProps {
   locale: string;
@@ -102,6 +103,7 @@ export function AccountSettingsCard({
         >
           🔄 {'Re-run Setup Wizard'}
         </button>
+        <PendingDeletesInbox />
       </Card>
     </section>
   );

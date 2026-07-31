@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 
  
 import type { UseSharedBoard } from '@/hooks/use-shared-board';
+import { PendingDeletesInbox } from '@/components/shared-board/pending-deletes-inbox';
 
 interface PartnerSharingCardProps {
   locale: string;
@@ -113,6 +114,7 @@ export function PartnerSharingCard({ shared }: PartnerSharingCardProps) {
             >
               {l.unlink}
             </Button>
+            <PendingDeletesInbox />
           </div>
         ) : (
           <div className="space-y-4">

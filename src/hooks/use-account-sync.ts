@@ -22,6 +22,7 @@ import { api } from "../../convex/_generated/api";
 import {
   serializeBoardForSync,
   applyRemoteBoard,
+  RESET_TOMBSTONE_KEY,
 } from "@/lib/db/local-db";
 import {
   getCurrentAccountId,
@@ -323,6 +324,20 @@ export function useAccountSync(): UseAccountSync {
     if (!remote.data) return;
     if (remote.updatedAt <= lastAppliedAt.current) return;
     if (applyingRemote.current) return;
+
+    // Honor "Reset all data": never re-inject a shared account board the user
+    // just wiped. The local wipe clears stores, but the Convex board survives;
+    // without this guard the next pull would resurrect the old entries.
+    const resetAt = Number(
+      typeof window !== "undefined"
+        ? localStorage.getItem(RESET_TOMBSTONE_KEY) || "0"
+        : "0"
+    );
+    if (resetAt > 0 && remote.updatedAt <= resetAt) {
+      console.log("[AccountSync] Skipping board pull: board predates last reset.");
+      lastAppliedAt.current = remote.updatedAt;
+      return;
+    }
 
     (async () => {
       applyingRemote.current = true;

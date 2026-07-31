@@ -54,6 +54,7 @@ import {
   generateId,
 } from '@/lib/db/local-db';
 import { BOARD_CHANGED_EVENT } from '@/lib/types/budget';
+import { getActiveSharedDeleteGuard } from '@/components/shared-board/shared-delete-guard-provider';
 
 /**
  * Helper hook to register a window event listener that re-fetches local DB state
@@ -141,6 +142,13 @@ export function useExpenses() {
   }, []);
 
   const remove = useCallback(async (id: string) => {
+    const guard = getActiveSharedDeleteGuard();
+    if (guard?.isShared) {
+      // Two-party consent: raise a server-side request; the item stays until
+      // the partner approves (delete executes server-side, then re-syncs down).
+      await guard.requestDelete('expenses', id);
+      return;
+    }
     await deleteExpense(id);
     setExpenses(prev => prev.filter(e => e.id !== id));
   }, []);
@@ -193,6 +201,11 @@ export function useIncomes() {
   }, []);
 
   const remove = useCallback(async (id: string) => {
+    const guard = getActiveSharedDeleteGuard();
+    if (guard?.isShared) {
+      await guard.requestDelete('incomes', id);
+      return;
+    }
     await deleteIncome(id);
     setIncomes(prev => prev.filter(i => i.id !== id));
   }, []);
@@ -277,6 +290,11 @@ export function useBills() {
   }, []);
 
   const remove = useCallback(async (id: string) => {
+    const guard = getActiveSharedDeleteGuard();
+    if (guard?.isShared) {
+      await guard.requestDelete('bills', id);
+      return;
+    }
     await deleteBill(id);
     setBills(prev => prev.filter(b => b.id !== id));
   }, []);
@@ -488,6 +506,11 @@ export function useSubscriptions() {
   }, []);
 
   const remove = useCallback(async (id: string) => {
+    const guard = getActiveSharedDeleteGuard();
+    if (guard?.isShared) {
+      await guard.requestDelete('expenses', id);
+      return;
+    }
     await deleteExpense(id);
     setSubscriptions(prev => prev.filter(s => s.id !== id));
   }, []);

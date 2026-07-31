@@ -85,6 +85,26 @@ export default defineSchema({
     .index("by_board", ["boardId"])
     .index("by_token", ["token"]),
 
+  // Two-party consent for destructive item deletes on a shared board.
+  // Either member of a shared board may request deletion of an item; the
+  // DELETE ONLY EXECUTES once the OTHER member approves it. A requester can
+  // cancel their own pending request; an approver (the other member) can
+  // accept or reject. This prevents one user from unilaterally destroying
+  // shared financial data.
+  pendingDeletes: defineTable({
+    boardId: v.string(),
+    store: v.string(), // 'expenses' | 'incomes' | 'bills'
+    itemId: v.string(),
+    requestedBy: v.id("users"),
+    requestedAt: v.number(),
+    status: v.string(), // 'pending' | 'approved' | 'rejected' | 'cancelled'
+    // Snapshot of the deleted item so approval can apply it deterministically
+    // on the board (and re-push), even if the item was later edited locally.
+    itemSnapshot: v.optional(v.any()),
+  })
+    .index("by_board_status", ["boardId", "status"])
+    .index("by_requestedBy", ["requestedBy"]),
+
   dailySnapshots: defineTable({
     userId: v.id("users"),
     accountId: v.optional(v.string()),

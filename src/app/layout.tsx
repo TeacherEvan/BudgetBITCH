@@ -4,6 +4,7 @@ import './globals.css';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { ConvexClientProvider } from '@/components/providers/convex-client-provider';
 import { SharedBoardSync } from '@/components/shared-board/shared-board-sync';
+import { SharedDeleteGuardMount } from '@/components/shared-board/shared-delete-guard-mount';
 import { AccountSyncMount } from '@/components/accounts/account-sync-mount';
 import { PWARegister } from '@/components/pwa/pwa-register';
 import { AppShellExtras } from '@/components/pwa/app-shell-extras';
@@ -75,13 +76,15 @@ export default async function RootLayout({
             <NextIntlClientProvider messages={messages} locale={locale}>
               <ThemeProvider>
                 <SharedBoardSync />
-                <AccountSyncMount />
-                <PWARegister />
-                <AppShellExtras locale={locale} />
-                <WebViewBanner />
-                {children}
-                <SiteFooter />
-                <CookieConsentBanner />
+                <SharedDeleteGuardMount>
+                  <AccountSyncMount />
+                  <PWARegister />
+                  <AppShellExtras locale={locale} />
+                  <WebViewBanner />
+                  {children}
+                  <SiteFooter />
+                  <CookieConsentBanner />
+                </SharedDeleteGuardMount>
               </ThemeProvider>
             </NextIntlClientProvider>
           </ConvexClientProvider>

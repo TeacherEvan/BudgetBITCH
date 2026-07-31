@@ -106,4 +106,61 @@ describe('restoreFromCloudSnapshot (Fix B + C)', () => {
     expect(ok).toBe(true);
     expect(await getCurrentAccountId()).toBe('personal');
   });
+
+  it('honors the "Reset all data" tombstone — refuses to re-inject deleted data (regression)', async () => {
+    // User wiped everything; the reset tombstone is stamped with "now".
+    const resetAt = Date.now();
+    localStorage.setItem('bb:lastResetAt', String(resetAt));
+
+    // A stale cloud snapshot from BEFORE the reset, carrying the deleted entries.
+    const oldSnapshotTime = resetAt - 60_000;
+    const snapshot = {
+      createdAt: oldSnapshotTime,
+      accountId: 'personal',
+      fullBackupData: {
+        wizardProfile: [{ completed: true, locale: 'en' }],
+        expenses: [{ id: 'should-not-return', date: '2026-07-01', category: 'food', amount: 999, source: 'manual' }],
+        incomes: [],
+        budgets: [],
+        bills: [],
+        savingsGoals: [],
+        netWorthSnapshots: [],
+        debts: [],
+        criticalExpenseCommitments: [],
+      },
+    };
+
+    const ok = await restoreFromCloudSnapshot(snapshot);
+
+    // Restore is refused and the deleted expense is NOT written back.
+    expect(ok).toBe(false);
+    const db = await getDB();
+    expect(await db.count('expenses')).toBe(0);
+  });
+
+  it('manual restore with force:true overrides the tombstone (explicit user choice)', async () => {
+    const resetAt = Date.now();
+    localStorage.setItem('bb:lastResetAt', String(resetAt));
+
+    const oldSnapshotTime = resetAt - 60_000;
+    const snapshot = {
+      createdAt: oldSnapshotTime,
+      fullBackupData: {
+        wizardProfile: [{ completed: true, locale: 'en' }],
+        expenses: [{ id: 'recovered-1', date: '2026-07-01', category: 'food', amount: 42, source: 'manual' }],
+        incomes: [],
+        budgets: [],
+        bills: [],
+        savingsGoals: [],
+        netWorthSnapshots: [],
+        debts: [],
+        criticalExpenseCommitments: [],
+      },
+    };
+
+    const ok = await restoreFromCloudSnapshot(snapshot, { force: true });
+    expect(ok).toBe(true);
+    const db = await getDB();
+    expect(await db.count('expenses')).toBe(1);
+  });
 });

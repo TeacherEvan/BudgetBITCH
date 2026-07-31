@@ -115,7 +115,7 @@ export function StorageDiagnosticsModal({ isOpen, onClose}: StorageDiagnosticsMo
       const snapshot = await convex.query(api.snapshots.getSnapshotById, { snapshotId: snapshotId as Id<"dailySnapshots"> });
       
       if (snapshot) {
-        const success = await restoreFromCloudSnapshot(snapshot);
+        const success = await restoreFromCloudSnapshot(snapshot, { force: true });
         if (success) {
           alert('Restored from cloud successfully!');
           window.location.reload();
