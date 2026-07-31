@@ -1,20 +1,23 @@
 // lib/db/reset-completeness.test.ts
 //
-// Characterization tests for the "Reset all data is not working" bug.
+// Regression tests for the "Reset all data is not working" bug.
 //
 // The Settings → Reset handler (src/components/settings/data-backup-card.tsx,
-// handleResetConfirm) calls clearAllUserData(), which only clears the nine
-// USER_DATA_STORES. The multi-board stores (accountsData, localAccounts,
-// bbMeta) and the LWW write-clock store (localWrites) survive, so:
+// handleResetConfirm) MUST call clearAllData(), NOT clearAllUserData(). The
+// latter only clears the nine USER_DATA_STORES; the multi-board stores
+// (accountsData, localAccounts, bbMeta) and the LWW write-clock store
+// (localWrites) would survive, so:
 //
 //   - switching accounts after a "reset" restores a full stash of the data
 //     the user believed they deleted, and
 //   - the surviving localWrites clocks let the sync engine reason about
 //     records that no longer exist.
 //
-// These tests pin the CURRENT (buggy) behaviour of clearAllUserData and the
-// CORRECT behaviour of clearAllData, so the fix is a one-line swap in the
-// reset handler and this file flips from documenting a bug to guarding it.
+// The fix (calling clearAllData + markResetTombstone so the cloud-sync mount
+// won't re-pull a stale snapshot) is already in place. These tests pin the
+// CORRECT behaviour of clearAllData and the INCOMPLETE behaviour of
+// clearAllUserData, so any regression that swaps the handler back to
+// clearAllUserData is caught here.
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
