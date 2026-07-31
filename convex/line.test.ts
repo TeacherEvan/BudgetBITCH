@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { convexTest } from "convex-test";
 import { describe, it, expect } from "vitest";
+import { api, internal } from "./_generated/api";
 import schema from "./schema";
 
 const modules = import.meta.glob("./**/*.ts");
@@ -73,5 +74,60 @@ describe("schema: LINE receipt-bot (Task 1)", () => {
       ctx.db.get(receiptId),
     );
     expect(receipt?.source).toBe("line");
+  });
+});
+
+// Identity-mapping layer (Task 2): linkLineAccount mutation + getConvexUserByLineId resolver.
+describe("line identity mapping (Task 2)", () => {
+  const newTest = () => convexTest(schema, import.meta.glob("./**/*.ts"));
+  const asUser = (userId: any) => (t: ReturnType<typeof convexTest>) =>
+    t.withIdentity({ subject: userId });
+
+  it("Test A: authed user can link and resolver returns the mapped userId", async () => {
+    const t = newTest();
+    const userId = await t.run(async (ctx: any) =>
+      ctx.db.insert("users", { email: "x@y.z" }),
+    );
+
+    const lineDocId = await asUser(userId)(t).mutation(
+      api.line.linkLineAccount,
+      { lineUserId: "U1" },
+    );
+    expect(typeof lineDocId).toBe("string");
+
+    const resolved = await t.query(internal.line.getConvexUserByLineId, {
+      lineUserId: "U1",
+    });
+    expect(resolved).toBe(userId);
+  });
+
+  it("Test B: unauthenticated linkLineAccount rejects with Authentication required", async () => {
+    const t = newTest();
+    await expect(
+      t.mutation(api.line.linkLineAccount, { lineUserId: "U1" }),
+    ).rejects.toThrow(/Authentication required/);
+  });
+
+  it("Test C: re-linking the same lineUserId upserts instead of duplicating", async () => {
+    const t = newTest();
+    const userId = await t.run(async (ctx: any) =>
+      ctx.db.insert("users", { email: "x@y.z" }),
+    );
+
+    await asUser(userId)(t).mutation(api.line.linkLineAccount, {
+      lineUserId: "U1",
+      accountId: "acc-1",
+    });
+    await asUser(userId)(t).mutation(api.line.linkLineAccount, {
+      lineUserId: "U1",
+      accountId: "acc-2",
+    });
+
+    const rows = await t.run(async (ctx: any) =>
+      ctx.db.query("lineUsers").collect(),
+    );
+    const forU1 = rows.filter((r: any) => r.lineUserId === "U1");
+    expect(forU1).toHaveLength(1);
+    expect(forU1[0].accountId).toBe("acc-2");
   });
 });
