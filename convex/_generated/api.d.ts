@@ -35,7 +35,6 @@ import type * as lib_receipt_metrics from "../lib/receipt/metrics.js";
 import type * as lib_receipt_normalise from "../lib/receipt/normalise.js";
 import type * as lib_receipt_questions from "../lib/receipt/questions.js";
 import type * as lib_receipt_templates_registry from "../lib/receipt/templates/registry.js";
-import type * as lib_receipt_templates_th from "../lib/receipt/templates/th.js";
 import type * as lib_receipt_templates_za from "../lib/receipt/templates/za.js";
 import type * as lib_receipt_types from "../lib/receipt/types.js";
 import type * as lib_receipt_validate from "../lib/receipt/validate.js";
@@ -79,7 +78,6 @@ declare const fullApi: ApiFromModules<{
   "lib/receipt/normalise": typeof lib_receipt_normalise;
   "lib/receipt/questions": typeof lib_receipt_questions;
   "lib/receipt/templates/registry": typeof lib_receipt_templates_registry;
-  "lib/receipt/templates/th": typeof lib_receipt_templates_th;
   "lib/receipt/templates/za": typeof lib_receipt_templates_za;
   "lib/receipt/types": typeof lib_receipt_types;
   "lib/receipt/validate": typeof lib_receipt_validate;
