@@ -51,7 +51,24 @@ export default function QuickAddPage() {
   const { add: addIncome } = useIncomes();
   const { profile, save: saveProfile } = useWizardProfile();
   
-  const { draft, scanImage, answerQuestion, confirmDraft } = useReceiptScan();
+  const { draft, isScanning, scanImage, answerQuestion, confirmDraft } = useReceiptScan();
+
+  const saveScannedExpense = async () => {
+    if (!draft) return;
+    try {
+      setLoading(true);
+      await confirmDraft();
+      setToast({ show: true, message: l.successAdded, type: 'success' });
+    } catch (err) {
+      setToast({
+        show: true,
+        message: (err instanceof Error ? err.message : String(err)) || 'Failed to save receipt.',
+        type: 'error',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // UI States
   const [isExpense, setIsExpense] = useState(true);
@@ -359,6 +376,44 @@ export default function QuickAddPage() {
             )}
             <span className="leading-tight">{toast.message}</span>
           </div>
+        </div>
+      )}
+
+      {/* Scanned Receipt Result */}
+      {draft && !isScanning && (
+        <div className="mt-4 bg-white/5 border border-amber-400/30 rounded-2xl p-4 space-y-3 text-left">
+          <div className="flex items-center gap-2 text-amber-400 font-medium">
+            <Check className="w-5 h-5 flex-shrink-0" />
+            <span>{'Receipt Scanned'}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-sm text-white/80">
+            <div>
+              <span className="text-xs text-white/40 block">{'Merchant'}</span>
+              <span className="font-semibold">{String(draft.fields.merchant?.value ?? 'Unknown')}</span>
+            </div>
+            <div>
+              <span className="text-xs text-white/40 block">{'Amount'}</span>
+              <span className="font-semibold text-amber-400">
+                {Number(draft.fields.total?.value ?? 0).toFixed(2)}
+              </span>
+            </div>
+            <div>
+              <span className="text-xs text-white/40 block">{'Category'}</span>
+              <span className="capitalize">{String(draft.fields.category?.value ?? 'other')}</span>
+            </div>
+            <div>
+              <span className="text-xs text-white/40 block">{'Date'}</span>
+              <span>{draft.fields.date?.value ? String(draft.fields.date.value) : 'Today'}</span>
+            </div>
+          </div>
+          <Button
+            variant="primary"
+            size="sm"
+            className="w-full"
+            onClick={saveScannedExpense}
+          >
+            {'Save Expense'}
+          </Button>
         </div>
       )}
 

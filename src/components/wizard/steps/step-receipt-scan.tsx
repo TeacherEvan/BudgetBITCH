@@ -163,6 +163,15 @@ export function StepReceiptScan({
           >
             {'Scan Another Receipt'}
           </Button>
+
+          <Button
+            variant="primary"
+            size="sm"
+            className="w-full mt-2"
+            onClick={() => confirmDraft()}
+          >
+            {'Save Expense'}
+          </Button>
         </div>
       )}
 
