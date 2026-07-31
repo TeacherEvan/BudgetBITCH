@@ -22,20 +22,13 @@ vi.mock('@convex-dev/auth/react', () => ({
   useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
 }));
 
-vi.mock('convex/react', () => ({
-  useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
-  useConvex: () => ({
-    query: async () => null,
-  }),
-  useMutation: () => pushBoard,
-  useQuery: (_ref: unknown, args: unknown) => {
-    if (args === 'skip') return undefined;
-    return queryResults.getBoard ?? null;
-  },
-}));
-
-// Separate mock that returns a listMyAccounts result so we can test the
-// "local cache empty but server has the boardId" fallback.
+// Single source of truth for the convex/react mock. A previous revision
+// declared TWO vi.mock('convex/react', ...) factories for the same module —
+// only one wins, and which one is not reliably deterministic across runs, so
+// listMyAccounts intermittently resolved to null and the dashboard fallback
+// couldn't resolve a boardId (the real cause of the CI flake). Keep exactly
+// one factory. listMyAccounts takes no args ({}); getAccountBoard takes
+// { boardId }.
 const myAccountsResult: unknown[] = [];
 vi.mock('convex/react', () => ({
   useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
@@ -43,9 +36,8 @@ vi.mock('convex/react', () => ({
     query: async () => null,
   }),
   useMutation: () => pushBoard,
-  useQuery: (ref: { __name__?: string } | string, args: unknown) => {
+  useQuery: (_ref: { __name__?: string } | string, args: unknown) => {
     if (args === 'skip') return undefined;
-    // listMyAccounts takes no args ({}); getAccountBoard takes { boardId }.
     if (args && typeof args === 'object' && Object.keys(args).length === 0) {
       return myAccountsResult;
     }
@@ -123,6 +115,7 @@ async function waitForBoard(
 beforeEach(async () => {
   cleanup();
   queryResults = { getBoard: null };
+  myAccountsResult.length = 0;
   pushBoard.mockClear();
   await clearAllData();
   localStorage.clear();
@@ -380,21 +373,19 @@ describe('useAccountSync', () => {
       role: 'owner',
     });
 
-    render(<HookProbe />);
-    // Allow resolveActiveBoard to hit the listMyAccounts fallback.
-    await act(async () => {
-      await sleep(250);
-    });
+    const result = render(<HookProbe />);
+    // resolveActiveBoard hits the listMyAccounts fallback (local cache cleared);
+    // wait for boardId to actually resolve before dispatching, so the edit
+    // isn't cancelled by the boardId reset effect (deterministic on CI).
+    await waitForBoard(result, 'board_family');
 
     await act(async () => {
       window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT));
     });
 
     // The edit listener debounces the push by PUSH_DEBOUNCE_MS (800ms) before
-    // the async doPush chain runs. A fixed sleep(1000) leaves only ~200ms of
-    // margin over the debounce and races it under CI's parallel load (flaky:
-    // green locally, 0-calls on CI). Poll until the push lands instead so the
-    // assertion is deterministic regardless of runner speed.
+    // the async doPush chain runs. Poll until the push lands instead of a fixed
+    // sleep so the assertion is deterministic regardless of runner speed.
     await waitFor(() => expect(pushBoard).toHaveBeenCalledTimes(1), {
       timeout: 3000,
     });
