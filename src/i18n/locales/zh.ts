@@ -77,9 +77,9 @@ export const zh: LocaleMessages = {
     }
   },
   welcome: {
-    brand: "Budget-BOSS",
-    heading: "打开你的 Budget-BOSS 面板",
-    description: "登录以解锁你的根流程。之后，Budget-BOSS 可以根据你保存的启动进度，将你引导至一次性启动问卷或直达登录面板。",
+    brand: "Budget Boss",
+    heading: "打开你的 Budget Boss 面板",
+    description: "登录以解锁你的根流程。之后，Budget Boss 可以根据你保存的启动进度，将你引导至一次性启动问卷或直达登录面板。",
     openSignIn: "打开登录",
     openSignUp: "打开注册",
     privacyPromise: "默认私密。仅在需要时设置。",
@@ -95,7 +95,7 @@ export const zh: LocaleMessages = {
       },
       moveWithoutSprawl: {
         title: "无杂乱地推进",
-        description: "Budget-BOSS 让入口路径紧凑、可读，并适合在小屏幕上快速浏览。"
+        description: "Budget Boss 让入口路径紧凑、可读，并适合在小屏幕上快速浏览。"
       }
     },
     rootFlow: "根流程",
@@ -111,7 +111,7 @@ export const zh: LocaleMessages = {
   launchWizard: {
     kicker: "启动问卷",
     title: "粗略支出",
-    description: "先添加大致的经常性成本，这样 Budget-BOSS 启动时就能有一个实用的资金基准，而不是空白面板。",
+    description: "先添加大致的经常性成本，这样 Budget Boss 启动时就能有一个实用的资金基准，而不是空白面板。",
     topCategoriesTitle: "常见支出名称",
     entryLabel: "支出名称",
     entryPlaceholder: "搜索或选择常见支出",
@@ -148,18 +148,18 @@ export const zh: LocaleMessages = {
     secureAccess: "安全访问",
     useGoogleToStart: "创建你的账户",
     useGoogleToContinue: "使用你的账户",
-    googleOnly: "Convex Auth 创建并保护 Budget-BOSS 账户。",
+    googleOnly: "Convex Auth 创建并保护 Budget Boss 账户。",
     secureSignIn: "使用你的电子邮件和密码，在任何设备上打开同一个账户。",
     gmailPrivacy: "登录无需 Google OAuth 客户端或用户管理的环境文件。",
-    minimalData: "Budget-BOSS 仅保留运行所需的最少账户、工作区、偏好和集成数据。",
+    minimalData: "Budget Boss 仅保留运行所需的最少账户、工作区、偏好和集成数据。",
     whyThisStepExists: "为何存在此步骤",
     localProfileFirst: "本地档案优先",
-    localProfileDescription: "Budget-BOSS 验证 Convex Auth 账户，然后一次性创建你的本地档案、个人工作区和默认工作区偏好，以便应用能在服务器上加载正确的数据形态。"
+    localProfileDescription: "Budget Boss 验证 Convex Auth 账户，然后一次性创建你的本地档案、个人工作区和默认工作区偏好，以便应用能在服务器上加载正确的数据形态。"
   },
   signIn: {
     eyebrow: "登录",
     title: "打开你的预算面板",
-    description: "使用你的 Budget-BOSS 账户，然后让应用在仪表盘打开前，为你的工作区完成本地设置。",
+    description: "使用你的 Budget Boss 账户，然后让应用在仪表盘打开前，为你的工作区完成本地设置。",
     needAccount: "需要账户？",
     openSignUp: "打开注册",
     continueWithGoogle: "登录",
@@ -173,7 +173,7 @@ export const zh: LocaleMessages = {
   signUp: {
     eyebrow: "创建账户",
     title: "创建你的预算账户",
-    description: "选择一个电子邮件和密码。Budget-BOSS 将在 Convex 中创建你的账户，并完成本地工作区设置。",
+    description: "选择一个电子邮件和密码。Budget Boss 将在 Convex 中创建你的账户，并完成本地工作区设置。",
     haveAccount: "已有账户？",
     openSignIn: "打开登录",
     submit: "创建账户",
@@ -184,16 +184,16 @@ export const zh: LocaleMessages = {
   authContinue: {
     eyebrow: "继续",
     missingEmailTitle: "添加电子邮件以完成设置",
-    missingEmailDescription: "Budget-BOSS 在本地设置完成前，需要一个电子邮件支持的 Convex 账户。",
+    missingEmailDescription: "Budget Boss 在本地设置完成前，需要一个电子邮件支持的 Convex 账户。",
     missingEmailHelp: "创建或使用电子邮件和密码账户登录，然后返回此处完成设置。",
     title: "完成你的本地设置",
-    description: "Budget-BOSS 在仪表盘能为此账户加载服务器端数据前，需要一个本地档案和一个个人工作区。",
+    description: "Budget Boss 在仪表盘能为此账户加载服务器端数据前，需要一个本地档案和一个个人工作区。",
     whatHappensNext: "接下来会发生什么",
     oneSafeBootstrap: "一次安全引导",
     oneSafeBootstrapDescription: "继续操作会一次性创建任何缺失的记录，在后续登录时重复使用，然后打开你的仪表盘并选中由此产生的工作区。",
     relinkConflict: "此电子邮件已关联到另一个账户。请在此退出登录，切换到原始登录方式，或在继续前联系支持。",
     bootstrapIssueTitle: "设置需要关注",
-    bootstrapIssueDescription: "Budget-BOSS 无法为此会话完成安全的 Convex 设置步骤。",
+    bootstrapIssueDescription: "Budget Boss 无法为此会话完成安全的 Convex 设置步骤。",
     bootstrapIssueHelp: "在应用所有者检查 Convex Auth 和 CONVEX_SYNC_SECRET 设置后重试。",
     continueToDashboard: "继续前往仪表盘",
     rerunSafe: "如果你的会话已经创建了本地记录，可以安全地再次运行。"
@@ -201,9 +201,9 @@ export const zh: LocaleMessages = {
   securitySettings: {
     eyebrow: "安全设置",
     title: "打开你的账户安全控制。",
-    description: "Budget-BOSS 使用 Convex Auth 的电子邮件和密码账户。使用登录时的\"忘记密码？\"链接通过电子邮件重置。电子邮件验证是计划中的后续功能。",
+    description: "Budget Boss 使用 Convex Auth 的电子邮件和密码账户。使用登录时的\"忘记密码？\"链接通过电子邮件重置。电子邮件验证是计划中的后续功能。",
     googleAccountEyebrow: "账户凭据",
-    googleAccountTitle: "使用你的 Budget-BOSS 账户。",
+    googleAccountTitle: "使用你的 Budget Boss 账户。",
     googleAccountDescription: "你的账户在 Convex Auth 中创建，使用注册时选择的电子邮件和密码。",
     openGoogleSecurity: "使用至少 8 个字符的强且唯一的密码。",
     openGooglePermissions: "忘记密码？使用登录屏幕上的链接通过电子邮件重置。电子邮件验证是计划中的后续功能。",
@@ -213,7 +213,7 @@ export const zh: LocaleMessages = {
     privacyEyebrow: "隐私",
     privacyItems: {
       signInOnly: "Convex Auth 验证登录并返回你的账户身份。",
-      minimalData: "Budget-BOSS 仅保留运行所需的本地账户、工作区、偏好和集成数据。",
+      minimalData: "Budget Boss 仅保留运行所需的本地账户、工作区、偏好和集成数据。",
       noMarketingData: "不记录或出售任何营销数据。",
       personalizationUserOnly: "个性化仅限用户本人，不与经纪商或第三方广告商共享。",
       gmailPrivacy: "登录无需 Google OAuth 客户端或用户管理的环境文件。"

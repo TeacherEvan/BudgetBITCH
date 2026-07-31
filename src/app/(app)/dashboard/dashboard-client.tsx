@@ -162,7 +162,7 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
         setIsLoading(false);
       }
     })();
-  }, [profile, profileLoading, latestSnapshot, checkWizardStatus, wizardForced, isRedo, router]);
+  }, [profile, profileLoading, latestSnapshot, checkWizardStatus, wizardCompleted, wizardForced, isRedo, router]);
 
   const handleWizardComplete = useCallback(async () => {
     setWizardCompleted(true);

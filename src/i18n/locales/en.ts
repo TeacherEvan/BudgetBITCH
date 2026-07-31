@@ -155,21 +155,21 @@ export const en = {
     secureAccess: "Secure access",
     useGoogleToStart: "Create your account",
     useGoogleToContinue: "Use your account",
-    googleOnly: "Convex Auth creates and protects Budget-BOSS accounts.",
+    googleOnly: "Convex Auth creates and protects Budget Boss accounts.",
     secureSignIn: "Use your email and password to open the same account on any device.",
     gmailPrivacy: "No Google OAuth client or user-managed env file is required for login.",
     minimalData:
-      "Budget-BOSS keeps only the minimal account, workspace, preference, and integration data it needs to run.",
+      "Budget Boss keeps only the minimal account, workspace, preference, and integration data it needs to run.",
     whyThisStepExists: "Why this step exists",
     localProfileFirst: "Local profile first",
     localProfileDescription:
-      "Budget-BOSS verifies the Convex Auth account, then creates your local profile, personal workspace, and default workspace preference once so the app can load the right data shape on the server.",
+      "Budget Boss verifies the Convex Auth account, then creates your local profile, personal workspace, and default workspace preference once so the app can load the right data shape on the server.",
   },
   signIn: {
     eyebrow: "Sign in",
     title: "Open your budget board",
     description:
-      "Use your Budget-BOSS account, then let the app finish local setup for your workspace before the dashboard opens.",
+      "Use your Budget Boss account, then let the app finish local setup for your workspace before the dashboard opens.",
     needAccount: "Need an account?",
     openSignUp: "Open sign-up",
     continueWithGoogle: "Sign in",
@@ -186,7 +186,7 @@ export const en = {
     eyebrow: "Create account",
     title: "Create your budget account",
     description:
-      "Choose an email and password. Budget-BOSS will create your account in Convex and finish local workspace setup next.",
+      "Choose an email and password. Budget Boss will create your account in Convex and finish local workspace setup next.",
     haveAccount: "Already have an account?",
     openSignIn: "Open sign in",
     submit: "Create account",
@@ -199,12 +199,12 @@ export const en = {
     eyebrow: "Continue",
     missingEmailTitle: "Add an email to finish setup",
     missingEmailDescription:
-      "Budget-BOSS requires an email-backed Convex account before local setup can finish.",
+      "Budget Boss requires an email-backed Convex account before local setup can finish.",
     missingEmailHelp:
       "Create or sign in with an email and password account, then return here to finish setup.",
     title: "Finish your local setup",
     description:
-      "Budget-BOSS needs one local profile and one personal workspace before the dashboard can load server-side data for this account.",
+      "Budget Boss needs one local profile and one personal workspace before the dashboard can load server-side data for this account.",
     whatHappensNext: "What happens next",
     oneSafeBootstrap: "One safe bootstrap",
     oneSafeBootstrapDescription:
@@ -213,7 +213,7 @@ export const en = {
       "This email is already linked to a different account. Sign out here, switch to the original sign-in method, or contact support before continuing.",
     bootstrapIssueTitle: "Setup needs attention",
     bootstrapIssueDescription:
-      "Budget-BOSS could not finish the secure Convex setup step for this session.",
+      "Budget Boss could not finish the secure Convex setup step for this session.",
     bootstrapIssueHelp:
       "Try again after the app owner checks Convex Auth and CONVEX_SYNC_SECRET settings.",
     continueToDashboard: "Continue to dashboard",
@@ -223,9 +223,9 @@ export const en = {
     eyebrow: "Security settings",
     title: "Open your account security controls.",
     description:
-      "Budget-BOSS uses Convex Auth email and password accounts. Use the \"Forgot password?\" link on sign-in to reset it by email. Email verification is a planned follow-up.",
+      "Budget Boss uses Convex Auth email and password accounts. Use the \"Forgot password?\" link on sign-in to reset it by email. Email verification is a planned follow-up.",
     googleAccountEyebrow: "Account credentials",
-    googleAccountTitle: "Use your Budget-BOSS account.",
+    googleAccountTitle: "Use your Budget Boss account.",
     googleAccountDescription:
       "Your account is created in Convex Auth with the email and password you choose on sign-up.",
     openGoogleSecurity: "Use a strong unique password with at least 8 characters.",
@@ -238,7 +238,7 @@ export const en = {
     privacyItems: {
       signInOnly: "Convex Auth verifies sign-in and returns your account identity.",
       minimalData:
-        "Budget-BOSS keeps only the local account, workspace, preference, and integration data it needs to run.",
+        "Budget Boss keeps only the local account, workspace, preference, and integration data it needs to run.",
       noMarketingData: "No marketing data is recorded or sold.",
       personalizationUserOnly:
         "Personalization stays user-only and is not shared with brokers or third-party advertisers.",

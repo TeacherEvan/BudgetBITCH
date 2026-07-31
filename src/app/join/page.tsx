@@ -79,7 +79,7 @@ export default function JoinPage() {
 
         {status === 'idle' && !code && (
           <p className="mt-3 text-sm text-[var(--text-2)]">
-            {t('Open this link from a Budget-BOSS invite to join.')}
+            {t('Open this link from a Budget Boss invite to join.')}
           </p>
         )}
 

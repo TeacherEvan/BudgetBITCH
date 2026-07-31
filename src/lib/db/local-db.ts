@@ -118,15 +118,19 @@ export interface BudgetBITCHDB extends DBSchema {
       createdAt: number;
     };
   };
+  // Offline sync snapshots queue
+  syncQueue: {
+    key: number;
+    value: {
+      id?: number;
+      data: unknown;
+      timestamp: number;
+    };
+  };
 }
 
 const DB_NAME = 'budgetbitch';
-// Bumped to 5: forces the IndexedDB upgrade callback to run for existing clients
-// whose database version was frozen (at 3) before the `incomes` store was added
-// (commit 08757d2). Without the bump the upgrade callback never executes, so
-// `incomes` is never created and reads throw
-// "IDBDatabase.transaction: 'incomes' is not a known object store name".
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 let dbInstance: IDBPDatabase<BudgetBITCHDB> | null = null;
 let dbPromise: Promise<IDBPDatabase<BudgetBITCHDB>> | null = null;
 
@@ -231,6 +235,7 @@ export async function getDB(): Promise<IDBPDatabase<BudgetBITCHDB>> {
       if (!db.objectStoreNames.contains('bbMeta')) db.createObjectStore('bbMeta');
       if (!db.objectStoreNames.contains('localWrites')) db.createObjectStore('localWrites');
       if (!db.objectStoreNames.contains('receiptDrafts')) db.createObjectStore('receiptDrafts');
+      if (!db.objectStoreNames.contains('syncQueue')) db.createObjectStore('syncQueue', { keyPath: 'id', autoIncrement: true });
 
       // Version-specific migrations
       if (oldVersion > 0 && oldVersion < 3) {

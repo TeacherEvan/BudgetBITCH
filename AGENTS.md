@@ -108,7 +108,7 @@ Convex agent skills can be reinstalled with `npx convex ai-files install`.
 
 - Write to IndexedDB (`src/lib/db/local-db.ts`) immediately; sync to Convex async.
 - `src/lib/convex/sync-snapshots.ts` posts the daily snapshot via
-  `upsertDailySnapshot`; failures queue in `localStorage` (`budgetbitch:offlineQueue`)
+  `upsertDailySnapshot`; failures queue in IndexedDB (`syncQueue` store)
   and replay on the `online` event.
 - Adding an IndexedDB store means adding a `createObjectStore` call in `upgrade()`
   — enforced by `npm run check:idb`.

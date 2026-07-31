@@ -77,10 +77,10 @@ export const es: LocaleMessages = {
     },
   },
   welcome: {
-    brand: "Budget-BOSS",
-    heading: "Abre tu panel de Budget-BOSS",
+    brand: "Budget Boss",
+    heading: "Abre tu panel de Budget Boss",
     description:
-      "Inicia sesión para desbloquear tu flujo raíz. Después, Budget-BOSS puede enviarte al cuestionario de inicio único o directamente al panel de inicio según tu progreso de inicio guardado.",
+      "Inicia sesión para desbloquear tu flujo raíz. Después, Budget Boss puede enviarte al cuestionario de inicio único o directamente al panel de inicio según tu progreso de inicio guardado.",
     openSignIn: "Abrir inicio de sesión",
     openSignUp: "Abrir registro",
     privacyPromise: "Privado por defecto. Configuración solo si es necesario.",
@@ -99,7 +99,7 @@ export const es: LocaleMessages = {
       moveWithoutSprawl: {
         title: "Avance sin desorden",
         description:
-          "Budget-BOSS mantiene la ruta de entrada densa, legible y lista para escaneo rápido en pantallas pequeñas.",
+          "Budget Boss mantiene la ruta de entrada densa, legible y lista para escaneo rápido en pantallas pequeñas.",
       },
     },
     rootFlow: "Flujo raíz",
@@ -118,7 +118,7 @@ export const es: LocaleMessages = {
     kicker: "Cuestionario de inicio",
     title: "Gastos aproximados",
     description:
-      "Añade primero costos recurrentes aproximados para que Budget-BOSS abra con una base financiera práctica en lugar de un panel en blanco.",
+      "Añade primero costos recurrentes aproximados para que Budget Boss abra con una base financiera práctica en lugar de un panel en blanco.",
     topCategoriesTitle: "Títulos comunes de gastos",
     entryLabel: "Título del gasto",
     entryPlaceholder: "Busca o selecciona un gasto común",
@@ -156,21 +156,21 @@ export const es: LocaleMessages = {
     secureAccess: "Acceso seguro",
     useGoogleToStart: "Crea tu cuenta",
     useGoogleToContinue: "Usa tu cuenta",
-    googleOnly: "Convex Auth crea y protege las cuentas de Budget-BOSS.",
+    googleOnly: "Convex Auth crea y protege las cuentas de Budget Boss.",
     secureSignIn: "Usa tu correo y contraseña para abrir la misma cuenta en cualquier dispositivo.",
     gmailPrivacy: "No se requiere un cliente OAuth de Google ni un archivo de entorno gestionado por el usuario para iniciar sesión.",
     minimalData:
-      "Budget-BOSS conserva solo los datos mínimos de cuenta, espacio de trabajo, preferencia e integración que necesita para funcionar.",
+      "Budget Boss conserva solo los datos mínimos de cuenta, espacio de trabajo, preferencia e integración que necesita para funcionar.",
     whyThisStepExists: "Por qué existe este paso",
     localProfileFirst: "Perfil local primero",
     localProfileDescription:
-      "Budget-BOSS verifica la cuenta de Convex Auth y luego crea una vez tu perfil local, espacio de trabajo personal y preferencia de espacio de trabajo predeterminada para que la aplicación pueda cargar la forma de datos correcta en el servidor.",
+      "Budget Boss verifica la cuenta de Convex Auth y luego crea una vez tu perfil local, espacio de trabajo personal y preferencia de espacio de trabajo predeterminada para que la aplicación pueda cargar la forma de datos correcta en el servidor.",
   },
   signIn: {
     eyebrow: "Iniciar sesión",
     title: "Abre tu panel de presupuesto",
     description:
-      "Usa tu cuenta de Budget-BOSS y luego deja que la aplicación termine la configuración local de tu espacio de trabajo antes de que se abra el panel.",
+      "Usa tu cuenta de Budget Boss y luego deja que la aplicación termine la configuración local de tu espacio de trabajo antes de que se abra el panel.",
     needAccount: "¿Necesitas una cuenta?",
     openSignUp: "Abrir registro",
     continueWithGoogle: "Iniciar sesión",
@@ -187,7 +187,7 @@ export const es: LocaleMessages = {
     eyebrow: "Crear cuenta",
     title: "Crea tu cuenta de presupuesto",
     description:
-      "Elige un correo y una contraseña. Budget-BOSS creará tu cuenta en Convex y luego terminará la configuración local del espacio de trabajo.",
+      "Elige un correo y una contraseña. Budget Boss creará tu cuenta en Convex y luego terminará la configuración local del espacio de trabajo.",
     haveAccount: "¿Ya tienes una cuenta?",
     openSignIn: "Abrir inicio de sesión",
     submit: "Crear cuenta",
@@ -200,12 +200,12 @@ export const es: LocaleMessages = {
     eyebrow: "Continuar",
     missingEmailTitle: "Añade un correo para terminar la configuración",
     missingEmailDescription:
-      "Budget-BOSS requiere una cuenta de Convex respaldada por correo antes de que la configuración local pueda terminar.",
+      "Budget Boss requiere una cuenta de Convex respaldada por correo antes de que la configuración local pueda terminar.",
     missingEmailHelp:
       "Crea o inicia sesión con una cuenta de correo y contraseña y luego regresa aquí para terminar la configuración.",
     title: "Termina tu configuración local",
     description:
-      "Budget-BOSS necesita un perfil local y un espacio de trabajo personal antes de que el panel pueda cargar datos del servidor para esta cuenta.",
+      "Budget Boss necesita un perfil local y un espacio de trabajo personal antes de que el panel pueda cargar datos del servidor para esta cuenta.",
     whatHappensNext: "Qué sucede a continuación",
     oneSafeBootstrap: "Un arranque seguro",
     oneSafeBootstrapDescription:
@@ -214,7 +214,7 @@ export const es: LocaleMessages = {
       "Este correo ya está vinculado a una cuenta diferente. Cierra sesión aquí, cambia al método de inicio de sesión original o contacta con soporte antes de continuar.",
     bootstrapIssueTitle: "La configuración necesita atención",
     bootstrapIssueDescription:
-      "Budget-BOSS no pudo terminar el paso seguro de configuración de Convex para esta sesión.",
+      "Budget Boss no pudo terminar el paso seguro de configuración de Convex para esta sesión.",
     bootstrapIssueHelp:
       "Inténtalo de nuevo después de que el propietario de la aplicación revise la configuración de Convex Auth y CONVEX_SYNC_SECRET.",
     continueToDashboard: "Continuar al panel",
@@ -224,9 +224,9 @@ export const es: LocaleMessages = {
     eyebrow: "Configuración de seguridad",
     title: "Abre los controles de seguridad de tu cuenta.",
     description:
-      "Budget-BOSS usa cuentas de Convex Auth con correo y contraseña. Usa el enlace «¿Olvidaste tu contraseña?» en el inicio de sesión para restablecerla por correo. La verificación por correo es un seguimiento planeado.",
+      "Budget Boss usa cuentas de Convex Auth con correo y contraseña. Usa el enlace «¿Olvidaste tu contraseña?» en el inicio de sesión para restablecerla por correo. La verificación por correo es un seguimiento planeado.",
     googleAccountEyebrow: "Credenciales de la cuenta",
-    googleAccountTitle: "Usa tu cuenta de Budget-BOSS.",
+    googleAccountTitle: "Usa tu cuenta de Budget Boss.",
     googleAccountDescription:
       "Tu cuenta se crea en Convex Auth con el correo y la contraseña que elijas al registrarte.",
     openGoogleSecurity: "Usa una contraseña fuerte y única de al menos 8 caracteres.",
@@ -239,7 +239,7 @@ export const es: LocaleMessages = {
     privacyItems: {
       signInOnly: "Convex Auth verifica el inicio de sesión y devuelve la identidad de tu cuenta.",
       minimalData:
-        "Budget-BOSS conserva solo los datos locales de cuenta, espacio de trabajo, preferencia e integración que necesita para funcionar.",
+        "Budget Boss conserva solo los datos locales de cuenta, espacio de trabajo, preferencia e integración que necesita para funcionar.",
       noMarketingData: "No se registran ni se venden datos de marketing.",
       personalizationUserOnly:
         "La personalización se mantiene solo para el usuario y no se comparte con corredores ni anunciantes de terceros.",

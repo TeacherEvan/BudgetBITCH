@@ -236,14 +236,30 @@ export function registerSyncWorker() {
   }
 }
 
-// Offline queue for when user is offline
+// Offline queue for when user is offline (using IndexedDB to avoid localStorage quota limits)
+export async function getOfflineQueueCount(): Promise<number> {
+  if (typeof window === 'undefined') return 0;
+  try {
+    const db = await getDB();
+    return await db.count('syncQueue');
+  } catch {
+    return 0;
+  }
+}
+
 export async function queueOfflineSnapshot(data: SyncSnapshotArgs) {
   if (typeof window === 'undefined') return;
   
   const cleanData = sanitizeForConvex(data);
-  const queue = JSON.parse(localStorage.getItem('budgetbitch:offlineQueue') || '[]');
-  queue.push({ data: cleanData, timestamp: Date.now() });
-  localStorage.setItem('budgetbitch:offlineQueue', JSON.stringify(queue));
+  try {
+    const db = await getDB();
+    await db.add('syncQueue', {
+      data: cleanData,
+      timestamp: Date.now(),
+    });
+  } catch (err) {
+    console.error('Failed to queue offline snapshot in IndexedDB:', err);
+  }
   
   // Try to sync immediately if online
   if (navigator.onLine) {
@@ -265,30 +281,32 @@ export async function flushOfflineQueue() {
     return;
   }
 
-  const queue = JSON.parse(localStorage.getItem("budgetbitch:offlineQueue") || "[]");
-  if (queue.length === 0) return;
-  
-  const failed: unknown[] = [];
-  for (const item of queue) {
-    try {
-      const cleanData = sanitizeForConvex(item.data);
-      await convex.mutation(api.snapshots.upsertDailySnapshot, cleanData);
-      console.log('Flushed offline snapshot:', item.timestamp);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes("Authentication required") || errorMessage.includes("Authentication") || errorMessage.includes("Unauthenticated")) {
-        console.log('User is not authenticated yet. Postponing offline queue flush.');
-        // Auth dropped mid-flush: keep the rest of the queue untouched.
-        failed.push(...queue.slice(queue.indexOf(item)));
-        break;
-      } else {
-        console.error('Failed to flush offline snapshot:', error);
-        failed.push(item);
+  try {
+    const db = await getDB();
+    const items = await db.getAll('syncQueue');
+    if (items.length === 0) return;
+    
+    for (const item of items) {
+      try {
+        const cleanData = sanitizeForConvex(item.data);
+        await convex.mutation(api.snapshots.upsertDailySnapshot, cleanData as never);
+        if (item.id !== undefined) {
+          await db.delete('syncQueue', item.id);
+        }
+        console.log('Flushed offline snapshot:', item.timestamp);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes("Authentication required") || errorMessage.includes("Authentication") || errorMessage.includes("Unauthenticated")) {
+          console.log('User is not authenticated yet. Postponing offline queue flush.');
+          break;
+        } else {
+          console.error('Failed to flush offline snapshot:', error);
+        }
       }
     }
+  } catch (err) {
+    console.error('Failed to read syncQueue from IndexedDB:', err);
   }
-  
-  localStorage.setItem('budgetbitch:offlineQueue', JSON.stringify(failed));
 }
 
 // Listen for online/offline events

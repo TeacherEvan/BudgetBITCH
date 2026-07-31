@@ -77,10 +77,10 @@ export const fr: LocaleMessages = {
     },
   },
   welcome: {
-    brand: "Budget-BOSS",
-    heading: "Ouvrez votre tableau Budget-BOSS",
+    brand: "Budget Boss",
+    heading: "Ouvrez votre tableau Budget Boss",
     description:
-      "Connectez-vous pour débloquer votre flux racine. Ensuite, Budget-BOSS peut vous diriger vers le questionnaire de démarrage unique ou directement vers le tableau d'accueil selon votre progression de démarrage enregistrée.",
+      "Connectez-vous pour débloquer votre flux racine. Ensuite, Budget Boss peut vous diriger vers le questionnaire de démarrage unique ou directement vers le tableau d'accueil selon votre progression de démarrage enregistrée.",
     openSignIn: "Ouvrir la connexion",
     openSignUp: "Ouvrir l'inscription",
     privacyPromise: "Privé par défaut. Configuration uniquement si nécessaire.",
@@ -99,7 +99,7 @@ export const fr: LocaleMessages = {
       moveWithoutSprawl: {
         title: "Avancez sans l'étalement",
         description:
-          "Budget-BOSS garde le chemin d'accès dense, lisible et prêt pour une lecture rapide sur les petits écrans.",
+          "Budget Boss garde le chemin d'accès dense, lisible et prêt pour une lecture rapide sur les petits écrans.",
       },
     },
     rootFlow: "Flux racine",
@@ -118,7 +118,7 @@ export const fr: LocaleMessages = {
     kicker: "Questionnaire de démarrage",
     title: "Dépenses approximatives",
     description:
-      "Ajoutez d'abord des coûts récurrents approximatifs pour que Budget-BOSS s'ouvre avec une base financière réaliste plutôt qu'un tableau vide.",
+      "Ajoutez d'abord des coûts récurrents approximatifs pour que Budget Boss s'ouvre avec une base financière réaliste plutôt qu'un tableau vide.",
     topCategoriesTitle: "Titres de dépenses courants",
     entryLabel: "Titre de la dépense",
     entryPlaceholder: "Recherchez ou sélectionnez une dépense courante",
@@ -156,21 +156,21 @@ export const fr: LocaleMessages = {
     secureAccess: "Accès sécurisé",
     useGoogleToStart: "Créez votre compte",
     useGoogleToContinue: "Utilisez votre compte",
-    googleOnly: "Convex Auth crée et protège les comptes Budget-BOSS.",
+    googleOnly: "Convex Auth crée et protège les comptes Budget Boss.",
     secureSignIn: "Utilisez votre e-mail et votre mot de passe pour ouvrir le même compte sur n'importe quel appareil.",
     gmailPrivacy: "Aucun client OAuth Google ni fichier d'environnement géré par l'utilisateur n'est requis pour la connexion.",
     minimalData:
-      "Budget-BOSS conserve uniquement les données minimales de compte, d'espace de travail, de préférence et d'intégration nécessaires à son fonctionnement.",
+      "Budget Boss conserve uniquement les données minimales de compte, d'espace de travail, de préférence et d'intégration nécessaires à son fonctionnement.",
     whyThisStepExists: "Pourquoi cette étape existe",
     localProfileFirst: "Profil local d'abord",
     localProfileDescription:
-      "Budget-BOSS vérifie le compte Convex Auth, puis crée une fois votre profil local, votre espace de travail personnel et la préférence d'espace de travail par défaut afin que l'application puisse charger la bonne structure de données sur le serveur.",
+      "Budget Boss vérifie le compte Convex Auth, puis crée une fois votre profil local, votre espace de travail personnel et la préférence d'espace de travail par défaut afin que l'application puisse charger la bonne structure de données sur le serveur.",
   },
   signIn: {
     eyebrow: "Connexion",
     title: "Ouvrez votre tableau budgétaire",
     description:
-      "Utilisez votre compte Budget-BOSS, puis laissez l'application terminer la configuration locale de votre espace de travail avant l'ouverture du tableau de bord.",
+      "Utilisez votre compte Budget Boss, puis laissez l'application terminer la configuration locale de votre espace de travail avant l'ouverture du tableau de bord.",
     needAccount: "Besoin d'un compte ?",
     openSignUp: "Ouvrir l'inscription",
     continueWithGoogle: "Se connecter",
@@ -187,7 +187,7 @@ export const fr: LocaleMessages = {
     eyebrow: "Créer un compte",
     title: "Créez votre compte budgétaire",
     description:
-      "Choisissez un e-mail et un mot de passe. Budget-BOSS créera votre compte dans Convex et terminera ensuite la configuration locale de l'espace de travail.",
+      "Choisissez un e-mail et un mot de passe. Budget Boss créera votre compte dans Convex et terminera ensuite la configuration locale de l'espace de travail.",
     haveAccount: "Vous avez déjà un compte ?",
     openSignIn: "Ouvrir la connexion",
     submit: "Créer un compte",
@@ -200,12 +200,12 @@ export const fr: LocaleMessages = {
     eyebrow: "Continuer",
     missingEmailTitle: "Ajoutez un e-mail pour terminer la configuration",
     missingEmailDescription:
-      "Budget-BOSS exige un compte Convex adossé à un e-mail avant de pouvoir terminer la configuration locale.",
+      "Budget Boss exige un compte Convex adossé à un e-mail avant de pouvoir terminer la configuration locale.",
     missingEmailHelp:
       "Créez un compte avec e-mail et mot de passe ou connectez-vous, puis revenez ici pour terminer la configuration.",
     title: "Terminez votre configuration locale",
     description:
-      "Budget-BOSS a besoin d'un profil local et d'un espace de travail personnel avant que le tableau de bord puisse charger les données côté serveur pour ce compte.",
+      "Budget Boss a besoin d'un profil local et d'un espace de travail personnel avant que le tableau de bord puisse charger les données côté serveur pour ce compte.",
     whatHappensNext: "Ce qui se passe ensuite",
     oneSafeBootstrap: "Un amorçage sûr",
     oneSafeBootstrapDescription:
@@ -214,7 +214,7 @@ export const fr: LocaleMessages = {
       "Cet e-mail est déjà lié à un compte différent. Déconnectez-vous ici, revenez à la méthode de connexion d'origine ou contactez le support avant de continuer.",
     bootstrapIssueTitle: "La configuration nécessite une attention",
     bootstrapIssueDescription:
-      "Budget-BOSS n'a pas pu terminer l'étape sécurisée de configuration Convex pour cette session.",
+      "Budget Boss n'a pas pu terminer l'étape sécurisée de configuration Convex pour cette session.",
     bootstrapIssueHelp:
       "Réessayez après que le propriétaire de l'application a vérifié les paramètres Convex Auth et CONVEX_SYNC_SECRET.",
     continueToDashboard: "Continuer vers le tableau de bord",
@@ -224,9 +224,9 @@ export const fr: LocaleMessages = {
     eyebrow: "Paramètres de sécurité",
     title: "Ouvrez les contrôles de sécurité de votre compte.",
     description:
-      "Budget-BOSS utilise les comptes e-mail et mot de passe Convex Auth. Utilisez le lien « Mot de passe oublié ? » sur l'écran de connexion pour le réinitialiser par e-mail. La vérification par e-mail est un suivi prévu.",
+      "Budget Boss utilise les comptes e-mail et mot de passe Convex Auth. Utilisez le lien « Mot de passe oublié ? » sur l'écran de connexion pour le réinitialiser par e-mail. La vérification par e-mail est un suivi prévu.",
     googleAccountEyebrow: "Identifiants du compte",
-    googleAccountTitle: "Utilisez votre compte Budget-BOSS.",
+    googleAccountTitle: "Utilisez votre compte Budget Boss.",
     googleAccountDescription:
       "Votre compte est créé dans Convex Auth avec l'e-mail et le mot de passe que vous choisissez lors de l'inscription.",
     openGoogleSecurity: "Utilisez un mot de passe fort et unique d'au moins 8 caractères.",
@@ -240,7 +240,7 @@ export const fr: LocaleMessages = {
     privacyItems: {
       signInOnly: "Convex Auth vérifie la connexion et renvoie l'identité de votre compte.",
       minimalData:
-        "Budget-BOSS conserve uniquement les données locales de compte, d'espace de travail, de préférence et d'intégration nécessaires à son fonctionnement.",
+        "Budget Boss conserve uniquement les données locales de compte, d'espace de travail, de préférence et d'intégration nécessaires à son fonctionnement.",
       noMarketingData: "Aucune donnée marketing n'est enregistrée ni vendue.",
       personalizationUserOnly:
         "La personnalisation reste strictement utilisateur et n'est pas partagée avec des courtiers ou des annonceurs tiers.",

@@ -7,6 +7,8 @@ import { BOARD_CHANGED_EVENT } from '@/lib/types/budget';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
+import { getOfflineQueueCount } from '@/lib/convex/sync-snapshots';
+
 interface SyncStatusIndicatorProps {
   locale: string;
 }
@@ -45,7 +47,7 @@ export function SyncStatusIndicator({ }: SyncStatusIndicatorProps) {
     ? 'Chrome on macOS (Laptop)'
     : 'Safari on iOS (iPhone)';
 
-  const checkStatus = () => {
+  const checkStatus = async () => {
     if (typeof window === 'undefined') return;
     setOnline(window.navigator.onLine);
     
@@ -68,8 +70,7 @@ export function SyncStatusIndicator({ }: SyncStatusIndicatorProps) {
     }
 
     try {
-      const q3 = JSON.parse(localStorage.getItem('budgetbitch:offlineQueue') || '[]');
-      q3Size = Array.isArray(q3) ? q3.length : 0;
+      q3Size = await getOfflineQueueCount();
     } catch {
       q3Size = 0;
     }

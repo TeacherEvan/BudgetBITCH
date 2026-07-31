@@ -190,7 +190,7 @@ For deeper orientation, start with `docs/CODEBASE_INDEX.md`.
 - `src/lib/convex/sync-snapshots.ts` gathers a daily snapshot from IndexedDB and
   calls the Convex mutation `upsertDailySnapshot` (table: `dailySnapshots`).
 - If Convex is unconfigured or the call fails, the snapshot is queued in
-  `localStorage` (`budgetbitch:offlineQueue`); `flushOfflineQueue()` replays it on
+  IndexedDB (`syncQueue` store); `flushOfflineQueue()` replays it on
   the navigator `online` event.
 - `public/sw.js` registers and requests periodic sync for the daily snapshot.
 - The daily snapshot is pushed client-side, not via a server cron.

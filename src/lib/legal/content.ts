@@ -15,18 +15,18 @@ export const termsContent: Record<LegalLocale, LegalDoc> = {
   en: {
     title: "Terms of Service",
     intro:
-      "Budget-BOSS is a personal budgeting tool. By creating an account you agree to use the app for your own household finances. You are responsible for the accuracy of the data you enter.",
+      "Budget Boss is a personal budgeting tool. By creating an account you agree to use the app for your own household finances. You are responsible for the accuracy of the data you enter.",
     sections: [
       {
         heading: "1. Acceptance of Terms",
         body: [
-          "By signing up or using Budget-BOSS you agree to these Terms and our Privacy Policy. If you do not agree, do not use the app.",
+          "By signing up or using Budget Boss you agree to these Terms and our Privacy Policy. If you do not agree, do not use the app.",
         ],
       },
       {
         heading: "2. The Service",
         body: [
-          "Budget-BOSS helps you track income, expenses, savings, and net worth on your own device. We provide estimates and projections for guidance only; they are not financial, legal, or tax advice.",
+          "Budget Boss helps you track income, expenses, savings, and net worth on your own device. We provide estimates and projections for guidance only; they are not financial, legal, or tax advice.",
           "We do not guarantee any specific financial outcome. You make the final decision on every transaction.",
         ],
       },
@@ -46,7 +46,7 @@ export const termsContent: Record<LegalLocale, LegalDoc> = {
       {
         heading: "5. Limitation of Liability",
         body: [
-          "The app is provided as-is, without warranty. To the maximum extent permitted by law, Budget-BOSS is not liable for any loss arising from your use of the app or reliance on its calculations.",
+          "The app is provided as-is, without warranty. To the maximum extent permitted by law, Budget Boss is not liable for any loss arising from your use of the app or reliance on its calculations.",
         ],
       },
       {
@@ -64,7 +64,7 @@ export const termsContent: Record<LegalLocale, LegalDoc> = {
       {
         heading: "8. AI Features and Accuracy",
         body: [
-          "Budget-BOSS includes AI-assisted features. The receipt scanner sends your receipt photo to Google's Gemini AI (a third-party service) to read the merchant, amount, date, and category. AI may misread; you must review and correct the result before saving.",
+          "Budget Boss includes AI-assisted features. The receipt scanner sends your receipt photo to Google's Gemini AI (a third-party service) to read the merchant, amount, date, and category. AI may misread; you must review and correct the result before saving.",
           "Market Watch shows headlines aggregated from independent third-party news publishers (such as Bangkok Post and Reuters) and may display automated, generic suggestions derived from those headlines. These are not our opinions and are not financial advice.",
           "We are not responsible for errors in AI-generated or aggregated content. You remain responsible for every transaction you record.",
         ],
@@ -174,7 +174,7 @@ export const cookieContent: Record<LegalLocale, LegalDoc> = {
   en: {
     title: "Cookie Policy",
     intro:
-      "Budget-BOSS uses a small number of cookies and local storage values to keep the app working and to remember your preferences.",
+      "Budget Boss uses a small number of cookies and local storage values to keep the app working and to remember your preferences.",
     sections: [
       {
         heading: "1. Essential Cookies",

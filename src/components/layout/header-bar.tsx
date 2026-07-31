@@ -91,7 +91,7 @@ export function HeaderBar({ locale, onLocaleChange }: HeaderBarProps) {
       {/* Center: Gold gradient title — click to return Home (dashboard) */}
       <Link
         href="/dashboard"
-        aria-label={'Budget-BOSS Home'}
+        aria-label={'Budget Boss Home'}
         className="no-underline"
       >
         <h1
@@ -104,7 +104,7 @@ export function HeaderBar({ locale, onLocaleChange }: HeaderBarProps) {
             color: 'transparent',
           }}
         >
-          Budget-BOSS
+          Budget Boss
         </h1>
       </Link>
 

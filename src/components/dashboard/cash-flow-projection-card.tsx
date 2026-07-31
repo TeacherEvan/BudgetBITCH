@@ -28,7 +28,6 @@ export function CashFlowProjectionCard({
   currency = 'USD',
   locale = 'en',
 }: CashFlowProjectionCardProps) {
-  const isTh = locale === 'th';
   const [viewMode, setViewMode] = useState<'timeline' | 'schedule'>('timeline');
 
   // Generate 30-day projection dataset
@@ -74,7 +73,7 @@ export function CashFlowProjectionCard({
     }
 
     return dailyData;
-  }, [currentCashBalance, monthlyIncome, commitment, isTh]);
+  }, [currentCashBalance, monthlyIncome, commitment]);
 
   const minBalance = useMemo(() => Math.min(...projection.map(p => p.balance)), [projection]);
   const lowBalanceDays = useMemo(() => projection.filter(p => p.balance < 5000), [projection]);

@@ -63,7 +63,7 @@ function SmsConfirmInner() {
     }
     setStatus('done');
     setTimeout(() => router.push('/dashboard'), 900);
-  }, [addExpense, addIncome, locale, router]);
+  }, [addExpense, addIncome, router]);
 
   const handleDismiss = useCallback(() => router.push('/dashboard'), [router]);
 

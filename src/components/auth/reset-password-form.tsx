@@ -98,7 +98,7 @@ export function ResetPasswordForm({ email = "", code = "" }: ResetPasswordFormPr
             WebkitTextFillColor: "transparent",
           }}
         >
-          Budget-BOSS
+          Budget Boss
         </span>
 
         <h1 className="mt-6 text-2xl font-bold text-white">{copy.title}</h1>

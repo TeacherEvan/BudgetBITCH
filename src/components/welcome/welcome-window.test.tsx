@@ -5,10 +5,10 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => {
     const translations: Record<string, string> = {
-      brand: "Budget-BOSS",
-      heading: "Open your Budget-BOSS board",
+      brand: "Budget Boss",
+      heading: "Open your Budget Boss board",
       description:
-        "Sign in to unlock your root flow. After that, Budget-BOSS can send you into the one-time startup questionnaire or straight to the landing board based on your saved startup progress.",
+        "Sign in to unlock your root flow. After that, Budget Boss can send you into the one-time startup questionnaire or straight to the landing board based on your saved startup progress.",
       openSignIn: "Open sign in",
       openSignUp: "Open sign-up",
       privacyPromise: "Private by default. Setup only if needed.",
@@ -18,7 +18,7 @@ vi.mock("next-intl", () => ({
       "quickReasons.keepItShort.title": "Keep the first step short",
       "quickReasons.keepItShort.description": "The startup questionnaire only appears after sign-in and only when your first-run progress is still incomplete.",
       "quickReasons.moveWithoutSprawl.title": "Move without the sprawl",
-      "quickReasons.moveWithoutSprawl.description": "Budget-BOSS keeps the entry path dense, readable, and ready for quick scanning on smaller screens.",
+      "quickReasons.moveWithoutSprawl.description": "Budget Boss keeps the entry path dense, readable, and ready for quick scanning on smaller screens.",
       rootFlow: "Root flow",
       authFirstThenSetup: "Auth first, then setup",
       rootFlowDescription:

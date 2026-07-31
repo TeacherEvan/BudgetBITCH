@@ -496,8 +496,7 @@ export const templateSnapshot = query({
     if (userId) {
       aliases = await ctx.db
         .query("merchantAliases")
-        .withIndex("by_user_and_normalised")
-        .filter((q) => q.eq(q.field("userId"), userId))
+        .withIndex("by_user_and_normalised", (q) => q.eq("userId", userId))
         .collect();
     }
 

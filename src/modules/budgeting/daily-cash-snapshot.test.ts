@@ -65,4 +65,66 @@ describe("buildDailyCashSnapshot", () => {
       subscriptionPressure: "high",
     });
   });
+
+  it("handles exact threshold boundaries (moneyLeft 0 and 300)", () => {
+    // Exactly 0 money left -> tight
+    expect(
+      buildDailyCashSnapshot({
+        monthlyIncome: 1000,
+        fixedBills: 500,
+        essentials: 500,
+        subscriptions: 0,
+        daysLeftInCycle: 10,
+      }),
+    ).toMatchObject({
+      status: "tight",
+      moneyLeft: 0,
+      dailyPace: 0,
+    });
+
+    // Exactly 300 money left -> stable
+    expect(
+      buildDailyCashSnapshot({
+        monthlyIncome: 1300,
+        fixedBills: 500,
+        essentials: 500,
+        subscriptions: 0,
+        daysLeftInCycle: 10,
+      }),
+    ).toMatchObject({
+      status: "stable",
+      moneyLeft: 300,
+      dailyPace: 30,
+    });
+  });
+
+  it("handles zero or negative income edge cases", () => {
+    expect(
+      buildDailyCashSnapshot({
+        monthlyIncome: 0,
+        fixedBills: 100,
+        essentials: 100,
+        subscriptions: 50,
+        daysLeftInCycle: 10,
+      }),
+    ).toMatchObject({
+      status: "at_risk",
+      moneyLeft: -250,
+      subscriptionPressure: "high",
+    });
+
+    expect(
+      buildDailyCashSnapshot({
+        monthlyIncome: 0,
+        fixedBills: 0,
+        essentials: 0,
+        subscriptions: 0,
+        daysLeftInCycle: 10,
+      }),
+    ).toMatchObject({
+      status: "tight",
+      moneyLeft: 0,
+      subscriptionPressure: "normal",
+    });
+  });
 });

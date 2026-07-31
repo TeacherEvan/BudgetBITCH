@@ -54,7 +54,7 @@ export const PRO_TIPS: ProTip[] = [
     category: 'offline',
     title: 'Zero-Signal Offline Logging',
     teaser: 'Log cash or store payments instantly without waiting for signal.',
-    summary: 'Budget-BOSS stores all logged transactions instantly in your device\'s local secure storage, syncing automatically to the cloud when online.',
+    summary: 'Budget Boss stores all logged transactions instantly in your device\'s local secure storage, syncing automatically to the cloud when online.',
     steps: [
       'Open: Open the PWA widget or app even with zero internet signal.',
       'Log: Record your transaction instantly. We cache it locally.',
@@ -95,7 +95,7 @@ export const PRO_TIPS: ProTip[] = [
     teaser: 'Instant expense logging shortcut from your phone\'s home screen.',
     summary: 'Configure PWA shortcuts on your phone home screen to launch directly into the transaction input screen within a second.',
     steps: [
-      'Install: Tap the install prompt banner to add Budget-BOSS to Home Screen.',
+      'Install: Tap the install prompt banner to add Budget Boss to Home Screen.',
       'Shortcut: Long-press the app icon to view "Quick Add" shortcut.',
       'Add: Drag the shortcut to your screen for 1-tap logging.'
     ],

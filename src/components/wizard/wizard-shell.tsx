@@ -112,7 +112,7 @@ export function WizardShell({ locale, onComplete, isModal = false }: WizardShell
     } else {
       setCurrentStepIndex(prev => prev + 1);
     }
-  }, [currentStepIndex, stepValues, isLastStep, locale, onComplete]);
+  }, [currentStepIndex, stepValues, isLastStep, locale, currencyOverride, onComplete]);
 
   const handleBack = useCallback(() => {
     if (!isFirstStep) {

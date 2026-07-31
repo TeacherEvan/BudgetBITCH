@@ -65,7 +65,7 @@ export function writeLocalSet(key: string, set: Set<string>): void {
  * already loads. No new data fetching. Pure derivation; dismissal is handled
  * by the consuming component (PriorityGuide / shell badge).
  */
-export function usePriorityAlerts(locale: string): PriorityAlert[] {
+export function usePriorityAlerts(_locale?: string): PriorityAlert[] {
   const { profile } = useWizardProfile();
   const { budgets, loading: budgetsLoading } = useBudgets();
   const { bills } = useBills();
@@ -123,7 +123,7 @@ export function usePriorityAlerts(locale: string): PriorityAlert[] {
     }
 
     return list;
-  }, [profile, budgets, budgetsLoading, bills, locale]);
+  }, [profile, budgets, budgetsLoading, bills]);
 }
 
 export function PriorityGuide() {
