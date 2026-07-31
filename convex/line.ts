@@ -91,7 +91,16 @@ export const parseLineReceipt = internalAction({
     base64Image: v.string(),
     accountId: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    receiptId: string;
+    amount: number;
+    merchant: string;
+    category: string;
+    date: string | null;
+  }> => {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new ConvexError(
