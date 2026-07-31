@@ -14,8 +14,8 @@ test.describe("Auth — sign-in page", () => {
     await page.goto("/sign-in");
   });
 
-  test("renders the Budget-BOSS sign-in card", async ({ page }) => {
-    await expect(page.getByText("Budget-BOSS").first()).toBeVisible();
+  test("renders the Budget Boss sign-in card", async ({ page }) => {
+    await expect(page.getByText("Budget Boss").first()).toBeVisible();
     await expect(page.getByRole("heading", { name: /welcome back/i })).toBeVisible();
     await expect(page.getByLabel(/email \/ username/i)).toBeVisible();
     await expect(page.getByLabel(/^password/i)).toBeVisible();
@@ -103,7 +103,7 @@ test.describe("First-launch language select", () => {
     // With no saved locale, the language modal should appear over the auth card.
     // Scope to the modal's unique title — other role="dialog" surfaces (privacy,
     // cookie banner) may also be mounted and would trip strict mode.
-    const modal = page.getByRole("dialog", { name: /welcome to budget-boss/i });
+    const modal = page.getByRole("dialog", { name: /welcome to budget boss/i });
     await expect(modal).toBeVisible({ timeout: 15000 });
     await expect(modal.getByText(/choose your language/i)).toBeVisible();
 
@@ -127,7 +127,7 @@ test.describe("First-launch language select", () => {
     });
     await page.reload({ waitUntil: "domcontentloaded" });
     await expect(
-      page.getByRole("dialog", { name: /welcome to budget-boss/i }),
+      page.getByRole("dialog", { name: /welcome to budget boss/i }),
     ).toBeHidden({ timeout: 15000 });
   });
 });

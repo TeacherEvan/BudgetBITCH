@@ -124,7 +124,6 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
     // z-order collision: manifesto + wizard both true at once).
     const wizardShowing = !wizardCompleted || wizardForced;
     if (wizardShowing) return;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     if (profileLoading || wizardForced || isRedo) return;
     if (profile && profile.completed) return; // already completed locally
     if (latestSnapshot === undefined || latestSnapshot === null) return; // loading or no snapshot
