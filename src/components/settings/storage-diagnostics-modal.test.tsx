@@ -403,7 +403,7 @@ describe('StorageDiagnosticsModal', () => {
         expect(mockConvexQuery).toHaveBeenCalledWith(api.snapshots.getSnapshotById, {
           snapshotId: 'cloud_snap_1',
         });
-        expect(mockRestoreFromCloudSnapshot).toHaveBeenCalledWith(snapshotPayload);
+        expect(mockRestoreFromCloudSnapshot).toHaveBeenCalledWith(snapshotPayload, { force: true });
         expect(window.alert).toHaveBeenCalledWith('Restored from cloud successfully!');
         expect(window.location.reload).toHaveBeenCalledTimes(1);
       });
