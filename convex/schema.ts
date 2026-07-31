@@ -200,11 +200,22 @@ export default defineSchema({
     questionsAsked: v.optional(v.any()),
     corrections: v.optional(v.any()),
     status: v.optional(v.string()), // 'draft' | 'confirmed'
+    // Ingestion source: "app" (default, from the web app) | "line" (from the LINE receipt bot)
+    source: v.optional(v.string()),
   })
     .index("by_user", ["userId"])
     .index("by_user_and_account", ["userId", "accountId"])
     .index("by_parsedAt", ["parsedAt"])
     .index("by_clientDraftId", ["clientDraftId"]),
+
+  // LINE (LIFF) identity mapping: links a LINE user ID to a Convex user/account
+  // so the LINE receipt-bot webhook can resolve the correct owner for an upload.
+  lineUsers: defineTable({
+    lineUserId: v.string(),
+    userId: v.string(),
+    accountId: v.optional(v.string()),
+    linkedAt: v.number(),
+  }).index("by_lineUserId", ["lineUserId"]),
 
   // Merchant receipt layout templates
   receiptTemplates: defineTable({
