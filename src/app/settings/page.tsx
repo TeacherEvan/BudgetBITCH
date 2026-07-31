@@ -15,6 +15,7 @@ import {
   User,
   Newspaper,
   LogOut,
+  X,
 } from 'lucide-react';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { useWizardProfile } from '@/hooks/use-local-db';
@@ -22,6 +23,7 @@ import { useCriticalExpense } from '@/hooks/use-critical-expense';
 import { useSharedBoard } from '@/hooks/use-shared-board';
 import { useDisplayPrefs } from '@/hooks/use-display-prefs';
 import { useNewsPrefs } from '@/hooks/use-news-prefs';
+import { useDisplayDetection } from '@/hooks/use-display-detection';
 import { Button } from '@/components/ui/button';
 import { RequireAuth } from '@/components/auth/require-auth';
 import { useCurrencyOverride } from '@/hooks/use-currency-override';
@@ -59,6 +61,7 @@ export default function SettingsPage() {
   const { graphType, setGraphType, accentColor, setAccentColor } = useDisplayPrefs();
   const { isGenreEnabled, toggleGenre } = useNewsPrefs();
   const { override, setOverride } = useCurrencyOverride();
+  const { isStandalone } = useDisplayDetection();
 
   const [showBugModal, setShowBugModal] = useState(false);
   const currentUser = useQuery(api.feedback.getCurrentUser);
@@ -99,6 +102,18 @@ export default function SettingsPage() {
               <LogOut className="h-4 w-4" />
               <span>{'Sign Out'}</span>
             </Button>
+            {isStandalone && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => window.close()}
+                title={'Best-effort: closes the standalone app window if the platform allows it'}
+                className="flex items-center gap-1.5 border-white/10 text-white/60 hover:bg-white/5 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+                <span>{'Close'}</span>
+              </Button>
+            )}
           </div>
 
           {/* Section nav tabs */}

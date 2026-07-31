@@ -85,6 +85,8 @@ module.exports = [
       "vitest.config.ts",
       "tsconfig.json",
       "scripts/**",
+      "android/**",
+      "ios/**",
       "*.config.*",
       "public/sw.js",
       "public/tesseract/**",
