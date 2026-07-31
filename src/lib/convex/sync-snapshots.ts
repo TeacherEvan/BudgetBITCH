@@ -165,6 +165,11 @@ function sanitizeForConvex<T>(obj: T): T {
 
 export async function syncDailySnapshot(): Promise<{ success: boolean; date: string }> {
   const today = new Date().toISOString().split('T')[0];
+  // Single-flight guard: the debounced auto-backup (account-sync-mount) can fire
+  // at the same time as a manual "Sync Now" press or wizard completion; drop the
+  // second concurrent entry so we don't gather + push the snapshot twice.
+  if (isSyncingDaily) return { success: false, date: today };
+  isSyncingDaily = true;
 
   try {
     const syncArgs = sanitizeForConvex(await gatherSnapshotData());
@@ -199,6 +204,8 @@ export async function syncDailySnapshot(): Promise<{ success: boolean; date: str
     }
 
     return { success: false, date: today };
+  } finally {
+    isSyncingDaily = false;
   }
 }
 
@@ -268,6 +275,12 @@ export async function queueOfflineSnapshot(data: SyncSnapshotArgs) {
 }
 
 let isFlushingQueue = false;
+// Single-flight guards for sibling sync paths (RELIABILITY_HARDENING_PLAN step 3):
+// a debounced auto-backup + manual "Sync Now"/wizard-complete can race, and the
+// latestSnapshot query can re-fire before the host effect's restoredSnapshotIdRef
+// is set, so two near-simultaneous runs could both clear + overwrite local stores.
+let isSyncingDaily = false;
+let isRestoringSnapshot = false;
 
 export async function flushOfflineQueue() {
   if (typeof window === "undefined" || isFlushingQueue) return;
@@ -327,6 +340,12 @@ export async function restoreFromCloudSnapshot(snapshot: CloudSnapshot): Promise
     console.warn('[Sync] Cannot restore: Snapshot contains no backup data');
     return false;
   }
+  // Single-flight guard: the latestSnapshot query can re-fire (the host effect's
+  // restoredSnapshotIdRef is set only AFTER this resolves), so two near-simultaneous
+  // runs could both clear + overwrite the local stores. Drop the second concurrent
+  // entry; the in-flight restore already covers it.
+  if (isRestoringSnapshot) return false;
+  isRestoringSnapshot = true;
   try {
     const db = await getDB();
     const backup = snapshot.fullBackupData;
@@ -387,5 +406,7 @@ export async function restoreFromCloudSnapshot(snapshot: CloudSnapshot): Promise
   } catch (err) {
     console.error('Failed to restore from cloud snapshot:', err);
     return false;
+  } finally {
+    isRestoringSnapshot = false;
   }
 }

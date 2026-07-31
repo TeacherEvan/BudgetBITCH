@@ -127,6 +127,18 @@ Convex agent skills can be reinstalled with `npx convex ai-files install`.
 | Unnecessary `'use client'` | Default to Server Components |
 | New IndexedDB store without `upgrade()` | `npm run check:idb` will fail the build |
 | Writing "BudgetBITCH" in UI copy | Display name is "Budget Boss" |
+| Test comment describing a bug the fix already shipped | At fix time, flip the header from "characterizes bug" to "guards regression", name the fix + commit, and say if the handler is already correct |
+
+### Comment-rot convention (test headers)
+
+When a fix lands, any test that once "documents the bug" must have its header
+flipped to "guards regression" and must name the shipped fix and its commit. A
+header that still claims a defect is present after the fix has shipped is itself
+a defect — it sends the next debugging session chasing a non-issue.
+
+`scripts/check-stale-bug-comments.mjs` greps test files for the phrases
+`CURRENT (buggy)` and `documents the bug` and exits non-zero if found, forcing
+the comment to be updated at fix time. Run it via `npm run check:comments`.
 
 ---
 

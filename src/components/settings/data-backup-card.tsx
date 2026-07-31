@@ -30,10 +30,35 @@ type Status = 'idle' | 'success' | 'error';
 const RESET_PRESERVE = [
   'budgetbitch:theme',
   'bb-locale',
-  'budgetbitch:offlineQueue',
-  'budgetbitch:boardQueue',
   'bb:lastResetAt',
 ];
+
+// Push queues that can outlive a reset. A snapshot queued in the IndexedDB
+// 'syncQueue' store before the wipe would otherwise still be flushed to Convex
+// afterwards (flushOfflineQueue -> upsertDailySnapshot), re-uploading data the
+// user just deleted; the localStorage board queues can replay the same way.
+// AccountSyncMount's tombstone only blocks the RESTORE direction, so the push
+// side has to be drained here.
+const RESET_QUEUE_KEYS = [
+  'budgetbitch:offlineQueue',
+  'budgetbitch:boardQueue',
+  'budgetbitch:accountBoardQueue',
+];
+
+/**
+ * Drain every pending outbound sync queue so a reset cannot be undone by a
+ * stale queued push. Client-only; safe to call when the store is absent.
+ */
+export async function clearSyncAndQueues(): Promise<void> {
+  if (typeof window === 'undefined') return;
+  const db = await getDB();
+  if (db.objectStoreNames.contains('syncQueue')) {
+    await db.clear('syncQueue');
+  }
+  for (const key of RESET_QUEUE_KEYS) {
+    localStorage.removeItem(key);
+  }
+}
 
 interface DataBackupCardProps {
   locale: string;
@@ -108,6 +133,8 @@ export function DataBackupCard({
     // Full wipe: clears active board, all account stashes, account listing,
     // account pointer, and LWW write-clocks. `markResetTombstone` then stops
     // AccountSyncMount from re-pulling the "deleted" cloud snapshot back.
+    // Queues are drained FIRST so nothing survives to push stale data up.
+    await clearSyncAndQueues();
     await clearAllData();
     await markResetTombstone();
     clearProfile?.();

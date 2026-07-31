@@ -34,6 +34,11 @@ import { BOARD_CHANGED_EVENT } from "@/lib/types/budget";
 const BOARD_QUEUE_KEY = "budgetbitch:accountBoardQueue";
 const PUSH_DEBOUNCE_MS = 800;
 
+// Single-flight guard (RELIABILITY_HARDENING_PLAN step 3): the 'online' and
+// 'budgetbitch:flushQueues' listeners both call flushQueue, so two near-simultaneous
+// events could re-read the queue before the first deletes, double-pushing a board.
+let isFlushingBoard = false;
+
 export interface QueuedPush {
   boardId: string;
   data: Record<string, { value: unknown; updatedAt: number }>;
@@ -167,34 +172,42 @@ export function useAccountSync(): UseAccountSync {
 
   const flushQueue = useCallback(async () => {
     if (!isAuthenticated || !isOnline()) return;
+    // Single-flight guard: drop a concurrent entry; the in-flight flush drains
+    // the whole queue, so no queued board is lost.
+    if (isFlushingBoard) return;
     const q = getQueue();
     if (q.length === 0) return;
 
-    const remaining: QueuedPush[] = [];
-    setSyncing(true);
-    for (const item of q) {
-      try {
-        const res = (await pushBoard({
-          boardId: item.boardId,
-          data: item.data as never,
-          updatedAt: item.updatedAt,
-        })) as { success?: boolean; reason?: string } | undefined;
+    isFlushingBoard = true;
+    try {
+      const remaining: QueuedPush[] = [];
+      setSyncing(true);
+      for (const item of q) {
+        try {
+          const res = (await pushBoard({
+            boardId: item.boardId,
+            data: item.data as never,
+            updatedAt: item.updatedAt,
+          })) as { success?: boolean; reason?: string } | undefined;
 
-        if (res && res.success === false) {
-          console.warn("Skipping unpushable queued board:", item.boardId, res.reason);
-          continue;
-        }
-      } catch (e) {
-        console.error("Failed to push queued board:", item.boardId, e);
-        const errStr = e instanceof Error ? e.message : String(e);
-        if (!errStr.includes("Board not found") && !errStr.includes("Not a member")) {
-          remaining.push(item);
+          if (res && res.success === false) {
+            console.warn("Skipping unpushable queued board:", item.boardId, res.reason);
+            continue;
+          }
+        } catch (e) {
+          console.error("Failed to push queued board:", item.boardId, e);
+          const errStr = e instanceof Error ? e.message : String(e);
+          if (!errStr.includes("Board not found") && !errStr.includes("Not a member")) {
+            remaining.push(item);
+          }
         }
       }
+      setQueue(remaining);
+      setSyncing(false);
+      setPushPending(remaining.length > 0);
+    } finally {
+      isFlushingBoard = false;
     }
-    setQueue(remaining);
-    setSyncing(false);
-    setPushPending(remaining.length > 0);
   }, [isAuthenticated, pushBoard]);
 
   const doPush = useCallback(async () => {

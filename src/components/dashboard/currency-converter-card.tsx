@@ -4,7 +4,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { RefreshCw, ArrowRight } from 'lucide-react';
 import type { CurrencyCode } from '@/lib/utils/currency';
-import { CURRENCY_SELECT_OPTIONS } from './currency-options';
+import { CURRENCY_SELECT_OPTIONS, FALLBACK_RATES } from './currency-options';
 
 interface CurrencyConverterCardProps {
   baseCurrency: CurrencyCode;
@@ -31,6 +31,7 @@ export function CurrencyConverterCard({ baseCurrency, amount = 100 }: CurrencyCo
   const [rate, setRate] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [offline, setOffline] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
 
   const fetchRates = useCallback(async (): Promise<Rates> => {
@@ -49,6 +50,8 @@ export function CurrencyConverterCard({ baseCurrency, amount = 100 }: CurrencyCo
     if (from === to) {
       setResult(Number(value) || 0);
       setRate(1);
+      setError(null);
+      setOffline(false);
       setUpdatedAt(Date.now());
       return;
     }
@@ -65,10 +68,24 @@ export function CurrencyConverterCard({ baseCurrency, amount = 100 }: CurrencyCo
       setResult(converted);
       setRate(t / f);
       setUpdatedAt(Date.now());
+      setOffline(false);
     } catch {
-      setError('Could not fetch live rates. Try again.');
-      setResult(null);
-      setRate(null);
+      // Live rates are unreachable (offline, CSP block, API outage). Degrade to
+      // the dated static snapshot rather than leaving the card useless.
+      const f = FALLBACK_RATES[from];
+      const t = FALLBACK_RATES[to];
+      if (f && t) {
+        const inEur = (Number(value) || 0) / f;
+        setResult(inEur * t);
+        setRate(t / f);
+        setUpdatedAt(Date.now());
+        setOffline(true);
+      } else {
+        setError('No rate available for this currency pair.');
+        setResult(null);
+        setRate(null);
+        setOffline(false);
+      }
     } finally {
       setLoading(false);
     }
@@ -157,7 +174,10 @@ export function CurrencyConverterCard({ baseCurrency, amount = 100 }: CurrencyCo
         </p>
       )}
       {error && <p className="mt-2 text-xs text-rose-400">{error}</p>}
-      {updatedAt && !error && (
+      {updatedAt && !error && offline && (
+        <p className="mt-1 text-[10px] text-amber-300/60">{'Last known rate (offline)'}</p>
+      )}
+      {updatedAt && !error && !offline && (
         <p className="mt-1 text-[10px] text-white/30">
           {'Live rates · updated '}
           {new Date(updatedAt).toLocaleTimeString()}
