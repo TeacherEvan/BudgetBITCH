@@ -13,6 +13,12 @@ import emptyNoItemsAnimation from '@/animations/empty-coin-jar.json';
 import errorAnimation from '@/animations/error-signal-lost.json';
 import refreshAnimation from '@/animations/refresh-coin-drop.json';
 
+// lottie-web's default web-worker path runs completeData off-thread where
+// animationData can arrive as undefined and throw "Cannot read properties of
+// undefined (reading '0')". Force main-thread parsing. (TS types omit this
+// flag, hence the cast.)
+const NO_WORKER_SETTINGS = { useWebWorker: false } as unknown as Record<string, unknown>;
+
 const BUDGET_TIPS_EN = [
   '💡 Fill up mid-week — fuel prices often dip Wed-Thu',
   '💡 Buy 1 Get 1 = 50% off per unit, beats 30% off',
@@ -75,7 +81,7 @@ export function AnimatedFeedList({ locale }: { locale: string }) {
   if (loading && !lastUpdated) {
     return (
       <motion.div className="space-y-3" variants={containerVariants} initial="hidden" animate="visible">
-        <Lottie animationData={loadingAnimation} loop style={{ height: 120 }} />
+        <Lottie animationData={loadingAnimation} loop style={{ height: 120 }} rendererSettings={NO_WORKER_SETTINGS} />
         <BudgetTipSkeleton tips={tips} count={3} />
       </motion.div>
     );
@@ -85,7 +91,7 @@ export function AnimatedFeedList({ locale }: { locale: string }) {
   if (!error && items.length === 0 && !loading && !lastUpdated) {
     return (
       <div className="space-y-4 text-center py-8">
-        <Lottie animationData={emptyLocationAnimation} loop style={{ height: 160 }} />
+        <Lottie animationData={emptyLocationAnimation} loop style={{ height: 160 }} rendererSettings={NO_WORKER_SETTINGS} />
         <p className="text-white/60 text-sm">
           {'Enable location for nearby news'}
         </p>
@@ -103,7 +109,7 @@ export function AnimatedFeedList({ locale }: { locale: string }) {
   if (!error && items.length === 0 && !loading) {
     return (
       <div className="space-y-4 text-center py-8">
-        <Lottie animationData={emptyNoItemsAnimation} loop style={{ height: 140 }} />
+        <Lottie animationData={emptyNoItemsAnimation} loop style={{ height: 140 }} rendererSettings={NO_WORKER_SETTINGS} />
         <p className="text-white/50 text-sm">
           {'No local updates yet'}
         </p>
@@ -118,7 +124,7 @@ export function AnimatedFeedList({ locale }: { locale: string }) {
   if (error) {
     return (
       <div className="space-y-4 text-center py-8">
-        <Lottie animationData={errorAnimation} loop={false} style={{ height: 120 }} />
+        <Lottie animationData={errorAnimation} loop={false} style={{ height: 120 }} rendererSettings={NO_WORKER_SETTINGS} />
         <p className="text-rose-400 text-sm">{error}</p>
         <p className="text-white/40 text-xs">
           Last updated: {lastUpdated ? new Date(lastUpdated).toLocaleTimeString() : 'Never'}
@@ -145,7 +151,7 @@ export function AnimatedFeedList({ locale }: { locale: string }) {
       <AnimatePresence>
         {isRefreshing && (
           <motion.div key="refresh" layout className="flex justify-center py-2" animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-            <Lottie animationData={refreshAnimation} loop style={{ height: 60, width: 60 }} />
+            <Lottie animationData={refreshAnimation} loop style={{ height: 60, width: 60 }} rendererSettings={NO_WORKER_SETTINGS} />
           </motion.div>
         )}
       </AnimatePresence>
