@@ -22,12 +22,13 @@ describe("schema: LINE receipt-bot (Task 1)", () => {
   it("roundtrips a lineUsers mapping via by_lineUserId index", async () => {
     const t = convexTest(schema, modules);
     const lineUserId = "Uabc123";
-    const convexUserId = "user_xyz";
+    const seededId = await seedUser(t, "line-map-user");
+    const convexUserId = seededId as unknown as string;
 
     const id = await t.run(async (ctx: any) =>
       ctx.db.insert("lineUsers", {
         lineUserId,
-        userId: convexUserId,
+        userId: seededId,
         accountId: undefined,
         linkedAt: 1_700_000_000_000,
       }),
@@ -46,6 +47,7 @@ describe("schema: LINE receipt-bot (Task 1)", () => {
     expect(found.lineUserId).toBe(lineUserId);
     expect(found.userId).toBe(convexUserId);
     expect(found.accountId).toBeUndefined();
+    void convexUserId;
   });
 
   it("roundtrips a receipt with the source field", async () => {

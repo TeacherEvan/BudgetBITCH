@@ -212,7 +212,7 @@ export default defineSchema({
   // so the LINE receipt-bot webhook can resolve the correct owner for an upload.
   lineUsers: defineTable({
     lineUserId: v.string(),
-    userId: v.string(),
+    userId: v.id("users"),
     accountId: v.optional(v.string()),
     linkedAt: v.number(),
   }).index("by_lineUserId", ["lineUserId"]),
