@@ -12,21 +12,21 @@ const VALID_CATEGORIES = [
   "medical", "housing", "personal", "education", "income", "other"
 ] as const;
 
-function normalizeCategory(category: string): string {
+export function normalizeCategory(category: string): string {
   const normalized = category.toLowerCase().trim();
   return VALID_CATEGORIES.includes(normalized as typeof VALID_CATEGORIES[number])
     ? normalized
     : "other";
 }
 
-function validateAmount(amount: unknown): number {
+export function validateAmount(amount: unknown): number {
   const num = typeof amount === "number" ? amount : parseFloat(String(amount || "0"));
   if (!Number.isFinite(num) || num < 0) return 0;
   // Round to 2 decimal places
   return Math.round(num * 100) / 100;
 }
 
-function validateDate(date: unknown): string | null {
+export function validateDate(date: unknown): string | null {
   if (!date || typeof date !== "string") return null;
   // Validate YYYY-MM-DD format
   const match = date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -45,7 +45,7 @@ function validateDate(date: unknown): string | null {
   return date;
 }
 
-function validateMerchant(merchant: unknown): string {
+export function validateMerchant(merchant: unknown): string {
   const str = String(merchant || "Unknown Merchant").trim();
   return str.length > 0 ? str.slice(0, 200) : "Unknown Merchant";
 }
@@ -193,6 +193,7 @@ export const saveReceipt = internalMutation({
     imageSizeBytes: v.number(),
     parsedAt: v.number(),
     geminiModel: v.string(),
+    source: v.optional(v.string()), // "app" (default) | "line"
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("receipts", args);
