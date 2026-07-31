@@ -1,9 +1,8 @@
 // components/dashboard/panelConfig.ts
 export type PanelKey = 
   | 'daily_budget' 
-  | 'expenses' 
+  | 'spending' 
   | 'inflow' 
-  | 'budget' 
   | 'budgetAlerts' 
   | 'bills' 
   | 'goals' 
@@ -15,9 +14,8 @@ export type PanelKey =
 
 export const PANEL_CONFIG: Record<PanelKey, { label: { en: string }; icon: string }> = {
   daily_budget: { label: { en: 'Daily Budget' }, icon: '📅' },
-  expenses: { label: { en: 'Expenses' }, icon: '💸' },
+  spending: { label: { en: 'Spending' }, icon: '💸' },
   inflow: { label: { en: 'Inflow / Income' }, icon: '💵' },
-  budget: { label: { en: 'Budget' }, icon: '📊' },
   budgetAlerts: { label: { en: 'Budget Alerts' }, icon: '🔔' },
   bills: { label: { en: 'Bills' }, icon: '📋' },
   goals: { label: { en: 'Goals' }, icon: '🎯' },
@@ -30,9 +28,8 @@ export const PANEL_CONFIG: Record<PanelKey, { label: { en: string }; icon: strin
 
 export const PANEL_ORDER: PanelKey[] = [
   'daily_budget', 
-  'expenses', 
+  'spending', 
   'inflow', 
-  'budget', 
   'budgetAlerts', 
   'bills', 
   'goals', 
@@ -59,9 +56,8 @@ export const createPanelConfigs = (
   // Lazy import to avoid circular deps
   return {
     daily_budget: { id: 'daily_budget', title: 'Daily Budget', component: 'DailyDisposableHero', props: { locale, onSetup } },
-    expenses: { id: 'expenses', title: 'Expenses', component: 'ExpenseTracker', props: {} },
+    spending: { id: 'spending', title: 'Spending', component: 'SpendingPanel', props: {} },
     inflow: { id: 'inflow', title: 'Income Inflow', component: 'IncomeInflowPanel', props: {} },
-    budget: { id: 'budget', title: 'Budget', component: 'BudgetVisual', props: {} },
     budgetAlerts: { id: 'budgetAlerts', title: 'Budget Alerts', component: 'BudgetAlerts', props: {} },
     bills: { id: 'bills', title: 'Bills', component: 'Bills', props: {} },
     goals: { id: 'goals', title: 'Goals', component: 'SavingsGoals', props: {} },

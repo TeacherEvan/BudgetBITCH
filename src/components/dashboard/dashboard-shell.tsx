@@ -40,10 +40,10 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
   const { budgets, loading: budgetsLoading } = useBudgets();
   const { bills } = useBills();
   const [criticalExpenseOpen, setCriticalExpenseOpen] = useState(false);
-  const [openPanels, setOpenPanels] = useState<PanelKey[]>(['budget']);
+  const [openPanels, setOpenPanels] = useState<PanelKey[]>(['spending']);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [marketWatchOpen, setMarketWatchOpen] = useState(false);
-  const [mobileActivePanel, setMobileActivePanel] = useState<PanelKey>('budget');
+  const [mobileActivePanel, setMobileActivePanel] = useState<PanelKey>('spending');
   const [scenarioModalOpen, setScenarioModalOpen] = useState(false);
   const [excelTab, setExcelTab] = useState<'standard' | 'variance' | 'cashflow' | 'pivot'>('standard');
 

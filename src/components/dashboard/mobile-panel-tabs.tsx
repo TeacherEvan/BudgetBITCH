@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { MoreHorizontal } from "lucide-react";
 import { PANEL_CONFIG, type PanelKey } from "./panelConfig";
 
-const PRIMARY_TABS: PanelKey[] = ['expenses', 'budget', 'goals', 'netWorth', 'budgetAlerts'];
+const PRIMARY_TABS: PanelKey[] = ['spending', 'goals', 'netWorth', 'budgetAlerts'];
 
 interface MobilePanelTabsProps {
   activePanel: PanelKey;

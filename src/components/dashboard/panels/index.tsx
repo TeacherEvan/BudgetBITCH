@@ -1,8 +1,7 @@
 // components/dashboard/panels/index.tsx
 import { DailyDisposableHero } from '../daily-disposable-hero';
-import { ExpenseTracker } from './expense-tracker';
+import { SpendingPanel } from './spending-panel';
 import { IncomeInflowPanel } from './income-inflow-panel';
-import { BudgetVisual } from './budget-visual';
 import { BudgetAlerts } from './budget-alerts';
 import { Bills } from './bills';
 import { SavingsGoals } from './savings-goals';
@@ -19,9 +18,8 @@ import type { WizardProfile } from '@/lib/types/budget';
 
 export const buildPanels = (locale: string, onSetup?: () => void): PanelConfig[] => [
   { id: 'daily_budget', title: 'Daily Budget', children: <DailyDisposableHero locale={locale} onSetup={onSetup} /> },
-  { id: 'expenses', title: 'Expenses', children: <ExpenseTracker /> },
+  { id: 'spending', title: 'Spending', children: <SpendingPanel /> },
   { id: 'inflow', title: 'Income Inflow', children: <IncomeInflowPanel /> },
-  { id: 'budget', title: 'Budget', children: <BudgetVisual /> },
   { id: 'budgetAlerts', title: 'Budget Alerts', children: <BudgetAlerts /> },
   { id: 'bills', title: 'Bills', children: <Bills /> },
   { id: 'goals', title: 'Goals', children: <SavingsGoals /> },
