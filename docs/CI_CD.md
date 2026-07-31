@@ -1,12 +1,15 @@
-# BudgetBITCH CI/CD & Automated Reliability Manual
+# Budget Boss CI/CD & Automated Reliability Manual
 
-This document provides complete architectural and operational documentation for **BudgetBITCH's** automated CI/CD pipeline, build guards, release automation, and production rollback procedures.
+Architectural and operational documentation for the **Budget Boss**
+(`BudgetBITCH` repo) automated CI/CD pipeline, build guards, release automation,
+and production rollback procedures.
 
 ---
 
-## 1. Quality Gate Pipeline Architecture
+## 1. Quality gate pipeline architecture
 
-Every code change must pass 9 shift-left quality gates before merging into `main`. The quality gate pipeline ensures static analysis catches errors before test execution, tests run before builds, and build/deploy guards verify production targets.
+GitHub Actions (`.github/workflows/ci.yml`) runs nine independent jobs on every
+push/PR to `main`. `npm run ci` runs the equivalent chain locally, in order.
 
 ```
                   ┌─────────────────────────────────────┐
@@ -17,166 +20,141 @@ Every code change must pass 9 shift-left quality gates before merging into `main
          ▼                           ▼                           ▼
  ┌───────────────┐           ┌───────────────┐           ┌───────────────┐
  │   1. LINT     │           │ 2. TYPE CHECK │           │ 3. IDB GUARD  │
- │ (eslint .)    │           │ (tsc --noEmit)│           │(check-idb)    │
+ │  (eslint .)   │           │ (tsc --noEmit)│           │ (check:idb)   │
  └───────┬───────┘           └───────┬───────┘           └───────┬───────┘
          │                           │                           │
          └───────────────────────────┼───────────────────────────┘
-                                     │
+                                     ▼
+                         ┌───────────────────────┐
+                         │ 4. CONVEX IMPORT GUARD│
+                         │ (check:convex-imports)│
+                         └───────────┬───────────┘
          ┌───────────────────────────┴───────────────────────────┐
          ▼                                                       ▼
  ┌───────────────┐                                       ┌───────────────┐
- │ 4. UNIT TESTS │                                       │5. CONVEX TESTS│
+ │ 5. UNIT TESTS │                                       │6. CONVEX TESTS│
  │ (vitest run)  │                                       │ (test:convex) │
  └───────┬───────┘                                       └───────┬───────┘
          │                                                       │
          └───────────────────────────┬───────────────────────────┘
-                                     │
-                                     ▼
-                         ┌───────────────────────┐
-                         │   6. CONVEX GUARD     │
-                         │ (deploy-guard check)  │
-                         └───────────┬───────────┘
-                                     │
                                      ▼
                          ┌───────────────────────┐
                          │    7. NEXT BUILD      │
                          │   (npm run build)     │
                          └───────────┬───────────┘
-                                     │
          ┌───────────────────────────┴───────────────────────────┐
-         ▼                                                       ▼
- ┌───────────────┐                                       ┌───────────────┐
- │  8. E2E TESTS │                                       │ 9. SEC AUDIT  │
- │ (playwright)  │                                       │  (npm audit)  │
- └───────────────┘                                       └───────────────┘
+         ▼                              ▼                        ▼
+ ┌───────────────┐            ┌───────────────┐         ┌───────────────┐
+ │  8. E2E TESTS │            │ 9. SEC AUDIT  │         │ DEPLOY GUARD  │
+ │  (playwright) │            │  (npm audit)  │         │(check:convex) │
+ └───────────────┘            └───────────────┘         └───────────────┘
 ```
 
 ---
 
-## 2. Gate Descriptions & Enforcement
+## 2. Gate descriptions & enforcement
 
-| Gate | Tool / Script | Command | Failure Impact |
+| Gate | Tool / Script | Command | Failure impact |
 | :--- | :--- | :--- | :--- |
-| **1. Lint** | ESLint v9 Flat Config | `npm run lint` | Code style, syntax, or unused variable errors block merge. |
-| **2. Type Check** | TypeScript | `npm run typecheck` | Any type mismatch in app code or test suites blocks merge. |
-| **3. IDB Schema Guard** | Custom Node Guard | `npm run check:idb` | Asserts every store in `USER_DATA_STORES` has a `createObjectStore` call in `upgrade()`. Prevents orphaned store crashes. |
-| **4. Unit Tests** | Vitest | `npm test` | Unit and React component test failures block merge. |
-| **5. Convex Tests** | Vitest (`convex/`) | `npm run test:convex` | Backend function and schema validation failures block merge. |
-| **6. Prod Convex Guard** | Custom Guard | `npm run check:convex` | Validates client-baked `NEXT_PUBLIC_CONVEX_URL` targets `steady-ox-280`. Prevents stale environment variables from shipping to production. |
-| **7. Production Build** | Next.js 16 | `npm run build` | Next.js compilation or asset bundling errors block merge. |
-| **8. E2E Tests** | Playwright | `npm run test:e2e` | End-to-end user journey failures block merge (requires `NEXT_PUBLIC_CONVEX_URL`). |
-| **9. Security Audit** | npm audit | `npm audit` | Flags high/critical vulnerabilities for review. |
+| **1. Lint** | ESLint 8 (`.eslintrc.json`, `next/core-web-vitals`) | `npm run lint` | Style, syntax, or unused-variable errors block merge. |
+| **2. Type Check** | TypeScript (strict) | `npm run typecheck` | Any type mismatch in app or test code blocks merge. |
+| **3. IDB Schema Guard** | Custom Node guard | `npm run check:idb` | Asserts every store in `USER_DATA_STORES` has a `createObjectStore` call in `upgrade()`. Prevents orphaned-store crashes on upgrade. |
+| **4. Convex Import Guard** | Custom Node guard | `npm run check:convex-imports` | Catches unresolvable imports inside `convex/` before they surface as a runtime "Could not find function" error. CI-only in the local runner. |
+| **5. Unit Tests** | Vitest + RTL | `npm test` | Unit and React component failures block merge. |
+| **6. Convex Tests** | Vitest + `convex-test` | `npm run test:convex` | Backend function and schema validation failures block merge. |
+| **7. Production Build** | Next.js 14 | `npm run build` | Compilation or bundling errors block merge. Runs `prebuild` → `check-convex-deployment.mjs`. |
+| **8. E2E Tests** | Playwright | `npm run test:e2e` | User-journey failures block merge. Skips cleanly when `NEXT_PUBLIC_CONVEX_URL` is unset. |
+| **9. Security Audit** | npm audit | `npm audit --audit-level=high` | Flags high/critical vulnerabilities. `continue-on-error: true` — advisory, retried up to 3×. |
+| **Deploy Guard** | Custom guard | `npm run check:convex` | Validates the client-baked `NEXT_PUBLIC_CONVEX_URL` targets the canonical prod slug. |
 
 ---
 
-## 3. GitHub Actions Workflow Inventory
+## 3. GitHub Actions workflow inventory
 
-All workflows are located in `.github/workflows/`:
+All workflows live in `.github/workflows/`:
 
-1. **`ci.yml` (Main CI Pipeline)**
-   - **Triggers**: `push` to `main`, `pull_request` to `main`, daily schedule (`cron: '0 0 * * *'`, 00:00 UTC), and `workflow_dispatch`.
-   - **Behavior**: Runs parallel jobs (`lint`, `typecheck`, `test`, `convex-test`, `idb-schema-guard`, `deploy-guard`, `build`, `e2e`, `security-audit`). Optimized with Next.js build caching (`.next/cache`) and Playwright browser caching (`~/.cache/ms-playwright`). Concurrency control cancels outdated runs on the same branch.
+1. **`ci.yml` (main pipeline)**
+   - **Triggers**: `push` to `main`, `pull_request` to `main`, daily schedule
+     (`cron: '0 0 * * *'`, 00:00 UTC), and `workflow_dispatch`.
+   - **Jobs**: `lint`, `typecheck`, `test`, `convex-test`, `build`, `e2e`,
+     `deploy-guard`, `security-audit`, `idb-schema-guard` — all on Node 22,
+     with Next.js build caching (`.next/cache`) and Playwright browser caching
+     (`~/.cache/ms-playwright`). Concurrency cancels stale runs on the same ref.
 
-2. **`release-draft.yml` (Automated Tag Release)**
+2. **`release-draft.yml` (tag release)**
    - **Triggers**: `push` on tags matching `v*`.
-   - **Behavior**: Re-runs quality gates (`npm test`, `npm run test:convex`, `npm run build`), compiles release notes automatically, and drafts a GitHub Release.
+   - **Behavior**: re-runs quality gates, compiles release notes, drafts a
+     GitHub Release.
 
-3. **`rollback.yml` (Manual Production Rollback)**
-   - **Triggers**: `workflow_dispatch` (Manual trigger from Actions tab).
-   - **Inputs**: `deployment` (Target Vercel deployment URL or ID).
-   - **Behavior**: Instantly promotes a previous known-good Vercel deployment back to production via `vercel rollback`. Zero rebuild required.
+3. **`rollback.yml` (manual production rollback)**
+   - **Triggers**: `workflow_dispatch`.
+   - **Inputs**: `deployment` (target Vercel deployment URL or ID).
+   - **Behavior**: promotes a previous known-good Vercel deployment back to
+     production via `vercel rollback`. Zero rebuild.
 
-4. **`update-dependencies.yml` (Daily Dependency Scans & Automated PRs)**
-   - **Triggers**: Daily schedule (`cron: '0 4 * * *'`, 04:00 UTC) and `workflow_dispatch`.
-   - **Behavior**: Runs `npm update` and `npm audit fix --package-lock-only`, executes full verification gate suite (`npm run lint`, `npm run typecheck`, `node scripts/check-idb-stores.mjs`, `npm test`, `npm run test:convex`, `npm run build`), and opens an automated Pull Request with Next.js build caching.
+4. **`update-dependencies.yml` (scheduled dependency PRs)**
+   - **Triggers**: daily schedule (`cron: '0 4 * * *'`, 04:00 UTC) and
+     `workflow_dispatch`.
+   - **Behavior**: runs `npm update` + `npm audit fix --package-lock-only`,
+     executes the verification gate suite, and opens an automated PR.
 
-5. **`dependabot.yml` (Automated Daily Dependency Version Checks)**
-   - **Schedule**: Daily interval (`04:00` UTC) for `npm` and `github-actions` ecosystems.
-   - **Behavior**: Automatically scans for outdated package versions and workflow actions, opening targeted dependency update PRs.
-
----
-
-## 4. Custom Build & Schema Guards
-
-### A. IndexedDB Schema Guard (`scripts/check-idb-stores.mjs`)
-- **Problem**: When a new store is added to `USER_DATA_STORES` in `src/lib/db/local-db.ts`, existing users upgrading their browser app will crash on transaction start unless `createObjectStore` is called in `upgrade()`.
-- **Enforcement**: Parses `local-db.ts`, extracts `USER_DATA_STORES`, and verifies every single store name has a matching `createObjectStore('<name>')` statement inside the `upgrade()` callback.
-
-### B. Convex Deployment Guard (`scripts/check-convex-deployment.mjs`)
-- **Problem**: Vercel environment variables can occasionally drift, causing a production build to bake in a dev/staging Convex deployment URL (`NEXT_PUBLIC_CONVEX_URL`). Users then encounter unresolvable auth and hanging state loading.
-- **Enforcement**: Runs as a `prebuild` hook on Vercel production builds. Asserts `NEXT_PUBLIC_CONVEX_URL` matches canonical slug `steady-ox-280`. Aborts build immediately if mismatched.
+5. **`.github/dependabot.yml`**
+   - **Schedule**: daily for `npm` (04:00 UTC, max 5 open PRs) and
+     `github-actions` (max 3 open PRs).
 
 ---
 
-## 5. Local Developer Quality Gate Runner
+## 4. Custom build & schema guards
 
-Developers and AI agents can execute the core pipeline locally prior to committing:
+### A. IndexedDB schema guard (`scripts/check-idb-stores.mjs`)
+- **Problem**: adding a store to `USER_DATA_STORES` in `src/lib/db/local-db.ts`
+  without creating it in `upgrade()` crashes existing users on transaction start.
+- **Enforcement**: parses `local-db.ts`, extracts `USER_DATA_STORES`, and
+  verifies each store name has a matching `createObjectStore('<name>')` inside
+  the `upgrade()` callback.
+
+### B. Convex deployment guard (`scripts/check-convex-deployment.mjs`)
+- **Problem**: Vercel env drift can bake a dev/staging Convex URL into a
+  production build, causing unresolvable auth and hanging state loads.
+- **Enforcement**: runs as a `prebuild` hook. Asserts `NEXT_PUBLIC_CONVEX_URL`
+  matches the expected slug from `BUDGETBITCH_PROD_CONVEX_SLUG` (default
+  `steady-ox-280`) and aborts the build on mismatch.
+
+### C. Convex import guard (`scripts/check-convex-imports.mjs`)
+- **Problem**: an import inside `convex/` that resolves locally but not on the
+  Convex deployment surfaces only at runtime as "Could not find function".
+- **Enforcement**: resolves every import in the Convex tree ahead of deploy.
+
+---
+
+## 5. Local developer quality gate runner
 
 ```bash
-# Run all 6 local quality gates sequentially
 npm run ci
 ```
 
-Output format:
-```
-======================================================
-🚀 BudgetBITCH Local Quality Gate Runner (CI)
-======================================================
+`scripts/run-full-ci.mjs` runs nine steps in sequence. Three are CI-only and are
+skipped locally unless the relevant environment is present:
 
-ℹ️  Running in LOCAL mode (no NEXT_PUBLIC_CONVEX_URL set)
-   Gates 7-8 will be skipped (require CI/Convex env).
-
-▶ Running 1/8 Linting (ESLint)...
-✅ Passed 1/8 Linting (ESLint) (2.41s)
-
-▶ Running 2/8 Type Checking (tsc)...
-✅ Passed 2/8 Type Checking (tsc) (3.12s)
-
-▶ Running 3/8 IndexedDB Schema Guard...
-✅ Passed 3/8 IndexedDB Schema Guard (0.15s)
-
-▶ Running 4/8 Unit & Component Tests (Vitest)...
-✅ Passed 4/8 Unit & Component Tests (Vitest) (12.45s)
-
-▶ Running 5/8 Convex Backend Tests...
-✅ Passed 5/8 Convex Backend Tests (4.10s)
-
-▶ Running 6/8 Production Build (Next.js)...
-✅ Passed 6/8 Production Build (Next.js) (18.20s)
-
-⏭️  Skipping 7/8 Security Audit (npm audit) (CI-only gate)
-
-⏭️  Skipping 8/8 Deploy Guard (Convex URL check) (CI-only gate)
-
-======================================================
-🎉 ALL QUALITY GATES PASSED CLEANLY in 40.43s
-======================================================
-```
-
-### Gate Mapping: Local vs CI
-
-| Gate | Local (`npm run ci`) | CI (GitHub Actions) |
-|------|---------------------|---------------------|
-| 1. Lint | ✅ | ✅ |
-| 2. Type Check | ✅ | ✅ |
-| 3. IDB Schema Guard | ✅ | ✅ |
-| 4. Unit Tests | ✅ | ✅ |
-| 5. Convex Tests | ✅ | ✅ |
-| 6. Production Build | ✅ | ✅ |
-| 7. Security Audit | ⏭️ CI-only | ✅ |
-| 8. Deploy Guard | ⏭️ CI-only* | ✅ |
-
-*Deploy Guard runs locally only if `NEXT_PUBLIC_CONVEX_URL` is set.
+| Step | Local (`npm run ci`) | CI |
+|------|---------------------|-----|
+| 1. Lint (ESLint) | ✅ | ✅ |
+| 2. Type check (tsc) | ✅ | ✅ |
+| 3. IndexedDB schema guard | ✅ | ✅ |
+| 4. Convex import resolution guard | ⏭️ CI-only | ✅ |
+| 5. Unit & component tests (Vitest) | ✅ | ✅ |
+| 6. Convex backend tests | ✅ | ✅ |
+| 7. Production build (Next.js) | ✅ | ✅ |
+| 8. Security audit (npm audit) | ⏭️ CI-only | ✅ |
+| 9. Deploy guard (Convex URL check) | ⏭️ unless `NEXT_PUBLIC_CONVEX_URL` is set | ✅ |
 
 ---
 
----
+## 6. Emergency production rollback protocol
 
-## 6. Emergency Production Rollback Protocol
+If a production deployment misbehaves after Vercel auto-deploys from `main`:
 
-If a production deployment encounters runtime issues after auto-deploying via Vercel:
-
-1. Open GitHub Actions tab -> **Rollback Production** (`rollback.yml`).
+1. Open the GitHub Actions tab → **Rollback Production** (`rollback.yml`).
 2. Click **Run workflow**.
-3. Supply the previous good Vercel Deployment ID or URL (found in Vercel Dashboard).
-4. Run the workflow. Vercel will instantly switch production traffic back to the prior deployment without rebuilding code.
+3. Supply the previous good Vercel deployment ID or URL (from the Vercel dashboard).
+4. Run it. Vercel switches production traffic back instantly, without rebuilding.

@@ -1,160 +1,246 @@
-# BudgetBITCH
+# Budget Boss (`BudgetBITCH`)
 
-BudgetBITCH is a cinematic, privacy-first budgeting application built with Next.js App Router, Convex (auth, database, realtime), IndexedDB for local-first offline data, Service Worker for PWA sync, next-intl for i18n (Thai/English), Tailwind CSS v4, framer-motion, recharts, and zod.
+Budget Boss is a cinematic, privacy-first budgeting PWA built with Next.js App
+Router, Convex (auth, database, realtime), IndexedDB for local-first offline
+data, a Service Worker for PWA sync, next-intl for i18n, Tailwind CSS v4,
+framer-motion, recharts, and zod.
+
+> **Naming:** `BudgetBITCH` is the repository / package name. The user-facing
+> display name in all UI copy is **Budget Boss**.
 
 ## Navigation docs
 
-- [docs/README.md](docs/README.md) — Central documentation hub & navigation map
-- [docs/CI_CD.md](docs/CI_CD.md) — Master CI/CD & Automated Reliability Pipeline manual
-- [docs/CODEBASE_INDEX.md](docs/CODEBASE_INDEX.md) — Consolidated orientation map, route/module index, and practical filesystem tree
+- [docs/README.md](docs/README.md) — documentation hub & navigation map
+- [docs/CODEBASE_INDEX.md](docs/CODEBASE_INDEX.md) — route/module/component index
+- [docs/CI_CD.md](docs/CI_CD.md) — CI/CD pipeline, build guards, rollback runbook
+- [ARCHITECTURE.md](ARCHITECTURE.md) — stack, directory boundaries, runtime flow
+- [AGENTS.md](AGENTS.md) — conventions for AI agents and contributors
 
-## 🛡️ Quality Gates & CI/CD Pipeline
+## Quality gates
 
-The project enforces a 9-stage shift-left quality gate pipeline (`.github/workflows/ci.yml`). Developers and AI agents can run the full suite locally before pushing:
+The repository enforces a shift-left quality gate pipeline
+(`.github/workflows/ci.yml`). Run the full local chain before pushing:
 
 ```bash
-# Run all 6 local quality gates (lint, typecheck, check:idb, test, test:convex, build)
-npm run ci
+npm run ci   # lint, typecheck, check:idb, convex-import guard, test, test:convex, build
 ```
 
-- **Documentation**: See [docs/CI_CD.md](docs/CI_CD.md) for full gate specifications, build guard mechanics (`scripts/check-idb-stores.mjs`, `scripts/check-convex-deployment.mjs`), and Vercel rollback runbooks.
+See [docs/CI_CD.md](docs/CI_CD.md) for gate specifications, build guard mechanics
+(`scripts/check-idb-stores.mjs`, `scripts/check-convex-deployment.mjs`,
+`scripts/check-convex-imports.mjs`), and Vercel rollback procedure.
 
 ## Features
 
-- Start Smart onboarding that generates a Money Survival Blueprint (10-question wizard, Q10 = location consent)
-- Auth-first root entry: signed-out visitors stay on the welcome window; signed-in users without a completed launch profile move to the launch wizard; signed-in users with a profile land on the dashboard
-- Accounts & Sharing Guidance — multi-board shared budgeting: up to 5 boards, 7 umbrellas, QR/link invite, plus automatic lossless cross-account sync (no manual button). Includes clear in-app collaboration guidance in accounts and settings screens to help family, friends, or work cohorts create or switch to a Shared Account (Family, Friends, Business) and invite members.
-- Global PWA Install Prompt: Mounted globally in [layout.tsx](src/app/layout.tsx) so the PWA install option is available on every page.
-- Sync Detail Popover: The sync indicator ([sync-status-indicator.tsx](src/components/ui/sync-status-indicator.tsx)) contains an interactive status popover showing connection status and sizes of active queues (accounts, couple, offline).
-- PWA Quick Add Widget: A standalone widget view located at [/quick-add](src/app/quick-add/page.tsx) that users can save directly to their device's home screen.
-- Flexible Transaction Logging: Offers a +/- sign toggle flow in the Quick Add interface, allowing users to choose between recording negative expenses or logging detailed positive income entries with category, source, and notes.
-- Income & Inflow Management: Dedicated "Add Income" modal accessible from the Hero metric bar and a detailed "Inflow" dashboard panel. Supports tracking inflow categories (Salary, Freelance, Business, Investments, Gift, Refund, Other), frequencies (One-Time, Weekly, Bi-weekly, Monthly, Yearly), date received, tax deductions, notes, and automatically syncing to profile monthly income estimates.
-- Smart Receipt Scanner: Features an internal camera capture scanning interface that photographs physical receipts and uses the Gemini 2.5 Flash API (executed via the Convex Action [receipts.ts](convex/receipts.ts)) to parse out transaction amounts, merchant names, and categories automatically.
-- PWA App Shortcuts: Integrated as app shortcuts in [manifest.json](public/manifest.json) for instant, one-tap launching into the Quick Add interface from the device home screen.
-- Protected dashboard with scan-first panels (Daily Disposable hero, inflow/income tracker, bills/due-soon priority guide, expenses, subscriptions, savings goals, net worth, critical-expense cut-one flow, CSV import)
-- Market Watch: localized financial news/RSS alerts surfaced in the dashboard
-- Location-driven currency: symbol derived from geolocation; numerals-only formatting when location is declined
-- Local-first storage in IndexedDB with offline queue that flushes to Convex on reconnect
-- Daily snapshot sync to Convex (`upsertDailySnapshot`) via the Service Worker / online event
-- CSV transaction import
-- Password reset via email (Resend) for Convex Auth accounts
-- Legal pages (Terms, Privacy, Cookie Policy) with a server-recorded consent audit trail
-- Privacy shield disclosures and consent helpers
-- i18n (English + Thai) via next-intl
+- **Start Smart onboarding** — Money Survival Blueprint 10-step wizard
+  (`src/components/wizard/wizard-shell.tsx`: income, rent, phone/internet,
+  healthcare, transport, entertainment, subscriptions, savings rate, risk
+  tolerance, location consent)
+- **Auth-first root entry** — signed-out visitors stay on the welcome window;
+  signed-in users without a completed launch profile go to the wizard; users
+  with a profile land on the dashboard
+- **Accounts & sharing** — multi-board shared budgeting (up to 5 boards, 7
+  umbrellas), QR/link invites, and automatic lossless cross-account sync
+- **Dashboard** — Daily Disposable hero, income/inflow tracker, bills & due-soon
+  priority guide, expense tracker, budget visual/ring, subscriptions, savings
+  goals, net worth, emergency fund, debt payoff, cash-flow forecast,
+  What-If scenario sandbox, category pivot, currency converter, CSV import/export
+- **Smart receipt scanning** — client-side OCR (tesseract.js →
+  `src/lib/receipt/**`) plus a server `parseReceipt` Convex action
+  (`convex/receipts.ts`) backed by Gemini 2.5 Flash, with a learning scraper
+  engine (`convex/lib/receipt/**`), receipt templates, and merchant aliases
+- **SMS import** — bank-SMS parsing (`src/lib/sms-parser/**`, EU/SG/US/generic
+  patterns) with a PWA Web Share Target (`/share-target` → `/sms-confirm`)
+- **Quick Add widget** — standalone `/quick-add` route with a +/- sign toggle,
+  installable as a PWA app shortcut (`public/manifest.json`)
+- **Market Watch** — localized finance news/RSS with location-gated vicinity feeds
+- **Web Push notifications** — VAPID push via `convex/push.ts` / `convex/pushSend.ts`
+- **Bug reporting** — in-app modal capturing the last 20 user actions
+  (`src/lib/utils/action-logger.ts`) with an admin review view
+- **Local-first storage** — IndexedDB with an offline queue that flushes to
+  Convex on reconnect; daily snapshot sync via `upsertDailySnapshot`
+- **Legal & privacy** — Terms, Privacy, Cookie Policy, `/security` page,
+  server-recorded consent audit trail, weekly privacy disclaimer
+- **i18n** — English, Spanish, French, German, Portuguese, Chinese via next-intl
 
-> Not in this slice (no routes or components exist): Learn!, Jobs hub, Connected Finance integrations, provider connection hub, workspace roles, audit log, notification fanout, email templates. The i18n catalog still references legacy `/api/v1/learn` and `/api/v1/jobs` paths; those API routes are not implemented.
+> Not in this slice (no routes or components exist): Learn!, Jobs hub,
+> Connected Finance / bank aggregation, provider connection hub, workspace
+> roles, audit log, notification fanout, email templates.
 
 ## Tech stack
 
-- Next.js 16
-- React 19
+- Next.js 14 (App Router)
+- React 18
 - TypeScript (strict)
-- Convex 1.34+ (auth, database, realtime, HTTP endpoints)
+- Convex 1.34 (auth, database, realtime, HTTP endpoints)
 - IndexedDB (via `idb`) for local-first offline data
 - Service Worker (`public/sw.js`) for PWA sync & background updates
-- next-intl v4 for i18n (Thai/English)
-- Tailwind CSS v4 for styling
-- framer-motion for animations
+- next-intl v4 for i18n (cookie `bb-locale`)
+- Tailwind CSS v4
+- framer-motion, lottie-react, @rive-app/canvas for motion
 - recharts for data visualization
+- tesseract.js for client-side receipt OCR
+- web-push (VAPID) for notifications
 - zod for validation
-- Vitest + React Testing Library for unit tests
+- Vitest + React Testing Library for unit/component tests
 - Playwright for E2E tests
 - Vercel for deployment
 
 ## Codebase shape
 
-- `src/app/**` contains routes, route groups, layouts, and API handlers
-- Live routes: `src/app/page.tsx` (auth-first root gate), `src/app/sign-in/`, `src/app/sign-up/`, `src/app/forgot-password/`, `src/app/reset/`, `src/app/accounts/`, `src/app/join/`, `src/app/settings/`, `src/app/privacy/`, `src/app/terms/`, `src/app/cookie-policy/`, and the `(app)` route group (`dashboard`, `wizard`). `src/lib/auth/routes.ts` defines `AUTH_ROUTES.continue = "/auth/continue"`, but no page implements that route; post-auth users land on `/dashboard`.
-- API routes: `src/app/api/news/route.ts` (Market Watch RSS), `src/app/api/legal/record-agreement/route.ts`, `src/app/api/legal/record-cookie-consent/route.ts`
-- `src/lib/auth/routes.ts` centralizes protected path prefixes and auth route constants used by route protection
-- `src/modules/**` contains business/domain logic grouped by capability; currently `src/modules/budgeting/` (budget math) and `src/modules/home-base/` (root board orchestration)
-- `src/components/**` holds the primary UI surfaces: `accounts/` (multi-board + sync), `auth/`, `dashboard/`, `i18n/`, `launch/` (splash, manifesto gate), `layout/` (header bar), `legal/` (consent banner, footer, legal pages), `mobile/`, `onboarding/` (language select), `pwa/` (install prompt + register), `providers/`, `shared-board/`, `start-smart/` (Money Survival Blueprint panels), `ui/`, `welcome/`, `wizard/`
-- `src/hooks/**` holds custom hooks: `use-accounts`, `use-account-sync`, `use-critical-expense`, `use-currency`, `use-display-prefs`, `use-haptic`, `use-local-db`, `use-news-prefs`, `use-shared-board`
-- `src/lib/**`: `auth/`, `convex/` (HTTP client, snapshot sync), `db/` (IndexedDB wrapper), `http/`, `legal/`, `news/` (RSS fetcher), `types/`, `utils/`, `animation/`, `colors/`
-- `src/lib/convex/sync-snapshots.ts` handles the local→Convex daily snapshot sync and offline queue flush
-- `tests/e2e/**` holds the Playwright suite (26 spec files) covering auth, wizard onboarding, dashboard panels/view modes, settings (exports, sync, password change, bug report), storage diagnostics & recovery, Market Watch, shared boards, accounts, PWA/offline, i18n, security headers, and route smoke tests. See "Verification" below.
+- `src/app/**` — routes, route groups, layouts, API handlers
+- Live page routes: `/` (auth-first root gate), `/sign-in`, `/sign-up`,
+  `/forgot-password`, `/reset`, `/accounts`, `/join`, `/settings`, `/quick-add`,
+  `/sms-confirm`, `/security`, `/privacy`, `/terms`, `/cookie-policy`, and the
+  `(app)` route group (`dashboard`, `wizard`)
+- Route handlers: `src/app/api/news/route.ts`, `src/app/api/news/vicinity/route.ts`,
+  `src/app/api/legal/record-agreement/route.ts`,
+  `src/app/api/legal/record-cookie-consent/route.ts`, `src/app/share-target/route.ts`
+- `src/lib/auth/routes.ts` centralizes protected path prefixes and auth constants
+- `src/modules/**` — domain logic: `budgeting/` (CSV import/export, daily cash
+  snapshot, subscription trim hints) and `home-base/` (root board orchestration,
+  location permission, reverse geocode)
+- `src/components/**` — `accounts/`, `admin/`, `auth/`, `bug-report/`,
+  `dashboard/`, `launch/`, `layout/`, `legal/`, `mobile/`, `onboarding/`,
+  `privacy/`, `pro-tips/`, `providers/`, `pwa/`, `receipt/`, `settings/`,
+  `shared-board/`, `sms/`, `start-smart/`, `ui/`, `webview/`, `welcome/`, `wizard/`
+- `src/lib/**` — `animation/`, `auth/`, `colors/`, `convex/`, `data/`, `db/`,
+  `http/`, `legal/`, `news/`, `notifications/`, `receipt/`, `sms-parser/`,
+  `types/`, `utils/`
+- `tests/e2e/**` — 25 Playwright spec files (plus shared `helpers.ts`)
 
 ## Auth-first root flow
 
-- `/` is the auth-first gate: signed-out visitors stay on the welcome window, signed-in visitors without a completed launch profile move into the launch wizard, and signed-in visitors with a completed launch profile land on the root board.
-- `/sign-in`, `/sign-up`, `/forgot-password`, and `/reset` keep only sanitized in-app `redirectTo` targets.
-- After sign-in, the post-auth bootstrap resolves any missing local user/workspace records, then lands on `/dashboard` (the wizard runs for users without a completed launch profile).
-- Client-side `<RequireAuth />` wrapper and route guard helpers (`src/lib/auth/routes.ts`) protect shared product surfaces. Tokens live in `localStorage` for in-app webview support (e.g., LINE, WhatsApp).
+- `/` is the auth-first gate: signed-out → welcome window; signed-in without a
+  completed launch profile → launch wizard; otherwise → root board.
+- `/sign-in`, `/sign-up`, `/forgot-password`, `/reset` accept only sanitized
+  in-app `redirectTo` targets.
+- After sign-in the post-auth bootstrap resolves missing local user/workspace
+  records, then lands on `/dashboard`.
+- There is no `src/middleware.ts`. Protection is client-side via `<RequireAuth />`
+  and `src/lib/auth/routes.ts`; tokens live in `localStorage` for in-app webview
+  support (LINE, WhatsApp).
+- `src/auth.ts` and `src/app/api/auth/[...nextauth]/route.ts` are an unwired
+  NextAuth Google scaffold; the shipped auth path is Convex Auth email/password.
 
 ## Local setup
 
-1. Copy environment values from `.env.example` into `.env.local`.
-2. Install dependencies with `npm install`.
-3. Create or link a Convex deployment with Convex Auth enabled, then set `CONVEX_DEPLOYMENT`, `NEXT_PUBLIC_CONVEX_URL`, `CONVEX_SITE_URL`, and `SITE_URL` (see Environment variables).
-4. Mirror the same Convex variables in Vercel before shipping preview or production deployments.
-5. Start development with `npm run dev`.
-9. For browser tests, keep the Playwright web server on its dedicated dev-server path. `playwright.config.ts` starts `npm run dev -- --port 3100` through `scripts/run-with-sanitized-env.mjs`. By default the Convex env is kept intact so client-only auth works; set `E2E_STRIP_AUTH=true` to replicate the stripped CI pipeline, or `E2E_BASE_URL` to target an already-running deployment.
+1. Copy `.env.example` to `.env.local` and fill in values.
+2. `npm install`
+3. Create or link a Convex deployment with Convex Auth enabled, then set
+   `CONVEX_DEPLOYMENT`, `NEXT_PUBLIC_CONVEX_URL`, `CONVEX_SITE_URL`, and
+   `SITE_URL` (see Environment variables).
+4. Mirror the same Convex variables in Vercel before shipping previews or prod.
+5. `npm run dev`
+6. For browser tests, `playwright.config.ts` starts `npm run dev -- --port 3100`
+   through `scripts/run-with-sanitized-env.mjs`. The Convex env is kept intact by
+   default so client-only auth works; set `E2E_STRIP_AUTH=true` to replicate the
+   stripped CI pipeline, or `E2E_BASE_URL` to target a running deployment.
 
 ## Verification
 
-Current workspace verification status:
+```bash
+npm run lint
+npm run typecheck
+npm run check:idb
+npm test
+npm run test:convex
+npm run test:e2e
+npm run build
+```
 
-- `npm run lint`
-- `npm run test`
-- `npm run test:e2e`
-- `npm run build`
+Notes:
 
-Deploy-time verification note:
-
-- Preview deployments should use isolated database credentials before you opt them into running migrations.
-
-Current browser-test note:
-
-- `npm run test:e2e` uses a dedicated dev server on port `3100` (local runs reuse an existing server; CI does not) so the suite stays deterministic.
-- Authenticated flows need real credentials: set `E2E_TEST_EMAIL` / `E2E_TEST_PASSWORD`. Tests that require auth skip cleanly when unset, so the suite stays green in CI without secrets.
-- Coverage spans 26 spec files under `tests/e2e/`, including `diagnostics.spec.ts` (the Settings → Data → "Diagnostics & Recovery" modal: quota/usage, integrity scan, manual checkpoint creation, persistent-storage request) and the 3-step wizard (`wizard.spec.ts`).
+- `npm run test:e2e` uses a dedicated dev server on port `3100` (local runs
+  reuse an existing server; CI does not) so the suite stays deterministic.
+- Authenticated flows need real credentials: set `E2E_TEST_EMAIL` /
+  `E2E_TEST_PASSWORD`. Specs requiring auth skip cleanly when unset, so CI stays
+  green without secrets.
+- Coverage spans 25 spec files under `tests/e2e/`, including `diagnostics.spec.ts`
+  (Settings → Data → "Diagnostics & Recovery": quota/usage, integrity scan,
+  manual checkpoint, persistent-storage request).
+- Preview deployments should use isolated credentials before opting them into
+  running migrations.
 
 For deeper orientation, start with `docs/CODEBASE_INDEX.md`.
 
 ## Launch wizard notes
 
-- Launch preferences remain local-only in `localStorage` under `budgetbitch:launch-profile`.
-- The signed-in root E2E override is non-production-only and uses `budgetbitch:e2e-auth-state` only to exercise the signed-in root flow when auth client config is missing locally.
-- Searchable city suggestions are loaded on demand from a small curated catalog instead of shipping every option up front.
-- The launch loading window appears only when deferred transition work runs long enough to cross the threshold, and the money-themed art is prepared only when that loading state is needed.
+- Launch preferences stay local-only in `localStorage` under
+  `budgetbitch:launch-profile`; the selected locale is stored under
+  `budgetbitch:locale` and mirrored to the `bb-locale` cookie for next-intl.
+- The signed-in root E2E override is non-production-only and uses
+  `budgetbitch:e2e-auth-state` solely to exercise the signed-in root flow when
+  auth client config is missing locally.
+- Searchable city suggestions load on demand from a small curated catalog.
+- The launch loading window appears only when deferred transition work crosses
+  the threshold; the money-themed art is prepared only when it is needed.
 
 ## Convex runtime
 
-- Convex is the authoritative backend: auth, `dailySnapshots` table, realtime subscriptions.
-- IndexedDB is the local cache for offline reads/writes; budget wizard profile, transactions, settings.
-- Service Worker provides background sync: posts daily snapshots to Convex via `upsertDailySnapshot`.
-- Server-side secrets: Convex Auth config, environment variables.
+- Convex is the authoritative backend: auth, tables, realtime subscriptions.
+- Tables (`convex/schema.ts`): `authTables`, `userProfiles`, `sharedBoards`,
+  `accounts`, `boardMembers`, `accountBoards`, `invites`, `dailySnapshots`,
+  `legalAgreements`, `cookieConsents`, `pushSubscriptions`, `feedbackReports`,
+  `receipts`, `receiptTemplates`, `merchantAliases`.
+- IndexedDB is the local cache for offline reads/writes: wizard profile,
+  transactions, expenses, incomes, accounts, receipt drafts, snapshots, settings.
 
 ### Daily snapshot sync
 
-- IndexedDB holds the local budget state (wizard profile, transactions, expenses, bills, savings goals, net worth, critical-expense commitments).
-- `src/lib/convex/sync-snapshots.ts` gathers a daily snapshot from IndexedDB and calls the Convex mutation `upsertDailySnapshot` (table: `dailySnapshots`).
-- If Convex is not configured or the call fails, the snapshot is queued in `localStorage` (`budgetbitch:offlineQueue`); `flushOfflineQueue()` replays queued snapshots to Convex on reconnect (navigator `online` event).
-- The Service Worker (`public/sw.js`) registers and requests periodic sync for the daily snapshot.
-- `vercel.json` previously declared a legacy cron path (`/api/cron/projections/check-ins/replay`) with no matching route handler; it has been removed. The daily snapshot is pushed client-side (`sync-snapshots.ts` → `upsertDailySnapshot`), not via a server cron.
-- Convex Auth email/password accounts are created by users through `/sign-up`; end users do not add environment files or OAuth credentials.
+- `src/lib/convex/sync-snapshots.ts` gathers a daily snapshot from IndexedDB and
+  calls the Convex mutation `upsertDailySnapshot` (table: `dailySnapshots`).
+- If Convex is unconfigured or the call fails, the snapshot is queued in
+  `localStorage` (`budgetbitch:offlineQueue`); `flushOfflineQueue()` replays it on
+  the navigator `online` event.
+- `public/sw.js` registers and requests periodic sync for the daily snapshot.
+- The daily snapshot is pushed client-side, not via a server cron.
+- Convex Auth email/password accounts are created by users through `/sign-up`;
+  end users never add environment files or OAuth credentials.
 
-## Security & Vercel Headers
+## Security & Vercel headers
 
-Deployment policies and security headers are configured in [vercel.json](vercel.json):
-- **Cross-Origin-Embedder-Policy (COEP)**: The `require-corp` header was removed to resolve launching/rendering failures inside restricted mobile webviews (in-app browsers).
-- **Content-Security-Policy (CSP)**: The `connect-src` directive has been updated to include wildcard patterns for Convex backends (`https://*.convex.cloud wss://*.convex.cloud https://*.convex.site wss://*.convex.site`) to facilitate direct, real-time client-to-backend socket and HTTP requests.
+Deployment policies and security headers live in [vercel.json](vercel.json):
+
+- **COEP**: the `require-corp` header was removed to fix rendering failures
+  inside restricted mobile webviews (in-app browsers).
+- **CSP**: `connect-src` includes wildcard Convex patterns
+  (`https://*.convex.cloud wss://*.convex.cloud https://*.convex.site
+  wss://*.convex.site`) for direct realtime client-to-backend traffic.
 
 ## Environment variables
 
-See `.env.example` for the authoritative list. Required for this slice:
+See `.env.example` for the authoritative list.
 
-- `CONVEX_DEPLOYMENT` — identifies the Convex deployment for CLI/codegen commands.
-- `NEXT_PUBLIC_CONVEX_URL` — the Convex cloud URL (baked into the browser bundle at build time; changing it requires a redeploy).
-- `NEXT_PUBLIC_CONVEX_SITE_URL` — the Convex site URL, mirrored into the browser bundle for client-side redirect/issuer reference.
-- `CONVEX_SITE_URL` — the Convex site URL used as the Convex Auth issuer. Built-in Convex variable; do not `npx convex env set` it.
-- `SITE_URL` — the app origin accepted by Convex Auth redirects (e.g. `http://localhost:3000` locally).
-- `NEXT_PUBLIC_APP_URL` — the public app origin used in reset/verification email links (Convex Auth reads it at runtime; falls back to `SITE_URL` locally).
-- `CONVEX_SYNC_SECRET` — shared secret for trusted server-side Convex sync (auth bootstrap + projection replay). Must match between the Vercel build env and the Convex deployment env.
-- `GEMINI_API_KEY` — API key for Google Gemini API, required for receipt image OCR and auto-categorization within the Convex action ([receipts.ts](convex/receipts.ts)). Set in the Convex dashboard environment settings.
+Frontend (Vercel / `.env.local`):
 
-> Reserved but not consumed in this slice: `PROVIDER_SECRET_ENCRYPTION_KEY` / `CRON_SECRET` for the unbuilt integration/provider-vault work. `RESEND_API_KEY` and `AUTH_EMAIL_FROM` are listed in `.env.example` as commented secrets (optional) — Convex Auth reads `RESEND_API_KEY` at runtime to deliver password-reset emails once an account-recovery flow is wired; they are not yet actively used by the app code in this slice. See `.env.example` for the authoritative, current list.
+- `NEXT_PUBLIC_CONVEX_URL` — Convex cloud URL, baked into the browser bundle at
+  build time (changing it requires a redeploy).
+- `NEXT_PUBLIC_CONVEX_SITE_URL` — Convex site URL mirrored into the bundle.
+- `SITE_URL` — app origin accepted by Convex Auth redirects.
+- `NEXT_PUBLIC_APP_URL` — public app origin used in reset/verification links.
+- `NEXT_PUBLIC_VAPID_PUBLIC_KEY` — Web Push public key for the browser.
+- `CONVEX_DEPLOYMENT` — identifies the Convex deployment for CLI/codegen.
+- `CONVEX_DEPLOY_KEY` — required for CI builds / `npx convex deploy`.
+- `BUDGETBITCH_PROD_CONVEX_SLUG` — expected prod slug for the deploy guard
+  (defaults to `steady-ox-280`).
+
+Backend (Convex dashboard):
+
+- `CONVEX_SITE_URL` — Convex Auth issuer. Built-in; do not `npx convex env set` it.
+- `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` — Web Push signing keys
+  (`convex/pushSend.ts`); rotate with `scripts/rotate-vapid.ts`.
+- `RESEND_API_KEY` / `AUTH_EMAIL_FROM` — transactional email for Convex Auth
+  password reset and feedback notifications.
+- `FEEDBACK_ADMIN_EMAIL` — recipient for in-app bug reports (`convex/feedback.ts`).
+- `GEMINI_API_KEY` — Google Gemini key for the server-side receipt parse action
+  (`convex/receipts.ts`).
+
+`AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` are read by the unwired NextAuth
+scaffold in `src/auth.ts` and are not required to run the app.
 
 ## Start Smart regional data
 
-The Start Smart flow uses curated, attributable regional inputs rather than open-ended scraping. Seeded assumptions keep the wizard responsive, then higher-trust data can refine those defaults when available. Major assumptions are labeled as verified, estimated, or user-entered so the resulting blueprint remains explainable.
+The Start Smart flow uses curated, attributable regional inputs rather than
+open-ended scraping. Seeded assumptions keep the wizard responsive, then
+higher-trust data refines those defaults when available. Major assumptions are
+labeled verified, estimated, or user-entered so the blueprint stays explainable.

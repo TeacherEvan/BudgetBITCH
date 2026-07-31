@@ -1,6 +1,8 @@
-# BudgetBITCH Feature Backlog & Ideas
+# Budget Boss Feature Backlog & Ideas
 
-This document lists prospective product features, extensions, and ideations for the BudgetBITCH application.
+This document lists prospective product features, extensions, and ideations for
+the Budget Boss app (`BudgetBITCH` repo). Nothing here is shipped — see
+`docs/CODEBASE_INDEX.md` for what actually exists.
 
 ---
 
@@ -56,10 +58,16 @@ Integrate a local opportunities finder or jobs listings panel in the dashboard t
 
 ---
 
-## 4. Deep Integrations & OpenClaw
+## 4. Deep Integrations
 
-Expand data tracking capability to hook into all possible external sources for automatic, privacy-first balance aggregation:
-- Banking APIs
-- Investment portfolios
-- OpenClaw API integrations
-- Custom third-party import modules
+Expand data tracking capability to hook into external sources for automatic,
+privacy-first balance aggregation.
+
+**Constraint:** Budget Boss is a free app. Paid bank-aggregation vendors
+(Plaid, MX, Yodlee, etc.) and any paid-API connector are out of scope. Only
+free/self-hosted or user-supplied-credential paths are acceptable:
+
+- Free/open banking APIs where the user supplies their own credentials
+- User-exported statement imports (CSV/OFX) — extends the existing CSV importer
+- Bank SMS parsing (already shipped: `src/lib/sms-parser/**`)
+- Custom third-party import modules the user configures themselves
