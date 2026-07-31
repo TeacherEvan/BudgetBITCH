@@ -6,6 +6,7 @@ import { extractTotal } from './extract_total';
 import { matchTemplate } from './fingerprint';
 import { normalisePayload } from './normalise';
 import { generateQuestions } from './questions';
+import { categorizeReceipt } from './categorize';
 import type { FieldCandidate, FieldName, OcrLine, OcrPayload, ScrapeResult } from './types';
 import { validateExtraction } from './validate';
 
@@ -44,6 +45,17 @@ export function scrape(payload: OcrPayload, options: EngineOptions = {}): Scrape
   const items = extractLineItems(norm);
   const itemsSum = items.length > 0 ? items.reduce((acc, it) => acc + it.amount, 0) : null;
 
+  // Category: infer from the merchant name via keyword rules. Previously
+  // hardcoded to the invalid value 'groceries' (not in ExpenseCategory), which
+  // always collapsed to 'other' downstream. A template could later supply an
+  // explicit category; for now merchant inference is the only signal.
+  const categoryValue = categorizeReceipt(merchantCand?.value as string | undefined, undefined);
+  const categoryCand: FieldCandidate = {
+    value: categoryValue,
+    conf: 0.8,
+    ruleId: 'category-infer',
+  };
+
   const validation = validateExtraction({
     total: totalCand ? Number(totalCand.value) : null,
     totalRaw: totalCand?.evidenceLine?.text,
@@ -64,7 +76,7 @@ export function scrape(payload: OcrPayload, options: EngineOptions = {}): Scrape
     date: dateCand,
     merchant: merchantCand,
     currency: currencyCand,
-    category: { value: 'groceries', conf: 0.8, ruleId: 'default-category' },
+    category: categoryCand,
     tax: taxCand,
   };
 
@@ -73,7 +85,7 @@ export function scrape(payload: OcrPayload, options: EngineOptions = {}): Scrape
     date: dateCand?.conf ?? 0,
     merchant: merchantCand?.conf ?? 0,
     currency: currencyCand?.conf ?? 0,
-    category: 0.8,
+    category: categoryCand.conf,
     tax: taxCand?.conf ?? 0,
   };
 

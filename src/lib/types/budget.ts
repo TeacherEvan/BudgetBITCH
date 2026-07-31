@@ -94,7 +94,7 @@ export interface ExpenseEntry {
   note?: string;
   isRecurring?: boolean;
   recurringId?: string; // for subscription detection
-  source: 'manual' | 'voice' | 'import';
+  source: 'manual' | 'voice' | 'import' | 'receipt';
   cycle?: 'monthly' | 'yearly'; // for subscriptions
   createdBy?: string; // shared-account: creator user id
   createdByName?: string; // shared-account: creator display name

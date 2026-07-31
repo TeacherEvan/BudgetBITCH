@@ -24,7 +24,7 @@ interface Expense {
   category: ExpenseCategory;
   date: string;
   note?: string;
-  source: 'manual' | 'voice' | 'import';
+  source: 'manual' | 'voice' | 'import' | 'receipt';
 }
 
 const CATEGORIES: { value: ExpenseCategory; label: { en: string } }[] = [
@@ -52,7 +52,7 @@ interface FormData {
   category: ExpenseCategory;
   date: string;
   note: string;
-  source: 'manual' | 'voice' | 'import';
+  source: 'manual' | 'voice' | 'import' | 'receipt';
 }
 
 export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
