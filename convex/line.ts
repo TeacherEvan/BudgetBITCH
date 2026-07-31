@@ -241,10 +241,11 @@ export const lineWebhook = httpAction(async (ctx, req) => {
     const lineUserId = e.source?.userId;
     if (!lineUserId) continue;
 
-    const userId = (await ctx.runQuery(internal.line.getConvexUserByLineId, {
+    const mapping = (await ctx.runQuery(internal.line.getLineMapping, {
       lineUserId,
-    })) as Id<"users"> | null;
-    if (!userId) continue;
+    })) as { userId: Id<"users">; accountId: string | null } | null;
+    if (!mapping) continue;
+    const userId = mapping.userId;
 
     // Fetch the original image bytes from LINE's content API.
     let base64Image: string | null = null;
@@ -266,28 +267,30 @@ export const lineWebhook = httpAction(async (ctx, req) => {
 
     if (!base64Image) continue;
 
-    const accountId = await ctx.runQuery(internal.line.getLineAccountId, {
-      lineUserId,
-    });
-
     await ctx.runAction(internal.line.parseLineReceipt, {
       userId,
       base64Image,
-      accountId: accountId ?? undefined,
+      accountId: mapping.accountId ?? undefined,
     });
   }
 
   return new Response("ok", { status: 200 });
 });
 
-// Internal query: resolve the optional accountId bound to a LINE user id.
-export const getLineAccountId = internalQuery({
-  args: { lineUserId: v.string() },
+// Internal resolver: returns the Convex userId + optional accountId for a given
+// LINE user id, or null when no mapping exists. Used by the webhook to resolve
+// both the upload owner and the target account in a single index lookup.
+export const getLineMapping = internalQuery({
+  args: {
+    lineUserId: v.string(),
+  },
   handler: async (ctx, args) => {
     const mapping = await ctx.db
       .query("lineUsers")
       .withIndex("by_lineUserId", (q) => q.eq("lineUserId", args.lineUserId))
       .unique();
-    return mapping?.accountId ?? null;
+    return mapping
+      ? { userId: mapping.userId, accountId: mapping.accountId ?? null }
+      : null;
   },
 });
