@@ -213,7 +213,7 @@ export const lineWebhook = httpAction(async (ctx, req) => {
 
   // Always 200 on a missing/invalid signature so LINE stops retrying a bad push.
   const signature = req.headers.get("x-line-signature") ?? "";
-  if (!secret || !verifyLineSignature(body, signature, secret)) {
+  if (!secret || !(await verifyLineSignature(body, signature, secret))) {
     return new Response("ignored", { status: 200 });
   }
 
