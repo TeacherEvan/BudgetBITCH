@@ -6,7 +6,7 @@ import { z } from "zod";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { GEMINI_MODEL, geminiGenerateUrl } from "./lib/gemini";
 import { scrape as scrapeEngine } from "./lib/receipt/engine";
-import { ingestRequestBodySchema } from "./lib/receipt/ingest-schema";
+import { ingestRequestBodySchema } from "./lib/receipt/ingestSchema";
 import { applyAnswers, generateQuestions } from "./lib/receipt/questions";
 import type { OcrPayload } from "./lib/receipt/types";
 
@@ -683,7 +683,7 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
     });
   }
 
-  // Parse + validate body (zod-hardened; see ingest-schema.ts)
+  // Parse + validate body (zod-hardened; see ingestSchema.ts)
   let rawBody: unknown;
   try {
     rawBody = await req.json();

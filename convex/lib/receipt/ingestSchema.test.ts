@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { ingestRequestBodySchema } from "./ingest-schema";
+import { ingestRequestBodySchema } from "./ingestSchema";
 
 const validPayload = {
   lineUserId: "U123",
