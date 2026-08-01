@@ -11,6 +11,8 @@ import { useInboxPermission } from '@/hooks/use-inbox-permission';
 import { parseSMS, getBestCandidate } from '@/lib/sms-parser';
 import { ReceiptVerifySheet } from '@/components/receipt/receipt-verify-sheet';
 import { type ExpenseCategory, type IncomeCategory } from '@/lib/types/budget';
+import { useAction } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 
 const labels = {
   en: {
@@ -19,7 +21,7 @@ const labels = {
     camera: 'Scan Receipt',
     inbox: 'Inbox SMS/Email',
     save: 'Save',
-    scanning: 'Scanning receipt...',
+    scanning: 'Scanning & scraping receipt photo...',
     parsing: 'Parsing SMS message...',
     successAdded: 'Expense recorded successfully!',
     successIncome: 'Income added successfully!',
@@ -64,8 +66,17 @@ export default function QuickAddPage() {
   const { add: addIncome } = useIncomes();
   const { profile, save: saveProfile } = useWizardProfile();
   
-  const { draft, isScanning, scanImage, answerQuestion, confirmDraft } = useReceiptScan();
-  const { status: inboxPermStatus, grantPermission, denyPermission, resetPermission } = useInboxPermission();
+  const { draft, scanImage, answerQuestion, confirmDraft } = useReceiptScan();
+  const { status: inboxPermStatus, grantPermission, denyPermission } = useInboxPermission();
+
+  // Optional Convex action for AI vision receipt parsing
+  let parseReceiptAction: ReturnType<typeof useAction<typeof api.receipts.parseReceipt>> | null = null;
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    parseReceiptAction = useAction(api.receipts.parseReceipt);
+  } catch {
+    // Offline or test environment fallback
+  }
 
   // UI States
   const [isExpense, setIsExpense] = useState(true);
@@ -89,48 +100,63 @@ export default function QuickAddPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Automatically hide toast after 3 seconds
+  // Automatically hide toast after 3.5 seconds
   useEffect(() => {
     if (toast.show) {
       const timer = setTimeout(() => {
         setToast(prev => ({ ...prev, show: false }));
-      }, 3000);
+      }, 3500);
       return () => clearTimeout(timer);
     }
   }, [toast.show]);
 
-  // Sync scanned receipt draft fields to input box
+  // Sync scanned receipt draft fields into Quick Add form automatically
   useEffect(() => {
     if (draft && draft.fields) {
       setIsExpense(true);
       setEntrySource('receipt');
-      const amtVal = draft.fields.total?.value ?? 0;
-      const merchVal = draft.fields.merchant?.value ?? '';
+      const amtVal = Number(draft.fields.total?.value ?? 0);
+      const merchVal = String(draft.fields.merchant?.value ?? 'Receipt').trim();
       const catVal = (draft.fields.category?.value as string) ?? 'other';
 
-      setInputText(`${amtVal} ${merchVal}`.trim());
-      setDetectedCategory(mapCategory(catVal));
-    }
-  }, [draft]);
+      const catMapped = mapCategory(catVal || merchVal);
+      setDetectedCategory(catMapped);
 
-  const saveScannedExpense = async () => {
-    if (!draft) return;
-    try {
-      setLoading(true);
-      await confirmDraft();
-      setToast({ show: true, message: l.successAdded, type: 'success' });
-    } catch (err) {
-      setToast({
-        show: true,
-        message: (err instanceof Error ? err.message : String(err)) || 'Failed to save receipt.',
-        type: 'error',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+      if (amtVal > 0) {
+        // Auto-fill input text with amount and merchant
+        setInputText(`${amtVal} ${merchVal}`.trim());
 
-  // Handle manual/auto-filled save
+        // Automatically commit scanned expense so user does not need to re-type or click secondary buttons
+        const handleAutoCommit = async () => {
+          try {
+            await addExpense({
+              amount: amtVal,
+              merchant: merchVal || 'Photo Receipt',
+              category: catMapped,
+              date: draft.fields.date?.value ? String(draft.fields.date.value) : new Date().toISOString().split('T')[0],
+              source: 'receipt',
+              note: 'Scanned receipt photo'
+            });
+            setToast({ show: true, message: `📸 Scraped & Saved: ${amtVal} @ ${merchVal}`, type: 'success' });
+            await confirmDraft();
+          } catch (err) {
+            console.error("Auto-save receipt error:", err);
+          }
+        };
+        handleAutoCommit();
+      } else {
+        // If amount was unextracted or 0, pre-fill merchant and prompt user for amount
+        setInputText(`${merchVal}`.trim());
+        setToast({
+          show: true,
+          message: `📸 Photo scanned: "${merchVal}". Please type the amount:`,
+          type: 'success'
+        });
+      }
+    }
+  }, [draft, addExpense, confirmDraft]);
+
+  // Handle manual or verified save
   const handleSave = async () => {
     const trimmed = inputText.trim();
     if (!trimmed) {
@@ -228,28 +254,64 @@ export default function QuickAddPage() {
       if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = async () => {
-      try {
-        setLoading(true);
-        setToast({ show: true, message: l.scanning, type: 'success' });
-        await scanImage(img, 'ZA');
-        setEntrySource('receipt');
-      } catch (err) {
-        console.error("Receipt scanning failed:", err);
-        setToast({
-          show: true,
-          message: (err instanceof Error ? err.message : String(err)) || "Failed to process receipt image. Please enter manually.",
-          type: 'error'
-        });
-      } finally {
-        setLoading(false);
-        URL.revokeObjectURL(url);
-        if (fileInputRef.current) fileInputRef.current.value = '';
+    reader.onload = async () => {
+      const dataUrl = reader.result as string;
+
+      // First attempt: Gemini AI Vision Receipt Parser via Convex (if online & action available)
+      if (parseReceiptAction && typeof navigator !== 'undefined' && navigator.onLine) {
+        try {
+          const aiRes = await parseReceiptAction({ base64Image: dataUrl });
+          if (aiRes && aiRes.amount > 0) {
+            const amt = aiRes.amount;
+            const merch = aiRes.merchant || 'Receipt';
+            const cat = mapCategory(aiRes.category || 'other');
+
+            await addExpense({
+              amount: amt,
+              merchant: merch,
+              category: cat,
+              date: aiRes.date || new Date().toISOString().split('T')[0],
+              source: 'receipt',
+              note: 'Scanned receipt photo'
+            });
+
+            setInputText(`${amt} ${merch}`);
+            setDetectedCategory(cat);
+            setEntrySource('receipt');
+            setToast({ show: true, message: `📸 AI Scraped & Saved: ${amt} @ ${merch}`, type: 'success' });
+            setLoading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+          }
+        } catch (aiErr) {
+          console.warn("Server AI receipt parse failed, falling back to OCR engine:", aiErr);
+        }
       }
+
+      // Fallback: Client-side OCR + Pattern Scraper Engine
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = async () => {
+        try {
+          await scanImage(img, 'ZA');
+          setEntrySource('receipt');
+        } catch (err) {
+          console.error("Receipt scanning failed:", err);
+          setToast({
+            show: true,
+            message: (err instanceof Error ? err.message : String(err)) || "Failed to process receipt image. Please enter manually.",
+            type: 'error'
+          });
+        } finally {
+          setLoading(false);
+          URL.revokeObjectURL(url);
+          if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+      };
+      img.src = url;
     };
-    img.src = url;
+
+    reader.readAsDataURL(file);
   };
 
   // Trigger Inbox SMS/Email process
@@ -257,7 +319,6 @@ export default function QuickAddPage() {
     if (inboxPermStatus === 'granted') {
       setShowSmsModal(true);
     } else if (inboxPermStatus === 'denied') {
-      // Allow user to re-grant permission
       setShowPermModal(true);
     } else {
       setShowPermModal(true);
@@ -277,7 +338,7 @@ export default function QuickAddPage() {
   };
 
   // Extract fields from pasted SMS/Email text
-  const handleScrapeSms = () => {
+  const handleScrapeSms = async () => {
     if (!rawSmsInput.trim()) {
       setToast({ show: true, message: 'Please enter or paste message text first.', type: 'error' });
       return;
@@ -287,12 +348,30 @@ export default function QuickAddPage() {
     const best = getBestCandidate(parsed);
 
     if (best && best.amount > 0) {
-      setInputText(`${best.amount} ${best.merchant}`.trim());
-      setDetectedCategory(mapCategory(best.merchant || best.rawText));
-      setIsExpense(best.type !== 'income');
+      const amt = best.amount;
+      const merch = best.merchant || 'Merchant';
+      const cat = mapCategory(best.merchant || best.rawText);
+      const isExp = best.type !== 'income';
+
+      setInputText(`${amt} ${merch}`.trim());
+      setDetectedCategory(cat);
+      setIsExpense(isExp);
       setEntrySource('import');
       setShowSmsModal(false);
-      setToast({ show: true, message: `Scraped: ${best.currency} ${best.amount} @ ${best.merchant}`, type: 'success' });
+
+      if (isExp) {
+        await addExpense({
+          amount: amt,
+          merchant: merch,
+          category: cat,
+          date: best.date || new Date().toISOString().split('T')[0],
+          source: 'import',
+          note: 'Inbox SMS/Email'
+        });
+        setToast({ show: true, message: `📱 Scraped & Saved: ${best.currency} ${amt} @ ${merch}`, type: 'success' });
+      } else {
+        setToast({ show: true, message: `📱 Scraped Income: ${best.currency} ${amt} @ ${merch}`, type: 'success' });
+      }
     } else {
       setToast({ show: true, message: 'Could not extract valid financial info from message.', type: 'error' });
     }
@@ -566,45 +645,7 @@ export default function QuickAddPage() {
         </div>
       )}
 
-      {/* Scanned Receipt Result */}
-      {draft && !isScanning && (
-        <div className="mt-4 bg-white/5 border border-amber-400/30 rounded-2xl p-4 space-y-3 text-left">
-          <div className="flex items-center gap-2 text-amber-400 font-medium">
-            <Check className="w-5 h-5 flex-shrink-0" />
-            <span>{'Receipt Scanned'}</span>
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-sm text-white/80">
-            <div>
-              <span className="text-xs text-white/40 block">{'Merchant'}</span>
-              <span className="font-semibold">{String(draft.fields.merchant?.value ?? 'Unknown')}</span>
-            </div>
-            <div>
-              <span className="text-xs text-white/40 block">{'Amount'}</span>
-              <span className="font-semibold text-amber-400">
-                {Number(draft.fields.total?.value ?? 0).toFixed(2)}
-              </span>
-            </div>
-            <div>
-              <span className="text-xs text-white/40 block">{'Category'}</span>
-              <span className="capitalize">{String(draft.fields.category?.value ?? 'other')}</span>
-            </div>
-            <div>
-              <span className="text-xs text-white/40 block">{'Date'}</span>
-              <span>{draft.fields.date?.value ? String(draft.fields.date.value) : 'Today'}</span>
-            </div>
-          </div>
-          <Button
-            variant="primary"
-            size="sm"
-            className="w-full"
-            onClick={saveScannedExpense}
-          >
-            {'Save Expense'}
-          </Button>
-        </div>
-      )}
-
-      {/* Receipt Verification Bottom Sheet */}
+      {/* Receipt Verification Bottom Sheet (Questions only if ambiguous) */}
       <ReceiptVerifySheet
         isOpen={Boolean(draft && draft.questions && draft.questions.length > 0)}
         questions={draft?.questions ?? []}

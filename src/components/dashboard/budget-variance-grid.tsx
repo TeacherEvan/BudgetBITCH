@@ -13,8 +13,6 @@ import {
   MessageSquare,
   PenTool,
   Mic,
-  Calendar,
-  Tag,
 } from 'lucide-react';
 
 interface CategoryBudgetConfig {
