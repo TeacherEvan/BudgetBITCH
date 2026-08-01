@@ -7,6 +7,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  outputFileTracingRoot: __dirname,
+  turbopack: {
+    root: __dirname,
+  },
   allowedDevOrigins: ["127.0.0.1"],
   async headers() {
     return [

@@ -6,6 +6,12 @@ type VitalsHandler = (metric: Metric) => void;
 
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_ID;
 
+declare global {
+  interface Window {
+    gtag?: (command: string, targetId: string, config?: Record<string, unknown>) => void;
+  }
+}
+
 /**
  * Send a web-vitals metric to Google Analytics 4 or custom endpoint.
  * Falls back to console in development.
@@ -27,8 +33,8 @@ function sendToAnalytics(metric: Metric): void {
   }
 
   // Send to Google Analytics 4 via gtag
-  if (GA_MEASUREMENT_ID && typeof window !== 'undefined' && 'gtag' in window) {
-    (window as any).gtag('event', metric.name, {
+  if (GA_MEASUREMENT_ID && typeof window !== 'undefined' && typeof window.gtag === 'function') {
+    window.gtag('event', metric.name, {
       value: payload.value,
       metric_id: metric.id,
       metric_delta: payload.delta,
@@ -80,12 +86,18 @@ export function useWebVitals(): VitalsHandler {
  * Manually report a custom metric (e.g., interaction latency).
  */
 export function reportMetric(name: string, value: number, rating: 'good' | 'needs-improvement' | 'poor'): void {
-  sendToAnalytics({
-    name,
+  // Build a complete Metric object. `navigationId` is required by the
+  // web-vitals v5 Metric type (number, not optional) — use 0 as the sentinel
+  // for manually-reported metrics that aren't tied to a soft navigation.
+  const metric: Metric = {
+    name: name as Metric['name'],
     value: Math.round(value),
     delta: 0,
     id: crypto.randomUUID(),
     rating,
     navigationType: 'navigate',
-  } as any);
+    navigationId: 0,
+    entries: [] as PerformanceEntry[],
+  };
+  sendToAnalytics(metric);
 }
