@@ -95,6 +95,7 @@ export function DataBackupCard({
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   
   const deleteAllSnapshotsMut = useMutation(api.snapshots.deleteAllUserSnapshots);
+  const purgeAccountDataMut = useMutation(api.purge.purgeMyAccountData);
 
   // Storage Diagnostics and Encryption states
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
@@ -138,14 +139,24 @@ export function DataBackupCard({
   const handleResetConfirm = async () => {
     setResetOpen(false);
     logUserAction('Reset all data');
-    
-    // 1. Delete all server cloud snapshots, receipts & merchant aliases from Convex database
+
+    // 1. HARD DELETE the server-side account: private profile (shareCode,
+    //    display name), owned accounts and their boards (the full serialized
+    //    financial data), memberships, invites, pending deletes, cloud
+    //    snapshots, receipts, merchant aliases, push subscriptions and LINE
+    //    identity. Consent records (legalAgreements/cookieConsents) are
+    //    intentionally retained as the compliance audit trail.
     try {
-      if (deleteAllSnapshotsMut) {
-        await deleteAllSnapshotsMut();
-      }
+      await purgeAccountDataMut();
     } catch (err) {
-      console.warn('[Reset] Cloud snapshot wipe failed (offline or unauthenticated):', err);
+      console.warn('[Reset] Server purge failed (offline or unauthenticated):', err);
+      // Fall back to the narrower snapshot/receipt wipe so an offline reset
+      // still removes what it can reach.
+      try {
+        await deleteAllSnapshotsMut();
+      } catch (fallbackErr) {
+        console.warn('[Reset] Cloud snapshot wipe failed too:', fallbackErr);
+      }
     }
 
     // 2. Drain all sync queues, receipt drafts, and offline push queues
@@ -341,7 +352,7 @@ export function DataBackupCard({
       syncDesc: 'Sync your profile & daily snapshot to the cloud (not the couple board)',
       resetData: 'Reset All Data',
       resetConfirmTitle: 'Confirm Reset',
-      resetConfirmBody: 'Delete ALL data: profile, expenses, budgets, goals, etc. This cannot be undone.',
+      resetConfirmBody: 'Permanently delete ALL data: your profile, expenses, budgets, goals, shared accounts you own, receipts and cloud backups — on this device and on the server. This cannot be undone.',
       resetConfirmCancel: 'Cancel',
       resetConfirmDestructive: 'Delete All Data',
       privacyDisclaimer: 'Privacy Disclaimer',

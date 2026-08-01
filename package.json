@@ -21,7 +21,7 @@
     "test:convex": "vitest run --config convex/vitest.config.ts",
     "postinstall": "node scripts/copy-tesseract-assets.mjs",
     "test:watch": "vitest",
-    "test:e2e": "playwright test",
+    "test:e2e": "node scripts/ensure-e2e-port.mjs && playwright test",
     "ci": "node scripts/run-full-ci.mjs",
     "cap:init": "capacitor init",
     "cap:add:android": "capacitor add android",

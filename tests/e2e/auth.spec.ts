@@ -23,6 +23,7 @@ test.describe("Auth — sign-in page", () => {
   });
 
   test("switches to sign-up flow and back", async ({ page }) => {
+    await expect(page.getByRole("heading", { name: /welcome back/i })).toBeVisible();
     await page.getByRole("button", { name: /sign up/i }).click();
     await expect(page.getByRole("heading", { name: /create account/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /sign up$/i })).toBeVisible();

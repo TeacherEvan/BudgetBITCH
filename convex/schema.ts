@@ -28,7 +28,13 @@ export default defineSchema({
     data: v.any(),
     updatedAt: v.number(),
     updatedBy: v.id("users"),
-  }).index("by_boardId", ["boardId"]),
+  })
+    .index("by_boardId", ["boardId"])
+    // Needed by the account purge (Reset All Data): a couple board must be
+    // reachable from either member without an unbounded table scan, even when
+    // the user's userProfiles.linkedBoardId has already been cleared.
+    .index("by_memberA", ["memberA"])
+    .index("by_memberB", ["memberB"]),
 
   // Accounts feature: per-user account metadata (umbrella grouping + shareable invite).
   accounts: defineTable({
@@ -83,6 +89,9 @@ export default defineSchema({
   })
     .index("by_toUser_status", ["toUserId", "status"])
     .index("by_board", ["boardId"])
+    // Invites the user SENT — needed so an account purge can remove them
+    // without scanning the table.
+    .index("by_fromUser", ["fromUserId"])
     .index("by_token", ["token"]),
 
   // Two-party consent for destructive item deletes on a shared board.
@@ -235,7 +244,10 @@ export default defineSchema({
     userId: v.id("users"),
     accountId: v.optional(v.string()),
     linkedAt: v.number(),
-  }).index("by_lineUserId", ["lineUserId"]),
+  })
+    .index("by_lineUserId", ["lineUserId"])
+    // Purge path: unlink every LINE identity bound to a user.
+    .index("by_user", ["userId"]),
 
   // Merchant receipt layout templates
   receiptTemplates: defineTable({
@@ -263,5 +275,8 @@ export default defineSchema({
     category: v.string(),
     hits: v.number(),
     updatedAt: v.number(),
-  }).index("by_user_and_normalised", ["userId", "normalised"]),
+  })
+    .index("by_user_and_normalised", ["userId", "normalised"])
+    // Purge path: delete every alias for a user without a table scan.
+    .index("by_user", ["userId"]),
 });
