@@ -47,6 +47,7 @@ vi.mock('../lib/receipt/ocr-worker', () => ({
     engine: 'tesseract.js@6',
     capturedAt: Date.now(),
   }),
+  resetOcrWorker: vi.fn().mockResolvedValue(undefined),
 }));
 
 describe('useReceiptScan hook', () => {
@@ -86,5 +87,27 @@ describe('useReceiptScan hook', () => {
     expect(entry.source).toBe('receipt');
     expect(entry.date).toBe('2026-03-15');
     expect(result.current.draft).toBeNull();
+  });
+
+  test('confirmDraft with skipLocalAdd confirms on server but writes no local expense', async () => {
+    const { result } = renderHook(() => useReceiptScan());
+
+    await act(async () => {
+      await result.current.scanImage({} as HTMLImageElement, 'ZA');
+    });
+    expect(result.current.draft).not.toBeNull();
+
+    // Caller (Quick Add) already persisted the expense, so pass skipLocalAdd
+    // to avoid a duplicate write into the local expense store.
+    await act(async () => {
+      await result.current.confirmDraft({ merchant: 'CHECKERS' }, { skipLocalAdd: true });
+    });
+
+    // No local expense written, but the draft still cleared and the server
+    // confirm mutation was invoked with the overrides.
+    expect(mockAddExpense).not.toHaveBeenCalled();
+    expect(result.current.draft).toBeNull();
+    const entry = mockMutation.mock.calls[mockMutation.mock.calls.length - 1][0];
+    expect(entry).toMatchObject({ overrides: { merchant: 'CHECKERS' } });
   });
 });

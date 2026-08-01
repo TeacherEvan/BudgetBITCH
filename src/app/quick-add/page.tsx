@@ -89,6 +89,12 @@ export default function QuickAddPage() {
   const [incomeCategory, setIncomeCategory] = useState<IncomeCategory>('salary');
   const [entrySource, setEntrySource] = useState<'manual' | 'receipt' | 'import'>('manual');
 
+  // Scanned-receipt review fields (editable before save)
+  const [scannedAmount, setScannedAmount] = useState('');
+  const [scannedMerchant, setScannedMerchant] = useState('');
+  const [scannedCategory, setScannedCategory] = useState<ExpenseCategory>('other');
+  const [scannedDate, setScannedDate] = useState('');
+
   // Permission & SMS Modal States
   const [showPermModal, setShowPermModal] = useState(false);
   const [showSmsModal, setShowSmsModal] = useState(false);
@@ -129,51 +135,91 @@ export default function QuickAddPage() {
     }
   }, [toast.show]);
 
-  // Sync scanned receipt draft fields into Quick Add form automatically
+  // Populate the Quick Add form from a scanned receipt draft so the user can
+  // review/edit the fields before saving. We mirror the SMS flow: fill the
+  // editable input + category selector, then let the user press Save manually.
+  // The draft is NOT auto-committed — that was the previous bug (data landed in
+  // the DB but never touched any field).
   useEffect(() => {
     if (draft && draft.fields) {
       setIsExpense(true);
       setEntrySource('receipt');
+
       const amtVal = Number(draft.fields.total?.value ?? 0);
-      const merchVal = String(draft.fields.merchant?.value ?? 'Receipt').trim();
+      const merchVal = String(draft.fields.merchant?.value ?? '').trim();
       const catVal = (draft.fields.category?.value as string) ?? 'other';
-
       const catMapped = mapCategory(catVal || merchVal);
+      const dateVal = draft.fields.date?.value
+        ? String(draft.fields.date.value)
+        : new Date().toISOString().split('T')[0];
+
       setDetectedCategory(catMapped);
+      // Receipt engine already returns a valid category; use it directly for the
+      // scanned review select (don't run the SMS mapCategory, which can emit
+      // values like 'phone_internet' that aren't in the select list).
+      setScannedAmount(amtVal > 0 ? String(amtVal) : '');
+      setScannedMerchant(merchVal);
+      setScannedCategory((catVal as ExpenseCategory) ?? 'other');
+      setScannedDate(dateVal);
 
-      if (amtVal > 0) {
-        // Auto-fill input text with amount and merchant
-        setInputText(`${amtVal} ${merchVal}`.trim());
+      // Pre-fill the combined amount+merchant input so the user can still edit
+      // the free-text field if they prefer that path.
+      const prefill = [
+        amtVal > 0 ? String(amtVal) : '',
+        merchVal,
+      ].filter(Boolean).join(' ').trim();
+      setInputText(prefill);
 
-        // Automatically commit scanned expense so user does not need to re-type or click secondary buttons
-        const handleAutoCommit = async () => {
-          try {
-            await addExpense({
-              amount: amtVal,
-              merchant: merchVal || 'Photo Receipt',
-              category: catMapped,
-              date: draft.fields.date?.value ? String(draft.fields.date.value) : new Date().toISOString().split('T')[0],
-              source: 'receipt',
-              note: 'Scanned receipt photo'
-            });
-            setToast({ show: true, message: `📸 Scraped & Saved: ${amtVal} @ ${merchVal}`, type: 'success' });
-            await confirmDraft();
-          } catch (err) {
-            console.error("Auto-save receipt error:", err);
-          }
-        };
-        handleAutoCommit();
-      } else {
-        // If amount was unextracted or 0, pre-fill merchant and prompt user for amount
-        setInputText(`${merchVal}`.trim());
+      if (amtVal > 0 || merchVal) {
         setToast({
           show: true,
-          message: `📸 Photo scanned: "${merchVal}". Please type the amount:`,
+          message: `📸 Photo scanned${merchVal ? `: ${merchVal}` : ''}. Review the fields, then press Save.`,
+          type: 'success'
+        });
+      } else {
+        setToast({
+          show: true,
+          message: '📸 Photo scanned but no details found. Type the amount to save.',
           type: 'success'
         });
       }
     }
-  }, [draft, addExpense, confirmDraft]);
+  }, [draft]);
+
+  // Persist the reviewed receipt fields. We fill the shared form state and reuse
+  // the manual Save path so there is exactly one write into the expense store.
+  const handleSaveScannedReceipt = async () => {
+    const amtVal = parseFloat(scannedAmount);
+    if (!Number.isFinite(amtVal) || amtVal <= 0) {
+      setToast({ show: true, message: 'Please enter a valid amount', type: 'error' });
+      return;
+    }
+    try {
+      setLoading(true);
+      await addExpense({
+        amount: Math.round(amtVal * 100) / 100,
+        merchant: scannedMerchant.trim() || 'Photo Receipt',
+        category: scannedCategory,
+        date: scannedDate || new Date().toISOString().split('T')[0],
+        source: 'receipt',
+        note: 'Scanned receipt photo',
+      });
+      setToast({ show: true, message: `📸 Saved receipt: ${amtVal} @ ${scannedMerchant || 'Photo Receipt'}`, type: 'success' });
+      // Clear the scanned state + draft (skip the hook's internal add; we just wrote it).
+      await confirmDraft(undefined, { skipLocalAdd: true });
+      setScannedAmount('');
+      setScannedMerchant('');
+      setScannedDate('');
+      setInputText('');
+      setDetectedCategory('other');
+      setEntrySource('manual');
+    } catch (err) {
+      console.error('Failed to save scanned receipt:', err);
+      setToast({ show: true, message: `Failed to save: ${err instanceof Error ? err.message : String(err)}`, type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Handle manual or verified save
   const handleSave = async () => {
@@ -548,6 +594,78 @@ export default function QuickAddPage() {
             </div>
           </div>
         </div>
+
+        {/* Scanned Receipt Review (editable fields) */}
+        {entrySource === 'receipt' && (scannedAmount !== '' || scannedMerchant !== '') ? (
+          <div className="mb-6 bg-amber-400/5 border border-amber-400/30 rounded-2xl p-4 space-y-3 animate-in fade-in" data-testid="scanned-receipt-card">
+            <div className="flex items-center gap-2 text-amber-400 font-medium text-xs uppercase tracking-wider">
+              <Camera className="w-4 h-4" />
+              <span>{'Scanned Receipt — review & save'}</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-bold text-white/50 tracking-wider">{'Amount'}</label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={scannedAmount}
+                  onChange={(e) => setScannedAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-white/30 text-sm focus:outline-none focus:border-amber-400/50"
+                  data-testid="scanned-amount-input"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-bold text-white/50 tracking-wider">{'Date'}</label>
+                <input
+                  type="date"
+                  value={scannedDate}
+                  onChange={(e) => setScannedDate(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-400/50"
+                  data-testid="scanned-date-input"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] uppercase font-bold text-white/50 tracking-wider">{'Merchant'}</label>
+              <input
+                type="text"
+                value={scannedMerchant}
+                onChange={(e) => setScannedMerchant(e.target.value)}
+                placeholder="Merchant name"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-white/30 text-sm focus:outline-none focus:border-amber-400/50"
+                data-testid="scanned-merchant-input"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] uppercase font-bold text-white/50 tracking-wider">{'Category'}</label>
+              <select
+                value={scannedCategory}
+                onChange={(e) => setScannedCategory(e.target.value as ExpenseCategory)}
+                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none focus:border-amber-400/50 text-white outline-none"
+                data-testid="scanned-category-select"
+              >
+                {['food', 'transport', 'shopping', 'utilities', 'entertainment', 'medical', 'housing', 'personal', 'education', 'income', 'other'].map((c) => (
+                  <option key={c} value={c} className="bg-[#0a0a0a]">{c}</option>
+                ))}
+              </select>
+            </div>
+
+            <Button
+              variant="primary"
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-bold"
+              onClick={handleSaveScannedReceipt}
+              isLoading={loading}
+              data-testid="save-scanned-receipt-btn"
+            >
+              <Save className="w-4 h-4 text-slate-950" />
+              <span>{'Save Scanned Receipt'}</span>
+            </Button>
+          </div>
+        ) : null}
 
         {/* Category Pickers for Income */}
         {!isExpense && (

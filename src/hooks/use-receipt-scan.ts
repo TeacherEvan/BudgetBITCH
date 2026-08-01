@@ -1,9 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import type { Id } from '../../convex/_generated/dataModel';
 import { preprocessImage } from '../lib/receipt/preprocess';
-import { runOcrScan } from '../lib/receipt/ocr-worker';
+import { runOcrScan, resetOcrWorker } from '../lib/receipt/ocr-worker';
 import { scrapeOffline } from '../lib/receipt/engine-client';
 import { saveOfflineDraft } from '../lib/db/stores/receipt-drafts-store';
 import { addExpense } from '../lib/db/stores/expenses-store';
@@ -20,6 +20,14 @@ export function useReceiptScan() {
   const scrapeMutation = useMutation(api.receipts.scrape);
   const answerMutation = useMutation(api.receipts.answer);
   const confirmMutation = useMutation(api.receipts.confirm);
+
+  // Release the cached Tesseract worker when the component unmounts so it
+  // doesn't hold WASM memory / the lang blob across route changes.
+  useEffect(() => {
+    return () => {
+      void resetOcrWorker();
+    };
+  }, []);
 
   const scanImage = useCallback(
     async (source: HTMLCanvasElement | HTMLImageElement, countryHint?: string) => {
@@ -88,7 +96,10 @@ export function useReceiptScan() {
 
   // Persist the scanned receipt as a real local expense entry, then clear the draft.
   const confirmDraft = useCallback(
-    async (overrides?: Record<string, string>) => {
+    async (
+      overrides?: Record<string, string>,
+      opts?: { skipLocalAdd?: boolean }
+    ) => {
       if (!draft) return;
       const amount = Number(draft.fields.total?.value ?? 0);
       const merchant = String(
@@ -112,7 +123,11 @@ export function useReceiptScan() {
 
       try {
         // Write the local expense first so it lands even if the server confirm fails.
-        await addExpense(entry);
+        // Callers that already persisted the expense (e.g. Quick Add's manual Save)
+        // pass skipLocalAdd to avoid a duplicate write.
+        if (!opts?.skipLocalAdd) {
+          await addExpense(entry);
+        }
 
         if (typeof navigator !== 'undefined' && navigator.onLine && draft.draftId) {
           await confirmMutation({

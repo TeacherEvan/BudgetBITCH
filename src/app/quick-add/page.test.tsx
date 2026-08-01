@@ -163,7 +163,7 @@ describe('QuickAddPage', () => {
     expect(mockPush).toHaveBeenCalledWith('/dashboard');
   });
 
-  it('populates the input from a scraped receipt draft', async () => {
+  it('shows editable scanned-receipt fields but does NOT auto-commit (no data lands until Save)', async () => {
     mockDraft = {
       draftId: 'draft-1',
       fields: {
@@ -176,9 +176,76 @@ describe('QuickAddPage', () => {
 
     render(<QuickAddPage />);
 
+    // Review card + editable fields are populated from the draft...
     await waitFor(() => {
-      const input = screen.getByPlaceholderText('Type amount then note, e.g. 120 lunch') as HTMLInputElement;
-      expect(input.value).toBe('450 Supermarket');
+      expect(screen.getByTestId('scanned-receipt-card')).toBeInTheDocument();
+    });
+    const amountInput = screen.getByTestId('scanned-amount-input') as HTMLInputElement;
+    const merchantInput = screen.getByTestId('scanned-merchant-input') as HTMLInputElement;
+    expect(amountInput.value).toBe('450');
+    expect(merchantInput.value).toBe('Supermarket');
+    // ...but no expense was written yet. The previous bug auto-committed
+    // silently, so this asserts the fix: scanned data sits in fields first.
+    expect(mockAddExpense).not.toHaveBeenCalled();
+  });
+
+  it('saves the scanned receipt via the review card: one expense write + draft confirm (no double write)', async () => {
+    mockDraft = {
+      draftId: 'draft-1',
+      fields: {
+        total: { value: 450 },
+        merchant: { value: 'Supermarket' },
+        category: { value: 'food' },
+      },
+      questions: [],
+    };
+
+    render(<QuickAddPage />);
+
+    const saveBtn = await screen.findByTestId('save-scanned-receipt-btn');
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(mockAddExpense).toHaveBeenCalledTimes(1);
+      expect(mockAddExpense).toHaveBeenCalledWith(expect.objectContaining({
+        amount: 450,
+        merchant: 'Supermarket',
+        category: 'food',
+        source: 'receipt',
+      }));
+      // Confirm the draft with skipLocalAdd so the expense isn't written twice.
+      expect(mockConfirmDraft).toHaveBeenCalledWith(undefined, { skipLocalAdd: true });
+    });
+  });
+
+  it('persists user-edited field values when saving the scanned receipt', async () => {
+    mockDraft = {
+      draftId: 'draft-2',
+      fields: {
+        total: { value: 450 },
+        merchant: { value: 'Supermarket' },
+        category: { value: 'food' },
+      },
+      questions: [],
+    };
+
+    render(<QuickAddPage />);
+
+    const amountInput = (await screen.findByTestId('scanned-amount-input')) as HTMLInputElement;
+    const merchantInput = (await screen.findByTestId('scanned-merchant-input')) as HTMLInputElement;
+
+    // User corrects the amount and merchant before saving.
+    fireEvent.change(amountInput, { target: { value: '39.99' } });
+    fireEvent.change(merchantInput, { target: { value: 'Corner Shop' } });
+
+    fireEvent.click(screen.getByTestId('save-scanned-receipt-btn'));
+
+    await waitFor(() => {
+      expect(mockAddExpense).toHaveBeenCalledWith(expect.objectContaining({
+        amount: 39.99,
+        merchant: 'Corner Shop',
+        source: 'receipt',
+      }));
     });
   });
 

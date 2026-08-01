@@ -1,4 +1,3 @@
-import { createWorker, OEM } from 'tesseract.js';
 import type { OcrLine, OcrPayload, OcrWord } from '../../../convex/lib/receipt/types';
 
 /** Minimal shape of the tesseract.js recognize() result we consume. */
@@ -17,31 +16,88 @@ type TesseractRecognizeResult = { data: { lines?: TesseractLine[] } };
 export type OcrScanOptions = {
   countryHint?: string;
   currencyHint?: string;
-  createWorkerFn?: typeof createWorker;
+  createWorkerFn?: (...args: unknown[]) => Promise<unknown>;
   onProgress?: (progress: number) => void;
 };
+
+export type TesseractWorker = {
+  recognize: (canvas: HTMLCanvasElement) => Promise<TesseractRecognizeResult>;
+  terminate: () => Promise<unknown>;
+};
+
+// Tesseract.js loads ~MBs of WASM + lang data. Import it lazily so it stays out
+// of the Quick Add / wizard route bundles and only downloads on first scan.
+let tesseractMod: typeof import('tesseract.js') | null = null;
+async function loadTesseract(): Promise<typeof import('tesseract.js')> {
+  if (!tesseractMod) {
+    tesseractMod = await import('tesseract.js');
+  }
+  return tesseractMod;
+}
+
+// Reuse one worker per language across scans. Creating a worker re-initializes
+// the WASM runtime + lang blob (hundreds of ms), so reusing it is the single
+// biggest repeat-scan win. Invalidated by lang change or explicit reset.
+let cachedWorker: { lang: string; worker: TesseractWorker } | null = null;
+
+/** Drop the cached worker (e.g. on unmount or in tests). */
+export async function resetOcrWorker(): Promise<void> {
+  if (cachedWorker) {
+    await cachedWorker.worker.terminate();
+    cachedWorker = null;
+  }
+}
+
+async function getWorker(
+  lang: string,
+  makeWorker: (...args: unknown[]) => Promise<unknown>,
+  logger?: (m: { status: string; progress: number }) => void
+): Promise<TesseractWorker> {
+  if (cachedWorker && cachedWorker.lang === lang) {
+    return cachedWorker.worker;
+  }
+  // Lang changed (or first run): terminate the stale worker, then create a new one.
+  if (cachedWorker) {
+    await cachedWorker.worker.terminate();
+    cachedWorker = null;
+  }
+  const worker = (await makeWorker(lang, 1, {
+    workerPath: '/tesseract/worker.min.js',
+    corePath: '/tesseract/',
+    langPath: '/tesseract/lang',
+    cacheMethod: 'refresh',
+    logger: (m: { status: string; progress: number }) => {
+      if (m.status === 'recognizing text' && logger) {
+        logger(m);
+      }
+    },
+  })) as TesseractWorker;
+  cachedWorker = { lang, worker };
+  return worker;
+}
 
 export async function runOcrScan(
   canvas: HTMLCanvasElement,
   options: OcrScanOptions = {}
 ): Promise<OcrPayload> {
   const lang = options.countryHint === 'TH' ? 'eng+tha' : 'eng';
-  const makeWorker = options.createWorkerFn ?? createWorker;
 
-  const worker = await makeWorker(lang, OEM.LSTM_ONLY, {
-    workerPath: '/tesseract/worker.min.js',
-    corePath: '/tesseract/',
-    langPath: '/tesseract/lang',
-    cacheMethod: 'refresh',
-    logger: (m) => {
-      if (m.status === 'recognizing text' && options.onProgress) {
-        options.onProgress(m.progress);
-      }
-    },
-  });
+  const makeWorker =
+    options.createWorkerFn ??
+    (async (...args: unknown[]) => {
+      const { createWorker, OEM } = await loadTesseract();
+      return (createWorker as (...a: unknown[]) => Promise<unknown>)(...args, OEM.LSTM_ONLY);
+    });
 
-  const res = (await worker.recognize(canvas)) as unknown as TesseractRecognizeResult;
-  await worker.terminate();
+  const worker = await getWorker(
+    lang,
+    makeWorker,
+    options.onProgress
+      ? (m) => options.onProgress!(m.progress)
+      : undefined
+  );
+
+  const res = (await worker.recognize(canvas)) as TesseractRecognizeResult;
 
   const rawLines = res.data.lines ?? [];
   const lines: OcrLine[] = rawLines.map((l: TesseractLine, idx: number) => {
