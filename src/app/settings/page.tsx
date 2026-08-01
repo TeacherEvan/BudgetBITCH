@@ -170,24 +170,6 @@ export default function SettingsPage() {
             shared={shared}
           />
 
-          <section id="settings-line" className="scroll-mt-24">
-            <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#C9960C] mb-4">
-              {'LINE Receipt Bot'}
-            </h2>
-            <div className="p-4 rounded-2xl border border-white/10 bg-white/5 space-y-3">
-              <p className="text-sm text-white/60">
-                {'Forward receipt photos in LINE and have them land in Budget Boss automatically.'}
-              </p>
-              <Button
-                variant="primary"
-                className="w-full gap-2 justify-center bg-amber-400 text-black hover:bg-amber-300 font-semibold"
-                onClick={() => router.push('/settings/line-link')}
-              >
-                {'Connect LINE account'}
-              </Button>
-            </div>
-          </section>
-
           <DataBackupCard
             locale={locale}
             lastSync={lastSync}

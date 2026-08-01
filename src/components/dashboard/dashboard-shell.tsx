@@ -13,7 +13,7 @@ import { AlertsSidebar } from '@/components/dashboard/alerts-sidebar';
 import { PriorityGuide } from '@/components/dashboard/priority-guide';
 import { Modal } from '@/components/ui/modal';
 import { useCriticalExpense } from '@/hooks/use-critical-expense';
-import { useWizardProfile, useBudgets, useBills } from '@/hooks/use-local-db';
+import { useWizardProfile, useBudgets, useBills, useExpenses } from '@/hooks/use-local-db';
 import { useResolvedLocation } from '@/hooks/use-resolved-location';
 import { useResolvedCurrency } from '@/hooks/use-currency';
 import { useShimmerPref } from '@/hooks/use-shimmer-pref';
@@ -39,6 +39,7 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
   const { profile } = useWizardProfile();
   const { budgets, loading: budgetsLoading } = useBudgets();
   const { bills } = useBills();
+  const { expenses } = useExpenses();
   const [criticalExpenseOpen, setCriticalExpenseOpen] = useState(false);
   const [openPanels, setOpenPanels] = useState<PanelKey[]>(['spending']);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -311,7 +312,7 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
           {/* Panels or Excel Views */}
           <div className="mt-4">
             {excelTab === 'variance' && (
-              <BudgetVarianceGrid locale={locale} currency={resolvedCurrency} />
+              <BudgetVarianceGrid locale={locale} currency={resolvedCurrency} expenses={expenses} />
             )}
             {excelTab === 'cashflow' && (
               <CashFlowProjectionCard

@@ -9,6 +9,7 @@ import { AccountSyncMount } from '@/components/accounts/account-sync-mount';
 import { PWARegister } from '@/components/pwa/pwa-register';
 import { AppShellExtras } from '@/components/pwa/app-shell-extras';
 import { WebViewBanner } from '@/components/webview/webview-banner';
+import { NativeBridge } from '@/components/native/native-bridge';
 import { SiteFooter } from '@/components/legal/site-footer';
 import { CookieConsentBanner } from '@/components/legal/cookie-consent-banner';
 import { NextIntlClientProvider } from 'next-intl';
@@ -81,6 +82,7 @@ export default async function RootLayout({
                   <PWARegister />
                   <AppShellExtras locale={locale} />
                   <WebViewBanner />
+                  <NativeBridge />
                   {children}
                   <SiteFooter />
                   <CookieConsentBanner />

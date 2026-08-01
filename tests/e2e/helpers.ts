@@ -164,28 +164,41 @@ export async function setupConsentDismissal(page: Page) {
     // Test-only backstop: guarantee the global privacy + cookie overlays never
     // intercept pointer events during E2E. (Unit tests cover the modal's real
     // visibility logic; this CSS exists only in the test browser.)
-    const style = document.createElement("style");
-    style.textContent =
-      '[data-testid="privacy-disclaimer"],[aria-label="Cookies"],[data-testid="push-permission"]{display:none!important;}';
-
-    // addInitScript runs before documentElement exists on first navigation, so
-    // appending synchronously throws "Cannot read properties of null". Guard on
-    // readiness and observe `document` (not documentElement, which may be null).
-    const attachStyle = () => {
+    //
+    // Robustness note: under the Next.js dev server, first paint + HMR can race
+    // the style insertion, letting the fullscreen privacy disclaimer (z-70)
+    // flash in and swallow a click before suppression lands. So we (a) attach
+    // synchronously when possible (documentElement exists at document-start for
+    // real navigations), (b) fall back to DOMContentLoaded, and (c) re-heal via
+    // the MutationObserver below if the style is ever missing from the DOM.
+    const STYLE_ID = "e2e-overlay-suppressor";
+    const ensureStyle = () => {
       if (!document.documentElement) return;
+      if (document.getElementById(STYLE_ID)) return;
+      const style = document.createElement("style");
+      style.id = STYLE_ID;
+      style.textContent =
+        '[data-testid="privacy-disclaimer"],[aria-label="Cookies"],[data-testid="push-permission"]{display:none!important;pointer-events:none!important;}';
       document.documentElement.appendChild(style);
     };
+
+    ensureStyle();
     if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", attachStyle, { once: true });
-    } else {
-      attachStyle();
+      document.addEventListener("DOMContentLoaded", ensureStyle, { once: true });
     }
 
-    const obs = new MutationObserver(tryDismiss);
+    const obs = new MutationObserver(() => {
+      ensureStyle();
+      tryDismiss();
+    });
     obs.observe(document, { childList: true, subtree: true });
     // Best-effort immediate pass once DOM is ready.
-    if (document.readyState !== "loading") tryDismiss();
-    else document.addEventListener("DOMContentLoaded", tryDismiss);
+    if (document.readyState !== "loading") {
+      ensureStyle();
+      tryDismiss();
+    } else {
+      document.addEventListener("DOMContentLoaded", tryDismiss);
+    }
   });
 }
 

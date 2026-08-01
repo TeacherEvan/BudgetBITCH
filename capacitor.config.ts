@@ -22,6 +22,15 @@ const devServerUrl = 'http://10.0.2.2:3100'; // 10.0.2.2 is the Android emulator
 const config: CapacitorConfig = {
   appId: 'com.budgetbitch.app',
   appName: 'Budget Boss',
+  plugins: {
+    SplashScreen: {
+      launchShowDuration: 0, // we hide it from NativeBridge once React mounts
+      androidScaleType: 'CENTER_CROP',
+    },
+    Keyboard: {
+      resize: 'body',
+    },
+  },
   // `webDir` is unused while server.url is set, but kept so a future static
   // export build (`next build` -> out/) has a declared copy target.
   webDir: 'out',

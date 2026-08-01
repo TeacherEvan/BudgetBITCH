@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ConvexPasswordAuthForm } from "./convex-password-auth-form";
 import { ForgotPasswordForm } from "./forgot-password-form";
+import { ProTipsCard } from "@/components/pro-tips/pro-tips-card";
 
 type CleanAuthCardProps = {
   initialFlow: "signIn" | "signUp";
@@ -100,6 +101,11 @@ export function CleanAuthCard({ initialFlow, redirectTo = "/dashboard" }: CleanA
               </button>
             </p>
           )}
+        </div>
+
+        {/* Boss Pro-Tip: rotating financial tip on the signed-out surface */}
+        <div className="mt-6">
+          <ProTipsCard locale="en" />
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore, useState } from "react";
 import { detectWebView } from "@/lib/webview";
+import { isNative } from "@/lib/native";
 
 const DISMISS_KEY = "bb:webview-banner-dismissed";
 
@@ -12,6 +13,10 @@ function subscribe() {
 
 function getSnapshot(): boolean {
   if (typeof window === "undefined") return false;
+  // A first-party native shell (Capacitor) is not a hostile third-party
+  // webview; its auth uses localStorage tokens, so never nag to "open in
+  // browser" there.
+  if (isNative()) return false;
   if (!detectWebView()) return false;
   if (sessionStorage.getItem(DISMISS_KEY) === "true") return false;
   return true;

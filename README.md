@@ -48,10 +48,6 @@ See [docs/CI_CD.md](docs/CI_CD.md) for gate specifications, build guard mechanic
   `src/lib/receipt/**`) plus a server `parseReceipt` Convex action
   (`convex/receipts.ts`) backed by Gemini 2.5 Flash, with a learning scraper
   engine (`convex/lib/receipt/**`), receipt templates, and merchant aliases
-- **LINE receipt bot** — link your LINE account in Settings (LIFF), then send a
-  receipt photo in the chat; a HMAC-verified Convex webhook (`/line/webhook`)
-  resolves your Convex user from the `lineUsers` mapping and ingests the image
-  via the same Gemini parse path, tagged `source: "line"`
 - **SMS import** — bank-SMS parsing (`src/lib/sms-parser/**`, EU/SG/US/generic
   patterns) with a PWA Web Share Target (`/share-target` → `/sms-confirm`)
 - **Quick Add widget** — standalone `/quick-add` route with a +/- sign toggle,
@@ -238,12 +234,6 @@ Backend (Convex dashboard):
 - `FEEDBACK_ADMIN_EMAIL` — recipient for in-app bug reports (`convex/feedback.ts`).
 - `GEMINI_API_KEY` — Google Gemini key for the server-side receipt parse action
   (`convex/receipts.ts`).
-- `LINE_CHANNEL_SECRET` — LINE Messaging API channel secret; verifies the
-  `x-line-signature` HMAC on `/line/webhook` (Convex env).
-- `LINE_CHANNEL_ACCESS_TOKEN` — LINE channel access token; fetches message
-  image bytes from the LINE content API (Convex env).
-- `NEXT_PUBLIC_LINE_LIFF_ID` — LIFF app ID used by the Settings "Link my LINE
-  account" screen (`src/app/settings/line-link`).
 
 `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` are read by the unwired NextAuth
 scaffold in `src/auth.ts` and are not required to run the app.

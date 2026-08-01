@@ -49,8 +49,7 @@ vi.mock('convex/react', () => ({
   useMutation: () => mockConvexMutation,
 }));
 
-// Mock the deterministic receipt scraper hook (replaced the old AI action path).
-// `mockDraft` is what the hook reports back after a successful scrape.
+// Mock the deterministic receipt scraper hook.
 type MockDraft = {
   draftId: string;
   fields: Record<string, { value: unknown }>;
@@ -77,6 +76,7 @@ vi.mock('@/hooks/use-receipt-scan', () => ({
 describe('QuickAddPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     mockDraft = null;
   });
 
@@ -85,6 +85,7 @@ describe('QuickAddPage', () => {
     expect(screen.getByText('Quick Add')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Type amount then note, e.g. 120 lunch')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /scan receipt/i })).toBeInTheDocument();
+    expect(screen.getByTestId('inbox-sms-btn')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
   });
 
@@ -108,7 +109,6 @@ describe('QuickAddPage', () => {
     
     fireEvent.click(saveButton);
 
-    // Toast alert should display invalid amount
     await waitFor(() => {
       expect(screen.getByText('Please enter a valid amount')).toBeInTheDocument();
     });
@@ -119,7 +119,6 @@ describe('QuickAddPage', () => {
     const input = screen.getByPlaceholderText('Type amount then note, e.g. 120 lunch');
     const saveButton = screen.getByRole('button', { name: /save/i });
 
-    // Type amount and note
     fireEvent.change(input, { target: { value: '150.50 delicious dinner' } });
     fireEvent.click(saveButton);
 
@@ -138,7 +137,6 @@ describe('QuickAddPage', () => {
     render(<QuickAddPage />);
     const toggleButton = screen.getByRole('button', { name: /expense \(-\)/i });
     
-    // Toggle to income
     fireEvent.click(toggleButton);
 
     const input = screen.getByPlaceholderText('Type amount then note, e.g. 120 lunch');
@@ -151,7 +149,7 @@ describe('QuickAddPage', () => {
       expect(mockSaveProfile).toHaveBeenCalledTimes(1);
       expect(mockSaveProfile).toHaveBeenCalledWith(expect.objectContaining({
         answers: expect.objectContaining({
-          income: 52500, // 50000 base + 2500 bonus
+          income: 52500,
         }),
       }));
       expect(screen.getByText('Income added successfully!')).toBeInTheDocument();
@@ -181,6 +179,45 @@ describe('QuickAddPage', () => {
     await waitFor(() => {
       const input = screen.getByPlaceholderText('Type amount then note, e.g. 120 lunch') as HTMLInputElement;
       expect(input.value).toBe('450 Supermarket');
+    });
+  });
+
+  it('handles Inbox SMS permission prompt with remember tick box and scrapes message', async () => {
+    render(<QuickAddPage />);
+    const inboxBtn = screen.getByTestId('inbox-sms-btn');
+    
+    // Click Inbox SMS button triggers permission modal
+    fireEvent.click(inboxBtn);
+    expect(screen.getByTestId('inbox-perm-modal')).toBeInTheDocument();
+    expect(screen.getByTestId('remember-perm-checkbox')).toBeChecked();
+
+    // Grant permission
+    fireEvent.click(screen.getByTestId('grant-perm-btn'));
+
+    // Opens SMS Paste Modal
+    await waitFor(() => {
+      expect(screen.getByTestId('paste-sms-modal')).toBeInTheDocument();
+    });
+
+    const smsInput = screen.getByTestId('sms-text-input');
+    fireEvent.change(smsInput, { target: { value: 'Spent $42.50 at STARBUCKS card 9999 on 08/01/2026' } });
+    fireEvent.click(screen.getByTestId('scrape-sms-btn'));
+
+    // Input auto-fills with scraped details
+    await waitFor(() => {
+      const input = screen.getByPlaceholderText('Type amount then note, e.g. 120 lunch') as HTMLInputElement;
+      expect(input.value).toContain('42.5 STARBUCKS');
+    });
+
+    // Save expense and verify source is 'import' (SMS)
+    const saveButton = screen.getByRole('button', { name: /save/i });
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(mockAddExpense).toHaveBeenCalledWith(expect.objectContaining({
+        amount: 42.5,
+        source: 'import',
+      }));
     });
   });
 

@@ -126,7 +126,7 @@ describe('gatherSnapshotData (C3 dedup)', () => {
     mocked.getExpenses.mockResolvedValue([
       {
         id: '1',
-        date: '2026-07-05',
+        date: new Date().toISOString().slice(0, 7) + '-05',
         category: 'food',
         merchant: 'test',
         amount: 10000,

@@ -3,10 +3,12 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Minus, Camera, Save, ArrowLeft, Loader2, Check, AlertCircle } from 'lucide-react';
+import { Plus, Minus, Camera, Save, ArrowLeft, Loader2, Check, AlertCircle, MessageSquare, ShieldCheck, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useExpenses, useWizardProfile, useIncomes } from '@/hooks/use-local-db';
 import { useReceiptScan } from '@/hooks/use-receipt-scan';
+import { useInboxPermission } from '@/hooks/use-inbox-permission';
+import { parseSMS, getBestCandidate } from '@/lib/sms-parser';
 import { ReceiptVerifySheet } from '@/components/receipt/receipt-verify-sheet';
 import { type ExpenseCategory, type IncomeCategory } from '@/lib/types/budget';
 
@@ -15,8 +17,10 @@ const labels = {
     title: 'Quick Add',
     placeholder: 'Type amount then note, e.g. 120 lunch',
     camera: 'Scan Receipt',
+    inbox: 'Inbox SMS/Email',
     save: 'Save',
     scanning: 'Scanning receipt...',
+    parsing: 'Parsing SMS message...',
     successAdded: 'Expense recorded successfully!',
     successIncome: 'Income added successfully!',
     failed: 'Failed to record entry!',
@@ -24,13 +28,22 @@ const labels = {
     back: 'Back',
     expense: 'Expense (-)',
     income: 'Income (+)',
+    permTitle: 'SMS & Email Inbox Permission',
+    permDesc: 'Allow Budget Boss to parse financial transaction messages from your inbox or clipboard to auto-fill details?',
+    rememberChoice: 'Remember my decision on this device',
+    allow: 'Allow Access',
+    deny: 'Deny Access',
+    pasteSmsTitle: 'Paste SMS or Email Notification',
+    pasteSmsPlaceholder: 'Paste bank alert e.g. "Paid $45.50 at STARBUCKS card 1234 on 08/01/2026"',
+    extractBtn: 'Scrape & Auto-Fill',
+    close: 'Close',
   }
 };
 
 const mapCategory = (cat: string): ExpenseCategory => {
   const normalized = cat.toLowerCase().replace(/[\s_-]+/g, '');
-  if (normalized.includes('food') || normalized.includes('dining') || normalized.includes('restaurant')) return 'food';
-  if (normalized.includes('transport') || normalized.includes('taxi') || normalized.includes('ride') || normalized.includes('fuel') || normalized.includes('car')) return 'transport';
+  if (normalized.includes('food') || normalized.includes('dining') || normalized.includes('restaurant') || normalized.includes('starbucks') || normalized.includes('mcdonald')) return 'food';
+  if (normalized.includes('transport') || normalized.includes('taxi') || normalized.includes('ride') || normalized.includes('fuel') || normalized.includes('car') || normalized.includes('grab') || normalized.includes('bolt') || normalized.includes('uber')) return 'transport';
   if (normalized.includes('utilities') || normalized.includes('electricity') || normalized.includes('water')) return 'utilities';
   if (normalized.includes('housing') || normalized.includes('rent') || normalized.includes('mortgage')) return 'housing';
   if (normalized.includes('phone') || normalized.includes('internet') || normalized.includes('telecom')) return 'phone_internet';
@@ -52,23 +65,7 @@ export default function QuickAddPage() {
   const { profile, save: saveProfile } = useWizardProfile();
   
   const { draft, isScanning, scanImage, answerQuestion, confirmDraft } = useReceiptScan();
-
-  const saveScannedExpense = async () => {
-    if (!draft) return;
-    try {
-      setLoading(true);
-      await confirmDraft();
-      setToast({ show: true, message: l.successAdded, type: 'success' });
-    } catch (err) {
-      setToast({
-        show: true,
-        message: (err instanceof Error ? err.message : String(err)) || 'Failed to save receipt.',
-        type: 'error',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { status: inboxPermStatus, grantPermission, denyPermission, resetPermission } = useInboxPermission();
 
   // UI States
   const [isExpense, setIsExpense] = useState(true);
@@ -76,6 +73,13 @@ export default function QuickAddPage() {
   const [loading, setLoading] = useState(false);
   const [detectedCategory, setDetectedCategory] = useState<ExpenseCategory>('other');
   const [incomeCategory, setIncomeCategory] = useState<IncomeCategory>('salary');
+  const [entrySource, setEntrySource] = useState<'manual' | 'receipt' | 'import'>('manual');
+
+  // Permission & SMS Modal States
+  const [showPermModal, setShowPermModal] = useState(false);
+  const [showSmsModal, setShowSmsModal] = useState(false);
+  const [rememberCheck, setRememberCheck] = useState(true);
+  const [rawSmsInput, setRawSmsInput] = useState('');
   
   const [toast, setToast] = useState<{
     show: boolean;
@@ -95,10 +99,11 @@ export default function QuickAddPage() {
     }
   }, [toast.show]);
 
-  // Sync scanned draft fields to input box
+  // Sync scanned receipt draft fields to input box
   useEffect(() => {
     if (draft && draft.fields) {
       setIsExpense(true);
+      setEntrySource('receipt');
       const amtVal = draft.fields.total?.value ?? 0;
       const merchVal = draft.fields.merchant?.value ?? '';
       const catVal = (draft.fields.category?.value as string) ?? 'other';
@@ -108,7 +113,24 @@ export default function QuickAddPage() {
     }
   }, [draft]);
 
-  // Handle manual input save
+  const saveScannedExpense = async () => {
+    if (!draft) return;
+    try {
+      setLoading(true);
+      await confirmDraft();
+      setToast({ show: true, message: l.successAdded, type: 'success' });
+    } catch (err) {
+      setToast({
+        show: true,
+        message: (err instanceof Error ? err.message : String(err)) || 'Failed to save receipt.',
+        type: 'error',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle manual/auto-filled save
   const handleSave = async () => {
     const trimmed = inputText.trim();
     if (!trimmed) {
@@ -135,7 +157,7 @@ export default function QuickAddPage() {
           merchant: noteVal || ('Quick Expense'),
           category: detectedCategory,
           date: new Date().toISOString().split('T')[0],
-          source: 'manual',
+          source: entrySource,
           note: noteVal || undefined
         });
         setToast({ show: true, message: l.successAdded, type: 'success' });
@@ -148,7 +170,7 @@ export default function QuickAddPage() {
           frequency: 'one_time',
           date: new Date().toISOString().split('T')[0],
           note: noteVal || undefined,
-          entrySource: 'manual'
+          entrySource: entrySource === 'import' ? 'import' : 'manual'
         });
 
         // Also update profile baseline monthly income
@@ -168,6 +190,7 @@ export default function QuickAddPage() {
       // Reset form
       setInputText('');
       setDetectedCategory('other');
+      setEntrySource('manual');
     } catch (err) {
       console.error(err);
       setToast({ show: true, message: `${l.failed} ${err instanceof Error ? err.message : String(err)}`, type: 'error' });
@@ -186,7 +209,6 @@ export default function QuickAddPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Verify it's an image
     if (!file.type.startsWith('image/')) {
       setToast({ show: true, message: 'Please select a valid image file.', type: 'error' });
       return;
@@ -213,6 +235,7 @@ export default function QuickAddPage() {
         setLoading(true);
         setToast({ show: true, message: l.scanning, type: 'success' });
         await scanImage(img, 'ZA');
+        setEntrySource('receipt');
       } catch (err) {
         console.error("Receipt scanning failed:", err);
         setToast({
@@ -227,6 +250,52 @@ export default function QuickAddPage() {
       }
     };
     img.src = url;
+  };
+
+  // Trigger Inbox SMS/Email process
+  const triggerInboxFeature = () => {
+    if (inboxPermStatus === 'granted') {
+      setShowSmsModal(true);
+    } else if (inboxPermStatus === 'denied') {
+      // Allow user to re-grant permission
+      setShowPermModal(true);
+    } else {
+      setShowPermModal(true);
+    }
+  };
+
+  const handleGrantPermission = () => {
+    grantPermission(rememberCheck);
+    setShowPermModal(false);
+    setShowSmsModal(true);
+  };
+
+  const handleDenyPermission = () => {
+    denyPermission(rememberCheck);
+    setShowPermModal(false);
+    setToast({ show: true, message: 'Permission denied for SMS/Email ingestion.', type: 'error' });
+  };
+
+  // Extract fields from pasted SMS/Email text
+  const handleScrapeSms = () => {
+    if (!rawSmsInput.trim()) {
+      setToast({ show: true, message: 'Please enter or paste message text first.', type: 'error' });
+      return;
+    }
+
+    const parsed = parseSMS(rawSmsInput, 'manual-paste');
+    const best = getBestCandidate(parsed);
+
+    if (best && best.amount > 0) {
+      setInputText(`${best.amount} ${best.merchant}`.trim());
+      setDetectedCategory(mapCategory(best.merchant || best.rawText));
+      setIsExpense(best.type !== 'income');
+      setEntrySource('import');
+      setShowSmsModal(false);
+      setToast({ show: true, message: `Scraped: ${best.currency} ${best.amount} @ ${best.merchant}`, type: 'success' });
+    } else {
+      setToast({ show: true, message: 'Could not extract valid financial info from message.', type: 'error' });
+    }
   };
 
   return (
@@ -287,14 +356,26 @@ export default function QuickAddPage() {
               onChange={(e) => setInputText(e.target.value)}
               placeholder={l.placeholder}
               disabled={loading}
-              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-white/30 text-sm focus:outline-none focus:border-amber-400/50 transition-colors disabled:opacity-50 pr-12"
+              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-white/30 text-sm focus:outline-none focus:border-amber-400/50 transition-colors disabled:opacity-50 pr-24"
               autoFocus
             />
-            {detectedCategory !== 'other' && isExpense && (
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] bg-amber-400/20 text-amber-300 font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                {detectedCategory}
-              </span>
-            )}
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              {entrySource === 'import' && (
+                <span className="text-[10px] bg-sky-400/20 text-sky-300 font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  📱 SMS
+                </span>
+              )}
+              {entrySource === 'receipt' && (
+                <span className="text-[10px] bg-amber-400/20 text-amber-300 font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  📸 Photo
+                </span>
+              )}
+              {detectedCategory !== 'other' && isExpense && entrySource === 'manual' && (
+                <span className="text-[10px] bg-amber-400/20 text-amber-300 font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  {detectedCategory}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -320,30 +401,42 @@ export default function QuickAddPage() {
           </div>
         )}
 
-        {/* Action Buttons Row */}
-        <div className="grid grid-cols-2 gap-4">
+        {/* Action Buttons Grid */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
           {/* Camera Scan Button */}
           <Button
             variant="secondary"
             onClick={triggerCamera}
             isLoading={loading}
-            className="flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-semibold"
+            className="flex items-center justify-center gap-1.5 py-3 rounded-2xl text-xs font-semibold"
           >
             <Camera className="w-4 h-4 text-amber-400" />
             <span>{l.camera}</span>
           </Button>
 
-          {/* Save Button */}
+          {/* Inbox SMS / Email Button */}
           <Button
-            variant="primary"
-            onClick={handleSave}
+            variant="secondary"
+            onClick={triggerInboxFeature}
             isLoading={loading}
-            className="flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-bold"
+            className="flex items-center justify-center gap-1.5 py-3 rounded-2xl text-xs font-semibold"
+            data-testid="inbox-sms-btn"
           >
-            <Save className="w-4 h-4 text-slate-950" />
-            <span>{l.save}</span>
+            <MessageSquare className="w-4 h-4 text-sky-400" />
+            <span>{l.inbox}</span>
           </Button>
         </div>
+
+        {/* Save Button */}
+        <Button
+          variant="primary"
+          onClick={handleSave}
+          isLoading={loading}
+          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-xs font-bold shadow-lg"
+        >
+          <Save className="w-4 h-4 text-slate-950" />
+          <span>{l.save}</span>
+        </Button>
 
         {/* Hidden Camera Input */}
         <input
@@ -356,6 +449,100 @@ export default function QuickAddPage() {
           data-testid="camera-file-input"
         />
       </div>
+
+      {/* Permission Modal */}
+      {showPermModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="w-full max-w-sm bg-neutral-900 border border-sky-400/30 rounded-3xl p-6 shadow-2xl space-y-4" data-testid="inbox-perm-modal">
+            <div className="flex items-center gap-3 text-sky-400">
+              <div className="p-2.5 rounded-2xl bg-sky-400/10 border border-sky-400/20">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <h3 className="text-sm font-bold text-white leading-tight">
+                {l.permTitle}
+              </h3>
+            </div>
+            <p className="text-xs text-white/70 leading-relaxed">
+              {l.permDesc}
+            </p>
+            <label className="flex items-center gap-2.5 text-xs text-white/80 cursor-pointer pt-2 select-none">
+              <input
+                type="checkbox"
+                checked={rememberCheck}
+                onChange={(e) => setRememberCheck(e.target.checked)}
+                className="w-4 h-4 rounded border-white/20 bg-white/10 text-sky-500 focus:ring-0 cursor-pointer"
+                data-testid="remember-perm-checkbox"
+              />
+              <span>{l.rememberChoice}</span>
+            </label>
+            <div className="flex gap-2 pt-2">
+              <Button
+                variant="secondary"
+                className="flex-1 py-2.5 rounded-xl text-xs"
+                onClick={handleDenyPermission}
+                data-testid="deny-perm-btn"
+              >
+                {l.deny}
+              </Button>
+              <Button
+                variant="primary"
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-sky-400 hover:bg-sky-300 text-slate-950"
+                onClick={handleGrantPermission}
+                data-testid="grant-perm-btn"
+              >
+                {l.allow}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Paste SMS / Email Modal */}
+      {showSmsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="w-full max-w-sm bg-neutral-900 border border-white/10 rounded-3xl p-6 shadow-2xl space-y-4" data-testid="paste-sms-modal">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sky-400">
+                <MessageSquare className="w-5 h-5" />
+                <h3 className="text-sm font-bold text-white">
+                  {l.pasteSmsTitle}
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowSmsModal(false)}
+                className="text-white/40 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <textarea
+              value={rawSmsInput}
+              onChange={(e) => setRawSmsInput(e.target.value)}
+              placeholder={l.pasteSmsPlaceholder}
+              rows={4}
+              className="w-full bg-white/5 border border-white/10 rounded-2xl p-3 text-xs text-white placeholder-white/30 focus:outline-none focus:border-sky-400/50"
+              data-testid="sms-text-input"
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                className="flex-1 py-2.5 rounded-xl text-xs"
+                onClick={() => setShowSmsModal(false)}
+              >
+                {l.close}
+              </Button>
+              <Button
+                variant="primary"
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-sky-400 hover:bg-sky-300 text-slate-950"
+                onClick={handleScrapeSms}
+                data-testid="scrape-sms-btn"
+              >
+                {l.extractBtn}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Floating Toast Notification */}
       {toast.show && (

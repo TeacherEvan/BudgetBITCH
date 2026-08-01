@@ -107,13 +107,16 @@ test.describe("First-launch language select", () => {
     await expect(modal).toBeVisible({ timeout: 15000 });
     await expect(modal.getByText(/choose your language/i)).toBeVisible();
 
-    // Selecting a language persists it and dismisses the modal.
-    await modal.getByRole("button", { name: /English \(South Africa\)/i }).click();
+    // Selecting a language sets the pressed state; the choice is persisted and
+    // the modal dismissed only when "Get Started" is clicked (which calls
+    // onComplete -> finishLocaleSelect). Default selection is English -> "en".
+    await modal.getByRole("button", { name: /English/i }).click();
+    await modal.getByRole("button", { name: /get started/i }).click();
     await expect(modal).toBeHidden({ timeout: 10000 });
     const stored = await page.evaluate(() =>
       localStorage.getItem("budgetbitch:locale"),
     );
-    expect(stored).toBe("en-ZA");
+    expect(stored).toBe("en");
   });
 
   test("does not show the language modal when a locale is already saved", async ({
@@ -122,7 +125,7 @@ test.describe("First-launch language select", () => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     // Establish origin, then persist a locale and skip the splash for reload.
     await page.evaluate(() => {
-      localStorage.setItem("budgetbitch:locale", "en-ZA");
+      localStorage.setItem("budgetbitch:locale", "en");
       sessionStorage.setItem("bb:splash-seen", "true");
     });
     await page.reload({ waitUntil: "domcontentloaded" });

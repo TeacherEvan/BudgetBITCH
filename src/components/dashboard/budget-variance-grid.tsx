@@ -5,9 +5,16 @@ import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { formatMoney, type CurrencyCode } from '@/lib/utils/currency';
 import type { ExpenseEntry, ExpenseCategory } from '@/lib/types/budget';
+import { useExpenses } from '@/hooks/use-local-db';
 import {
   ArrowUpDown,
   Sparkles,
+  Receipt,
+  MessageSquare,
+  PenTool,
+  Mic,
+  Calendar,
+  Tag,
 } from 'lucide-react';
 
 interface CategoryBudgetConfig {
@@ -56,16 +63,19 @@ const DEFAULT_BUDGETS: Record<ExpenseCategory, number> = {
 type SortField = 'category' | 'budgeted' | 'actual' | 'variance';
 
 export function BudgetVarianceGrid({
-  expenses = [],
+  expenses: propExpenses,
   currency = 'USD',
   locale = 'en',
 }: BudgetVarianceGridProps) {
+  const { expenses: hookExpenses } = useExpenses();
+  const activeExpenses = propExpenses && propExpenses.length > 0 ? propExpenses : hookExpenses;
+
   const [sortField, setSortField] = useState<SortField>('variance');
   const [sortAsc, setSortAsc] = useState(true);
 
   const gridData = useMemo(() => {
     const actualMap: Record<string, number> = {};
-    expenses.forEach(e => {
+    activeExpenses.forEach(e => {
       actualMap[e.category] = (actualMap[e.category] || 0) + e.amount;
     });
 
@@ -73,7 +83,7 @@ export function BudgetVarianceGrid({
       category: cat,
       nameEn: CATEGORY_NAMES[cat]?.en ?? cat,
       budgeted: DEFAULT_BUDGETS[cat],
-      actual: actualMap[cat] || (DEFAULT_BUDGETS[cat] * (cat === 'housing' ? 1.0 : cat === 'food' ? 0.85 : 0.4)),
+      actual: actualMap[cat] || 0,
     }));
 
     return rows.sort((a, b) => {
@@ -88,7 +98,7 @@ export function BudgetVarianceGrid({
 
       return sortAsc ? result : -result;
     });
-  }, [expenses, sortField, sortAsc]);
+  }, [activeExpenses, sortField, sortAsc]);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -103,20 +113,26 @@ export function BudgetVarianceGrid({
   const totalActual = gridData.reduce((sum, r) => sum + r.actual, 0);
   const totalVariance = totalBudgeted - totalActual;
 
+  const sortedRecentExpenses = useMemo(() => {
+    return [...activeExpenses].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+  }, [activeExpenses]);
+
   return (
-    <Card className="p-5 border-white/10 bg-neutral-900/90 backdrop-blur-xl relative">
+    <Card className="p-5 border-white/10 bg-neutral-900/90 backdrop-blur-xl relative space-y-6" data-testid="budget-variance-grid">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <div className="flex items-center gap-2.5">
           <div className="p-2 rounded-xl bg-emerald-400/10 text-emerald-400 border border-emerald-400/20">
             <Sparkles className="w-5 h-5" />
           </div>
           <div>
             <h3 className="font-bold text-white text-base">
-              {'Budget Variance & Health Data Bars'}
+              {'Excel Variance Grid & Spent Ledger'}
             </h3>
             <p className="text-xs text-white/50">
-              {'Budgeted vs. Actual with in-cell data bars & dynamic thresholds'}
+              {'Budgeted vs. Actual with spent details & ingestion source tracking'}
             </p>
           </div>
         </div>
@@ -203,7 +219,6 @@ export function BudgetVarianceGrid({
                   </td>
                   <td className="py-2.5 px-3">
                     <div className="flex items-center gap-2">
-                      {/* Excel-style in-cell Data Bar */}
                       <div className="flex-1 bg-white/10 h-2 rounded-full overflow-hidden">
                         <div
                           style={{ width: `${Math.min(100, pctUsed)}%` }}
@@ -220,6 +235,89 @@ export function BudgetVarianceGrid({
             })}
           </tbody>
         </table>
+      </div>
+
+      {/* Excel Spent Ledger Section */}
+      <div className="border-t border-white/10 pt-5">
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-2">
+            <span>📑</span>
+            {'Recent Spent Items (Excel Ledger)'}
+          </h4>
+          <span className="text-[10px] text-white/40 font-mono">
+            {sortedRecentExpenses.length} {'entries recorded'}
+          </span>
+        </div>
+
+        {sortedRecentExpenses.length === 0 ? (
+          <div className="p-6 text-center text-xs text-white/40 bg-white/5 rounded-2xl border border-white/5">
+            {'No expenses recorded yet. Tap Quick Add (+) to capture via Photo or SMS/Email inbox!'}
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-2xl border border-white/10 bg-black/40">
+            <table className="w-full text-left text-xs border-collapse" data-testid="spent-ledger-table">
+              <thead>
+                <tr className="border-b border-white/10 text-white/40 uppercase text-[10px] bg-white/5">
+                  <th className="py-2.5 px-3">{'Date'}</th>
+                  <th className="py-2.5 px-3">{'Merchant / Item'}</th>
+                  <th className="py-2.5 px-3">{'Category'}</th>
+                  <th className="py-2.5 px-3">{'Ingestion Source'}</th>
+                  <th className="py-2.5 px-3 text-right">{'Amount'}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {sortedRecentExpenses.slice(0, 15).map(expense => {
+                  const catName = CATEGORY_NAMES[expense.category]?.en ?? expense.category;
+                  let sourceBadge = (
+                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/70">
+                      <PenTool className="w-3 h-3 text-white/50" /> Manual
+                    </span>
+                  );
+                  if (expense.source === 'receipt') {
+                    sourceBadge = (
+                      <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 font-semibold">
+                        <Receipt className="w-3 h-3 text-amber-400" /> 📸 Photo Receipt
+                      </span>
+                    );
+                  } else if (expense.source === 'import') {
+                    sourceBadge = (
+                      <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-sky-400/20 text-sky-300 font-semibold">
+                        <MessageSquare className="w-3 h-3 text-sky-400" /> 📱 SMS/Email Inbox
+                      </span>
+                    );
+                  } else if (expense.source === 'voice') {
+                    sourceBadge = (
+                      <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-purple-400/20 text-purple-300 font-semibold">
+                        <Mic className="w-3 h-3 text-purple-400" /> 🎤 Voice
+                      </span>
+                    );
+                  }
+
+                  return (
+                    <tr key={expense.id} className="hover:bg-white/5 transition-colors">
+                      <td className="py-2.5 px-3 text-white/60 font-mono text-[11px]">
+                        {expense.date}
+                      </td>
+                      <td className="py-2.5 px-3 font-semibold text-white">
+                        {expense.merchant}
+                        {expense.note && <span className="text-[11px] text-white/40 block font-normal">{expense.note}</span>}
+                      </td>
+                      <td className="py-2.5 px-3 text-white/70">
+                        {catName}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        {sourceBadge}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-mono font-bold text-rose-400">
+                        {formatMoney(expense.amount, currency, locale)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </Card>
   );
