@@ -46,6 +46,7 @@
     "@swc/core": "^1.15.46",
     "@types/web-push": "^3.6.4",
     "@vercel/analytics": "^2.0.1",
+    "agent-browser": "^0.33.1",
     "convex": "^1.34.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.38.0",
@@ -111,7 +112,8 @@
     "es5-ext@0.10.64": true,
     "core-js-pure@3.49.0": true,
     "@swc/core@1.15.47": true,
-    "tesseract.js@6.0.1": true
+    "tesseract.js@6.0.1": true,
+    "agent-browser@0.33.1": true
   },
   "overrides": {
     "postcss": "^8.5.18"

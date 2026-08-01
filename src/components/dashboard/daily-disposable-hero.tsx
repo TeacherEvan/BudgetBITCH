@@ -77,16 +77,17 @@ export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProp
     return reconcileBudgetWithExpenses(profile, expenses);
   }, [profile, expenses]);
 
-  const daysLeft = useMemo(() => {
-    const today = new Date();
-    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-    return daysInMonth - today.getDate();
-  }, []);
+  // Date text is rendered only AFTER mount. Computing it from `new Date()`
+  // during SSR yields a server timestamp that differs from the client's
+  // (timezone / second skew), which throws a React #418 hydration mismatch.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
-  const monthName = useMemo(() => {
-    const today = new Date();
-    return today.toLocaleDateString('en-US', { month: 'long' });
-  }, []);
+  const today = mounted ? new Date() : null;
+  const daysLeft = today
+    ? new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() - today.getDate()
+    : 0;
+  const monthName = today ? today.toLocaleDateString('en-US', { month: 'long' }) : '';
 
   if (!calculation) {
     return (
@@ -250,7 +251,9 @@ export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProp
           <span>
             {isOverBudget
               ? (`Over budget by ${formatCurrency(Math.abs(remainingDisposable), locale)}`)
-              : (`${daysLeft} days left in ${monthName}`)}
+              : mounted
+                ? (`${daysLeft} days left in ${monthName}`)
+                : null}
           </span>
         </div>
       </div>

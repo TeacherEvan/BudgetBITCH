@@ -59,7 +59,15 @@ export const parseReceipt = action({
     accountId: v.optional(v.string()), // Optional: which account/board this belongs to
   },
   handler: async (ctx, args): Promise<{ receiptId: string; amount: number; merchant: string; category: string; date: string | null }> => {
-    const userId = await getAuthUserId(ctx);
+    const userId = await (async () => {
+      try {
+        return await getAuthUserId(ctx);
+      } catch (e) {
+        throw new ConvexError(
+          `Authentication failed: ${e instanceof Error ? e.message : String(e)}`
+        );
+      }
+    })();
     if (!userId) {
       throw new ConvexError("Authentication required to parse receipts");
     }
