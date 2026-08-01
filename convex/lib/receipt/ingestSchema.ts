@@ -29,8 +29,10 @@ export const ingestRequestBodySchema = z.object({
     lang: z.string().optional(),
     engine: z.string().optional(),
     capturedAt: z.number().optional(),
-    countryHint: z.string().optional(),
-    currencyHint: z.string().optional(),
+    // nullish (not optional) because the TeacherBOY bridge serializes
+    // absent hints as JSON null (Python None) rather than omitting the key.
+    countryHint: z.string().nullish(),
+    currencyHint: z.string().nullish(),
   }),
 });
 
