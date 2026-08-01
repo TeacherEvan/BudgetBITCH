@@ -18,7 +18,7 @@ export type OcrPayload = {
   width: number;
   height: number;
   lang: string;
-  engine: 'tesseract.js@6';
+  engine: 'tesseract.js@6' | 'gemini-vision@1';
   capturedAt: number;
   countryHint?: string;
   currencyHint?: string;
