@@ -1,3 +1,5 @@
+import type { LineItem } from './extract_details';
+
 export type OcrWord = {
   text: string;
   conf: number;
@@ -68,6 +70,7 @@ export type ScrapeResult = {
   confidence: Record<FieldName, number>;
   evidence: Record<FieldName, OcrLine | null>;
   questions: Question[];
+  lineItems?: LineItem[]; // optional parsed line items from receipt
 };
 
 export function makeLine(words: OcrWord[]): OcrLine {

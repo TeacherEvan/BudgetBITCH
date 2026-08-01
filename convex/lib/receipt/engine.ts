@@ -9,6 +9,8 @@ import { generateQuestions } from './questions';
 import { categorizeReceipt } from './categorize';
 import type { FieldCandidate, FieldName, OcrLine, OcrPayload, ScrapeResult } from './types';
 import { validateExtraction } from './validate';
+import { detectCurrency as detectCurrencyNew, parseAmount, parseDate, inferCategory } from './currency';
+import { inferPaymentMethod } from './payment';
 
 export type EngineOptions = {
   now?: number;
@@ -100,10 +102,15 @@ export function scrape(payload: OcrPayload, options: EngineOptions = {}): Scrape
 
   const questions = generateQuestions(fields, confidence);
 
+  // Use the enhanced currency detection for payment method and additional currency info
+  const paymentMethod = inferPaymentMethod(fullText);
+  const currencyHint = detectCurrencyNew(fullText);
+
   return {
     fields,
     confidence,
     evidence,
     questions,
+    lineItems: items,
   };
 }

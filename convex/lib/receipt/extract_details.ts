@@ -6,6 +6,7 @@ export type LineItem = {
   description: string;
   amount: number;
   qty?: number;
+  unit_price?: number;
 };
 
 export function extractTax(payload: NormalisedPayload): FieldCandidate | null {
@@ -86,6 +87,9 @@ export function extractLineItems(payload: NormalisedPayload): LineItem[] {
     totalLineIdx = payload.lines.length;
   }
 
+  // Regex to find qty * unit_price = total patterns
+  const QTY_UNIT_PATTERN = /(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:[.,]\d{2})?)\s*[=]\s*(\d+(?:[.,]\d{2})?)/i;
+
   for (let i = 0; i < totalLineIdx; i++) {
     const line = payload.lines[i];
     if (line.isNoise) continue;
@@ -99,10 +103,24 @@ export function extractLineItems(payload: NormalisedPayload): LineItem[] {
       const desc = (descEnd > 0 ? line.text.slice(0, descEnd) : line.text).trim();
 
       if (desc.length >= 2 && !/^\d+$/.test(desc)) {
-        items.push({
+        const item: LineItem = {
           description: desc,
           amount: lastAmt.value,
-        });
+        };
+
+        // Try to parse qty * unit_price pattern
+        const qtyUnitMatch = line.text.match(QTY_UNIT_PATTERN);
+        if (qtyUnitMatch) {
+          const qty = parseFloat(qtyUnitMatch[1]);
+          const unitPrice = parseFloat(qtyUnitMatch[2].replace(',', '.'));
+          const total = parseFloat(qtyUnitMatch[3].replace(',', '.'));
+          if (!Number.isNaN(qty) && !Number.isNaN(unitPrice) && Math.abs(qty * unitPrice - total) < 0.02) {
+            item.qty = qty;
+            item.unit_price = unitPrice;
+          }
+        }
+
+        items.push(item);
       }
     }
   }
