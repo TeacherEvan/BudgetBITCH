@@ -22,6 +22,7 @@ import type * as feedback from "../feedback.js";
 import type * as http from "../http.js";
 import type * as legal from "../legal.js";
 import type * as lib_auth from "../lib/auth.js";
+import type * as lib_gemini from "../lib/gemini.js";
 import type * as lib_line_verify from "../lib/line/verify.js";
 import type * as lib_receipt_amounts from "../lib/receipt/amounts.js";
 import type * as lib_receipt_categorize from "../lib/receipt/categorize.js";
@@ -33,6 +34,7 @@ import type * as lib_receipt_extract_details from "../lib/receipt/extract_detail
 import type * as lib_receipt_extract_merchant from "../lib/receipt/extract_merchant.js";
 import type * as lib_receipt_extract_total from "../lib/receipt/extract_total.js";
 import type * as lib_receipt_fingerprint from "../lib/receipt/fingerprint.js";
+import type * as lib_receipt_ingestSchema from "../lib/receipt/ingestSchema.js";
 import type * as lib_receipt_learning from "../lib/receipt/learning.js";
 import type * as lib_receipt_metrics from "../lib/receipt/metrics.js";
 import type * as lib_receipt_normalise from "../lib/receipt/normalise.js";
@@ -73,6 +75,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   legal: typeof legal;
   "lib/auth": typeof lib_auth;
+  "lib/gemini": typeof lib_gemini;
   "lib/line/verify": typeof lib_line_verify;
   "lib/receipt/amounts": typeof lib_receipt_amounts;
   "lib/receipt/categorize": typeof lib_receipt_categorize;
@@ -84,6 +87,7 @@ declare const fullApi: ApiFromModules<{
   "lib/receipt/extract_merchant": typeof lib_receipt_extract_merchant;
   "lib/receipt/extract_total": typeof lib_receipt_extract_total;
   "lib/receipt/fingerprint": typeof lib_receipt_fingerprint;
+  "lib/receipt/ingestSchema": typeof lib_receipt_ingestSchema;
   "lib/receipt/learning": typeof lib_receipt_learning;
   "lib/receipt/metrics": typeof lib_receipt_metrics;
   "lib/receipt/normalise": typeof lib_receipt_normalise;
