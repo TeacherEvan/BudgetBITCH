@@ -102,3 +102,44 @@ test("parseReceipt handles API error responses", async () => {
   vi.unstubAllGlobals();
 });
 
+test("parseMessage handles successful response from Gemini for financial notification text", async () => {
+  const userId = await seedUser(t, "message-user");
+  const mockFetch = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      candidates: [
+        {
+          content: {
+            parts: [
+              {
+                text: JSON.stringify({
+                  amount: 89.99,
+                  merchant: "Amazon",
+                  category: "shopping",
+                  date: "2026-07-25",
+                  type: "expense"
+                })
+              }
+            ]
+          }
+        }
+      ]
+    })
+  });
+  vi.stubGlobal("fetch", mockFetch);
+
+  const res = await asUser(userId).action(api.receipts.parseMessage, {
+    messageText: "FNB :-): Paid R89.99 at Amazon on 25Jul26."
+  });
+
+  expect(res).toEqual({
+    amount: 89.99,
+    merchant: "Amazon",
+    category: "shopping",
+    date: "2026-07-25",
+    type: "expense"
+  });
+
+  vi.unstubAllGlobals();
+});
+

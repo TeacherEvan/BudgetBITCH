@@ -221,6 +221,42 @@ describe('QuickAddPage', () => {
     });
   });
 
+  it('scrapes preset sample bank notification and shows verified card preview', async () => {
+    render(<QuickAddPage />);
+
+    const inboxBtn = screen.getByTestId('inbox-sms-btn');
+    fireEvent.click(inboxBtn);
+
+    // Grant permission
+    fireEvent.click(screen.getByTestId('grant-perm-btn'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('paste-sms-modal')).toBeInTheDocument();
+    });
+
+    // Click sample notification chip
+    const presetBtn = screen.getByText(/CHASE: Your card ending in 1234 was charged \$45\.20 at TARGET on 08\/01/i);
+    fireEvent.click(presetBtn);
+
+    // Shows verified card preview
+    await waitFor(() => {
+      expect(screen.getByTestId('verified-scraped-card')).toBeInTheDocument();
+      expect(screen.getByText('TARGET')).toBeInTheDocument();
+      expect(screen.getByText('$45.20')).toBeInTheDocument();
+    });
+
+    // Confirm verified entry
+    fireEvent.click(screen.getByTestId('confirm-verified-sms-btn'));
+
+    await waitFor(() => {
+      expect(mockAddExpense).toHaveBeenCalledWith(expect.objectContaining({
+        amount: 45.2,
+        merchant: 'TARGET',
+        source: 'import',
+      }));
+    });
+  });
+
   it('rejects a non-image file and prompts for manual entry', async () => {
     render(<QuickAddPage />);
 

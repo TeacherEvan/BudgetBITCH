@@ -179,6 +179,107 @@ Do not include any formatting, markdown wrappers, or extra text. Output ONLY the
   },
 });
 
+/**
+ * Parses financial SMS or Email notification text using Gemini 2.5 Flash AI.
+ * Extracts amount, merchant, category, date, and transaction type.
+ */
+export const parseMessage = action({
+  args: {
+    messageText: v.string(),
+  },
+  handler: async (ctx, args): Promise<{ amount: number; merchant: string; category: string; date: string | null; type: "expense" | "income" }> => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new ConvexError("Authentication required to parse messages");
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new ConvexError(
+        "Gemini API key is not configured in the backend environment. Please set GEMINI_API_KEY in your Convex dashboard."
+      );
+    }
+
+    const prompt = `Analyze the financial notification email or SMS message text below:
+"${args.messageText}"
+
+Extract:
+1. Total amount spent or received (as a positive number, do not include currency symbols).
+2. Merchant/Store/Payee name (e.g. Amazon, Uber, Walmart, Salary, Chase, Starbucks).
+3. A suggested category (food, transport, shopping, utilities, entertainment, medical, housing, personal, education, income, salary, freelance, business, other).
+4. Date (formatted as YYYY-MM-DD or null if not clear).
+5. Transaction type ("expense" or "income").
+
+Return a JSON object matching this schema exactly:
+{
+  "amount": number,
+  "merchant": string,
+  "category": string,
+  "date": string | null,
+  "type": "expense" | "income"
+}
+Do not include any formatting, markdown wrappers, or extra text. Output ONLY the raw JSON string.`;
+
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [{ text: prompt }],
+              },
+            ],
+            generationConfig: {
+              responseMimeType: "application/json",
+            },
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Gemini API returned error status ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+      const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) {
+        throw new Error("No parsing response candidates returned from Gemini API");
+      }
+
+      let cleanText = text.trim();
+      if (cleanText.startsWith("```")) {
+        cleanText = cleanText.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
+      }
+
+      const parsed = JSON.parse(cleanText);
+
+      const amount = validateAmount(parsed.amount);
+      const merchant = validateMerchant(parsed.merchant);
+      const category = normalizeCategory(parsed.category);
+      const date = validateDate(parsed.date);
+      const type = parsed.type === "income" ? "income" : "expense";
+
+      return {
+        amount,
+        merchant,
+        category,
+        date: date ?? null,
+        type,
+      };
+    } catch (error) {
+      console.error("Error in parseMessage action:", error);
+      const message = error instanceof Error ? error.message : String(error);
+      throw new ConvexError(`Failed to parse message: ${message}`);
+    }
+  },
+});
+
 // Internal mutation to save receipt (called from action)
 export const saveReceipt = internalMutation({
   args: {
