@@ -2,7 +2,7 @@
 'use client';
 
 import { useConvexAuth } from "@convex-dev/auth/react";
-import { useState, useSyncExternalStore } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { LanguageSelectModal } from "@/components/onboarding/language-select-modal";
 import { CleanAuthCard } from "@/components/auth/clean-auth-card";
@@ -24,18 +24,20 @@ export default function Home() {
 
   const mounted = useSyncExternalStore(subscribeToMount, () => true, () => false);
 
-  // Synchronously initialize splash state to avoid state oscillation / double-renders on mount
-  const [splashDismissed, setSplashDismissed] = useState(() => {
-    if (typeof window === 'undefined') return true;
-    return sessionStorage.getItem("bb:splash-seen") === "true";
-  });
+  // Initialize to the server-consistent value (no client storage available
+  // during SSR) and resolve the real client state in an effect AFTER mount.
+  // Reading sessionStorage/localStorage directly in the initializer causes a
+  // React hydration mismatch (#418) because the server and first client render
+  // would diverge. Gating the real read behind `mounted` keeps the first
+  // client render identical to the server, then corrects post-hydration.
+  const [splashDismissed, setSplashDismissed] = useState(true);
+  const [localeChosen, setLocaleChosen] = useState(true);
 
-  // Track whether the user has chosen a locale. Derived state (not a bare
-  // localStorage read) so selecting a language re-renders and closes the modal.
-  const [localeChosen, setLocaleChosen] = useState(() => {
-    if (typeof window === 'undefined') return true;
-    return Boolean(localStorage.getItem(LANGUAGE_STORAGE_KEY));
-  });
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setSplashDismissed(sessionStorage.getItem('bb:splash-seen') === 'true');
+    setLocaleChosen(Boolean(localStorage.getItem(LANGUAGE_STORAGE_KEY)));
+  }, []);
 
   const showLanguageModal =
     mounted && typeof window !== "undefined" && !localeChosen;
