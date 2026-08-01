@@ -3,6 +3,7 @@ import { v, ConvexError } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { getAuthUserId } from "./lib/auth";
+import { GEMINI_MODEL, geminiGenerateUrl } from "./lib/gemini";
 import { verifyLineSignature } from "./lib/line/verify";
 import {
   normalizeCategory,
@@ -120,7 +121,7 @@ export const parseLineReceipt = internalAction({
 
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+        geminiGenerateUrl(apiKey),
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -178,7 +179,7 @@ export const parseLineReceipt = internalAction({
         imageMimeType: mimeType,
         imageSizeBytes,
         parsedAt,
-        geminiModel: "gemini-2.5-flash",
+        geminiModel: GEMINI_MODEL,
         source: "line",
       });
 

@@ -2,8 +2,11 @@ import { action, mutation, query, internalMutation, internalQuery, httpAction } 
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { v, ConvexError } from "convex/values";
+import { z } from "zod";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { GEMINI_MODEL, geminiGenerateUrl } from "./lib/gemini";
 import { scrape as scrapeEngine } from "./lib/receipt/engine";
+import { ingestRequestBodySchema } from "./lib/receipt/ingest-schema";
 import { applyAnswers, generateQuestions } from "./lib/receipt/questions";
 import type { OcrPayload } from "./lib/receipt/types";
 
@@ -97,7 +100,7 @@ Do not include any formatting, markdown wrappers, or extra text. Output ONLY the
 
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+        geminiGenerateUrl(apiKey),
         {
           method: "POST",
           headers: {
@@ -161,7 +164,7 @@ Do not include any formatting, markdown wrappers, or extra text. Output ONLY the
         imageMimeType: mimeType,
         imageSizeBytes,
         parsedAt,
-        geminiModel: "gemini-2.5-flash",
+        geminiModel: GEMINI_MODEL,
       });
 
       return {
@@ -222,7 +225,7 @@ Do not include any formatting, markdown wrappers, or extra text. Output ONLY the
 
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+        geminiGenerateUrl(apiKey),
         {
           method: "POST",
           headers: {
@@ -680,10 +683,10 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
     });
   }
 
-  // Parse body
-  let body: { lineUserId: string; payload: any; idempotencyKey: string };
+  // Parse + validate body (zod-hardened; see ingest-schema.ts)
+  let rawBody: unknown;
   try {
-    body = await req.json();
+    rawBody = await req.json();
   } catch {
     return new Response(JSON.stringify({ success: false, error: "Invalid JSON" }), {
       status: 400,
@@ -691,13 +694,21 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
     });
   }
 
-  const { lineUserId, payload, idempotencyKey } = body;
-  if (!lineUserId || !payload || !idempotencyKey) {
-    return new Response(JSON.stringify({ success: false, error: "Missing required fields" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
+  const parsed = ingestRequestBodySchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: "Invalid request body",
+        details: parsed.error.issues.map((i: z.ZodIssue) => ({
+          path: i.path.join("."),
+          message: i.message,
+        })),
+      }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    );
   }
+  const { lineUserId, payload, idempotencyKey } = parsed.data;
 
   // Resolve Convex user from LINE user ID
   const mapping = await ctx.runQuery(internal.line.getLineMapping, { lineUserId });
@@ -730,8 +741,8 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
     });
   }
 
-  // Run the scraper engine
-  const scraped = scrapeEngine(payload);
+  // Run the scraper engine (validated payload is structurally an OcrPayload)
+  const scraped = scrapeEngine(payload as OcrPayload);
 
   // Extract fields
   const amount = typeof scraped.fields.total?.value === "number" ? scraped.fields.total.value : 0;

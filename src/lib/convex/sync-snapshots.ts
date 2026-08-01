@@ -177,13 +177,13 @@ export async function syncDailySnapshot(): Promise<{ success: boolean; date: str
 
     const convex = getConvexClient();
     if (!convex) {
-      console.warn('Convex is not configured. Queueing snapshot offline.');
+      console.debug('Convex is not configured. Queueing snapshot offline.');
       await queueOfflineSnapshot(syncArgs);
       return { success: false, date: today };
     }
 
     if (!hasAuthToken()) {
-      console.log('User is not authenticated yet. Queueing snapshot offline.');
+      console.debug('User is not authenticated yet. Queueing snapshot offline.');
       await queueOfflineSnapshot(syncArgs);
       return { success: false, date: today };
     }
@@ -193,7 +193,7 @@ export async function syncDailySnapshot(): Promise<{ success: boolean; date: str
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     if (errorMessage.includes("Authentication required") || errorMessage.includes("Authentication") || errorMessage.includes("Unauthenticated")) {
-      console.log('User is not authenticated yet. Queueing snapshot offline.');
+      console.debug('User is not authenticated yet. Queueing snapshot offline.');
     } else {
       console.error('Sync failed:', error);
     }
@@ -222,7 +222,7 @@ export function registerSyncWorker() {
     )
   ) {
     navigator.serviceWorker.register('/sw.js').then((registration) => {
-      console.log('SW registered:', registration.scope);
+      console.debug('SW registered:', registration.scope);
       
       // Request periodic sync if supported
       if ('periodicSync' in registration) {
@@ -235,7 +235,7 @@ export function registerSyncWorker() {
         periodicSync.register('daily-snapshot', {
           minInterval: 24 * 60 * 60 * 1000,
         }).catch((err: unknown) => {
-          console.log('Periodic sync not available:', err);
+          console.debug('Periodic sync not available:', err);
         });
       }
     }).catch((err) => {
@@ -288,12 +288,12 @@ export async function flushOfflineQueue() {
 
   const convex = getConvexClient();
   if (!convex) {
-    console.log("Convex is not configured. Cannot flush offline queue.");
+    console.debug('Convex is not configured. Cannot flush offline queue.');
     return;
   }
 
   if (!hasAuthToken()) {
-    console.log("User is not authenticated yet. Postponing offline queue flush.");
+    console.debug('User is not authenticated yet. Postponing offline queue flush.');
     return;
   }
 
@@ -310,7 +310,7 @@ export async function flushOfflineQueue() {
         if (item.id !== undefined) {
           await db.delete('syncQueue', item.id);
         }
-        console.log('Flushed offline snapshot:', item.timestamp);
+        console.debug('Flushed offline snapshot:', item.timestamp);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         if (errorMessage.includes("Authentication required") || errorMessage.includes("Authentication") || errorMessage.includes("Unauthenticated")) {

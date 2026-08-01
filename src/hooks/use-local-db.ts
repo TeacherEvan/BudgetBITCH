@@ -154,7 +154,7 @@ export function useExpenses() {
         notify('Delete sent to your partner for approval.', 'info');
         return;
       } catch (e) {
-        console.error('Shared delete request failed, deleting locally:', e);
+        console.debug('Shared delete request failed, deleting locally:', e);
       }
     }
     await deleteExpense(id);
@@ -216,7 +216,7 @@ export function useIncomes() {
         notify('Delete sent to your partner for approval.', 'info');
         return;
       } catch (e) {
-        console.error('Shared delete request failed, deleting locally:', e);
+        console.debug('Shared delete request failed, deleting locally:', e);
       }
     }
     await deleteIncome(id);
@@ -310,7 +310,7 @@ export function useBills() {
         notify('Delete sent to your partner for approval.', 'info');
         return;
       } catch (e) {
-        console.error('Shared delete request failed, deleting locally:', e);
+        console.debug('Shared delete request failed, deleting locally:', e);
       }
     }
     await deleteBill(id);

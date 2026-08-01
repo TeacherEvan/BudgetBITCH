@@ -22,6 +22,7 @@ export function useVicinityFeeds(locale: string): VicinityFeedResult {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const isFetchingRef = useRef(false);
+  const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchNews = useCallback(async () => {
     if (!location || isFetchingRef.current) {
@@ -88,12 +89,19 @@ export function useVicinityFeeds(locale: string): VicinityFeedResult {
       fetchNews();
     } else if (!location) {
       // Use setTimeout to avoid setState in effect
-      setTimeout(() => {
+      if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
+      clearTimerRef.current = setTimeout(() => {
         setItems([]);
         setLoading(false);
         fetchedLocationRef.current = null;
       }, 0);
     }
+    return () => {
+      if (clearTimerRef.current) {
+        clearTimeout(clearTimerRef.current);
+        clearTimerRef.current = null;
+      }
+    };
   }, [location, locale, country, fetchNews]);
 
   return { items, loading, error, lastUpdated, refresh: fetchNews };
