@@ -135,3 +135,54 @@ export const getSnapshotById = query({
     return snapshot;
   },
 });
+
+/**
+ * Permanently deletes ALL daily snapshots, receipts, and merchant aliases for the user from Convex cloud storage.
+ * Called when the user executes a "Reset all data" wipe.
+ */
+export const deleteAllUserSnapshots = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      return { success: false, deletedSnapshots: 0, deletedReceipts: 0 };
+    }
+
+    // 1. Delete all daily snapshots
+    const snapshots = await ctx.db
+      .query("dailySnapshots")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    for (const snap of snapshots) {
+      await ctx.db.delete(snap._id);
+    }
+
+    // 2. Delete all receipts
+    const receipts = await ctx.db
+      .query("receipts")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    for (const rec of receipts) {
+      await ctx.db.delete(rec._id);
+    }
+
+    // 3. Delete all merchant aliases
+    const aliases = await ctx.db
+      .query("merchantAliases")
+      .withIndex("by_user_and_normalised", (q) => q.eq("userId", userId))
+      .collect();
+
+    for (const alias of aliases) {
+      await ctx.db.delete(alias._id);
+    }
+
+    return {
+      success: true,
+      deletedSnapshots: snapshots.length,
+      deletedReceipts: receipts.length,
+      deletedAliases: aliases.length,
+    };
+  },
+});

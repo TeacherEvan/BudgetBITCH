@@ -25,6 +25,9 @@ import { ChangePasswordModal } from '@/components/settings/change-password-modal
 import { StorageDiagnosticsModal } from '@/components/settings/storage-diagnostics-modal';
 import { DecryptImportModal } from '@/components/settings/decrypt-import-modal';
 
+import { useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+
 type Status = 'idle' | 'success' | 'error';
 
 const RESET_PRESERVE = [
@@ -54,6 +57,9 @@ export async function clearSyncAndQueues(): Promise<void> {
   const db = await getDB();
   if (db.objectStoreNames.contains('syncQueue')) {
     await db.clear('syncQueue');
+  }
+  if (db.objectStoreNames.contains('receiptDrafts')) {
+    await db.clear('receiptDrafts');
   }
   for (const key of RESET_QUEUE_KEYS) {
     localStorage.removeItem(key);
@@ -88,6 +94,8 @@ export function DataBackupCard({
   const [syncStatus, setSyncStatus] = useState<Status>('idle');
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   
+  const deleteAllSnapshotsMut = useMutation(api.snapshots.deleteAllUserSnapshots);
+
   // Storage Diagnostics and Encryption states
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [encryptExport, setEncryptExport] = useState(false);
@@ -130,20 +138,41 @@ export function DataBackupCard({
   const handleResetConfirm = async () => {
     setResetOpen(false);
     logUserAction('Reset all data');
-    // Full wipe: clears active board, all account stashes, account listing,
-    // account pointer, and LWW write-clocks. `markResetTombstone` then stops
-    // AccountSyncMount from re-pulling the "deleted" cloud snapshot back.
-    // Queues are drained FIRST so nothing survives to push stale data up.
+    
+    // 1. Delete all server cloud snapshots, receipts & merchant aliases from Convex database
+    try {
+      if (deleteAllSnapshotsMut) {
+        await deleteAllSnapshotsMut();
+      }
+    } catch (err) {
+      console.warn('[Reset] Cloud snapshot wipe failed (offline or unauthenticated):', err);
+    }
+
+    // 2. Drain all sync queues, receipt drafts, and offline push queues
     await clearSyncAndQueues();
+
+    // 3. Clear all IndexedDB stores completely
     await clearAllData();
+
+    // 4. Mark reset tombstone timestamp in localStorage
     await markResetTombstone();
+
+    // 5. Clear profile hook state
     clearProfile?.();
+
+    // 6. Clear localStorage keys except RESET_PRESERVE
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i);
       if (key && !RESET_PRESERVE.includes(key)) {
         localStorage.removeItem(key);
       }
     }
+
+    // 7. Clear sessionStorage
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      window.sessionStorage.clear();
+    }
+
     window.location.href = '/';
   };
 

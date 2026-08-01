@@ -476,6 +476,7 @@ export async function clearAllData(): Promise<void> {
     'netWorthSnapshots', 'debts', 'criticalExpenseCommitments', 'newsCache',
     'locationCache', 'settings',
     'accountsData', 'localAccounts', 'bbMeta', 'localWrites',
+    'receiptDrafts', 'syncQueue',
   ] as const;
   const activeStores = db.objectStoreNames
     ? stores.filter((store) => db.objectStoreNames.contains(store))

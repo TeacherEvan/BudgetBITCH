@@ -78,3 +78,32 @@ test("upsertDailySnapshot isolates snapshots per user", async () => {
   expect(aliceRows).toHaveLength(1);
   expect(aliceRows[0].userId).toBe(aliceId);
 });
+
+test("deleteAllUserSnapshots removes all cloud snapshots for the user", async () => {
+  const aliceId = await seedUser(t, "alice");
+  const bobId = await seedUser(t, "bob");
+  
+  await asUser(aliceId).mutation(api.snapshots.upsertDailySnapshot, sampleArgs);
+  await asUser(bobId).mutation(api.snapshots.upsertDailySnapshot, sampleArgs);
+
+  const res = await asUser(aliceId).mutation(api.snapshots.deleteAllUserSnapshots, {});
+  expect(res.success).toBe(true);
+  expect(res.deletedSnapshots).toBe(1);
+
+  const aliceRows = await t.run(async (ctx: any) =>
+    ctx.db
+      .query("dailySnapshots")
+      .withIndex("by_user", (q: any) => q.eq("userId", aliceId))
+      .collect(),
+  );
+  expect(aliceRows).toHaveLength(0);
+
+  // Ensure Bob's data remains untouched
+  const bobRows = await t.run(async (ctx: any) =>
+    ctx.db
+      .query("dailySnapshots")
+      .withIndex("by_user", (q: any) => q.eq("userId", bobId))
+      .collect(),
+  );
+  expect(bobRows).toHaveLength(1);
+});
