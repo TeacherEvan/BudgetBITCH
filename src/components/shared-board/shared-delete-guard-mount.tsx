@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { SharedDeleteGuardProvider } from './shared-delete-guard-provider';
 import { useSharedBoard } from '@/hooks/use-shared-board';
+import { useAccounts } from '@/hooks/use-accounts';
 import { getCurrentAccountId, getLocalAccount } from '@/lib/db/accountStorage';
 import { PERSONAL_ACCOUNT_ID } from '@/lib/types/accounts';
 
@@ -18,14 +19,17 @@ import { PERSONAL_ACCOUNT_ID } from '@/lib/types/accounts';
  */
 export function SharedDeleteGuardMount({ children }: { children: React.ReactNode }) {
   const shared = useSharedBoard();
+  const { accounts } = useAccounts();
   const [accountBoardId, setAccountBoardId] = useState<string | null>(null);
   const [accountIsShared, setAccountIsShared] = useState(false);
+  const [activeAccountId, setActiveAccountId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const id = await getCurrentAccountId();
+        if (!cancelled) setActiveAccountId(id ?? null);
         if (id && id !== PERSONAL_ACCOUNT_ID) {
           const meta = await getLocalAccount(id);
           if (meta?.boardId) {
@@ -52,9 +56,22 @@ export function SharedDeleteGuardMount({ children }: { children: React.ReactNode
     };
   }, []);
 
+  // Does the active account board actually have a second member to approve?
+  const accountHasPartner = !!accounts.find(
+    (a) => a.accountId === activeAccountId && (a.memberCount ?? 1) > 1,
+  );
+
   // Prefer the couple board when it's active; otherwise the active account board.
   const boardId = shared.isLinked && shared.boardId ? shared.boardId : accountBoardId;
-  const isShared = !!(shared.isLinked && shared.boardId) || accountIsShared;
+
+  // CRITICAL: a board is only "shared" for delete-consent purposes when there is
+  // actually ANOTHER member who can approve. A solo user on a personal account
+  // board (or a couple board with no partner linked yet) has nobody to approve,
+  // so routing their deletes through two-party consent makes every Delete button
+  // a permanent silent no-op. Require a real second member.
+  const coupleIsShared = !!(shared.isLinked && shared.boardId && shared.partnerName);
+  const isShared = coupleIsShared || (accountIsShared && accountHasPartner);
+
 
   return (
     <SharedDeleteGuardProvider boardId={boardId} isShared={isShared}>

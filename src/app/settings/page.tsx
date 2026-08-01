@@ -31,6 +31,7 @@ import { AccountSettingsCard } from '@/components/settings/account-settings-card
 import { PreferenceSettingsCard } from '@/components/settings/preference-settings-card';
 import { PartnerSharingCard } from '@/components/settings/partner-sharing-card';
 import { DataBackupCard } from '@/components/settings/data-backup-card';
+import { notify } from '@/lib/ui/notice';
 
 import { BugReportModal } from '@/components/bug-report/bug-report-modal';
 import { AdminBugReports } from '@/components/admin/admin-bug-reports';
@@ -52,7 +53,22 @@ export default function SettingsPage() {
       router.replace('/');
     } catch (e) {
       console.error('Sign out failed:', e);
+      notify('Sign out failed. Please try again.', 'error');
     }
+  };
+
+  // `window.close()` is a no-op for any tab the script did not open, so the
+  // button used to do nothing at all in a normal browser. Only offer it where
+  // it can actually work, and tell the user when it cannot.
+  const handleCloseApp = () => {
+    const before = Date.now();
+    window.close();
+    // If we are still alive a tick later the platform refused to close us.
+    setTimeout(() => {
+      if (Date.now() - before >= 0 && !window.closed) {
+        notify('Your browser will not let the app close this window — close the tab manually.', 'info');
+      }
+    }, 300);
   };
 
   const { profile, clear: clearProfile } = useWizardProfile();
@@ -106,7 +122,7 @@ export default function SettingsPage() {
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => window.close()}
+                onClick={handleCloseApp}
                 title={'Best-effort: closes the standalone app window if the platform allows it'}
                 className="flex items-center gap-1.5 border-white/10 text-white/60 hover:bg-white/5 hover:text-white"
               >
@@ -127,10 +143,10 @@ export default function SettingsPage() {
                 { id: 'profile', label: { en: 'Profile' }, icon: <User className="w-3.5 h-3.5" /> },
                 { id: 'display', label: { en: 'Display' }, icon: <Palette className="w-3.5 h-3.5" /> },
                 { id: 'news', label: { en: 'News' }, icon: <Newspaper className="w-3.5 h-3.5" /> },
-                { id: 'preferences', label: { en: 'Preferences' }, icon: <Settings className="w-3.5 h-3.5" /> },
                 { id: 'data', label: { en: 'Data' }, icon: <Download className="w-3.5 h-3.5" /> },
                 { id: 'shared', label: { en: 'Shared Board' }, icon: <Users className="w-3.5 h-3.5" /> },
                 { id: 'privacy', label: { en: 'Privacy' }, icon: <Shield className="w-3.5 h-3.5" /> },
+                { id: 'feedback', label: { en: 'Feedback' }, icon: <Settings className="w-3.5 h-3.5" /> },
               ] as const
             ).map((tab) => (
               <a
@@ -207,22 +223,25 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* Close / Exit (handy in PWA / standalone mode where the browser
-              close button is hidden) */}
-          <section className="pt-6">
-            <div className="p-4 rounded-2xl border border-white/10 bg-white/5 space-y-3">
-              <p className="text-sm text-white/60">
-                {'Close the app (useful in PWA / standalone mode where the window close control is hidden).'}
-              </p>
-              <Button
-                variant="secondary"
-                className="w-full gap-2 justify-center"
-                onClick={() => window.close()}
-              >
-                {'Close App'}
-              </Button>
-            </div>
-          </section>
+          {/* Close / Exit — only meaningful in PWA / standalone mode where the
+              browser's own close control is hidden. In a normal tab
+              window.close() is a no-op, so we don't render a dead button. */}
+          {isStandalone && (
+            <section className="pt-6">
+              <div className="p-4 rounded-2xl border border-white/10 bg-white/5 space-y-3">
+                <p className="text-sm text-white/60">
+                  {'Close the app (useful in PWA / standalone mode where the window close control is hidden).'}
+                </p>
+                <Button
+                  variant="secondary"
+                  className="w-full gap-2 justify-center"
+                  onClick={handleCloseApp}
+                >
+                  {'Close App'}
+                </Button>
+              </div>
+            </section>
+          )}
         </main>
 
         <BugReportModal

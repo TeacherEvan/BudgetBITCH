@@ -93,6 +93,8 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
 
   const handleImportRows = async (rows: ParsedExpense[]) => {
     // Persist each parsed row as an ExpenseEntry with a generated id.
+    // Errors propagate to ImportCsvModal.handleConfirm, which reports them
+    // instead of silently closing as if the import worked.
     await Promise.all(
       rows.map((row) =>
         addExpense({

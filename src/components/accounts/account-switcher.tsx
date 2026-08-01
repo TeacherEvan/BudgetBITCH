@@ -8,6 +8,7 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { ChevronDown, Check, Plus } from 'lucide-react';
 import { useAccounts } from '@/hooks/use-accounts';
+import { notify } from '@/lib/ui/notice';
 import { umbrellaLabel } from '@/lib/types/accounts';
 
 interface AccountSwitcherProps {
@@ -35,7 +36,12 @@ export function AccountSwitcher({ locale: _locale }: AccountSwitcherProps) {
   const handleSelect = async (accountId: string) => {
     setOpen(false);
     if (accountId !== currentAccountId) {
-      await switchTo(accountId);
+      try {
+        await switchTo(accountId);
+      } catch (e) {
+        console.error('Account switch failed:', e);
+        notify('Could not switch account. Please try again.', 'error');
+      }
     }
   };
 

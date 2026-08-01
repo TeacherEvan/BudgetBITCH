@@ -13,6 +13,7 @@ import { useCurrency } from '@/hooks/use-currency';
 import { SubscriptionsSkeleton } from './subscriptions-skeleton';
 import { EmptyState } from './empty-state';
 import type { ExpenseEntry } from '@/lib/types/budget';
+import { notify } from '@/lib/ui/notice';
 
 interface SubscriptionsProps {
   locale?: string;
@@ -92,12 +93,17 @@ export function Subscriptions({ locale = 'en' }: SubscriptionsProps) {
       note: `category: ${formData.category}, payment: ${formData.paymentMethod}`,
     };
 
-    if (editingId) {
-      await update({ ...sub, id: editingId });
-    } else {
-      await add(sub);
+    try {
+      if (editingId) {
+        await update({ ...sub, id: editingId });
+      } else {
+        await add(sub);
+      }
+      resetForm();
+    } catch (err) {
+      console.error('Saving subscription failed:', err);
+      notify('Could not save that subscription. Please try again.', 'error');
     }
-    resetForm();
   };
 
   const handleEdit = (sub: ExpenseEntry) => {
@@ -117,7 +123,12 @@ export function Subscriptions({ locale = 'en' }: SubscriptionsProps) {
   };
 
   const handleDelete = async (id: string) => {
-    await remove(id);
+    try {
+      await remove(id);
+    } catch (err) {
+      console.error('Deleting subscription failed:', err);
+      notify('Could not delete that subscription. Please try again.', 'error');
+    }
   };
 
   const getCategoryIcon = (category: string) => {

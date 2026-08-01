@@ -6,12 +6,15 @@ import { Upload, AlertTriangle, CheckCircle2, FileSpreadsheet } from 'lucide-rea
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { parseImport, type ParsedExpense } from '@/modules/budgeting/csv-import';
+import { notify } from '@/lib/ui/notice';
 
 interface ImportCsvModalProps {
   isOpen: boolean;
   onClose: () => void;
   /** Called with the parsed (valid) rows once the user confirms. */
-  onImport: (rows: ParsedExpense[]) => void;
+  /** Persists the rows. May be async — handleConfirm awaits it so a failed
+   *  import no longer closes the modal as if it succeeded. */
+  onImport: (rows: ParsedExpense[]) => void | Promise<void>;
   locale?: string;
 }
 
@@ -53,20 +56,34 @@ export function ImportCsvModal({ isOpen, onClose, onImport = () => {} }: ImportC
 
   const handleFile = async (file: File | undefined) => {
     if (!file) return;
-    const content = await file.text();
-    setText(content);
-    setResult(parseImport(content));
+    try {
+      const content = await file.text();
+      setText(content);
+      setResult(parseImport(content));
+    } catch (err) {
+      console.error('Reading CSV file failed:', err);
+      notify('Could not read that file. Please try another.', 'error');
+    }
   };
 
   const handlePreview = () => {
     setResult(parseImport(text));
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!result || result.valid.length === 0) return;
-    onImport(result.valid);
-    reset();
-    onClose();
+    // onImport persists to IndexedDB and can reject. Previously it was called
+    // without await, so a failed import still closed the modal and looked
+    // like a success.
+    try {
+      await onImport(result.valid);
+      notify(`Imported ${result.valid.length} row(s).`, 'success');
+      reset();
+      onClose();
+    } catch (err) {
+      console.error('CSV import failed:', err);
+      notify('Import failed. Nothing was saved.', 'error');
+    }
   };
 
   return (
@@ -143,7 +160,7 @@ export function ImportCsvModal({ isOpen, onClose, onImport = () => {} }: ImportC
               <Button
                 variant="primary"
                 size="sm"
-                onClick={handleConfirm}
+                onClick={() => void handleConfirm()}
                 className="w-full"
                 data-testid="csv-confirm-btn"
               >

@@ -34,11 +34,16 @@ export function PartnerSharingCard({ shared }: PartnerSharingCardProps) {
 
   const handleLink = async () => {
     setLinkError(null);
-    const res = await shared.linkByCode(code);
-    if (!res.ok) {
-      setLinkError(res.error);
-    } else {
-      setCode('');
+    try {
+      const res = await shared.linkByCode(code);
+      if (!res.ok) {
+        setLinkError(res.error);
+      } else {
+        setCode('');
+      }
+    } catch (e) {
+      console.error('Linking partner board failed:', e);
+      setLinkError('Could not link right now. Please check the code and try again.');
     }
   };
 

@@ -14,6 +14,7 @@ import { AssetItem } from './net-worth-asset-item';
 import { LiabilityItem } from './net-worth-liability-item';
 import { Asset, Liability, AssetInput, LiabilityInput } from './net-worth-types';
 import { generateId } from '@/lib/db/local-db';
+import { notify } from '@/lib/ui/notice';
 
 export function NetWorth({ locale = 'en' }: { locale?: string }) {
   const {
@@ -46,23 +47,33 @@ export function NetWorth({ locale = 'en' }: { locale?: string }) {
   const handleAssetSubmit = async (data: AssetInput | LiabilityInput) => {
     const assetData = data as AssetInput;
     const assetWithId: Asset = { ...assetData, id: editingAsset?.id || generateId() };
-    if (editingAsset) {
-      await updateAsset(assetWithId);
-    } else {
-      await addAsset(assetWithId);
+    try {
+      if (editingAsset) {
+        await updateAsset(assetWithId);
+      } else {
+        await addAsset(assetWithId);
+      }
+      setEditingAsset(null);
+    } catch (e) {
+      console.error('Saving asset failed:', e);
+      notify('Could not save that asset. Please try again.', 'error');
     }
-    setEditingAsset(null);
   };
 
   const handleLiabilitySubmit = async (data: AssetInput | LiabilityInput) => {
     const liabilityData = data as LiabilityInput;
     const liabilityWithId: Liability = { ...liabilityData, id: editingLiability?.id || generateId() };
-    if (editingLiability) {
-      await updateLiability(liabilityWithId);
-    } else {
-      await addLiability(liabilityWithId);
+    try {
+      if (editingLiability) {
+        await updateLiability(liabilityWithId);
+      } else {
+        await addLiability(liabilityWithId);
+      }
+      setEditingLiability(null);
+    } catch (e) {
+      console.error('Saving liability failed:', e);
+      notify('Could not save that liability. Please try again.', 'error');
     }
-    setEditingLiability(null);
   };
 
   const openAssetForm = (asset?: Asset) => {

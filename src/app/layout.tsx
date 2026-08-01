@@ -17,6 +17,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { cookies } from 'next/headers';
 import { resolveLocale, getLocaleMessages, localeCookieName } from '@/i18n/messages';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
+import { NoticeHost } from '@/components/ui/notice-host';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -87,6 +88,7 @@ export default async function RootLayout({
                   {children}
                   <SiteFooter />
                   <CookieConsentBanner />
+                  <NoticeHost />
                 </SharedDeleteGuardMount>
               </ThemeProvider>
             </NextIntlClientProvider>

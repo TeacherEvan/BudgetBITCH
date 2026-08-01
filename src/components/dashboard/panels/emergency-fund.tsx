@@ -12,6 +12,7 @@ import { ProgressRing } from '@/components/ui/progress-ring';
 import { Modal } from '@/components/ui/modal';
 import { useCurrency } from '@/hooks/use-currency';
 import { EmergencyFundSkeleton } from './emergency-fund-skeleton';
+import { notify } from '@/lib/ui/notice';
 
 interface EmergencyFundProps {
   locale?: string;
@@ -47,16 +48,26 @@ export function EmergencyFund({ locale = 'en' }: EmergencyFundProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.targetAmount) return;
-    await updateFund({
-      targetAmount: parseFloat(formData.targetAmount),
-      currentAmount: parseFloat(formData.currentAmount) || 0,
-    });
-    setIsFormOpen(false);
-    resetForm();
+    try {
+      await updateFund({
+        targetAmount: parseFloat(formData.targetAmount),
+        currentAmount: parseFloat(formData.currentAmount) || 0,
+      });
+      setIsFormOpen(false);
+      resetForm();
+    } catch (err) {
+      console.error('Saving emergency fund failed:', err);
+      notify('Could not save your emergency fund. Please try again.', 'error');
+    }
   };
 
   const handleAddToFund = async (amount: number) => {
-    await updateFund({ currentAmount: fund.currentAmount + amount });
+    try {
+      await updateFund({ currentAmount: fund.currentAmount + amount });
+    } catch (err) {
+      console.error('Adding to emergency fund failed:', err);
+      notify('Could not add to the fund. Please try again.', 'error');
+    }
   };
 
   const openForm = () => {

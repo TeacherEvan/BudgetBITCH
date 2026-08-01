@@ -55,6 +55,7 @@ import {
 } from '@/lib/db/local-db';
 import { BOARD_CHANGED_EVENT } from '@/lib/types/budget';
 import { getActiveSharedDeleteGuard } from '@/components/shared-board/shared-delete-guard-provider';
+import { notify } from '@/lib/ui/notice';
 
 /**
  * Helper hook to register a window event listener that re-fetches local DB state
@@ -146,8 +147,15 @@ export function useExpenses() {
     if (guard?.isShared) {
       // Two-party consent: raise a server-side request; the item stays until
       // the partner approves (delete executes server-side, then re-syncs down).
-      await guard.requestDelete('expenses', id);
-      return;
+      // If that request fails for ANY reason we must fall back to a local
+      // delete — otherwise the button is a silent no-op.
+      try {
+        await guard.requestDelete('expenses', id);
+        notify('Delete sent to your partner for approval.', 'info');
+        return;
+      } catch (e) {
+        console.error('Shared delete request failed, deleting locally:', e);
+      }
     }
     await deleteExpense(id);
     setExpenses(prev => prev.filter(e => e.id !== id));
@@ -203,8 +211,13 @@ export function useIncomes() {
   const remove = useCallback(async (id: string) => {
     const guard = getActiveSharedDeleteGuard();
     if (guard?.isShared) {
-      await guard.requestDelete('incomes', id);
-      return;
+      try {
+        await guard.requestDelete('incomes', id);
+        notify('Delete sent to your partner for approval.', 'info');
+        return;
+      } catch (e) {
+        console.error('Shared delete request failed, deleting locally:', e);
+      }
     }
     await deleteIncome(id);
     setIncomes(prev => prev.filter(i => i.id !== id));
@@ -292,8 +305,13 @@ export function useBills() {
   const remove = useCallback(async (id: string) => {
     const guard = getActiveSharedDeleteGuard();
     if (guard?.isShared) {
-      await guard.requestDelete('bills', id);
-      return;
+      try {
+        await guard.requestDelete('bills', id);
+        notify('Delete sent to your partner for approval.', 'info');
+        return;
+      } catch (e) {
+        console.error('Shared delete request failed, deleting locally:', e);
+      }
     }
     await deleteBill(id);
     setBills(prev => prev.filter(b => b.id !== id));
@@ -402,13 +420,29 @@ export function useNetWorth() {
 
   useDatabaseListener(load);
 
+  /**
+   * A new user has NO net-worth snapshot yet, so every `if (!snapshot) return;`
+   * guard below used to make the very first "Add Asset" / "Add Liability" a
+   * silent no-op. Seed an empty snapshot for today instead of bailing.
+   */
+  const baseSnapshot = useCallback((): NetWorthSnapshot => {
+    return (
+      snapshot ?? {
+        date: new Date().toISOString().slice(0, 10),
+        assets: [],
+        liabilities: [],
+        netWorth: 0,
+      }
+    );
+  }, [snapshot]);
+
   const addAsset = useCallback(async (asset: Asset) => {
-    if (!snapshot) return;
-    const newAssets = [...snapshot.assets, { ...asset, id: generateId() }];
-    const newSnapshot = { ...snapshot, assets: newAssets };
+    const base = baseSnapshot();
+    const newAssets = [...base.assets, { ...asset, id: generateId() }];
+    const newSnapshot = { ...base, assets: newAssets };
     await saveNetWorthSnapshot(newSnapshot);
     setSnapshot(newSnapshot);
-  }, [snapshot]);
+  }, [baseSnapshot]);
 
   const updateAsset = useCallback(async (asset: Asset) => {
     if (!snapshot) return;
@@ -427,12 +461,12 @@ export function useNetWorth() {
   }, [snapshot]);
 
   const addLiability = useCallback(async (liability: Liability) => {
-    if (!snapshot) return;
-    const newLiabilities = [...snapshot.liabilities, { ...liability, id: generateId() }];
-    const newSnapshot = { ...snapshot, liabilities: newLiabilities };
+    const base = baseSnapshot();
+    const newLiabilities = [...base.liabilities, { ...liability, id: generateId() }];
+    const newSnapshot = { ...base, liabilities: newLiabilities };
     await saveNetWorthSnapshot(newSnapshot);
     setSnapshot(newSnapshot);
-  }, [snapshot]);
+  }, [baseSnapshot]);
 
   const updateLiability = useCallback(async (liability: Liability) => {
     if (!snapshot) return;

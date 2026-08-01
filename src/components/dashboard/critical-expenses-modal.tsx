@@ -7,6 +7,7 @@ import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { ProgressRing } from '@/components/ui/progress-ring';
 import { Card } from '@/components/ui/card';
+import { notify } from '@/lib/ui/notice';
 import { CRITICAL_EXPENSES, CriticalExpenseKey } from '@/lib/types/budget';
 import { calculateCompoundProjection, getSuggestedCriticalExpenseCost } from '@/lib/utils/compound-calculator';
 import { useCurrency } from '@/hooks/use-currency';
@@ -49,16 +50,21 @@ export function CriticalExpensesModal({ isOpen, onClose, locale }: CriticalExpen
     if (amount <= 0) return;
 
     const projection = calculateCompoundProjection({ monthlySavings: amount });
-    
-    await saveCommitment({
-      month: new Date().toISOString().slice(0, 7),
-      expenseKey: selectedExpense,
-      estimatedMonthlyCost: amount,
-      committedAt: new Date().toISOString(),
-      status: 'active',
-      compoundProjection: projection,
-    });
-    onClose();
+
+    try {
+      await saveCommitment({
+        month: new Date().toISOString().slice(0, 7),
+        expenseKey: selectedExpense,
+        estimatedMonthlyCost: amount,
+        committedAt: new Date().toISOString(),
+        status: 'active',
+        compoundProjection: projection,
+      });
+      onClose();
+    } catch (e) {
+      console.error('Saving commitment failed:', e);
+      notify('Could not save your commitment. Please try again.', 'error');
+    }
   };
 
   const currentCommitment = commitment;
