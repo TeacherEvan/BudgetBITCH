@@ -20,7 +20,6 @@ test.describe("Mobile shell", () => {
     }));
     // Allow 2 px rounding tolerance.
     expect(overflow.sw).toBeLessThanOrEqual(overflow.cw + 2);
-    await page.waitForLoadState("networkidle").catch(() => {});
     errors.assertClean();
   });
 

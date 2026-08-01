@@ -115,8 +115,6 @@ test.describe("Market Watch — vicinity feeds", () => {
     await expect(
       modal.locator('[data-testid="feed-card"]').first(),
     ).toBeVisible({ timeout: 15000 });
-    // Allow one render cycle before asserting.
-    await page.waitForLoadState("networkidle").catch(() => {});
     errors.assertClean();
   });
 });
