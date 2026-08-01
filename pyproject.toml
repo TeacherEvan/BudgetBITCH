@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hf-receipt-ocr-bot"
+version = "1.0.0"
+description = "International Receipt OCR & Financial Data Extraction Bot for Hugging Face (EvilEvan)"
+authors = [{ name = "EvilEvan" }]
+readme = "README.md"
+requires-python = ">=3.9"
+
+[tool.pytest.ini_options]
+testpaths = ["tests/python"]
+python_files = ["test_*.py"]
