@@ -51,6 +51,18 @@ vi.mock('lottie-react', () => ({
   useLottieInteractivity: () => null,
 }));
 
+// Mock convex/react so the shell test isolates panel switching, not the
+// receipts data layer (ReceiptDraftsList is rendered inside the shell).
+vi.mock('convex/react', () => ({
+  useQuery: () => undefined,
+  useMutation: () => vi.fn(),
+}));
+
+// ReceiptDraftsList imports addExpense; stub it so it no-ops in the shell test.
+vi.mock('@/lib/db/stores/expenses-store', () => ({
+  addExpense: vi.fn(),
+}));
+
 // The AccountSwitcher child uses useAccounts (Convex); mock it so the shell
 // test only exercises panel switching, not the accounts data layer.
 vi.mock('@/hooks/use-accounts', () => ({

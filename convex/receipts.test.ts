@@ -143,3 +143,44 @@ test("parseMessage handles successful response from Gemini for financial notific
   vi.unstubAllGlobals();
 });
 
+test("listReceipts filters by source and status", async () => {
+  const userId = await seedUser(t, "filter-user");
+
+  // Insert receipts directly with explicit source/status (mirrors what the
+  // TeacherBOY / LINE bot ingest and the app scrape produce).
+  const insert = (source: string | undefined, status: string | undefined) =>
+    t.run(async (ctx: any) =>
+      ctx.db.insert("receipts", {
+        userId,
+        amount: 10,
+        merchant: "M",
+        category: "food",
+        parsedAt: Date.now(),
+        geminiModel: "scraper-bot",
+        imageMimeType: "application/json",
+        imageSizeBytes: 0,
+        engine: "scraper-bot",
+        status: status ?? "draft",
+        source,
+      }),
+    );
+
+  await insert("app", "confirmed");
+  await insert("app", "draft");
+  await insert("line", "draft");
+  await insert("line", "confirmed");
+
+  // Filtering source=line, status=draft should return ONLY the line draft.
+  const res = await asUser(userId).query(api.receipts.listReceipts, {
+    source: "line",
+    status: "draft",
+  });
+  expect(res.receipts.length).toBe(1);
+  expect(res.receipts[0].source).toBe("line");
+  expect(res.receipts[0].status).toBe("draft");
+
+  // No filter returns all four.
+  const all = await asUser(userId).query(api.receipts.listReceipts, {});
+  expect(all.receipts.length).toBe(4);
+});
+

@@ -46,7 +46,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
-        run: npm ci --prefer-offline --no-audit --no-fund
+        run: npm ci --legacy-peer-deps --prefer-offline --no-audit --no-fund
 
       - name: Lint
         run: npm run lint -- --no-cache
@@ -69,7 +69,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
-        run: npm ci --prefer-offline --no-audit --no-fund
+        run: npm ci --legacy-peer-deps --prefer-offline --no-audit --no-fund
 
       - name: Type check
         run: npm run typecheck
@@ -92,7 +92,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
-        run: npm ci --prefer-offline --no-audit --no-fund
+        run: npm ci --legacy-peer-deps --prefer-offline --no-audit --no-fund
 
       - name: Test
         run: npm test
@@ -115,7 +115,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
-        run: npm ci --prefer-offline --no-audit --no-fund
+        run: npm ci --legacy-peer-deps --prefer-offline --no-audit --no-fund
 
       - name: Convex tests
         run: npm run test:convex
@@ -145,7 +145,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
-        run: npm ci --prefer-offline --no-audit --no-fund
+        run: npm ci --legacy-peer-deps --prefer-offline --no-audit --no-fund
 
       - name: Cache Next.js build
         uses: actions/cache@v4
@@ -182,7 +182,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
-        run: npm ci --prefer-offline --no-audit --no-fund
+        run: npm ci --legacy-peer-deps --prefer-offline --no-audit --no-fund
 
       - name: Cache Playwright browsers
         uses: actions/cache@v4
@@ -226,8 +226,8 @@ jobs:
             test-results/
           retention-days: 7
 
-  deploy-guard:
-    name: Prod Convex Deployment Guard
+  static-guards:
+    name: Repo-Specific Static Guards
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -244,31 +244,36 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
-        run: npm ci --prefer-offline --no-audit --no-fund
+        run: npm ci --legacy-peer-deps --prefer-offline --no-audit --no-fund
 
-      - name: Verify prod Convex URL matches canonical deployment
-        env:
-          EXPECTED_SLUG: steady-ox-280
-          NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
-        run: |
-          if [ -z "$NEXT_PUBLIC_CONVEX_URL" ]; then
-            echo "NEXT_PUBLIC_CONVEX_URL secret not set — skipping (guard runs authoritatively in Vercel prod prebuild)."
-            exit 0
-          fi
-          slug=$(echo "$NEXT_PUBLIC_CONVEX_URL" | sed -E 's#https://([a-z0-9-]+)\.convex\.(cloud|site).*#\1#I')
-          if [ "$slug" != "$EXPECTED_SLUG" ]; then
-            echo "::error::NEXT_PUBLIC_CONVEX_URL points at '$slug' but prod deployment is '$EXPECTED_SLUG'. Fix the Vercel prod env before deploy."
-            exit 1
-          fi
-          echo "OK: Vercel prod NEXT_PUBLIC_CONVEX_URL targets canonical deployment '$EXPECTED_SLUG'."
+      # These three guards only ran locally via `npm run ci` before; they are
+      # real shift-left checks (CSP host drift, stale bug-comment rot, broken
+      # Convex relative imports) and belong in CI so they gate every PR.
+      - name: CSP / source-host drift guard
+        run: node scripts/check-csp-hosts.mjs
 
-  security-audit:
-    name: Security Audit
+      - name: Stale bug-comment guard
+        run: node scripts/check-stale-bug-comments.mjs
+
+      - name: Convex import-resolution guard
+        run: node scripts/check-convex-imports.mjs
+
+  convex-deploy:
+    name: Deploy Convex Backend
+    # Convex does NOT auto-deploy from git (only the Vercel frontend does),
+    # so a deploy step is required — not redundant. Runs only on merge to main,
+    # after every quality gate passes, so the backend can never ship behind a
+    # red test suite.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [lint, typecheck, test, convex-test, build, static-guards]
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     permissions:
       contents: read
-    continue-on-error: true
+    env:
+      EXPECTED_SLUG: steady-ox-280
+      NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
+      CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -281,7 +286,54 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
-        run: npm ci --prefer-offline --no-audit --no-fund
+        run: npm ci --legacy-peer-deps --prefer-offline --no-audit --no-fund
+
+      # Fail fast if the Vercel prod frontend points at a different Convex
+      # deployment than the one we are about to deploy — a mismatch means the
+      # shipped frontend would call the wrong backend.
+      - name: Verify prod Convex URL matches canonical deployment
+        run: |
+          if [ -z "$NEXT_PUBLIC_CONVEX_URL" ]; then
+            echo "::warning::NEXT_PUBLIC_CONVEX_URL secret not set — skipping slug guard (runs authoritatively in Vercel prod prebuild)."
+          else
+            slug=$(echo "$NEXT_PUBLIC_CONVEX_URL" | sed -E 's#https://([a-z0-9-]+)\.convex\.(cloud|site).*#\1#I')
+            if [ "$slug" != "$EXPECTED_SLUG" ]; then
+              echo "::error::NEXT_PUBLIC_CONVEX_URL points at '$slug' but prod deployment is '$EXPECTED_SLUG'. Fix the Vercel prod env before deploy."
+              exit 1
+            fi
+            echo "OK: Vercel prod NEXT_PUBLIC_CONVEX_URL targets canonical deployment '$EXPECTED_SLUG'."
+          fi
+
+      # Deploy the backend. Skips cleanly (stays green) until CONVEX_DEPLOY_KEY
+      # is set in repo secrets; when present, it is a real production deploy.
+      - name: Deploy Convex functions
+        run: |
+          if [ -z "$CONVEX_DEPLOY_KEY" ]; then
+            echo "::warning::CONVEX_DEPLOY_KEY secret not set — skipping Convex backend deploy. Set it in repo secrets to enable automatic backend deploys on merge to main."
+            exit 0
+          fi
+          npx convex deploy --cmd-url-env-variable-name NEXT_PUBLIC_CONVEX_URL
+
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    # A real gate — a high-severity advisory MUST block the merge, not be skipped.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps --prefer-offline --no-audit --no-fund
 
       - name: Audit (high)
         run: |
@@ -309,7 +361,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
-        run: npm ci --prefer-offline --no-audit --no-fund
+        run: npm ci --legacy-peer-deps --prefer-offline --no-audit --no-fund
 
       # Fails the build if any store in USER_DATA_STORES lacks a
       # createObjectStore() call in upgrade() — prevents orphaned-store

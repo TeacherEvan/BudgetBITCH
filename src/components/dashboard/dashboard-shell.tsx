@@ -27,6 +27,7 @@ import { BudgetVarianceGrid } from '@/components/dashboard/budget-variance-grid'
 import { buildPanels } from '@/components/dashboard/panels';
 import { PANEL_CONFIG, PANEL_ORDER, type PanelKey } from '@/components/dashboard/panelConfig';
 import { DailyDisposableHero } from '@/components/dashboard/daily-disposable-hero';
+import { ReceiptDraftsList } from '@/components/receipt/receipt-drafts-list';
 
 interface DashboardShellProps {
   locale: string;
@@ -249,6 +250,9 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
         <div className="bb-scroll-zone flex flex-col px-4 py-4 sm:px-5 lg:px-6">
           {/* Daily Disposable Hero */}
           <DailyDisposableHero locale={locale} onSetup={onSetup} />
+
+          {/* Bot-ingested receipt drafts: review & save as expenses */}
+          <ReceiptDraftsList />
 
           {/* Excel Power Budgeting Control Bar */}
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 p-3 bg-neutral-900/80 backdrop-blur-xl rounded-2xl border border-white/10">

@@ -328,6 +328,8 @@ export const listReceipts = query({
     accountId: v.optional(v.string()),
     cursor: v.optional(v.string()), // ISO timestamp string for parsedAt
     limit: v.optional(v.number()), // Max 50
+    source: v.optional(v.string()), // Optional filter: "app" | "line"
+    status: v.optional(v.string()), // Optional filter: "draft" | "confirmed"
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -335,23 +337,40 @@ export const listReceipts = query({
 
     const limit = Math.min(args.limit || 20, 50);
     
-    // Query using the by_user_and_account index, ordered by parsedAt desc
-    let queryBuilder = ctx.db
-      .query("receipts")
-      .withIndex("by_user_and_account", (q) => 
-        q.eq("userId", userId).eq("accountId", args.accountId || "")
-      )
-      .order("desc");
+    // When no accountId is supplied, list across all the user's receipts
+    // (bot-ingested drafts often have no accountId). Use the by_user index;
+    // otherwise scope to the specific account via by_user_and_account.
+    let queryBuilder;
+    if (args.accountId) {
+      queryBuilder = ctx.db
+        .query("receipts")
+        .withIndex("by_user_and_account", (q) =>
+          q.eq("userId", userId).eq("accountId", args.accountId as string)
+        );
+    } else {
+      queryBuilder = ctx.db
+        .query("receipts")
+        .withIndex("by_user", (q) => q.eq("userId", userId));
+    }
+    queryBuilder = queryBuilder.order("desc");
 
     // Fetch one extra to check if there are more
     const receipts = await queryBuilder.take(limit + 1);
 
-    // Filter by cursor if provided
+    // Apply optional server-side filters (source / status)
     let filtered = receipts;
+    if (args.source !== undefined) {
+      filtered = filtered.filter((r) => (r.source ?? "app") === args.source);
+    }
+    if (args.status !== undefined) {
+      filtered = filtered.filter((r) => (r.status ?? "draft") === args.status);
+    }
+
+    // Filter by cursor if provided
     if (args.cursor) {
       const cursorTime = parseInt(args.cursor);
       if (!isNaN(cursorTime)) {
-        filtered = receipts.filter(r => r.parsedAt < cursorTime);
+        filtered = filtered.filter(r => r.parsedAt < cursorTime);
       }
     }
 
