@@ -1,12 +1,15 @@
 // Feature: Static legal & info pages render correct content. Requires sign-in.
+// Legal copy is authored in English only (LegalLocale = "en"); all other
+// locales fall back to English, so matchers are English-only. (Thai was removed
+// from the project — see AGENTS.md.)
 import { test, expect, signInReal, seedLocalStorage, HAS_CREDS } from "./helpers";
 
 const PAGES = [
-  { path: "/terms", expectText: /terms of service|ข้อกำหนด/i },
-  { path: "/privacy", expectText: /privacy policy|นโยบายความเป็นส่วนตัว/i },
-  { path: "/cookie-policy", expectText: /cookie|คุกกี้/i },
-  { path: "/settings", expectText: /settings|ตั้งค่า/i },
-  { path: "/accounts", expectText: /account|บัญชี/i },
+  { path: "/terms", expectText: /terms of service/i },
+  { path: "/privacy", expectText: /privacy policy/i },
+  { path: "/cookie-policy", expectText: /cookie/i },
+  { path: "/settings", expectText: /settings/i },
+  { path: "/accounts", expectText: /account/i },
 ];
 
 test.describe("Legal & info pages", () => {

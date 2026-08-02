@@ -5,8 +5,7 @@
 // IntlError (MISSING_MESSAGE for localeSwitcher.options.*).
 //
 // Best-practice notes:
-//  - waitForTimeout(800/1200) replaced with waitForLoadState("networkidle") so
-//    the wait is bounded by real network activity, not wall-clock guesses.
+//  - readiness gated on web-first visible assertions (no networkidle/ wall-clock waits).
 import { test, expect } from "./helpers";
 
 test.describe("Launch & onboarding", () => {
@@ -20,7 +19,6 @@ test.describe("Launch & onboarding", () => {
     await expect(
       page.getByRole("button", { name: /enter boss mode/i }),
     ).toBeVisible({ timeout: 8000 });
-    await page.waitForLoadState("networkidle").catch(() => {});
     errors.assertClean();
   });
 
@@ -37,7 +35,6 @@ test.describe("Launch & onboarding", () => {
         [loc],
       );
       await page.goto("/");
-      await page.waitForLoadState("networkidle").catch(() => {});
       // No IntlError (MISSING_MESSAGE) should appear in console.
       errors.assertClean();
     }

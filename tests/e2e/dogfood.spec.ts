@@ -127,7 +127,7 @@ test.describe("BudgetBITCH Dogfood Audit E2E Flow", () => {
 
     // Net Worth toggle — optional, may not be in this account state.
     const netWorthBtn = page.getByRole("button", { name: /💰 Net Worth/ });
-    if (await netWorthBtn.isVisible()) {
+    if (await netWorthBtn.count()) {
       await netWorthBtn.click();
       await expect(netWorthBtn).toBeVisible(); // re-renders without crash
       await page.screenshot({ path: path.join(screenshotsDir, "14_dashboard_networth_panel.png") });
@@ -135,13 +135,13 @@ test.describe("BudgetBITCH Dogfood Audit E2E Flow", () => {
 
     // Critical expenses modal — optional.
     const cutExpenseBtn = page.getByRole("button", { name: /Pick 1 to cut/i });
-    if (await cutExpenseBtn.isVisible()) {
+    if (await cutExpenseBtn.count()) {
       await cutExpenseBtn.click();
       await page.screenshot({
         path: path.join(screenshotsDir, "15_dashboard_critical_expense_modal.png"),
       });
       const closeModalBtn = page.getByRole("button", { name: /close/i });
-      if (await closeModalBtn.first().isVisible()) {
+      if (await closeModalBtn.count()) {
         await closeModalBtn.first().click();
       }
     }

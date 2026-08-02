@@ -5,8 +5,7 @@
 // Receipt-only surfaces are NOT visited.
 //
 // Best-practice notes:
-//  - waitForTimeout(800) replaced with waitForLoadState("networkidle") so the
-//    wait is bounded by actual network activity, not a fixed wall-clock delay.
+//  - readiness gated on web-first visible assertions (no networkidle/ wall-clock waits).
 //  - Status check tightened to `< 400` (excludes redirects which are expected
 //    on auth-gated routes when not signed in).
 import { test, expect, signInReal, seedLocalStorage, HAS_CREDS } from "./helpers";
@@ -41,7 +40,6 @@ test.describe("Route smoke — unauthenticated", () => {
       const resp = await page.goto(r.path);
       expect(resp?.status()).toBeLessThan(400);
       await expect(page.getByText(r.expectText).first()).toBeVisible({ timeout: 8000 });
-      await page.waitForLoadState("networkidle").catch(() => {});
       errors.assertClean();
     });
   }
@@ -62,7 +60,6 @@ test.describe("Route smoke — authenticated", () => {
       await expect(page.getByText(r.expectText).first())
         .toBeVisible({ timeout: 8000 })
         .catch(() => {});
-      await page.waitForLoadState("networkidle").catch(() => {});
       errors.assertClean();
     });
   }

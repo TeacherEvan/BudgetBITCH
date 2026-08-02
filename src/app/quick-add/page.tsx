@@ -3,6 +3,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQuery, useMutation } from 'convex/react';
 import { Plus, Minus, Camera, Save, ArrowLeft, Loader2, Check, AlertCircle, MessageSquare, ShieldCheck, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useExpenses, useWizardProfile, useIncomes } from '@/hooks/use-local-db';
@@ -80,6 +81,17 @@ export default function QuickAddPage() {
   } catch {
     // Offline or test environment fallback
   }
+
+  // Load the pending bot-ingested (LINE / TeacherBOY) receipt draft so the
+  // scraped amount/merchant surface on Quick Add without hunting the dashboard.
+  // The bot writes drafts to Convex (status: 'draft', source: 'line').
+  const botDrafts = useQuery(api.receipts.listReceipts, {
+    source: 'line',
+    status: 'draft',
+    limit: 1,
+  });
+  const confirmBotDraft = useMutation(api.receipts.confirm);
+  const [botDraftId, setBotDraftId] = useState<string | null>(null);
 
   // UI States
   const [isExpense, setIsExpense] = useState(true);
@@ -186,6 +198,33 @@ export default function QuickAddPage() {
     }
   }, [draft]);
 
+  // Surface a bot-ingested (LINE / TeacherBOY) draft on Quick Add. The bot
+  // writes drafts to Convex; load the latest pending one and fill the scanned
+  // review fields so the scraped amount/merchant are visible and editable.
+  // Skips if the user scanned a receipt in this session (local `draft` wins).
+  useEffect(() => {
+    if (draft) return; // session scan takes precedence
+    const bot = botDrafts?.receipts?.[0];
+    if (!bot) {
+      if (botDraftId) setBotDraftId(null);
+      return;
+    }
+    setIsExpense(true);
+    setEntrySource('receipt');
+    setBotDraftId(bot._id as string);
+    setScannedAmount(bot.amount ? String(bot.amount) : '');
+    setScannedMerchant(String(bot.merchant ?? ''));
+    setScannedCategory((bot.category as ExpenseCategory) ?? 'other');
+    setScannedDate(
+      bot.date
+        ? String(bot.date)
+        : new Date(bot._creationTime ?? Date.now()).toISOString().split('T')[0],
+    );
+    if (bot.amount) {
+      setInputText(`${bot.amount} ${bot.merchant ?? ''}`.trim());
+    }
+  }, [draft, botDrafts, botDraftId]);
+
   // Persist the reviewed receipt fields. We fill the shared form state and reuse
   // the manual Save path so there is exactly one write into the expense store.
   const handleSaveScannedReceipt = async () => {
@@ -196,17 +235,33 @@ export default function QuickAddPage() {
     }
     try {
       setLoading(true);
+      const date = scannedDate || new Date().toISOString().split('T')[0];
       await addExpense({
         amount: Math.round(amtVal * 100) / 100,
         merchant: scannedMerchant.trim() || 'Photo Receipt',
         category: scannedCategory,
-        date: scannedDate || new Date().toISOString().split('T')[0],
+        date,
         source: 'receipt',
         note: 'Scanned receipt photo',
       });
+      if (botDraftId) {
+        // Confirm the bot-ingested Convex draft (idempotent; flips status to
+        // confirmed and stores the reviewed overrides).
+        await confirmBotDraft({
+          draftId: botDraftId as never,
+          overrides: {
+            amount: Math.round(amtVal * 100) / 100,
+            merchant: scannedMerchant.trim() || 'Photo Receipt',
+            category: scannedCategory,
+            date,
+          },
+        });
+        setBotDraftId(null);
+      } else {
+        // Session scan path: reuse the hook's confirm (skips the duplicate add).
+        await confirmDraft(undefined, { skipLocalAdd: true });
+      }
       setToast({ show: true, message: `📸 Saved receipt: ${amtVal} @ ${scannedMerchant || 'Photo Receipt'}`, type: 'success' });
-      // Clear the scanned state + draft (skip the hook's internal add; we just wrote it).
-      await confirmDraft(undefined, { skipLocalAdd: true });
       setScannedAmount('');
       setScannedMerchant('');
       setScannedDate('');

@@ -13,24 +13,13 @@ const nextConfig = {
   },
   allowedDevOrigins: ["127.0.0.1"],
   async headers() {
+    // CSP is now applied per-request with a nonce in src/app/proxy.ts
+    // (required so Next.js 16's inline RSC/hydration scripts pass a strict
+    // policy without 'unsafe-inline'). Non-CSP security headers stay here.
     return [
       {
-        source: "/:path*",
+        source: '/:path*',
         headers: [
-          {
-            key: "Content-Security-Policy",
-            value: [
-              "default-src 'self'",
-              "script-src 'self'",
-              "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https:",
-              "font-src 'self'",
-              "connect-src 'self' https://*.convex.cloud wss://*.convex.cloud",
-              "frame-ancestors 'self'",
-              "base-uri 'self'",
-              "form-action 'self'",
-            ].join("; "),
-          },
           {
             key: "X-Frame-Options",
             value: "DENY",
