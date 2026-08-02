@@ -137,8 +137,32 @@ The root app is an auth-first, local-first PWA:
    lossless cross-account sync.
 6. IndexedDB + Service Worker provide offline-first UX; data syncs to Convex daily.
 7. Market Watch surfaces localized finance news (RSS via `/api/news` and
-   `/api/news/vicinity`) inside the dashboard; legal pages record consent
-   server-side (`legalAgreements`, `cookieConsents`).
+   vicinity registry).
+
+### Receipt ingestion (bot → Convex, not app-side LINE IDs)
+
+Receipts scraped by the TeacherBOY / LINE bot do **not** flow through the
+app's own auth or any raw LINE identifier in client code. The path is:
+
+1. The bot POSTs a scraped receipt to the Convex `ingestReceipt` HTTP action
+   (`convex/http.ts` → `convex/receipts.ts`), authenticated by a Bearer token.
+2. `ingestReceipt` resolves the owning user via the **LINE → Convex mapping**
+   (`convex/line.ts` `getLineMapping`, seeded by `seedLineLink`), then writes a
+   `receipts` row with `status: "draft"`, `source: "line"`.
+3. The **app authenticates users with Convex Auth (email/password)** — there is
+   no LINE ID in app logic. Attribution from a LINE user to a Convex account
+   happens only server-side through the mapping above.
+4. The client surfaces pending drafts two ways:
+   - the dashboard `ReceiptDraftsList` widget (`listReceipts` query), and
+   - the Quick Add page, which loads the latest `status: "draft"` bot draft on
+     mount and confirms it via `receipts.confirm` on Save.
+
+**Do not** embed a raw LINE UID in app/client code to attribute receipts — use
+the Convex-side `getLineMapping` bridge. If a LINE user is "not linked", the
+fix is the server-side mapping (or `seedLineLink`), never a client LINE ID.
+
+7b. Legal pages record consent server-side (`legalAgreements`,
+    `cookieConsents`).
 8. Receipts are parsed locally (tesseract.js + the shared scraper engine) with a
    Gemini-backed Convex action as the server path; SMS shares arrive via the PWA
    share target and are confirmed at `/sms-confirm`.

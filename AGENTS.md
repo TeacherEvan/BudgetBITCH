@@ -124,6 +124,7 @@ Convex agent skills can be reinstalled with `npx convex ai-files install`.
 | Skipping Convex guidelines | Read `convex/_generated/ai/guidelines.md` first |
 | `.collect()` or `.filter()` in Convex | Indexes + `withIndex` + `.take()` |
 | Passing `userId` from the client for authz | `ctx.auth.getUserIdentity()` server-side |
+| Embedding a raw LINE UID in app/client code to attribute bot receipts | Bot receipts are attributed server-side via the LINE→Convex mapping (`convex/line.ts` `getLineMapping`, seeded by `seedLineLink`); the app uses Convex Auth (email/password). Fix "not linked" with the server mapping, not a client LINE ID |
 | Unnecessary `'use client'` | Default to Server Components |
 | New IndexedDB store without `upgrade()` | `npm run check:idb` will fail the build |
 | Writing "BudgetBITCH" in UI copy | Display name is "Budget Boss" |
