@@ -43,7 +43,11 @@ test("parseReceipt handles successful response from Gemini for authenticated use
                   amount: 150.50,
                   merchant: "Test Coffee Shop",
                   category: "food",
-                  date: "2026-07-21"
+                  date: "2026-07-21",
+                  lineItems: [
+                    { description: "Latte", amount: 80.50 },
+                    { description: "Sandwich", amount: 70.00 },
+                  ]
                 })
               }
             ]
@@ -63,7 +67,11 @@ test("parseReceipt handles successful response from Gemini for authenticated use
     amount: 150.50,
     merchant: "Test Coffee Shop",
     category: "food",
-    date: "2026-07-21"
+    date: "2026-07-21",
+    lineItems: [
+      { description: "Latte", amount: 80.50 },
+      { description: "Sandwich", amount: 70.00 },
+    ]
   });
 
   expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -135,7 +143,7 @@ test("parseMessage handles successful response from Gemini for financial notific
   expect(res).toEqual({
     amount: 89.99,
     merchant: "Amazon",
-    category: "shopping",
+    category: "other",
     date: "2026-07-25",
     type: "expense"
   });

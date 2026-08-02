@@ -11,8 +11,9 @@ import { applyAnswers, generateQuestions } from "./lib/receipt/questions";
 import type { OcrPayload } from "./lib/receipt/types";
 
 const VALID_CATEGORIES = [
-  "food", "transport", "shopping", "utilities", "entertainment",
-  "medical", "housing", "personal", "education", "income", "other"
+  "food", "transport", "utilities", "entertainment",
+  "housing", "phone_internet", "subscriptions", "healthcare",
+  "insurance", "debt", "savings", "other"
 ] as const;
 
 export function normalizeCategory(category: string): string {
@@ -58,7 +59,7 @@ export const parseReceipt = action({
     base64Image: v.string(), // Base64 encoded receipt image
     accountId: v.optional(v.string()), // Optional: which account/board this belongs to
   },
-  handler: async (ctx, args): Promise<{ receiptId: string; amount: number; merchant: string; category: string; date: string | null }> => {
+  handler: async (ctx, args): Promise<{ receiptId: string; amount: number; merchant: string; category: string; date: string | null; lineItems?: Array<{ description: string; amount: number }> }> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new ConvexError("Authentication required to parse receipts");
@@ -86,15 +87,17 @@ export const parseReceipt = action({
     const prompt = `Analyze the receipt in the image. You must extract:
 1. Total amount spent (as a number, do not include currency symbols).
 2. Merchant/Store name.
-3. A suggested category (e.g. food, transport, shopping, utilities, entertainment, medical, housing, personal, education, income, other).
+3. A suggested category (one of: food, transport, utilities, entertainment, housing, phone_internet, subscriptions, healthcare, insurance, debt, savings, other).
 4. Date (formatted as YYYY-MM-DD or null if not clear).
+5. An array of line items. Each line item has a "description" (the item name as printed on the receipt) and an "amount" (the line total as a number). If the receipt is too blurry to read individual items, return an empty array.
 
 Return a JSON object matching this schema exactly:
 {
   "amount": number,
   "merchant": string,
   "category": string,
-  "date": string | null
+  "date": string | null,
+  "lineItems": Array<{ "description": string, "amount": number }>
 }
 Do not include any formatting, markdown wrappers, or extra text. Output ONLY the raw JSON string.`;
 
@@ -152,6 +155,15 @@ Do not include any formatting, markdown wrappers, or extra text. Output ONLY the
       const date = validateDate(parsed.date);
       const parsedAt = Date.now();
 
+      // Extract and validate line items (Gemini may return them)
+      const rawLineItems = Array.isArray(parsed.lineItems) ? parsed.lineItems : [];
+      const lineItems = rawLineItems
+        .map((li: { description?: unknown; amount?: unknown }) => ({
+          description: String(li.description ?? '').trim(),
+          amount: validateAmount(li.amount),
+        }))
+        .filter((li: { description: string; amount: number }) => li.description.length > 0 && li.amount > 0);
+
       // Persist to Convex using internal mutation
       const receiptId = await ctx.runMutation(internal.receipts.saveReceipt, {
         userId,
@@ -165,6 +177,7 @@ Do not include any formatting, markdown wrappers, or extra text. Output ONLY the
         imageSizeBytes,
         parsedAt,
         geminiModel: GEMINI_MODEL,
+        lineItems: lineItems.length > 0 ? lineItems : undefined,
       });
 
       return {
@@ -173,6 +186,7 @@ Do not include any formatting, markdown wrappers, or extra text. Output ONLY the
         merchant,
         category,
         date: date ?? null,
+        lineItems: lineItems.length > 0 ? lineItems : undefined,
       };
     } catch (error) {
       console.error("Error in parseReceipt action:", error);
@@ -209,7 +223,7 @@ export const parseMessage = action({
 Extract:
 1. Total amount spent or received (as a positive number, do not include currency symbols).
 2. Merchant/Store/Payee name (e.g. Amazon, Uber, Walmart, Salary, Chase, Starbucks).
-3. A suggested category (food, transport, shopping, utilities, entertainment, medical, housing, personal, education, income, salary, freelance, business, other).
+3. A suggested category (food, transport, utilities, entertainment, housing, phone_internet, subscriptions, healthcare, insurance, debt, savings, other).
 4. Date (formatted as YYYY-MM-DD or null if not clear).
 5. Transaction type ("expense" or "income").
 

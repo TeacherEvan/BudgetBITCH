@@ -410,4 +410,53 @@ describe('QuickAddPage', () => {
     });
     expect(mockScanImage).not.toHaveBeenCalled();
   });
+
+  it('Gemini AI path populates editable fields and does NOT auto-commit (fix: AI-scan-no-autocommit)', async () => {
+    // Regression guard: the Gemini path previously called addExpense directly
+    // and returned early, bypassing the editable review card entirely. Now it
+    // must populate the scanned fields and let the user press Save.
+    mockParseReceipt.mockResolvedValueOnce({
+      receiptId: 'r-gem-1',
+      amount: 250,
+      merchant: 'AI Supermarket',
+      category: 'food',
+      date: '2026-08-03',
+      lineItems: [
+        { description: 'groceries', amount: 200 },
+        { description: 'movie ticket', amount: 50 },
+      ],
+    });
+
+    render(<QuickAddPage />);
+
+    const file = new File(['fake-image'], 'receipt.jpg', { type: 'image/jpeg' });
+    const fileInput = screen.getByTestId('camera-file-input');
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    // The editable review card appears with the AI-scanned values
+    await waitFor(() => {
+      expect(screen.getByTestId('scanned-receipt-card')).toBeInTheDocument();
+    });
+    const amountInput = screen.getByTestId('scanned-amount-input') as HTMLInputElement;
+    const merchantInput = screen.getByTestId('scanned-merchant-input') as HTMLInputElement;
+    expect(amountInput.value).toBe('250');
+    expect(merchantInput.value).toBe('AI Supermarket');
+
+    // No expense was auto-committed — user must press Save
+    expect(mockAddExpense).not.toHaveBeenCalled();
+
+    // Saving writes once with the AI-scanned values + line items
+    fireEvent.click(screen.getByTestId('save-scanned-receipt-btn'));
+    await waitFor(() => {
+      expect(mockAddExpense).toHaveBeenCalledTimes(1);
+      const entry = mockAddExpense.mock.calls[0][0];
+      expect(entry.amount).toBe(250);
+      expect(entry.merchant).toBe('AI Supermarket');
+      expect(entry.source).toBe('receipt');
+      expect(entry.lineItems).toEqual([
+        { description: 'groceries', amount: 200, category: 'food' },
+        { description: 'movie ticket', amount: 50, category: 'entertainment' },
+      ]);
+    });
+  });
 });

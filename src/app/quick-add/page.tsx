@@ -395,21 +395,42 @@ export default function QuickAddPage() {
           if (aiRes && aiRes.amount > 0) {
             const amt = aiRes.amount;
             const merch = aiRes.merchant || 'Receipt';
-            const cat = mapCategory(aiRes.category || 'other');
+            const catRaw = aiRes.category || 'other';
+            const catMapped = mapCategory(catRaw);
+            const dateVal = aiRes.date || new Date().toISOString().split('T')[0];
 
-            await addExpense({
-              amount: amt,
-              merchant: merch,
-              category: cat,
-              date: aiRes.date || new Date().toISOString().split('T')[0],
-              source: 'receipt',
-              note: 'Scanned receipt photo'
-            });
-
-            setInputText(`${amt} ${merch}`);
-            setDetectedCategory(cat);
+            // Populate the editable review fields — do NOT auto-commit.
+            // The user reviews and presses "Save Scanned Receipt" just like
+            // the OCR path. This is the same UX rule the skill codifies:
+            // scanned data must populate EDITABLE fields for review, never
+            // silently auto-commit to the store.
+            setIsExpense(true);
             setEntrySource('receipt');
-            setToast({ show: true, message: `📸 AI Scraped & Saved: ${amt} @ ${merch}`, type: 'success' });
+            setScannedAmount(String(amt));
+            setScannedMerchant(merch);
+            setScannedCategory(catMapped);
+            setScannedDate(dateVal);
+
+            // Gemini line items (when the prompt returns them).
+            const aiItems = Array.isArray((aiRes as { lineItems?: unknown }).lineItems)
+              ? ((aiRes as { lineItems: Array<{ description?: string; amount?: number }> }).lineItems)
+              : [];
+            const mappedItems: ReceiptLineItem[] = aiItems.map((li) => ({
+              description: String(li.description ?? ''),
+              amount: Math.round((Number(li.amount) || 0) * 100) / 100,
+              category: mapCategory(li.description),
+            }));
+            setScannedLineItems(mappedItems.length > 0 ? mappedItems : undefined);
+
+            const prefill = [String(amt), merch].filter(Boolean).join(' ').trim();
+            setInputText(prefill);
+            setDetectedCategory(catMapped);
+
+            setToast({
+              show: true,
+              message: `📸 AI scanned: ${merch} — review the fields, then press Save.`,
+              type: 'success',
+            });
             setLoading(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
             return;
@@ -424,7 +445,7 @@ export default function QuickAddPage() {
       const url = URL.createObjectURL(file);
       img.onload = async () => {
         try {
-          await scanImage(img, profile?.locale?.includes('TH') ? 'TH' : 'ZA');
+          await scanImage(img, profile?.locale?.includes('TH') ? 'TH' : (profile?.locale?.includes('ZA') ? 'ZA' : undefined));
           setEntrySource('receipt');
         } catch (err) {
           console.error("Receipt scanning failed:", err);
@@ -714,7 +735,7 @@ export default function QuickAddPage() {
                 className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none focus:border-amber-400/50 text-white outline-none"
                 data-testid="scanned-category-select"
               >
-                {['food', 'transport', 'shopping', 'utilities', 'entertainment', 'medical', 'housing', 'personal', 'education', 'income', 'other'].map((c) => (
+                {(['food', 'transport', 'utilities', 'entertainment', 'housing', 'phone_internet', 'subscriptions', 'healthcare', 'insurance', 'debt', 'savings', 'other'] as ExpenseCategory[]).map((c) => (
                   <option key={c} value={c} className="bg-[#0a0a0a]">{c}</option>
                 ))}
               </select>
