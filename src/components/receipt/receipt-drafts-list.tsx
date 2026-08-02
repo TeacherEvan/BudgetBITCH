@@ -7,22 +7,30 @@ import type { Doc } from '../../../convex/_generated/dataModel';
 import { addExpense } from '@/lib/db/stores/expenses-store';
 import { generateId } from '@/lib/db/local-db';
 
-// Canonical category set (mirrors convex/receipts.ts VALID_CATEGORIES).
+// Canonical category set (mirrors convex/receipts.ts VALID_CATEGORIES +
+// src/lib/types/budget ExpenseCategory). Used for the per-item "type" select.
 const CATEGORIES = [
-  'food',
-  'transport',
-  'shopping',
-  'utilities',
-  'entertainment',
-  'medical',
   'housing',
-  'personal',
-  'education',
-  'income',
+  'transport',
+  'food',
+  'utilities',
+  'phone_internet',
+  'subscriptions',
+  'entertainment',
+  'healthcare',
+  'insurance',
+  'debt',
+  'savings',
   'other',
 ] as const;
 
 type DraftRow = Doc<'receipts'>;
+
+type ReceiptItem = {
+  title: string;
+  type: string;
+  amount: number;
+};
 
 function normalizeCategory(cat: string): string {
   const c = cat.toLowerCase().trim();
@@ -41,8 +49,12 @@ function formatDate(ts: number): string {
 /**
  * Lists receipt drafts pushed by the TeacherBOY / LINE receipt bot (source:
  * "line", status: "draft") and lets the user review/edit the extracted fields
- * before saving them as expenses. Saving writes the expense locally and
- * confirms the server draft; discarding deletes the server draft.
+ * — amount, merchant, category, date, currency, tax AND the itemized lines
+ * (title/type/amount) — before saving them as expenses. Each line becomes its
+ * own Expense row so it shows up in the Expenses list and the CSV/Excel export;
+ * when there are no lines, the receipt total is saved as a single expense.
+ * Saving writes the expense(s) locally and confirms the server draft;
+ * discarding deletes the server draft.
  */
 export function ReceiptDraftsList() {
   const draftsResult = useQuery(api.receipts.listReceipts, {
@@ -54,13 +66,15 @@ export function ReceiptDraftsList() {
   const remove = useMutation(api.receipts.deleteReceipt);
 
   // Local editable overrides keyed by draft id.
-  const [overrides, setOverrides] = useState<Record<string, Partial<DraftRow>>>({});
+  const [overrides, setOverrides] = useState<
+    Record<string, Partial<DraftRow> & { items?: ReceiptItem[] }>
+  >({});
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const drafts = useMemo<DraftRow[]>(
     () => draftsResult?.receipts ?? [],
-    [draftsResult]
+    [draftsResult],
   );
 
   if (draftsResult === undefined) {
@@ -75,11 +89,33 @@ export function ReceiptDraftsList() {
     return null; // No bot drafts — render nothing so the dashboard stays clean.
   }
 
-  const get = (d: DraftRow, key: 'amount' | 'merchant' | 'category' | 'date') =>
+  const get = (
+    d: DraftRow,
+    key: 'amount' | 'merchant' | 'category' | 'date' | 'currency' | 'tax',
+  ): string | number | undefined =>
     (overrides[d._id]?.[key] as never) ?? (d[key] as never);
 
-  const set = (d: DraftRow, key: 'amount' | 'merchant' | 'category' | 'date', value: string) =>
-    setOverrides((prev) => ({ ...prev, [d._id]: { ...prev[d._id], [key]: value } }));
+  const set = (
+    d: DraftRow,
+    key: 'amount' | 'merchant' | 'category' | 'date' | 'currency' | 'tax',
+    value: string,
+  ) => setOverrides((prev) => ({ ...prev, [d._id]: { ...prev[d._id], [key]: value } }));
+
+  const getItems = (d: DraftRow): ReceiptItem[] =>
+    overrides[d._id]?.items ??
+    ((d.items as ReceiptItem[] | undefined) ?? []);
+
+  const setItems = (d: DraftRow, items: ReceiptItem[]) =>
+    setOverrides((prev) => ({ ...prev, [d._id]: { ...prev[d._id], items } }));
+
+  const updateItem = (
+    d: DraftRow,
+    idx: number,
+    patch: Partial<ReceiptItem>,
+  ) => {
+    const items = getItems(d).map((it, i) => (i === idx ? { ...it, ...patch } : it));
+    setItems(d, items);
+  };
 
   const handleSave = async (d: DraftRow) => {
     setSaving(d._id);
@@ -89,17 +125,56 @@ export function ReceiptDraftsList() {
       const merchant = String(get(d, 'merchant') || 'Unknown Merchant').slice(0, 200);
       const category = normalizeCategory(String(get(d, 'category') || 'other'));
       const date = String(get(d, 'date') || new Date().toISOString().slice(0, 10));
+      const currency = get(d, 'currency') ? String(get(d, 'currency')) : undefined;
+      const tax = get(d, 'tax') ? Number(get(d, 'tax')) : undefined;
+      const items = getItems(d).map((it) => ({
+        title: String(it.title || '').slice(0, 200),
+        type: normalizeCategory(String(it.type || 'other')),
+        amount: Number(it.amount) || 0,
+      }));
 
-      await addExpense({
-        id: generateId(),
-        date,
-        category: category as never,
-        merchant,
-        amount,
-        source: 'receipt',
+      // Itemized expenses: one Expense per line so they show in the Expenses
+      // list and the CSV/Excel export. Fall back to the receipt total when the
+      // bot found no lines.
+      const expenseRows =
+        items.length > 0
+          ? items.map((it) => ({
+              id: generateId(),
+              date,
+              category: it.type as never,
+              merchant: it.title || merchant,
+              amount: it.amount,
+              note: merchant,
+              source: 'receipt' as const,
+            }))
+          : [
+              {
+                id: generateId(),
+                date,
+                category: category as never,
+                merchant,
+                amount,
+                note: undefined,
+                source: 'receipt' as const,
+              },
+            ];
+
+      for (const row of expenseRows) {
+        await addExpense(row);
+      }
+
+      await confirm({
+        draftId: d._id,
+        overrides: {
+          amount,
+          merchant,
+          category,
+          date,
+          currency,
+          tax,
+          items: items.length > 0 ? items : undefined,
+        },
       });
-
-      await confirm({ draftId: d._id, overrides: { amount, merchant, category, date } });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save receipt');
     } finally {
@@ -134,81 +209,153 @@ export function ReceiptDraftsList() {
       )}
 
       <ul className="space-y-3">
-        {drafts.map((d) => (
-          <li key={d._id} className="rounded-xl border border-white/10 bg-zinc-900/60 p-3">
-            <div className="mb-2 flex items-center justify-between text-[11px] text-white/40">
-              <span>{formatDate(d._creationTime)}</span>
-              <span className="uppercase tracking-wide">line bot</span>
-            </div>
+        {drafts.map((d) => {
+          const items = getItems(d);
+          return (
+            <li key={d._id} className="rounded-xl border border-white/10 bg-zinc-900/60 p-3">
+              <div className="mb-2 flex items-center justify-between text-[11px] text-white/40">
+                <span>{formatDate(d._creationTime)}</span>
+                <span className="uppercase tracking-wide">line bot</span>
+              </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <label className="flex flex-col text-[11px] text-white/50">
-                Amount
-                <input
-                  type="number"
-                  step="0.01"
-                  value={get(d, 'amount')}
-                  onChange={(e) => set(d, 'amount', e.target.value)}
-                  className="mt-1 rounded-lg border border-white/10 bg-zinc-950 px-2 py-1.5 text-sm text-white outline-none focus:border-amber-400/50"
-                />
-              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="flex flex-col text-[11px] text-white/50">
+                  Amount
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={get(d, 'amount') ?? ''}
+                    onChange={(e) => set(d, 'amount', e.target.value)}
+                    className="mt-1 rounded-lg border border-white/10 bg-zinc-950 px-2 py-1.5 text-sm text-white outline-none focus:border-amber-400/50"
+                  />
+                </label>
 
-              <label className="flex flex-col text-[11px] text-white/50">
-                Date
-                <input
-                  type="date"
-                  value={get(d, 'date') ?? ''}
-                  onChange={(e) => set(d, 'date', e.target.value)}
-                  className="mt-1 rounded-lg border border-white/10 bg-zinc-950 px-2 py-1.5 text-sm text-white outline-none focus:border-amber-400/50"
-                />
-              </label>
+                <label className="flex flex-col text-[11px] text-white/50">
+                  Date
+                  <input
+                    type="date"
+                    value={get(d, 'date') ?? ''}
+                    onChange={(e) => set(d, 'date', e.target.value)}
+                    className="mt-1 rounded-lg border border-white/10 bg-zinc-950 px-2 py-1.5 text-sm text-white outline-none focus:border-amber-400/50"
+                  />
+                </label>
 
-              <label className="col-span-2 flex flex-col text-[11px] text-white/50">
-                Merchant
-                <input
-                  type="text"
-                  value={get(d, 'merchant')}
-                  onChange={(e) => set(d, 'merchant', e.target.value)}
-                  className="mt-1 rounded-lg border border-white/10 bg-zinc-950 px-2 py-1.5 text-sm text-white outline-none focus:border-amber-400/50"
-                />
-              </label>
+                <label className="col-span-2 flex flex-col text-[11px] text-white/50">
+                  Merchant
+                  <input
+                    type="text"
+                    value={get(d, 'merchant') ?? ''}
+                    onChange={(e) => set(d, 'merchant', e.target.value)}
+                    className="mt-1 rounded-lg border border-white/10 bg-zinc-950 px-2 py-1.5 text-sm text-white outline-none focus:border-amber-400/50"
+                  />
+                </label>
 
-              <label className="col-span-2 flex flex-col text-[11px] text-white/50">
-                Category
-                <select
-                  value={get(d, 'category')}
-                  onChange={(e) => set(d, 'category', e.target.value)}
-                  className="mt-1 rounded-lg border border-white/10 bg-zinc-950 px-2 py-1.5 text-sm text-white outline-none focus:border-amber-400/50"
+                <label className="col-span-2 flex flex-col text-[11px] text-white/50">
+                  Category
+                  <select
+                    value={get(d, 'category') ?? 'other'}
+                    onChange={(e) => set(d, 'category', e.target.value)}
+                    className="mt-1 rounded-lg border border-white/10 bg-zinc-950 px-2 py-1.5 text-sm text-white outline-none focus:border-amber-400/50"
+                  >
+                    {CATEGORIES.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="flex flex-col text-[11px] text-white/50">
+                  Currency
+                  <input
+                    type="text"
+                    placeholder="e.g. THB"
+                    value={get(d, 'currency') ?? ''}
+                    onChange={(e) => set(d, 'currency', e.target.value)}
+                    className="mt-1 rounded-lg border border-white/10 bg-zinc-950 px-2 py-1.5 text-sm uppercase text-white outline-none focus:border-amber-400/50"
+                  />
+                </label>
+
+                <label className="flex flex-col text-[11px] text-white/50">
+                  Tax
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={get(d, 'tax') ?? ''}
+                    onChange={(e) => set(d, 'tax', e.target.value)}
+                    className="mt-1 rounded-lg border border-white/10 bg-zinc-950 px-2 py-1.5 text-sm text-white outline-none focus:border-amber-400/50"
+                  />
+                </label>
+              </div>
+
+              {/* Itemized lines: editable title / type / amount */}
+              <div className="mt-3">
+                <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-white/40">
+                  Items {items.length > 0 && `(${items.length})`}
+                </p>
+                {items.length === 0 ? (
+                  <p className="text-[11px] text-white/30">No line items detected — the receipt total will be saved as one expense.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {items.map((it, idx) => (
+                      <li key={idx} className="rounded-lg border border-white/10 bg-zinc-950/60 p-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] uppercase tracking-wide text-white/30">Item {idx + 1}</span>
+                          <span className="text-[10px] text-white/30">
+                            {normalizeCategory(String(it.type || 'other'))}
+                          </span>
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="Title"
+                          value={it.title}
+                          onChange={(e) => updateItem(d, idx, { title: e.target.value })}
+                          className="mt-1 w-full rounded-lg border border-white/10 bg-zinc-950 px-2 py-1.5 text-sm text-white outline-none focus:border-amber-400/50"
+                        />
+                        <div className="mt-1 grid grid-cols-2 gap-2">
+                          <input
+                            type="text"
+                            placeholder="Type"
+                            value={it.type}
+                            onChange={(e) => updateItem(d, idx, { type: e.target.value })}
+                            className="rounded-lg border border-white/10 bg-zinc-950 px-2 py-1.5 text-sm text-white outline-none focus:border-amber-400/50"
+                          />
+                          <input
+                            type="number"
+                            step="0.01"
+                            placeholder="Amount"
+                            value={it.amount}
+                            onChange={(e) => updateItem(d, idx, { amount: Number(e.target.value) })}
+                            className="rounded-lg border border-white/10 bg-zinc-950 px-2 py-1.5 text-sm text-white outline-none focus:border-amber-400/50"
+                          />
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleSave(d)}
+                  disabled={saving === d._id}
+                  className="flex-1 rounded-lg bg-amber-400 px-3 py-1.5 text-xs font-bold text-zinc-950 transition-colors hover:bg-amber-300 disabled:opacity-50"
                 >
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <div className="mt-3 flex gap-2">
-              <button
-                type="button"
-                onClick={() => handleSave(d)}
-                disabled={saving === d._id}
-                className="flex-1 rounded-lg bg-amber-400 px-3 py-1.5 text-xs font-bold text-zinc-950 transition-colors hover:bg-amber-300 disabled:opacity-50"
-              >
-                {saving === d._id ? 'Saving…' : 'Save expense'}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDiscard(d)}
-                disabled={saving === d._id}
-                className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-semibold text-white/60 transition-colors hover:border-red-400/40 hover:text-red-300 disabled:opacity-50"
-              >
-                Discard
-              </button>
-            </div>
-          </li>
-        ))}
+                  {saving === d._id ? 'Saving…' : 'Save expense'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDiscard(d)}
+                  disabled={saving === d._id}
+                  className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-semibold text-white/60 transition-colors hover:border-red-400/40 hover:text-red-300 disabled:opacity-50"
+                >
+                  Discard
+                </button>
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );

@@ -7,7 +7,7 @@ import { matchTemplate } from './fingerprint';
 import { normalisePayload } from './normalise';
 import { generateQuestions } from './questions';
 import { categorizeReceipt } from './categorize';
-import type { FieldCandidate, FieldName, OcrLine, OcrPayload, ScrapeResult } from './types';
+import type { FieldCandidate, FieldName, OcrLine, OcrPayload, ReceiptItem, ScrapeResult } from './types';
 import { validateExtraction } from './validate';
 import { detectCurrency as detectCurrencyNew, parseAmount, parseDate, inferCategory } from './currency';
 import { inferPaymentMethod } from './payment';
@@ -106,11 +106,21 @@ export function scrape(payload: OcrPayload, options: EngineOptions = {}): Scrape
   const paymentMethod = inferPaymentMethod(fullText);
   const currencyHint = detectCurrencyNew(fullText);
 
+  // Map raw line items into the editable ReceiptItem shape. The line "type"
+  // defaults to a category inferred from the product description (the same
+  // keyword rules used for the receipt-level category), so the user reviews a
+  // sensible value before saving it as an expense.
+  const receiptItems: ReceiptItem[] = items.map((it) => ({
+    title: it.description,
+    type: categorizeReceipt(it.description, undefined),
+    amount: it.amount,
+  }));
+
   return {
     fields,
     confidence,
     evidence,
     questions,
-    lineItems: items,
+    items: receiptItems,
   };
 }
