@@ -47,6 +47,7 @@ const mockConvexMutation = vi.fn();
 vi.mock('convex/react', () => ({
   useAction: () => mockParseReceipt,
   useMutation: () => mockConvexMutation,
+  useQuery: () => undefined,
 }));
 
 // Mock the deterministic receipt scraper hook.
