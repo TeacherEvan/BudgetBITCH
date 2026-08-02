@@ -192,3 +192,186 @@ test("listReceipts filters by source and status", async () => {
   expect(all.receipts.length).toBe(4);
 });
 
+
+// ---------------------------------------------------------------------------
+// App camera ingest path: "app:<userId>" prefix + source pass-through.
+//
+// Guards the fix that lets the Quick Add camera reach /receipts/ingest without
+// a LINE mapping, and stops app-camera drafts being mislabelled source="line"
+// (the source was previously hardcoded at three call sites).
+// ---------------------------------------------------------------------------
+
+const ingestPayload = (lines: string[]) => ({
+  lines: lines.map((text, i) => ({ text, conf: 85, y: i, words: [] })),
+  width: 1024,
+  height: 400,
+  lang: "en",
+  engine: "gemini-vision@1",
+  capturedAt: Date.now(),
+  countryHint: "TH",
+  currencyHint: null,
+});
+
+async function postIngest(body: unknown, token = "test-sync-secret") {
+  return t.fetch("/receipts/ingest", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+}
+
+test("ingestReceipt resolves an app: prefixed user without a LINE mapping", async () => {
+  vi.stubEnv("CONVEX_SYNC_SECRET", "test-sync-secret");
+  const userId = await seedUser(t, "app-camera-user");
+
+  const res = await postIngest({
+    lineUserId: `app:${userId}`,
+    idempotencyKey: "app_no_mapping_1",
+    source: "app-camera",
+    payload: ingestPayload(["MERCHANT CAFE", "TOTAL 91000"]),
+  });
+
+  expect(res.status).toBe(200);
+  const body = await res.json();
+  expect(body.success).toBe(true);
+  expect(body.draftId).toBeDefined();
+});
+
+test("ingestReceipt returns 404 for an app: prefixed user that does not exist", async () => {
+  vi.stubEnv("CONVEX_SYNC_SECRET", "test-sync-secret");
+  const realUserId = await seedUser(t, "real-user");
+  // Structurally valid Convex ID for the users table, but deleted.
+  await t.run(async (ctx: any) => ctx.db.delete(realUserId));
+
+  const res = await postIngest({
+    lineUserId: `app:${realUserId}`,
+    idempotencyKey: "app_missing_user_1",
+    source: "app-camera",
+    payload: ingestPayload(["MERCHANT CAFE", "TOTAL 91000"]),
+  });
+
+  expect(res.status).toBe(404);
+  const body = await res.json();
+  expect(body.error).toMatch(/User not found/);
+});
+
+test("ingestReceipt persists source=app-camera instead of hardcoding line", async () => {
+  vi.stubEnv("CONVEX_SYNC_SECRET", "test-sync-secret");
+  const userId = await seedUser(t, "source-user");
+
+  const res = await postIngest({
+    lineUserId: `app:${userId}`,
+    idempotencyKey: "app_source_1",
+    source: "app-camera",
+    payload: ingestPayload(["MERCHANT CAFE", "TOTAL 91000"]),
+  });
+  expect(res.status).toBe(200);
+
+  const stored = await t.run(async (ctx: any) =>
+    ctx.db
+      .query("receipts")
+      .withIndex("by_clientDraftId", (q: any) => q.eq("clientDraftId", "app_source_1"))
+      .first(),
+  );
+  expect(stored.source).toBe("app-camera");
+});
+
+test("ingestReceipt defaults source to line when the field is omitted", async () => {
+  vi.stubEnv("CONVEX_SYNC_SECRET", "test-sync-secret");
+  const userId = await seedUser(t, "default-source-user");
+
+  const res = await postIngest({
+    lineUserId: `app:${userId}`,
+    idempotencyKey: "app_default_source_1",
+    payload: ingestPayload(["MERCHANT CAFE", "TOTAL 91000"]),
+  });
+  expect(res.status).toBe(200);
+
+  const stored = await t.run(async (ctx: any) =>
+    ctx.db
+      .query("receipts")
+      .withIndex("by_clientDraftId", (q: any) => q.eq("clientDraftId", "app_default_source_1"))
+      .first(),
+  );
+  expect(stored.source).toBe("line");
+});
+
+// ---------------------------------------------------------------------------
+// proxyReceiptScan: the app never holds CONVEX_SYNC_SECRET.
+// ---------------------------------------------------------------------------
+
+test("proxyReceiptScan rejects unauthenticated calls", async () => {
+  await expect(
+    t.action(api.receipts.proxyReceiptScan, {
+      base64Image: "data:image/png;base64,abc",
+      idempotencyKey: "proxy_unauth_1",
+    }),
+  ).rejects.toThrow(/Authentication required to scan receipts/);
+});
+
+test("proxyReceiptScan fails clearly when the bot URL is not configured", async () => {
+  const userId = await seedUser(t, "proxy-unconfigured");
+  vi.stubEnv("BUDGETBOSS_BOT_URL", "");
+  vi.stubEnv("CONVEX_SYNC_SECRET", "");
+
+  await expect(
+    asUser(userId).action(api.receipts.proxyReceiptScan, {
+      base64Image: "data:image/png;base64,abc",
+      idempotencyKey: "proxy_unconfigured_1",
+    }),
+  ).rejects.toThrow(/Receipt bot is not configured/);
+});
+
+test("proxyReceiptScan sends the server-derived userId and never a client one", async () => {
+  const userId = await seedUser(t, "proxy-user");
+  vi.stubEnv("BUDGETBOSS_BOT_URL", "https://bot.example");
+  vi.stubEnv("CONVEX_SYNC_SECRET", "test-sync-secret");
+
+  const mockFetch = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({ success: true, draftId: "draft_1" }),
+  });
+  vi.stubGlobal("fetch", mockFetch);
+
+  const result = await asUser(userId).action(api.receipts.proxyReceiptScan, {
+    base64Image: "data:image/png;base64,abc",
+    idempotencyKey: "proxy_ok_1",
+    countryHint: "ID",
+  });
+
+  expect(result).toEqual({ success: true, draftId: "draft_1" });
+
+  const [url, init] = mockFetch.mock.calls[0];
+  expect(url).toBe("https://bot.example/receipt/scan");
+  expect(init.headers.Authorization).toBe("Bearer test-sync-secret");
+
+  const sent = JSON.parse(init.body);
+  expect(sent.userId).toBe(userId);
+  expect(sent.countryHint).toBe("ID");
+  expect(sent.idempotencyKey).toBe("proxy_ok_1");
+});
+
+test("proxyReceiptScan surfaces a bot HTTP failure instead of returning junk", async () => {
+  const userId = await seedUser(t, "proxy-fail-user");
+  vi.stubEnv("BUDGETBOSS_BOT_URL", "https://bot.example");
+  vi.stubEnv("CONVEX_SYNC_SECRET", "test-sync-secret");
+
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({
+      ok: false,
+      status: 502,
+      text: async () => "upstream gemini error",
+    }),
+  );
+
+  await expect(
+    asUser(userId).action(api.receipts.proxyReceiptScan, {
+      base64Image: "data:image/png;base64,abc",
+      idempotencyKey: "proxy_fail_1",
+    }),
+  ).rejects.toThrow(/Receipt bot scan failed \(502\)/);
+});

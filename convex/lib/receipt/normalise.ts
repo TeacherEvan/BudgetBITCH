@@ -5,8 +5,11 @@ export type NormalisedLine = OcrLine & {
   isNoise: boolean;
 };
 
-export type NormalisedPayload = OcrPayload & {
+export type NormalisedPayload = Omit<OcrPayload, "countryHint" | "currencyHint"> & {
   lines: NormalisedLine[];
+  // Collapsed to string | undefined in normalisePayload (null → undefined).
+  countryHint?: string;
+  currencyHint?: string;
 };
 
 const THAI_DIGITS_MAP: Record<string, string> = {
@@ -55,6 +58,11 @@ export function normaliseLine(input: string | OcrLine): NormalisedLine {
 export function normalisePayload(payload: OcrPayload): NormalisedPayload {
   return {
     ...payload,
+    // The TeacherBOY bridge serializes absent hints as JSON null. Downstream
+    // consumers are typed `string | undefined` and guard truthily, so collapse
+    // null -> undefined here to keep both the schema contract and the types happy.
+    countryHint: payload.countryHint ?? undefined,
+    currencyHint: payload.currencyHint ?? undefined,
     lines: payload.lines.map((line) => normaliseLine(line)),
   };
 }

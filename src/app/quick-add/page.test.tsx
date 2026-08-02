@@ -42,10 +42,10 @@ vi.mock('next-intl', () => ({
 }));
 
 // Mock Convex
-const mockParseReceipt = vi.fn();
+const mockProxyScan = vi.fn();
 const mockConvexMutation = vi.fn();
 vi.mock('convex/react', () => ({
-  useAction: () => mockParseReceipt,
+  useAction: () => mockProxyScan,
   useMutation: () => mockConvexMutation,
   useQuery: () => undefined,
 }));
@@ -105,27 +105,22 @@ describe('QuickAddPage', () => {
     expect(screen.getByRole('button', { name: /expense \(-\)/i })).toBeInTheDocument();
   });
 
-  it('guards regression: empty/note-only input saves as amount 0 instead of blocking (fix: optional-amount quick-add)', async () => {
+  it('guards: manual expense entry is disabled — Save does NOT write from a typed note-only input (quick-add has no manual amount feature)', async () => {
     render(<QuickAddPage />);
     const input = screen.getByPlaceholderText('Type amount then note, e.g. 120 lunch');
     const saveButton = screen.getByRole('button', { name: /save/i });
 
-    // Note-only entry (no number) — must NOT show the old validation error.
+    // Note-only entry (no number) must NOT save — there is no manual-amount feature.
     fireEvent.change(input, { target: { value: 'lunch with team' } });
     fireEvent.click(saveButton);
 
+    // Button is disabled in expense + manual mode, so no write happens.
     await waitFor(() => {
-      expect(mockAddExpense).toHaveBeenCalledTimes(1);
-      expect(mockAddExpense).toHaveBeenCalledWith(expect.objectContaining({
-        amount: 0,
-        merchant: 'lunch with team',
-        source: 'manual',
-      }));
+      expect(mockAddExpense).not.toHaveBeenCalled();
     });
-    expect(screen.queryByText('Please enter a valid amount')).not.toBeInTheDocument();
   });
 
-  it('parses amount and note, then calls addExpense on save for expenses', async () => {
+  it('guards: typed amount + note does NOT save as a manual expense (no manual amount feature)', async () => {
     render(<QuickAddPage />);
     const input = screen.getByPlaceholderText('Type amount then note, e.g. 120 lunch');
     const saveButton = screen.getByRole('button', { name: /save/i });
@@ -134,13 +129,7 @@ describe('QuickAddPage', () => {
     fireEvent.click(saveButton);
 
     await waitFor(() => {
-      expect(mockAddExpense).toHaveBeenCalledTimes(1);
-      expect(mockAddExpense).toHaveBeenCalledWith(expect.objectContaining({
-        amount: 150.50,
-        merchant: 'delicious dinner',
-        source: 'manual',
-      }));
-      expect(screen.getByText('Expense recorded successfully!')).toBeInTheDocument();
+      expect(mockAddExpense).not.toHaveBeenCalled();
     });
   });
 
@@ -411,16 +400,21 @@ describe('QuickAddPage', () => {
     expect(mockScanImage).not.toHaveBeenCalled();
   });
 
-  it('Gemini AI path populates editable fields and does NOT auto-commit (fix: AI-scan-no-autocommit)', async () => {
-    // Regression guard: the Gemini path previously called addExpense directly
+  it('app camera path: HF bot scan populates editable fields and does NOT auto-commit (fix: AI-scan-no-autocommit)', async () => {
+    // Regression guard: the camera path previously called addExpense directly
     // and returned early, bypassing the editable review card entirely. Now it
-    // must populate the scanned fields and let the user press Save.
-    mockParseReceipt.mockResolvedValueOnce({
-      receiptId: 'r-gem-1',
-      amount: 250,
-      merchant: 'AI Supermarket',
-      category: 'food',
-      date: '2026-08-03',
+    // routes through the Convex proxy → HF bot and populates the scanned fields
+    // for the user to review before pressing Save.
+    mockProxyScan.mockResolvedValueOnce({
+      success: true,
+      draftId: 'd-app-1',
+      fields: {
+        total: { value: 250 },
+        merchant: { value: 'AI Supermarket' },
+        category: { value: 'food' },
+        date: { value: '2026-08-03' },
+        tax: { value: 17.5 },
+      },
       lineItems: [
         { description: 'groceries', amount: 200 },
         { description: 'movie ticket', amount: 50 },
@@ -433,19 +427,24 @@ describe('QuickAddPage', () => {
     const fileInput = screen.getByTestId('camera-file-input');
     fireEvent.change(fileInput, { target: { files: [file] } });
 
-    // The editable review card appears with the AI-scanned values
+    // The editable review card appears with the bot-scanned values
     await waitFor(() => {
       expect(screen.getByTestId('scanned-receipt-card')).toBeInTheDocument();
     });
     const amountInput = screen.getByTestId('scanned-amount-input') as HTMLInputElement;
     const merchantInput = screen.getByTestId('scanned-merchant-input') as HTMLInputElement;
+    const taxInput = screen.getByTestId('scanned-tax-input') as HTMLInputElement;
     expect(amountInput.value).toBe('250');
     expect(merchantInput.value).toBe('AI Supermarket');
+    expect(taxInput.value).toBe('17.5');
+
+    // Line items render and are editable
+    expect(screen.getByTestId('scanned-line-item-desc-0')).toBeInTheDocument();
 
     // No expense was auto-committed — user must press Save
     expect(mockAddExpense).not.toHaveBeenCalled();
 
-    // Saving writes once with the AI-scanned values + line items
+    // Saving writes once with the bot-scanned values + line items
     fireEvent.click(screen.getByTestId('save-scanned-receipt-btn'));
     await waitFor(() => {
       expect(mockAddExpense).toHaveBeenCalledTimes(1);
@@ -453,6 +452,7 @@ describe('QuickAddPage', () => {
       expect(entry.amount).toBe(250);
       expect(entry.merchant).toBe('AI Supermarket');
       expect(entry.source).toBe('receipt');
+      expect(entry.tax).toBe(17.5);
       expect(entry.lineItems).toEqual([
         { description: 'groceries', amount: 200, category: 'food' },
         { description: 'movie ticket', amount: 50, category: 'entertainment' },

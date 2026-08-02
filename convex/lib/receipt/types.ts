@@ -20,8 +20,10 @@ export type OcrPayload = {
   lang: string;
   engine: 'tesseract.js@6' | 'gemini-vision@1';
   capturedAt: number;
-  countryHint?: string;
-  currencyHint?: string;
+  // nullish (not optional): the TeacherBOY bridge serializes an absent hint as
+  // JSON null, so the ingest schema (ingestSchema.ts) accepts string | null | undefined.
+  countryHint?: string | null;
+  currencyHint?: string | null;
 };
 
 export type FieldName = 'total' | 'date' | 'merchant' | 'category' | 'currency' | 'tax';

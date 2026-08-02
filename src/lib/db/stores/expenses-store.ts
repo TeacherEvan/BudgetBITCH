@@ -1,6 +1,6 @@
 import type { ExpenseEntry, ExpenseCategory, CriticalExpenseCommitment } from '@/lib/types/budget';
 import { notifyBoardChanged } from '@/lib/types/budget';
-import { getDB, afterBoardMutation } from '../local-db';
+import { getDB, afterBoardMutation, generateId } from '../local-db';
 import { logUserAction } from '@/lib/utils/action-logger';
 import { getCurrentMember } from '../current-member';
 
@@ -44,6 +44,30 @@ export async function getExpensesByDateRange(startDate: string, endDate: string)
 export async function getExpensesByCategory(category: ExpenseCategory): Promise<ExpenseEntry[]> {
   const db = await getDB();
   return db.getAllFromIndex('expenses', 'by-category', category);
+}
+
+/**
+ * Repeat Purchase: clone an existing expense as a fresh entry with today's
+ * date. The clone carries the same merchant/amount/category/lineItems so the
+ * user can log the same purchase again without re-typing. `repeatedFrom`
+ * links back to the original for lineage/audit.
+ */
+export async function repeatExpense(id: string): Promise<ExpenseEntry | null> {
+  const db = await getDB();
+  const original = await db.get('expenses', id);
+  if (!original) return null;
+
+  const clone: ExpenseEntry = {
+    ...original,
+    id: generateId(),
+    date: new Date().toISOString().split('T')[0],
+    note: original.note,
+    source: 'manual',
+    repeatedFrom: original.id,
+  };
+
+  await addExpense(clone);
+  return clone;
 }
 
 // Critical Expense Commitments

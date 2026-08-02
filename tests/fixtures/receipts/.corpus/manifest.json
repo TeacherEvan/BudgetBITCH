@@ -1,0 +1,190 @@
+{
+  "scrapedAt": "2026-08-02T00:52:02.580Z",
+  "count": 8,
+  "entries": [
+    {
+      "id": "cord-000",
+      "file": "cord-000.jpg",
+      "sha256": "4e13b815b540420a4d68229494bd6259768c226a595114609970edae9a620aa9",
+      "bytes": 25639,
+      "source": {
+        "dataset": "naver-clova-ix/cord-v2",
+        "config": "default",
+        "split": "test",
+        "rowIdx": 0,
+        "license": "CC BY 4.0",
+        "homepage": "https://huggingface.co/datasets/naver-clova-ix/cord-v2",
+        "note": "Real photographed Indonesian retail receipts (CORD v2)."
+      },
+      "groundTruth": {
+        "totalRaw": "60.000",
+        "subtotalRaw": "60.000",
+        "taxRaw": "5.455",
+        "imageSize": {
+          "width": 432,
+          "height": 648
+        }
+      },
+      "ocrText": "-TICKET CP\n901016\n60.000\n60.000\n2\nTOTAL DISC $ -60.000\nTAX 5.455\nSubtotal 60.000\nTOTAL 60.000\n(Qty 2.00\nEDC CIMB NIAGA No: xx7730 60.000"
+    },
+    {
+      "id": "cord-001",
+      "file": "cord-001.jpg",
+      "sha256": "636284664cfc357e05f7b10d67ddb380f828a1be0a20809514f9e7fc0c611a9f",
+      "bytes": 56652,
+      "source": {
+        "dataset": "naver-clova-ix/cord-v2",
+        "config": "default",
+        "split": "test",
+        "rowIdx": 1,
+        "license": "CC BY 4.0",
+        "homepage": "https://huggingface.co/datasets/naver-clova-ix/cord-v2",
+        "note": "Real photographed Indonesian retail receipts (CORD v2)."
+      },
+      "groundTruth": {
+        "totalRaw": "91000",
+        "subtotalRaw": null,
+        "taxRaw": null,
+        "imageSize": {
+          "width": 960,
+          "height": 1280
+        }
+      },
+      "ocrText": "J.STB PROMO\n17500\nY.B.BAT\n46000\nY.BASO PROM\n27500\nTOTAL 91000\nCASH 91000"
+    },
+    {
+      "id": "cord-002",
+      "file": "cord-002.jpg",
+      "sha256": "bcf0c175181bfc6b2352ab8f452704b8f18e27fa51f2278bc5c41f6765179edb",
+      "bytes": 67501,
+      "source": {
+        "dataset": "naver-clova-ix/cord-v2",
+        "config": "default",
+        "split": "test",
+        "rowIdx": 2,
+        "license": "CC BY 4.0",
+        "homepage": "https://huggingface.co/datasets/naver-clova-ix/cord-v2",
+        "note": "Real photographed Indonesian retail receipts (CORD v2)."
+      },
+      "groundTruth": {
+        "totalRaw": "28,000",
+        "subtotalRaw": "28,000",
+        "taxRaw": null,
+        "imageSize": {
+          "width": 864,
+          "height": 1296
+        }
+      },
+      "ocrText": "JASMINE MT ( L )\n1\n24,000\nCOCONUT JELLY ( L )\n4,000\nSUB TOTAL 28,000\nTOTAL SAI S 28,000\nTOTAL ITEMS 1\nCASH 100,000\nCHANGE 72,000"
+    },
+    {
+      "id": "cord-003",
+      "file": "cord-003.jpg",
+      "sha256": "175fdc716afc51e67bcb79954c3dad4b54633299ec124780e5af04a8e8305333",
+      "bytes": 68697,
+      "source": {
+        "dataset": "naver-clova-ix/cord-v2",
+        "config": "default",
+        "split": "test",
+        "rowIdx": 3,
+        "license": "CC BY 4.0",
+        "homepage": "https://huggingface.co/datasets/naver-clova-ix/cord-v2",
+        "note": "Real photographed Indonesian retail receipts (CORD v2)."
+      },
+      "groundTruth": {
+        "totalRaw": "11,000",
+        "subtotalRaw": "11,000",
+        "taxRaw": null,
+        "imageSize": {
+          "width": 864,
+          "height": 1296
+        }
+      },
+      "ocrText": "@11000\n1X\n11,000\nDONAT GULA\n1.00xITEMs\nSUBTOTAL 11,000\nTOTAL 11,000\nCASH 11,000"
+    },
+    {
+      "id": "invoice-000",
+      "file": "invoice-000.jpg",
+      "sha256": "f7ab9972d7790dc9b5974efa07b946d0cbee85501572a19c3537cb97e3de0d33",
+      "bytes": 298372,
+      "source": {
+        "dataset": "mychen76/invoices-and-receipts_ocr_v1",
+        "config": "default",
+        "split": "test",
+        "rowIdx": 0,
+        "license": "Apache-2.0",
+        "homepage": "https://huggingface.co/datasets/mychen76/invoices-and-receipts_ocr_v1",
+        "note": "Scanned invoice/receipt images with parsed header + summary ground truth."
+      },
+      "groundTruth": {
+        "totalRaw": null,
+        "dateRaw": "09/18/2015",
+        "sellerRaw": "Bradley-Andrade 9879 Elizabeth Common Lake Jonathan, RI 12335"
+      },
+      "ocrText": "Invoice no: 97159829\nDate of issue:\n09/18/2015\nSeller:\nClient:\nBradley-Andrade\nCastro PLC\n9879 Elizabeth Common\nUnit 9678 Box 9664\nLake Jonathan, RI 12335\nDPO AP 69387\nTax Id: 985-73-8194\nTax Id: 994-72-1270\nIBAN: GB81LZWO32519172531418\nITEMS\nUM\nNo.\nDescription\nQty\nNet price\nNet worth\nVAT [%]\nGross\n worth\n2,00\n444,60\n889,20\n12\" Marble Lapis Inlay Chess.\neach\n10%\n978,12\nTable Top With 2\" Pieces & 15'\nWooden Stand w537\nSUMMARY\nVAT [%]\nNet worth\nVAT\nGross worth\n10%\n889,20\n88,92\n978,12\nTotal\n$ 889,20\n$ 88,92\n$ 978,12"
+    },
+    {
+      "id": "invoice-001",
+      "file": "invoice-001.jpg",
+      "sha256": "31bc61a1e2343879c7d7593282f254aa9700385d70e02ea06b1016cd78a7af98",
+      "bytes": 398518,
+      "source": {
+        "dataset": "mychen76/invoices-and-receipts_ocr_v1",
+        "config": "default",
+        "split": "test",
+        "rowIdx": 1,
+        "license": "Apache-2.0",
+        "homepage": "https://huggingface.co/datasets/mychen76/invoices-and-receipts_ocr_v1",
+        "note": "Scanned invoice/receipt images with parsed header + summary ground truth."
+      },
+      "groundTruth": {
+        "totalRaw": null,
+        "dateRaw": "05/29/2021",
+        "sellerRaw": "Hopkins and Sons 62283 Flores Tunnel North Luis, IA 69983"
+      },
+      "ocrText": "Invoice no: 13194726\nDate of issue:\n05/29/2021\nSeller:\nClient:\nHopkins and Sons\nSims PLC\n62283 Flores Tunnel\nUSS Kramer\nNorth Luis, IA 69983\nFPO AA 81651\nTax Id: 952-73-7223\nTax Id: 995-88-9495\nIBAN: GB31LZXS20242755934691\nITEMS\nNo.\nDescription\nQty\nUM\nNet price\nNet worth\nVAT [%]\nGross\n worth\nBeach Lunch Lounge Striped\n1,00\neach\n16,99\n16,99\n10%\n18,69\n1\nShirt Dress Large Navy Blue\nWhite Long Sleeve Causal\nJams World Hawaiian  Dress\n5,00\n65,00\n325,00\neach\n10%\n357,50\n2.\nRayon sz.L\n LuLaRoe Nicole Dress Size Large\n2,00\neach\n1,99\n3,98\n10%\n4,38\n3.\n26\nJohnny Was Medium Linen Wrap\n2,00\neach\n89,99\n179,98\n10%\n197,98\n4.\nDress Dessert Rose Embroiderd\nBohemian\ns Long\", \n, \n, \n, \n, \n, \n, \n, \n, \n, \n, \n, \n, \" Hanna Anderson Women\n1,00\neach\n26,40\n6.\nLarge Coral Short Sleeve Casual\nFall Tee Shirt Dress\nSUMMARY\nVAT [%]\nNet worth\nVAT\nGross worth\n10%\n581,93\n58,19\n640,12\nTotal\n$ 640,12\n$ 581,93\n$58,19"
+    },
+    {
+      "id": "invoice-002",
+      "file": "invoice-002.jpg",
+      "sha256": "af14d323ddd0e40550d91f982ce9053d8ef43d6d98a6d1a908eb38a80beb0a65",
+      "bytes": 285574,
+      "source": {
+        "dataset": "mychen76/invoices-and-receipts_ocr_v1",
+        "config": "default",
+        "split": "test",
+        "rowIdx": 2,
+        "license": "Apache-2.0",
+        "homepage": "https://huggingface.co/datasets/mychen76/invoices-and-receipts_ocr_v1",
+        "note": "Scanned invoice/receipt images with parsed header + summary ground truth."
+      },
+      "groundTruth": {
+        "totalRaw": null,
+        "dateRaw": "06/02/2015",
+        "sellerRaw": "Trujillo-Hunt 430 Mark Ferry Suite 495 Maxside, DC 65686"
+      },
+      "ocrText": "Invoice no: 62517865.\nDate of issue:\n06/02/2015\nSeller:\nClient:\nTrujillo-Hunt\nLee and Sons\n430 Mark Ferry Suite 495\n8552 Karen Islands\nMaxside, DC 65686\nEast Roger, ID 40416\nTax Id: 992-71-8540\nTax Id: 929-86-0601\nIBAN: GB73HCPH34959888432899\nITEMS\nNo.\nDescription\nQty\nUM\nNet price\nNet worth\nVAT [%]\nGross\nworth\nCare & Repair of Furniture\n2,00\neach\n4,25\n8,50\n10%\n9,35\n1.\nSUMMARY\nVAT [%]\nVAT\nNet worth\nGross worth\n10%\n9,35\n8,50\n0,85\nTotal\n$8,50\n$ 0,85\n$ 9,35"
+    },
+    {
+      "id": "invoice-003",
+      "file": "invoice-003.jpg",
+      "sha256": "7540837789a6307a6966ef4d95b02b0de0f78db5d87b2e3f2bfee058b9c62b64",
+      "bytes": 317832,
+      "source": {
+        "dataset": "mychen76/invoices-and-receipts_ocr_v1",
+        "config": "default",
+        "split": "test",
+        "rowIdx": 3,
+        "license": "Apache-2.0",
+        "homepage": "https://huggingface.co/datasets/mychen76/invoices-and-receipts_ocr_v1",
+        "note": "Scanned invoice/receipt images with parsed header + summary ground truth."
+      },
+      "groundTruth": {
+        "totalRaw": null,
+        "dateRaw": "10/01/2014",
+        "sellerRaw": "Nichols-Barajas 3882 Stacy Ville Apt. 488 Lake Kristinatown, ND 48049"
+      },
+      "ocrText": "Invoice no: 56014042\nDate of issue:\n10/01/2014\nSeller:\nClient:\n Nichols-Barajas\nMckay PLC\n3882 Stacy Ville Apt. 488\n5542 Danielle Drive Suite 381\nLake Kristinatown, ND 48049\nWest Mason, ME 76671\nTax Id: 953-87-6813\nTax Id: 965-90-8517\nIBAN: GB08KXQT19711661357354\nITEMS\nNo.\nDescription\nQty\nUM\nNet price\nNet worth\nVAT [%]\nGross\nworth\n11,50\n10%\nJordan Hydro 2 (TD)-Child Size\n2,00\neach\n5,75\n12,65\n1.\n10c\nSketchers Energy Lights Boys\n12,00\n48,00\n10%\n4,00\neach\n52,80\nBlack Canvas Size 4 With\nCharging Cable\nSUMMARY\nVAT [%]\nNet worth\nVAT\nGross worth\n10%\n59,50\n5,95\n65,45\nTotal\n$ 59,50\n$ 5,95\n$ 65,45"
+    }
+  ]
+}

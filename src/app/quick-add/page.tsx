@@ -56,13 +56,13 @@ export default function QuickAddPage() {
   const { status: inboxPermStatus, grantPermission, denyPermission } = useInboxPermission();
 
   // Optional Convex actions for AI vision receipt and message parsing
-  let parseReceiptAction: ReturnType<typeof useAction<typeof api.receipts.parseReceipt>> | null = null;
   let parseMessageAction: ReturnType<typeof useAction<typeof api.receipts.parseMessage>> | null = null;
+  let proxyReceiptScan: ReturnType<typeof useAction<typeof api.receipts.proxyReceiptScan>> | null = null;
   try {
     // eslint-disable-next-line react-hooks/rules-of-hooks
-    parseReceiptAction = useAction(api.receipts.parseReceipt);
-    // eslint-disable-next-line react-hooks/rules-of-hooks
     parseMessageAction = useAction(api.receipts.parseMessage);
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    proxyReceiptScan = useAction(api.receipts.proxyReceiptScan);
   } catch {
     // Offline or test environment fallback
   }
@@ -91,6 +91,7 @@ export default function QuickAddPage() {
   const [scannedMerchant, setScannedMerchant] = useState('');
   const [scannedCategory, setScannedCategory] = useState<ExpenseCategory>('other');
   const [scannedDate, setScannedDate] = useState('');
+  const [scannedTax, setScannedTax] = useState('');
   const [scannedLineItems, setScannedLineItems] = useState<ReceiptLineItem[] | undefined>(undefined);
 
   // Permission & SMS Modal States
@@ -259,6 +260,7 @@ export default function QuickAddPage() {
         source: 'receipt',
         note: 'Scanned receipt photo',
         lineItems: trustedItems,
+        tax: scannedTax ? parseFloat(scannedTax) || undefined : undefined,
       });
       if (botDraftId) {
         // Confirm the bot-ingested Convex draft (idempotent; flips status to
@@ -281,6 +283,7 @@ export default function QuickAddPage() {
       setScannedAmount('');
       setScannedMerchant('');
       setScannedDate('');
+      setScannedTax('');
       setScannedLineItems(undefined);
       setInputText('');
       setDetectedCategory('other');
@@ -291,6 +294,13 @@ export default function QuickAddPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Update one editable line item in the scanned receipt review card.
+  const updateScannedLineItem = (idx: number, field: 'description' | 'amount' | 'qty', value: string | number | undefined) => {
+    setScannedLineItems((prev) =>
+      prev?.map((item, i) => (i === idx ? { ...item, [field]: value } : item)),
+    );
   };
 
   // Handle manual or verified save
@@ -388,55 +398,60 @@ export default function QuickAddPage() {
     reader.onload = async () => {
       const dataUrl = reader.result as string;
 
-      // First attempt: Gemini AI Vision Receipt Parser via Convex (if online & action available)
-      if (parseReceiptAction && typeof navigator !== 'undefined' && navigator.onLine) {
+      // First attempt: send the photo to the TeacherBOY HuggingFace bot via the
+      // Convex proxy (Gemini vision scrape). The proxy keeps CONVEX_SYNC_SECRET
+      // server-side and the user is derived from the Convex Auth session.
+      if (proxyReceiptScan && typeof navigator !== 'undefined' && navigator.onLine) {
         try {
-          const aiRes = await parseReceiptAction({ base64Image: dataUrl });
-          if (aiRes && aiRes.amount > 0) {
-            const amt = aiRes.amount;
-            const merch = aiRes.merchant || 'Receipt';
-            const catRaw = aiRes.category || 'other';
-            const catMapped = mapCategory(catRaw);
-            const dateVal = aiRes.date || new Date().toISOString().split('T')[0];
+          const res = await proxyReceiptScan({
+            base64Image: dataUrl,
+            idempotencyKey: `app_${crypto.randomUUID()}`,
+            countryHint: profile?.locale?.includes('TH') ? 'TH' : (profile?.locale?.includes('ZA') ? 'ZA' : undefined),
+          });
 
-            // Populate the editable review fields — do NOT auto-commit.
-            // The user reviews and presses "Save Scanned Receipt" just like
-            // the OCR path. This is the same UX rule the skill codifies:
-            // scanned data must populate EDITABLE fields for review, never
-            // silently auto-commit to the store.
+          const fields = (res as { fields?: Record<string, { value?: unknown } | null> }).fields;
+          if (res && fields) {
             setIsExpense(true);
             setEntrySource('receipt');
-            setScannedAmount(String(amt));
-            setScannedMerchant(merch);
-            setScannedCategory(catMapped);
-            setScannedDate(dateVal);
+            setScannedAmount(String((fields.total?.value as number) ?? ''));
+            setScannedMerchant(String((fields.merchant?.value as string) ?? ''));
+            setScannedCategory(mapCategory(String((fields.category?.value as string) ?? 'other')));
+            setScannedDate(
+              fields.date?.value != null ? String(fields.date.value) : new Date().toISOString().split('T')[0],
+            );
+            setScannedTax(
+              fields.tax?.value != null ? String(fields.tax.value) : '',
+            );
 
-            // Gemini line items (when the prompt returns them).
-            const aiItems = Array.isArray((aiRes as { lineItems?: unknown }).lineItems)
-              ? ((aiRes as { lineItems: Array<{ description?: string; amount?: number }> }).lineItems)
+            const items = Array.isArray((res as unknown as { lineItems?: unknown }).lineItems)
+              ? ((res as unknown as { lineItems: Array<{ description?: string; amount?: number; qty?: number; unit_price?: number }> }).lineItems)
               : [];
-            const mappedItems: ReceiptLineItem[] = aiItems.map((li) => ({
+            const mappedItems: ReceiptLineItem[] = items.map((li) => ({
               description: String(li.description ?? ''),
               amount: Math.round((Number(li.amount) || 0) * 100) / 100,
               category: mapCategory(li.description),
+              ...(Number.isFinite(li.qty) ? { qty: Number(li.qty) } : {}),
+              ...(Number.isFinite(li.unit_price) ? { unitPrice: Number(li.unit_price) } : {}),
             }));
             setScannedLineItems(mappedItems.length > 0 ? mappedItems : undefined);
 
-            const prefill = [String(amt), merch].filter(Boolean).join(' ').trim();
+            const prefill = [
+              String((fields.total?.value as number) ?? ''),
+              String((fields.merchant?.value as string) ?? ''),
+            ].filter(Boolean).join(' ').trim();
             setInputText(prefill);
-            setDetectedCategory(catMapped);
 
             setToast({
               show: true,
-              message: `📸 AI scanned: ${merch} — review the fields, then press Save.`,
+              message: `📸 Scanned: ${String((fields.merchant?.value as string) ?? 'Receipt')} — review & save`,
               type: 'success',
             });
             setLoading(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
             return;
           }
-        } catch (aiErr) {
-          console.warn("Server AI receipt parse failed, falling back to OCR engine:", aiErr);
+        } catch (botErr) {
+          console.warn('HF bot scan failed, falling back to client OCR:', botErr);
         }
       }
 
@@ -741,6 +756,55 @@ export default function QuickAddPage() {
               </select>
             </div>
 
+            <div className="space-y-1">
+              <label className="text-[10px] uppercase font-bold text-white/50 tracking-wider">{'Tax / VAT'}</label>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={scannedTax}
+                onChange={(e) => setScannedTax(e.target.value)}
+                placeholder="0.00"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-white/30 text-sm focus:outline-none focus:border-amber-400/50"
+                data-testid="scanned-tax-input"
+              />
+            </div>
+
+            {scannedLineItems && scannedLineItems.length > 0 && (
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase font-bold text-white/50 tracking-wider">{'Line Items (editable)'}</label>
+                {scannedLineItems.map((item, idx) => (
+                  <div key={idx} className="grid grid-cols-12 gap-1.5">
+                    <input
+                      type="text"
+                      value={item.description}
+                      onChange={(e) => updateScannedLineItem(idx, 'description', e.target.value)}
+                      placeholder="Item"
+                      className="col-span-6 bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white"
+                      data-testid={`scanned-line-item-desc-${idx}`}
+                    />
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={String(item.amount)}
+                      onChange={(e) => updateScannedLineItem(idx, 'amount', parseFloat(e.target.value) || 0)}
+                      placeholder="0.00"
+                      className="col-span-3 bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white"
+                      data-testid={`scanned-line-item-amount-${idx}`}
+                    />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={item.qty != null ? String(item.qty) : ''}
+                      onChange={(e) => updateScannedLineItem(idx, 'qty', e.target.value ? parseInt(e.target.value) || undefined : undefined)}
+                      placeholder="qty"
+                      className="col-span-3 bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white"
+                      data-testid={`scanned-line-item-qty-${idx}`}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
             <Button
               variant="primary"
               className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-bold"
@@ -807,7 +871,9 @@ export default function QuickAddPage() {
           variant="primary"
           onClick={handleSave}
           isLoading={loading}
+          disabled={isExpense && entrySource === 'manual' && !verifiedSmsData}
           className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-xs font-bold shadow-lg"
+          data-testid="quick-add-save-btn"
         >
           <Save className="w-4 h-4 text-slate-950" />
           <span>{l.save}</span>

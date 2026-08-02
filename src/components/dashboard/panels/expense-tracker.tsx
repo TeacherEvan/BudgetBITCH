@@ -5,6 +5,7 @@ import { useState, useMemo } from 'react';
 import { Plus, Trash2, Edit, FileSpreadsheet } from 'lucide-react';
 import { useExpenses, useBudgets } from '@/hooks/use-local-db';
 import { addExpense, generateId } from '@/lib/db/local-db';
+import { repeatExpense } from '@/lib/db/stores/expenses-store';
 import type { ExpenseEntry } from '@/lib/types/budget';
 import type { ParsedExpense } from '@/modules/budgeting/csv-import';
 import { ImportCsvModal } from './import-csv-modal';
@@ -67,6 +68,7 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
   const [showImport, setShowImport] = useState(false);
   const [noteExpenseId, setNoteExpenseId] = useState<string | null>(null);
   const [expandedItemIds, setExpandedItemIds] = useState<string[]>([]);
+  const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({ show: false, message: '', type: 'success' });
 
   const toggleItemBreakdown = (id: string) => {
     setExpandedItemIds(prev =>
@@ -153,6 +155,14 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
 
   const handleDelete = (id: string) => {
     remove(id);
+  };
+
+  const handleRepeat = async (id: string) => {
+    const clone = await repeatExpense(id);
+    if (clone) {
+      // The list auto-refreshes via the IndexedDB mutation listener; surface a toast.
+      setToast({ show: true, message: `Repeated: ${clone.merchant} — ${clone.amount}`, type: 'success' });
+    }
   };
 
   const resetForm = () => {
@@ -342,6 +352,9 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
                         <Button variant="ghost" size="sm" onClick={() => handleEdit(expense)} aria-label="Edit">
                           <Edit className="w-4 h-4" />
                         </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleRepeat(expense.id)} aria-label="Repeat purchase">
+                          <Plus className="w-4 h-4 text-emerald-400" />
+                        </Button>
                         <Button variant="ghost" size="sm" onClick={() => handleDelete(expense.id)} aria-label="Delete">
                           <Trash2 className="w-4 h-4 text-rose-400" />
                         </Button>
@@ -395,6 +408,12 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
           if (noteExpenseId) return setNote(noteExpenseId, note);
         }}
       />
+
+      {toast.show && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-emerald-500/90 text-white text-xs font-medium shadow-lg animate-in fade-in">
+          {toast.message}
+        </div>
+      )}
     </div>
   );
 }

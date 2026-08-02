@@ -13,6 +13,7 @@ import { z } from "zod";
 export const ingestRequestBodySchema = z.object({
   lineUserId: z.string().min(1, "lineUserId is required"),
   idempotencyKey: z.string().min(1, "idempotencyKey is required"),
+  source: z.string().optional(),        // "line" (default) | "app-camera"
   payload: z.object({
     lines: z
       .array(

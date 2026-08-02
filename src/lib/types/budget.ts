@@ -112,6 +112,10 @@ export interface ExpenseEntry {
   createdByName?: string; // shared-account: creator display name
   /** Itemized lines from a scanned receipt (deterministic bot). Undefined for manual entries. */
   lineItems?: ReceiptLineItem[];
+  /** Tax/VAT extracted from a scanned receipt. */
+  tax?: number;
+  /** ID of the original expense this was repeated from (Repeat Purchase feature). */
+  repeatedFrom?: string;
 }
 
 export type ExpenseCategory =
