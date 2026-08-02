@@ -84,6 +84,18 @@ export const CRITICAL_EXPENSES: Record<CriticalExpenseKey, {
   },
 };
 
+/** Receipt line item captured by the deterministic scraper bot. */
+export interface ReceiptLineItem {
+  description: string;
+  amount: number;
+  /** Inferred from the description via mapCategory; always a valid ExpenseCategory. */
+  category: ExpenseCategory;
+  /** Quantity, when the receipt encoded a `qty x unit = total` pattern. */
+  qty?: number;
+  /** Unit price, when the receipt encoded a `qty x unit = total` pattern. */
+  unitPrice?: number;
+}
+
 /** Expense entry — local only */
 export interface ExpenseEntry {
   id: string; // uuid
@@ -98,6 +110,8 @@ export interface ExpenseEntry {
   cycle?: 'monthly' | 'yearly'; // for subscriptions
   createdBy?: string; // shared-account: creator user id
   createdByName?: string; // shared-account: creator display name
+  /** Itemized lines from a scanned receipt (deterministic bot). Undefined for manual entries. */
+  lineItems?: ReceiptLineItem[];
 }
 
 export type ExpenseCategory =

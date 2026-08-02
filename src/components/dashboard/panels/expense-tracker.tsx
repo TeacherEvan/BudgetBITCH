@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useCurrency } from '@/hooks/use-currency';
 import { usePurchaseNotes } from '@/hooks/use-purchase-notes';
+import { hasTrustworthyLineItems } from '@/modules/budgeting/line-item-rollup';
 import type { ExpenseCategory } from '@/lib/types/budget';
 
 interface Expense {
@@ -65,6 +66,13 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
   const [noteExpenseId, setNoteExpenseId] = useState<string | null>(null);
+  const [expandedItemIds, setExpandedItemIds] = useState<string[]>([]);
+
+  const toggleItemBreakdown = (id: string) => {
+    setExpandedItemIds(prev =>
+      prev.includes(id) ? prev.filter(existing => existing !== id) : [...prev, id]
+    );
+  };
   
   const [formData, setFormData] = useState<FormData>({
     merchant: '',
@@ -272,55 +280,104 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
                 const sourceIcon = expense.source === 'voice' ? '🎤' : 
                                   expense.source === 'import' ? '📥' : '✏️';
 
+                const lineItems = expense.lineItems ?? [];
+                const itemsReconcile = hasTrustworthyLineItems(expense);
+                const itemsExpanded = expandedItemIds.includes(expense.id);
+
                 return (
                   <div
                     key={expense.id}
-                    className="flex items-center gap-3 p-3 rounded-xl bg-black/30 border border-white/10"
+                    className="rounded-xl bg-black/30 border border-white/10"
                   >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-white truncate">{expense.merchant}</span>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/70">
-                          {catLabel || expense.category}
+                    <div className="flex items-center gap-3 p-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-white truncate">{expense.merchant}</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/70">
+                            {catLabel || expense.category}
+                          </span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-400">
+                            {sourceIcon}
+                          </span>
+                          {lineItems.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => toggleItemBreakdown(expense.id)}
+                              aria-expanded={itemsExpanded}
+                              aria-label={'Toggle line items'}
+                              data-testid={`toggle-line-items-${expense.id}`}
+                              className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/70 border border-white/10 hover:border-[rgba(201,150,12,0.4)] transition-colors"
+                            >
+                              🧾 {lineItems.length} {itemsExpanded ? '▴' : '▾'}
+                            </button>
+                          )}
+                          {overBudget && <span className="text-xs px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400">
+                            {'Over Budget'}
+                          </span>}
+                          {boardId && (
+                            <button
+                              type="button"
+                              onClick={() => setNoteExpenseId(expense.id)}
+                              aria-label={'Shared note'}
+                              className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${
+                                notes[expense.id]
+                                  ? 'bg-amber-400/20 text-amber-400 border-amber-400/30'
+                                  : 'bg-white/10 text-white/70 border-white/10 hover:border-[rgba(201,150,12,0.4)]'
+                              }`}
+                            >
+                              📝 {notes[expense.id] ? '✓' : ''}
+                            </button>
+                          )}
+                        </div>
+                        <p className="text-xs text-white/50 mt-0.5 truncate">
+                          {new Date(expense.date).toLocaleDateString('en-US')} • {formatCurrency(expense.amount, locale)}
+                          {expense.note && ` • ${expense.note}`}
+                          {notes[expense.id] && ` • 📝 ${notes[expense.id].note}`}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`font-mono text-white ${overBudget ? 'text-rose-400' : ''}`}>
+                          {formatCurrency(expense.amount, locale)}
                         </span>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-400">
-                          {sourceIcon}
-                        </span>
-                        {overBudget && <span className="text-xs px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400">
-                          {'Over Budget'}
-                        </span>}
-                        {boardId && (
-                          <button
-                            type="button"
-                            onClick={() => setNoteExpenseId(expense.id)}
-                            aria-label={'Shared note'}
-                            className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${
-                              notes[expense.id]
-                                ? 'bg-amber-400/20 text-amber-400 border-amber-400/30'
-                                : 'bg-white/10 text-white/70 border-white/10 hover:border-[rgba(201,150,12,0.4)]'
-                            }`}
-                          >
-                            📝 {notes[expense.id] ? '✓' : ''}
-                          </button>
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(expense)} aria-label="Edit">
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDelete(expense.id)} aria-label="Delete">
+                          <Trash2 className="w-4 h-4 text-rose-400" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {lineItems.length > 0 && itemsExpanded && (
+                      <div
+                        className="border-t border-white/10 px-3 py-2 space-y-1"
+                        data-testid={`expense-line-items-${expense.id}`}
+                      >
+                        {lineItems.map((item, index) => {
+                          const itemCat = CATEGORIES.find(c => c.value === item.category);
+                          return (
+                            <div
+                              key={`${expense.id}:item:${index}`}
+                              className="flex items-center gap-2 text-xs text-white/60"
+                            >
+                              <span className="text-white/30 font-mono">└</span>
+                              <span className="flex-1 min-w-0 truncate">{item.description}</span>
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/50 shrink-0">
+                                {itemCat?.label.en || item.category}
+                              </span>
+                              <span className="font-mono text-white/70 shrink-0">
+                                {formatCurrency(item.amount, locale)}
+                              </span>
+                            </div>
+                          );
+                        })}
+                        {!itemsReconcile && (
+                          <p className="text-[10px] text-white/40 pt-1">
+                            {`Items don't add up to the total — counted under ${catLabel || expense.category}.`}
+                          </p>
                         )}
                       </div>
-                      <p className="text-xs text-white/50 mt-0.5 truncate">
-                        {new Date(expense.date).toLocaleDateString('en-US')} • {formatCurrency(expense.amount, locale)}
-                        {expense.note && ` • ${expense.note}`}
-                        {notes[expense.id] && ` • 📝 ${notes[expense.id].note}`}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`font-mono text-white ${overBudget ? 'text-rose-400' : ''}`}>
-                        {formatCurrency(expense.amount, locale)}
-                      </span>
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(expense)} aria-label="Edit">
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(expense.id)} aria-label="Delete">
-                        <Trash2 className="w-4 h-4 text-rose-400" />
-                      </Button>
-                    </div>
+                    )}
                   </div>
                 );
               })}

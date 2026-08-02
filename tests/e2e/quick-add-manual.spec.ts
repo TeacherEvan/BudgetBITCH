@@ -26,9 +26,10 @@ test.describe("Quick Add — manual entry", () => {
     await expect(page.getByText(/recorded successfully|บันทึกค่าใช้จ่ายสำเร็จ/i)).toBeVisible({ timeout: 6000 });
   });
 
-  test("shows validation error on empty submit", async ({ page }) => {
+  test("guards regression: empty submit saves note-only as amount 0, no validation toast (fix: optional-amount quick-add)", async ({ page }) => {
     await page.goto("/quick-add");
     await page.getByRole("button", { name: /save|บันทึก/i }).click();
-    await expect(page.getByText(/valid amount|จำนวนเงินที่ถูกต้อง/i)).toBeVisible({ timeout: 4000 });
+    // New behavior: Save is never blocked; empty/note-only entry persists as amount 0.
+    await expect(page.getByText(/valid amount|จำนวนเงินที่ถูกต้อง/i)).toHaveCount(0, { timeout: 4000 });
   });
 });

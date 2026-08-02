@@ -11,7 +11,8 @@ import { useReceiptScan } from '@/hooks/use-receipt-scan';
 import { useInboxPermission } from '@/hooks/use-inbox-permission';
 import { parseSMS, getBestCandidate } from '@/lib/sms-parser';
 import { ReceiptVerifySheet } from '@/components/receipt/receipt-verify-sheet';
-import { type ExpenseCategory, type IncomeCategory } from '@/lib/types/budget';
+import { type ExpenseCategory, type IncomeCategory, type ReceiptLineItem } from '@/lib/types/budget';
+import { mapCategory, reconcileLineItems } from '@/lib/receipt/map-category';
 import { useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
@@ -41,23 +42,7 @@ const labels = {
     extractBtn: 'Scrape & Auto-Fill',
     close: 'Close',
   }
-};
-
-const mapCategory = (cat: string): ExpenseCategory => {
-  const normalized = cat.toLowerCase().replace(/[\s_-]+/g, '');
-  if (normalized.includes('food') || normalized.includes('dining') || normalized.includes('restaurant') || normalized.includes('starbucks') || normalized.includes('mcdonald')) return 'food';
-  if (normalized.includes('transport') || normalized.includes('taxi') || normalized.includes('ride') || normalized.includes('fuel') || normalized.includes('car') || normalized.includes('grab') || normalized.includes('bolt') || normalized.includes('uber')) return 'transport';
-  if (normalized.includes('utilities') || normalized.includes('electricity') || normalized.includes('water')) return 'utilities';
-  if (normalized.includes('housing') || normalized.includes('rent') || normalized.includes('mortgage')) return 'housing';
-  if (normalized.includes('phone') || normalized.includes('internet') || normalized.includes('telecom')) return 'phone_internet';
-  if (normalized.includes('sub') || normalized.includes('netflix') || normalized.includes('spotify')) return 'subscriptions';
-  if (normalized.includes('entertainment') || normalized.includes('movie') || normalized.includes('game')) return 'entertainment';
-  if (normalized.includes('health') || normalized.includes('medical') || normalized.includes('doctor') || normalized.includes('hospital')) return 'healthcare';
-  if (normalized.includes('insurance')) return 'insurance';
-  if (normalized.includes('debt') || normalized.includes('loan')) return 'debt';
-  if (normalized.includes('savings') || normalized.includes('invest')) return 'savings';
-  return 'other';
-};
+}
 
 export default function QuickAddPage() {
   const router = useRouter();
@@ -106,6 +91,7 @@ export default function QuickAddPage() {
   const [scannedMerchant, setScannedMerchant] = useState('');
   const [scannedCategory, setScannedCategory] = useState<ExpenseCategory>('other');
   const [scannedDate, setScannedDate] = useState('');
+  const [scannedLineItems, setScannedLineItems] = useState<ReceiptLineItem[] | undefined>(undefined);
 
   // Permission & SMS Modal States
   const [showPermModal, setShowPermModal] = useState(false);
@@ -174,6 +160,22 @@ export default function QuickAddPage() {
       setScannedCategory((catVal as ExpenseCategory) ?? 'other');
       setScannedDate(dateVal);
 
+      // Carry the engine's itemization into the review card. The bot-ingest
+      // path below does the same; without this a CAMERA scan silently lost its
+      // line items and the whole receipt total landed in one category.
+      // `unit_price` is the engine's snake_case field -> `unitPrice` on ours.
+      const rawItems = Array.isArray(draft.lineItems) ? draft.lineItems : [];
+      const mappedItems: ReceiptLineItem[] = rawItems.map((li) => ({
+        description: String(li.description ?? ''),
+        amount: Math.round((Number(li.amount) || 0) * 100) / 100,
+        category: mapCategory(li.description),
+        ...(Number.isFinite(li.qty) ? { qty: Number(li.qty) } : {}),
+        ...(Number.isFinite(li.unit_price)
+          ? { unitPrice: Math.round((Number(li.unit_price) || 0) * 100) / 100 }
+          : {}),
+      }));
+      setScannedLineItems(mappedItems.length > 0 ? mappedItems : undefined);
+
       // Pre-fill the combined amount+merchant input so the user can still edit
       // the free-text field if they prefer that path.
       const prefill = [
@@ -215,6 +217,15 @@ export default function QuickAddPage() {
     setScannedAmount(bot.amount ? String(bot.amount) : '');
     setScannedMerchant(String(bot.merchant ?? ''));
     setScannedCategory((bot.category as ExpenseCategory) ?? 'other');
+    setScannedLineItems(
+      Array.isArray(bot.lineItems)
+        ? (bot.lineItems as Array<{ description?: string; amount?: number }>).map((li) => ({
+            description: String(li.description ?? ''),
+            amount: Math.round((Number(li.amount) || 0) * 100) / 100,
+            category: mapCategory(li.description),
+          }))
+        : undefined,
+    );
     setScannedDate(
       bot.date
         ? String(bot.date)
@@ -236,13 +247,18 @@ export default function QuickAddPage() {
     try {
       setLoading(true);
       const date = scannedDate || new Date().toISOString().split('T')[0];
+      const roundedAmount = Math.round(amtVal * 100) / 100;
+      // Only persist an itemization that reconciles with the reviewed total —
+      // a half-parsed item set would misreport per-category spend downstream.
+      const trustedItems = reconcileLineItems(scannedLineItems, roundedAmount);
       await addExpense({
-        amount: Math.round(amtVal * 100) / 100,
+        amount: roundedAmount,
         merchant: scannedMerchant.trim() || 'Photo Receipt',
         category: scannedCategory,
         date,
         source: 'receipt',
         note: 'Scanned receipt photo',
+        lineItems: trustedItems,
       });
       if (botDraftId) {
         // Confirm the bot-ingested Convex draft (idempotent; flips status to
@@ -265,6 +281,7 @@ export default function QuickAddPage() {
       setScannedAmount('');
       setScannedMerchant('');
       setScannedDate('');
+      setScannedLineItems(undefined);
       setInputText('');
       setDetectedCategory('other');
       setEntrySource('manual');
@@ -279,20 +296,13 @@ export default function QuickAddPage() {
   // Handle manual or verified save
   const handleSave = async () => {
     const trimmed = inputText.trim();
-    if (!trimmed) {
-      setToast({ show: true, message: l.invalidAmount, type: 'error' });
-      return;
-    }
 
-    // Extract first number found
+    // Amount is optional on Quick Add: a note-only entry is saved as amount 0
+    // so the user is never blocked from recording a spend. The manual/verified
+    // save path below tolerates amountVal === 0.
     const numberMatch = trimmed.match(/(\d+(?:\.\d+)?)/);
-    if (!numberMatch) {
-      setToast({ show: true, message: l.invalidAmount, type: 'error' });
-      return;
-    }
-
-    const amountVal = parseFloat(numberMatch[1]);
-    const noteVal = trimmed.replace(numberMatch[0], '').trim();
+    const amountVal = numberMatch ? parseFloat(numberMatch[1]) : 0;
+    const noteVal = (numberMatch ? trimmed.replace(numberMatch[0], '') : trimmed).trim();
 
     try {
       setLoading(true);
@@ -304,7 +314,8 @@ export default function QuickAddPage() {
           category: detectedCategory,
           date: new Date().toISOString().split('T')[0],
           source: entrySource,
-          note: noteVal || undefined
+          note: noteVal || undefined,
+          lineItems: entrySource === 'receipt' ? scannedLineItems : undefined,
         });
         setToast({ show: true, message: l.successAdded, type: 'success' });
       } else {
@@ -413,7 +424,7 @@ export default function QuickAddPage() {
       const url = URL.createObjectURL(file);
       img.onload = async () => {
         try {
-          await scanImage(img, 'ZA');
+          await scanImage(img, profile?.locale?.includes('TH') ? 'TH' : 'ZA');
           setEntrySource('receipt');
         } catch (err) {
           console.error("Receipt scanning failed:", err);

@@ -51,7 +51,9 @@ See [docs/CI_CD.md](docs/CI_CD.md) for gate specifications, build guard mechanic
 - **SMS import** — bank-SMS parsing (`src/lib/sms-parser/**`, EU/SG/US/generic
   patterns) with a PWA Web Share Target (`/share-target` → `/sms-confirm`)
 - **Quick Add widget** — standalone `/quick-add` route with a +/- sign toggle,
-  installable as a PWA app shortcut (`public/manifest.json`)
+  installable as a PWA app shortcut (`public/manifest.json`). The amount is
+  optional: a note-only or empty entry saves as a Quick Expense with amount 0
+  (the note becomes the merchant) instead of being rejected for a missing amount.
 - **Market Watch** — localized finance news/RSS with location-gated vicinity feeds
 - **Web Push notifications** — VAPID push via `convex/push.ts` / `convex/pushSend.ts`
 - **Bug reporting** — in-app modal capturing the last 20 user actions

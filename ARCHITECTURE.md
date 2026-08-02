@@ -163,7 +163,10 @@ The root app is an auth-first, local-first PWA:
   [sync-status-indicator.tsx](src/components/ui/sync-status-indicator.tsx)
   details active queues (shared accounts, couple board, offline snapshots).
 - **PWA Quick Add Widget**: [/quick-add](src/app/quick-add/page.tsx) handles
-  rapid transaction entry with a +/- sign toggle writing to IndexedDB.
+  rapid transaction entry with a +/- sign toggle writing to IndexedDB. The
+  amount field is optional — when no amount is entered the entry saves as a
+  Quick Expense with amount 0 (merchant taken from the note), so Save never
+  blocks on a missing amount.
 - **Web Share Target**: `share_target` in
   [manifest.json](public/manifest.json) POSTs to
   [share-target/route.ts](src/app/share-target/route.ts), which 303-redirects the

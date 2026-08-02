@@ -55,6 +55,7 @@ type MockDraft = {
   draftId: string;
   fields: Record<string, { value: unknown }>;
   questions: unknown[];
+  lineItems?: Array<{ description: string; amount: number; qty?: number; unit_price?: number }>;
 } | null;
 
 let mockDraft: MockDraft = null;
@@ -104,15 +105,24 @@ describe('QuickAddPage', () => {
     expect(screen.getByRole('button', { name: /expense \(-\)/i })).toBeInTheDocument();
   });
 
-  it('validates empty inputs on save', async () => {
+  it('guards regression: empty/note-only input saves as amount 0 instead of blocking (fix: optional-amount quick-add)', async () => {
     render(<QuickAddPage />);
+    const input = screen.getByPlaceholderText('Type amount then note, e.g. 120 lunch');
     const saveButton = screen.getByRole('button', { name: /save/i });
-    
+
+    // Note-only entry (no number) — must NOT show the old validation error.
+    fireEvent.change(input, { target: { value: 'lunch with team' } });
     fireEvent.click(saveButton);
 
     await waitFor(() => {
-      expect(screen.getByText('Please enter a valid amount')).toBeInTheDocument();
+      expect(mockAddExpense).toHaveBeenCalledTimes(1);
+      expect(mockAddExpense).toHaveBeenCalledWith(expect.objectContaining({
+        amount: 0,
+        merchant: 'lunch with team',
+        source: 'manual',
+      }));
     });
+    expect(screen.queryByText('Please enter a valid amount')).not.toBeInTheDocument();
   });
 
   it('parses amount and note, then calls addExpense on save for expenses', async () => {
@@ -248,6 +258,69 @@ describe('QuickAddPage', () => {
         source: 'receipt',
       }));
     });
+  });
+
+  it('carries camera-scanned line items into the saved expense with per-item categories', async () => {
+    // Regression guard: the camera-scan effect previously ignored draft.lineItems
+    // (only the LINE-bot path populated them) AND handleSaveScannedReceipt wrote
+    // the expense without lineItems — so a scanned receipt's itemization never
+    // reached the store and the whole total landed in one category.
+    mockDraft = {
+      draftId: 'draft-items',
+      fields: {
+        total: { value: 100 },
+        merchant: { value: 'Supermarket' },
+        category: { value: 'food' },
+      },
+      questions: [],
+      lineItems: [
+        { description: 'bread', amount: 25 },
+        { description: 'milk', amount: 18.5 },
+        { description: 'movie rental', amount: 56.5 },
+      ],
+    };
+
+    render(<QuickAddPage />);
+    fireEvent.click(await screen.findByTestId('save-scanned-receipt-btn'));
+
+    await waitFor(() => {
+      expect(mockAddExpense).toHaveBeenCalledTimes(1);
+    });
+
+    const entry = mockAddExpense.mock.calls[0][0];
+    expect(entry.source).toBe('receipt');
+    expect(entry.lineItems).toEqual([
+      { description: 'bread', amount: 25, category: 'food' },
+      { description: 'milk', amount: 18.5, category: 'food' },
+      { description: 'movie rental', amount: 56.5, category: 'entertainment' },
+    ]);
+  });
+
+  it('drops a line-item set that does not reconcile with the reviewed total', async () => {
+    // Half-parsed receipt: OCR captured only 30 of a 450 total. Persisting those
+    // items would misreport per-category spend, so they must be discarded and
+    // the receipt saved as a single unsplit expense.
+    mockDraft = {
+      draftId: 'draft-mismatch',
+      fields: {
+        total: { value: 450 },
+        merchant: { value: 'Supermarket' },
+        category: { value: 'food' },
+      },
+      questions: [],
+      lineItems: [{ description: 'bread', amount: 30 }],
+    };
+
+    render(<QuickAddPage />);
+    fireEvent.click(await screen.findByTestId('save-scanned-receipt-btn'));
+
+    await waitFor(() => {
+      expect(mockAddExpense).toHaveBeenCalledTimes(1);
+    });
+
+    const entry = mockAddExpense.mock.calls[0][0];
+    expect(entry.amount).toBe(450);
+    expect(entry.lineItems).toBeUndefined();
   });
 
   it('handles Inbox SMS permission prompt with remember tick box and scrapes message', async () => {

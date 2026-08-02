@@ -23,6 +23,22 @@ const WizardProfileSchema = z.object({
   }),
 });
 
+/**
+ * Itemized receipt lines. Mirrors `ReceiptLineItem` in src/lib/types/budget.ts.
+ * `category` stays a plain string (like ExpenseEntrySchema.category) so a
+ * backup written by a newer build that added a category never fails to import.
+ */
+const ReceiptLineItemSchema = z.object({
+  description: z.string(),
+  amount: z.number(),
+  category: z.string(),
+  qty: z.number().optional(),
+  unitPrice: z.number().optional(),
+});
+
+// Keep in lockstep with `ExpenseEntry` (src/lib/types/budget.ts). Drift here is
+// silent data loss: zod strips unknown keys, and an unknown `source` member
+// rejects the whole backup on restore.
 const ExpenseEntrySchema = z.object({
   id: z.string(),
   date: z.string(),
@@ -32,8 +48,11 @@ const ExpenseEntrySchema = z.object({
   note: z.string().optional(),
   isRecurring: z.boolean().optional(),
   recurringId: z.string().optional(),
-  source: z.enum(['manual', 'voice', 'import']),
+  source: z.enum(['manual', 'voice', 'import', 'receipt']),
   cycle: z.enum(['monthly', 'yearly']).optional(),
+  createdBy: z.string().optional(),
+  createdByName: z.string().optional(),
+  lineItems: z.array(ReceiptLineItemSchema).optional(),
 });
 
 const IncomeEntrySchema = z.object({
