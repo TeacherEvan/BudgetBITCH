@@ -15,6 +15,7 @@
     "check:idb": "node scripts/check-idb-stores.mjs",
     "check:csp": "node scripts/check-csp-hosts.mjs",
     "check:comments": "node scripts/check-stale-bug-comments.mjs",
+    "check:bundle": "node scripts/check-bundle-budgets.mjs",
     "check:convex": "node scripts/check-convex-deployment.mjs",
     "check:convex-imports": "node scripts/check-convex-imports.mjs",
     "test": "vitest run",
