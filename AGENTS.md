@@ -35,7 +35,7 @@ relevant surface. Don't start in `src/components/**` before checking
 
 ## 2. Stack (verified against `package.json`)
 
-- Next.js 14 (App Router), React 18, TypeScript strict, path alias `@/*` → `src/*`
+- Next.js 16 (App Router), React 18, TypeScript strict, path alias `@/*` → `src/*`
 - Convex 1.34 — auth (`@convex-dev/auth` Password provider), database, realtime, HTTP
 - IndexedDB via `idb` for local-first data; `public/sw.js` service worker for PWA sync
 - next-intl v4 (cookie `bb-locale`), Tailwind CSS v4, framer-motion, recharts, zod
@@ -139,6 +139,44 @@ a defect — it sends the next debugging session chasing a non-issue.
 `scripts/check-stale-bug-comments.mjs` greps test files for the phrases
 `CURRENT (buggy)` and `documents the bug` and exits non-zero if found, forcing
 the comment to be updated at fix time. Run it via `npm run check:comments`.
+
+---
+
+## 9. Verified commands (from package.json)
+
+| Task | Command |
+|---|---|
+| Dev server | `npm run dev` |
+| Build | `npm run build` (runs `check:convex` prebuild) |
+| Lint | `npm run lint` |
+| Typecheck | `npm run typecheck` |
+| All unit tests | `npm test` (647 pass, ~3 skipped) |
+| Convex backend tests | `npm run test:convex` (195 pass) |
+| E2E (Playwright) | `npm run test:e2e` |
+| Full CI gate | `npm run ci` |
+| IDB store check | `npm run check:idb` |
+| CSP hosts check | `npm run check:csp` |
+| Stale test-comment check | `npm run check:comments` |
+
+---
+
+## 10. Key paths for new features
+
+| Feature | Domain logic | API/route | UI |
+|---|---|---|---|
+| Receipt scanning (app camera) | `convex/lib/receipt/*` | `convex/receipts.ts` (`proxyReceiptScan`, `ingestReceipt`) | `src/app/quick-add/page.tsx` |
+| LINE bot ingest | `convex/lib/receipt/*` | `convex/receipts.ts` (`ingestReceipt`) | TeacherBOY HF Space |
+| Quick Add (3 features) | `src/lib/types/budget.ts` | `src/lib/db/stores/expenses-store.ts` | `src/app/quick-add/page.tsx` |
+| Repeat Purchase | `src/lib/db/stores/expenses-store.ts` (`repeatExpense`) | — | `src/components/dashboard/panels/expense-tracker.tsx` |
+
+---
+
+## 11. Deployment notes
+
+- Frontend: `git push` → Vercel (auto-deploys from `main`)
+- Convex backend: `npx convex deploy` (uses prod deployment `steady-ox-280`)
+- HF bot: push to `hf/main` → Space rebuilds (`EvilEvan/TeacherBOY`)
+- Env vars: `BUDGETBOSS_SYNC_TOKEN` = `CONVEX_SYNC_SECRET` (must match; verify via `npx convex env get`)
 
 ---
 
