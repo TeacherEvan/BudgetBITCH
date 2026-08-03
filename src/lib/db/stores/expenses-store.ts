@@ -9,6 +9,9 @@ export async function addExpense(expense: ExpenseEntry): Promise<void> {
   const member = getCurrentMember();
   // Stamp attribution so the synced-account dashboard can break down by member.
   if (!expense.createdByName) expense.createdByName = member ?? 'Personal';
+  // Stamp the date of entry (distinct from `date`, the purchase date on the
+  // receipt). `??=`-style: a caller-provided value (sync/replay) is preserved.
+  if (!expense.entryDate) expense.entryDate = new Date().toISOString().split('T')[0];
   const db = await getDB();
   await db.add('expenses', expense);
   await afterBoardMutation('expenses', expense.id);
@@ -61,6 +64,9 @@ export async function repeatExpense(id: string): Promise<ExpenseEntry | null> {
     ...original,
     id: generateId(),
     date: new Date().toISOString().split('T')[0],
+    // A repeat is a NEW entry made today — never inherit the original's
+    // entry date, or the purchase-vs-entry split lies about the clone.
+    entryDate: new Date().toISOString().split('T')[0],
     note: original.note,
     source: 'manual',
     repeatedFrom: original.id,

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { repeatExpense } from './expenses-store';
+import { addExpense, repeatExpense } from './expenses-store';
 import type { ExpenseEntry } from '@/lib/types/budget';
 
 // In-memory stand-in for the IndexedDB `expenses` store.
@@ -62,6 +62,18 @@ describe('repeatExpense (Repeat Purchase)', () => {
     expect(clone!.source).toBe('manual');
   });
 
+  it('gives the clone a fresh entryDate distinct from the original purchase date', async () => {
+    store.set(sample.id, sample);
+
+    const clone = await repeatExpense(sample.id);
+
+    const today = new Date().toISOString().split('T')[0];
+    // The clone was ENTERED today even though it repeats an old purchase.
+    expect(clone!.entryDate).toBe(today);
+    // The original is untouched and (pre-existing row) has no entryDate.
+    expect(store.get(sample.id)!.entryDate).toBeUndefined();
+  });
+
   it('returns null when the original expense does not exist', async () => {
     const clone = await repeatExpense('does-not-exist');
     expect(clone).toBeNull();
@@ -74,5 +86,31 @@ describe('repeatExpense (Repeat Purchase)', () => {
     const all = Array.from(store.values());
     expect(all.length).toBe(2);
     expect(all.some((e) => e.repeatedFrom === sample.id)).toBe(true);
+  });
+});
+
+describe('addExpense entryDate stamping', () => {
+  const base: ExpenseEntry = {
+    id: 'stamp-1',
+    date: '2026-08-01', // purchase date on the receipt
+    category: 'food',
+    merchant: '7-Eleven',
+    amount: 85,
+    source: 'receipt',
+  };
+
+  it('stamps entryDate with today when the caller does not provide one', async () => {
+    await addExpense({ ...base });
+
+    const today = new Date().toISOString().split('T')[0];
+    expect(store.get(base.id)!.entryDate).toBe(today);
+    // Purchase date is never clobbered by the stamp.
+    expect(store.get(base.id)!.date).toBe('2026-08-01');
+  });
+
+  it('preserves a caller-provided entryDate (idempotent for sync/replay paths)', async () => {
+    await addExpense({ ...base, id: 'stamp-2', entryDate: '2026-08-03' });
+
+    expect(store.get('stamp-2')!.entryDate).toBe('2026-08-03');
   });
 });
