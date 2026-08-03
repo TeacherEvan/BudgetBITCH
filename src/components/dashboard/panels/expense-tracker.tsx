@@ -27,6 +27,8 @@ interface Expense {
   date: string;
   note?: string;
   source: 'manual' | 'voice' | 'import' | 'receipt';
+  /** Date the entry was recorded in-app; distinct from `date` (purchase date). */
+  entryDate?: string;
 }
 
 const CATEGORIES: { value: ExpenseCategory; label: { en: string } }[] = [
@@ -343,6 +345,11 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
                           {new Date(expense.date).toLocaleDateString('en-US')} • {formatCurrency(expense.amount, locale)}
                           {expense.note && ` • ${expense.note}`}
                           {notes[expense.id] && ` • 📝 ${notes[expense.id].note}`}
+                          {expense.entryDate && expense.entryDate !== expense.date && (
+                            <span className="text-white/40" data-testid={`entry-date-${expense.id}`}>
+                              {` • Entered ${expense.entryDate}`}
+                            </span>
+                          )}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
