@@ -332,7 +332,7 @@ test("proxyReceiptScan sends the server-derived userId and never a client one", 
 
   const mockFetch = vi.fn().mockResolvedValue({
     ok: true,
-    json: async () => ({ success: true, draftId: "draft_1" }),
+    json: async () => ({ success: true, draftId: "draft_1", fields: {}, confidence: {}, evidence: {}, questions: [], lineItems: [], source: "app-camera" }),
   });
   vi.stubGlobal("fetch", mockFetch);
 
@@ -342,7 +342,7 @@ test("proxyReceiptScan sends the server-derived userId and never a client one", 
     countryHint: "ID",
   });
 
-  expect(result).toEqual({ success: true, draftId: "draft_1" });
+  expect(result).toEqual({ success: true, draftId: "draft_1", fields: {}, confidence: {}, evidence: {}, questions: [], lineItems: [], source: "app-camera" });
 
   const [url, init] = mockFetch.mock.calls[0];
   expect(url).toBe("https://bot.example/receipt/scan");

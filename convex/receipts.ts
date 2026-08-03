@@ -71,7 +71,16 @@ export const proxyReceiptScan = action({
     countryHint: v.optional(v.string()),
     idempotencyKey: v.string(),
   },
-  handler: async (ctx, args): Promise<{ success: boolean; draftId: string }> => {
+  handler: async (ctx, args): Promise<{
+    success: boolean;
+    draftId: string;
+    fields?: Record<string, { value?: unknown } | null>;
+    confidence?: Record<string, number>;
+    evidence?: Record<string, unknown>;
+    questions?: unknown[];
+    lineItems?: Array<{ description?: string; amount?: number; qty?: number; unit_price?: number }>;
+    source?: string;
+  }> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new ConvexError("Authentication required to scan receipts");
@@ -102,10 +111,25 @@ export const proxyReceiptScan = action({
       throw new ConvexError(`Receipt bot scan failed (${status})`);
     }
 
-    const data = (await res.json()) as { success?: boolean; draftId?: string };
+    const data = (await res.json()) as { 
+      success?: boolean; 
+      draftId?: string;
+      fields?: Record<string, { value?: unknown } | null>;
+      confidence?: Record<string, number>;
+      evidence?: Record<string, unknown>;
+      questions?: unknown[];
+      lineItems?: Array<{ description?: string; amount?: number; qty?: number; unit_price?: number }>;
+      source?: string;
+    };
     return {
       success: data.success ?? true,
       draftId: data.draftId ?? "",
+      fields: data.fields,
+      confidence: data.confidence,
+      evidence: data.evidence,
+      questions: data.questions,
+      lineItems: data.lineItems,
+      source: data.source,
     };
   },
 });
