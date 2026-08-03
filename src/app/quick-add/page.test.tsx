@@ -18,6 +18,7 @@ const mockProfile = {
 vi.mock('@/hooks/use-local-db', () => ({
   useExpenses: () => ({
     add: mockAddExpense,
+    expenses: mockExpenses,
   }),
   useIncomes: () => ({
     add: mockAddIncome,
@@ -27,6 +28,22 @@ vi.mock('@/hooks/use-local-db', () => ({
     save: mockSaveProfile,
   }),
 }));
+
+// Mock the Repeat Purchase store action. The page matches a scanned merchant
+// against existing expenses and offers a one-tap repeat of the last purchase.
+const mockRepeatExpense = vi.fn();
+vi.mock('@/lib/db/stores/expenses-store', () => ({
+  repeatExpense: (...args: unknown[]) => mockRepeatExpense(...args),
+}));
+
+let mockExpenses: Array<{
+  id: string;
+  date: string;
+  category: string;
+  merchant: string;
+  amount: number;
+  source: string;
+}> = [];
 
 // Mock Next Navigation
 const mockPush = vi.fn();
@@ -80,6 +97,7 @@ describe('QuickAddPage', () => {
     vi.clearAllMocks();
     localStorage.clear();
     mockDraft = null;
+    mockExpenses = [];
   });
 
   it('renders quick add components correctly', () => {
@@ -187,6 +205,56 @@ describe('QuickAddPage', () => {
     // ...but no expense was written yet. The previous bug auto-committed
     // silently, so this asserts the fix: scanned data sits in fields first.
     expect(mockAddExpense).not.toHaveBeenCalled();
+  });
+
+  it('offers a Repeat Purchase "+" in the review card when a same-merchant expense exists', async () => {
+    mockExpenses = [
+      { id: 'exp-prev-1', date: '2026-07-28', category: 'food', merchant: 'Supermarket', amount: 400, source: 'receipt' },
+    ];
+    mockDraft = {
+      draftId: 'draft-r1',
+      fields: {
+        total: { value: 450 },
+        merchant: { value: 'supermarket' }, // case-insensitive match
+        category: { value: 'food' },
+      },
+      questions: [],
+    };
+
+    render(<QuickAddPage />);
+
+    const repeatBtn = await screen.findByTestId('repeat-purchase-btn');
+    fireEvent.click(repeatBtn);
+
+    await waitFor(() => {
+      expect(mockRepeatExpense).toHaveBeenCalledWith('exp-prev-1');
+    });
+    // Repeat and Save are independent: the review card must still be open
+    // and nothing was saved by the repeat tap itself.
+    expect(screen.getByTestId('scanned-receipt-card')).toBeInTheDocument();
+    expect(mockAddExpense).not.toHaveBeenCalled();
+  });
+
+  it('hides the Repeat Purchase button when no prior expense matches the merchant', async () => {
+    mockExpenses = [
+      { id: 'exp-other', date: '2026-07-28', category: 'food', merchant: 'Corner Cafe', amount: 60, source: 'manual' },
+    ];
+    mockDraft = {
+      draftId: 'draft-r2',
+      fields: {
+        total: { value: 450 },
+        merchant: { value: 'Supermarket' },
+        category: { value: 'food' },
+      },
+      questions: [],
+    };
+
+    render(<QuickAddPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('scanned-receipt-card')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('repeat-purchase-btn')).not.toBeInTheDocument();
   });
 
   it('saves the scanned receipt via the review card: one expense write + draft confirm (no double write)', async () => {

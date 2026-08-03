@@ -1,7 +1,7 @@
 // app/quick-add/page.tsx
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation } from 'convex/react';
 import { Plus, Minus, Camera, Save, ArrowLeft, Loader2, Check, AlertCircle, MessageSquare, ShieldCheck, X } from 'lucide-react';
@@ -10,6 +10,7 @@ import { useExpenses, useWizardProfile, useIncomes } from '@/hooks/use-local-db'
 import { useReceiptScan } from '@/hooks/use-receipt-scan';
 import { useInboxPermission } from '@/hooks/use-inbox-permission';
 import { parseSMS, getBestCandidate } from '@/lib/sms-parser';
+import { repeatExpense } from '@/lib/db/stores/expenses-store';
 import { ReceiptVerifySheet } from '@/components/receipt/receipt-verify-sheet';
 import { type ExpenseCategory, type IncomeCategory, type ReceiptLineItem } from '@/lib/types/budget';
 import { mapCategory, reconcileLineItems } from '@/lib/receipt/map-category';
@@ -51,6 +52,10 @@ export default function QuickAddPage() {
   const { add: addExpense } = useExpenses();
   const { add: addIncome } = useIncomes();
   const { profile, save: saveProfile } = useWizardProfile();
+  // Existing expenses feed the Repeat Purchase "+" on the scanned-receipt
+  // review card: when the scanned merchant matches a prior purchase, offer a
+  // one-tap repeat alongside Save. (useExpenses exposes the full list.)
+  const { expenses: existingExpenses } = useExpenses();
   
   const { draft, scanImage, answerQuestion, confirmDraft } = useReceiptScan();
   const { status: inboxPermStatus, grantPermission, denyPermission } = useInboxPermission();
@@ -301,6 +306,39 @@ export default function QuickAddPage() {
     setScannedLineItems((prev) =>
       prev?.map((item, i) => (i === idx ? { ...item, [field]: value } : item)),
     );
+  };
+
+  // Repeat Purchase "+" on the review card: the most recent prior expense
+  // with the same merchant (case-insensitive) as the scanned receipt.
+  const repeatCandidate = useMemo(() => {
+    if (entrySource !== 'receipt') return undefined;
+    const merchant = scannedMerchant.trim().toLowerCase();
+    if (!merchant) return undefined;
+    return (existingExpenses ?? [])
+      .filter((e) => e.merchant?.trim().toLowerCase() === merchant)
+      .sort((a, b) => (a.date < b.date ? 1 : -1))[0];
+  }, [entrySource, scannedMerchant, existingExpenses]);
+
+  // One-tap repeat of the matched purchase. Independent of Save: the review
+  // card stays open so the user can still save the (edited) scan as new.
+  const handleRepeatPurchase = async () => {
+    if (!repeatCandidate) return;
+    try {
+      setLoading(true);
+      const clone = await repeatExpense(repeatCandidate.id);
+      if (clone) {
+        setToast({
+          show: true,
+          message: `🔁 Repeated: ${clone.merchant} — ${clone.amount}`,
+          type: 'success',
+        });
+      }
+    } catch (err) {
+      console.error('Repeat purchase failed:', err);
+      setToast({ show: true, message: `Repeat failed: ${err instanceof Error ? err.message : String(err)}`, type: 'error' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handle manual or verified save
@@ -815,6 +853,19 @@ export default function QuickAddPage() {
               <Save className="w-4 h-4 text-slate-950" />
               <span>{'Save Scanned Receipt'}</span>
             </Button>
+
+            {repeatCandidate && (
+              <Button
+                variant="secondary"
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl text-xs font-semibold"
+                onClick={handleRepeatPurchase}
+                isLoading={loading}
+                data-testid="repeat-purchase-btn"
+              >
+                <Plus className="w-4 h-4 text-amber-400" />
+                <span>{`Repeat last ${repeatCandidate.merchant} purchase`}</span>
+              </Button>
+            )}
           </div>
         ) : null}
 
