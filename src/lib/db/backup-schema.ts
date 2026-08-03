@@ -53,6 +53,12 @@ const ExpenseEntrySchema = z.object({
   createdBy: z.string().optional(),
   createdByName: z.string().optional(),
   lineItems: z.array(ReceiptLineItemSchema).optional(),
+  /** Tax/VAT extracted from a scanned receipt. */
+  tax: z.number().optional(),
+  /** ID of the original expense this was repeated from (Repeat Purchase). */
+  repeatedFrom: z.string().optional(),
+  /** Date the entry was recorded in-app; distinct from `date` (purchase date). */
+  entryDate: z.string().optional(),
 });
 
 const IncomeEntrySchema = z.object({

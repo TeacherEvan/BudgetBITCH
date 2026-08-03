@@ -141,6 +141,32 @@ describe('Backup Schema and Integrity Engine', () => {
     expect(result.data.expenses?.map((e) => e.source)).toEqual([...sources]);
   });
 
+  it('round-trips tax, repeatedFrom and entryDate without stripping', async () => {
+    // Guards regression: ExpenseEntry gained `tax`, `repeatedFrom` and
+    // `entryDate` (scanned-receipt VAT, Repeat Purchase lineage, and the
+    // purchase-vs-entry date split) but ExpenseEntrySchema lagged the live
+    // type again — zod would silently strip all three on restore.
+    // Fix: same commit that added the fields widened the schema.
+    const data = {
+      expenses: [
+        {
+          ...receiptExpense,
+          tax: 45.02,
+          repeatedFrom: 'orig-e89b-12d3-a456-426614174000',
+          entryDate: '2026-08-04',
+        },
+      ],
+    };
+    const payload = await createBackupPayload(data);
+    const result = await parseAndValidateBackup(JSON.stringify(payload));
+
+    const restored = result.data.expenses![0];
+    expect(restored).toEqual(data.expenses[0]);
+    expect(restored.tax).toBe(45.02);
+    expect(restored.repeatedFrom).toBe('orig-e89b-12d3-a456-426614174000');
+    expect(restored.entryDate).toBe('2026-08-04');
+  });
+
   it('rejects a line item with a non-numeric amount', async () => {
     const data = {
       expenses: [

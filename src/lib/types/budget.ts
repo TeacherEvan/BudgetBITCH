@@ -116,6 +116,13 @@ export interface ExpenseEntry {
   tax?: number;
   /** ID of the original expense this was repeated from (Repeat Purchase feature). */
   repeatedFrom?: string;
+  /**
+   * Date the entry was recorded in the app (YYYY-MM-DD), set once at save
+   * time. Distinct from `date`, the purchase date printed on the receipt —
+   * a receipt scanned days late keeps its original `date` while `entryDate`
+   * records when it entered the ledger. Never user-editable.
+   */
+  entryDate?: string;
 }
 
 export type ExpenseCategory =
