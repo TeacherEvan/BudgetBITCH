@@ -139,7 +139,7 @@ flowchart TD
 | `/dashboard` | `src/app/(app)/dashboard/page.tsx` | Protected dashboard (post-auth landing) |
 | `/wizard` | `src/app/(app)/wizard/page.tsx` | Protected 10-step launch wizard |
 | `/settings` | `src/app/settings/page.tsx` | Settings (theme, currency, sync, data, admin) |
-| `/quick-add` | `src/app/quick-add/page.tsx` | Standalone PWA quick-add widget |
+| `/quick-add` | `src/app/quick-add/page.tsx` | Standalone PWA widget: Camera (photo → HF bot TeacherBOY → Gemini → Convex → editable review; no LINE ID) + Inbox + Income; no manual amount; Repeat Purchase "+" |
 | `/sms-confirm` | `src/app/sms-confirm/page.tsx` | Confirm a parsed bank SMS into a transaction |
 | `/security` | `src/app/security/page.tsx` | Security disclosure page |
 | `/privacy` | `src/app/privacy/page.tsx` | Privacy policy |

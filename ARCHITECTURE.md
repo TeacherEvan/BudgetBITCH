@@ -162,11 +162,22 @@ The root app is an auth-first, local-first PWA:
 - **Interactive Sync Status Popover**:
   [sync-status-indicator.tsx](src/components/ui/sync-status-indicator.tsx)
   details active queues (shared accounts, couple board, offline snapshots).
-- **PWA Quick Add Widget**: [/quick-add](src/app/quick-add/page.tsx) handles
-  rapid transaction entry with a +/- sign toggle writing to IndexedDB. The
-  amount field is optional — when no amount is entered the entry saves as a
-  Quick Expense with amount 0 (merchant taken from the note), so Save never
-  blocks on a missing amount.
+- **PWA Quick Add Widget**: [/quick-add](src/app/quick-add/page.tsx) has
+  exactly three features — Camera, Inbox, Income; manual amount entry is not
+  one of them. The Camera path is: photo → `proxyReceiptScan` action
+  ([convex/receipts.ts](convex/receipts.ts); user derived server-side from
+  the Convex Auth session, `CONVEX_SYNC_SECRET` never ships to the client) →
+  POST `{BUDGETBOSS_BOT_URL}/receipt/scan` (HF Space `EvilEvan/TeacherBOY`,
+  Gemini vision) → bot POSTs the scrape back to `/receipts/ingest` with
+  `lineUserId="app:<convexUserId>"` (no LINE mapping — the `app:` prefix is
+  resolved directly as a Convex user id) → the action returns the full
+  scraped fields/lineItems/questions inline → the review card renders them
+  as editable fields (amount, merchant, category, purchase date, tax/VAT,
+  line items). Nothing auto-commits; Save writes IndexedDB-first and stamps
+  `entryDate` separately from the receipt's purchase `date`. When the
+  scanned merchant matches a prior expense, a **Repeat Purchase** "+" button
+  clones that purchase with today's date. Offline/bot-down fallback:
+  client-side tesseract.js OCR via `useReceiptScan`.
 - **Web Share Target**: `share_target` in
   [manifest.json](public/manifest.json) POSTs to
   [share-target/route.ts](src/app/share-target/route.ts), which 303-redirects the

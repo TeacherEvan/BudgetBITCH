@@ -50,10 +50,17 @@ See [docs/CI_CD.md](docs/CI_CD.md) for gate specifications, build guard mechanic
   engine (`convex/lib/receipt/**`), receipt templates, and merchant aliases
 - **SMS import** — bank-SMS parsing (`src/lib/sms-parser/**`, EU/SG/US/generic
   patterns) with a PWA Web Share Target (`/share-target` → `/sms-confirm`)
-- **Quick Add widget** — standalone `/quick-add` route with a +/- sign toggle,
-  installable as a PWA app shortcut (`public/manifest.json`). The amount is
-  optional: a note-only or empty entry saves as a Quick Expense with amount 0
-  (the note becomes the merchant) instead of being rejected for a missing amount.
+- **Quick Add widget** — standalone `/quick-add` route with exactly three
+  features: **Camera** (photo → HF bot `EvilEvan/TeacherBOY` → Gemini vision →
+  Convex → editable review fields for amount, merchant, category, purchase
+  date, tax/VAT, and line items — nothing auto-commits; no LINE ID involved,
+  the bot identifies the user as `app:<convexUserId>`), **Inbox** (pasted
+  SMS/email scraped by Gemini or the regex parser into a verify card), and
+  **Income** (+/- toggle). Manual amount entry is deliberately NOT a feature.
+  The Camera review card also offers a one-tap **Repeat Purchase** "+" when
+  the scanned merchant matches a prior expense (also available per-row in the
+  Expense Tracker). Expenses stamp `entryDate` (date of entry) separately
+  from `date` (purchase date on the receipt).
 - **Market Watch** — localized finance news/RSS with location-gated vicinity feeds
 - **Web Push notifications** — VAPID push via `convex/push.ts` / `convex/pushSend.ts`
 - **Bug reporting** — in-app modal capturing the last 20 user actions
