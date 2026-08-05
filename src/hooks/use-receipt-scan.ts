@@ -48,8 +48,16 @@ export function useReceiptScan() {
           };
           await syncOfflineDraftMutation(syncArgs);
           await deleteOfflineDraft(queuedDraft.clientDraftId);
-        } catch {
-          // Keep failed drafts queued for the next reconnect attempt.
+        } catch (error) {
+          // Keep failed drafts queued for the next reconnect attempt, but log for visibility.
+          // eslint-disable-next-line no-console
+          console.error(
+            'Failed to sync offline draft; it will remain queued for retry.',
+            {
+              clientDraftId: queuedDraft.clientDraftId,
+              error,
+            },
+          );
         }
       }
     } finally {
