@@ -24,6 +24,21 @@ export async function getAllOfflineDrafts(): Promise<OfflineReceiptDraft[]> {
   return db.getAll('receiptDrafts');
 }
 
+export async function updateOfflineDraft(
+  clientDraftId: string,
+  update: Partial<Omit<OfflineReceiptDraft, 'clientDraftId'>>,
+): Promise<void> {
+  const existing = await getOfflineDraft(clientDraftId);
+  if (!existing) return;
+
+  const db = await getDB();
+  await db.put(
+    'receiptDrafts',
+    { ...existing, ...update, clientDraftId },
+    clientDraftId,
+  );
+}
+
 export async function deleteOfflineDraft(clientDraftId: string): Promise<void> {
   const db = await getDB();
   await db.delete('receiptDrafts', clientDraftId);
