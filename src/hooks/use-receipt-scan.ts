@@ -58,6 +58,8 @@ export function useReceiptScan() {
   }, [syncOfflineDraftMutation]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
     const onOnline = () => {
       void flushOfflineDrafts();
     };
