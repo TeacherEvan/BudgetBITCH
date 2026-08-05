@@ -1,6 +1,6 @@
 // src/modules/budgeting/csv-export.test.ts
 import { expect, test, vi } from 'vitest';
-import { exportExpensesToCsv, exportIncomesToCsv, exportBudgetsToCsv, downloadCsv } from './csv-export';
+import { exportExpensesToCsv, exportIncomesToCsv, exportBudgetsToCsv, downloadCsv, expenseLineItemsToCsv } from './csv-export';
 import type { ExpenseEntry, IncomeEntry } from '@/lib/types/budget';
 
 test('exportExpensesToCsv formats empty array to header row only', () => {
@@ -137,4 +137,73 @@ test('downloadCsv returns false and does nothing outside a browser', () => {
   const ok = downloadCsv('x', 'nope');
   expect(ok).toBe(false);
   globalThis.document = savedDoc;
+});
+
+const LINE_ITEM_HEADER = 'date,merchant,item,category,qty,unitPrice,amount';
+
+test('expenseLineItemsToCsv returns header only when no expense has line items', () => {
+  const expenses: ExpenseEntry[] = [
+    { id: '1', date: '2026-08-01', category: 'food', merchant: 'Cafe', amount: 50, source: 'manual' },
+  ];
+  expect(expenseLineItemsToCsv([])).toBe(LINE_ITEM_HEADER);
+  expect(expenseLineItemsToCsv(expenses)).toBe(LINE_ITEM_HEADER);
+});
+
+test('expenseLineItemsToCsv emits one row per line item, denormalized against its parent', () => {
+  const expenses: ExpenseEntry[] = [
+    {
+      id: '1',
+      date: '2026-08-01',
+      category: 'food',
+      merchant: 'Supermarket',
+      amount: 100,
+      source: 'receipt',
+      lineItems: [
+        { description: 'bread', amount: 25, category: 'food' },
+        { description: 'movie rental', amount: 75, category: 'entertainment', qty: 3, unitPrice: 25 },
+      ],
+    },
+    // No line items -> contributes no rows.
+    { id: '2', date: '2026-08-02', category: 'transport', merchant: 'Uber', amount: 80, source: 'manual' },
+  ];
+
+  const lines = expenseLineItemsToCsv(expenses).split('\n');
+  expect(lines).toHaveLength(3);
+  expect(lines[0]).toBe(LINE_ITEM_HEADER);
+  expect(lines[1]).toBe('2026-08-01,Supermarket,bread,food,,,25');
+  expect(lines[2]).toBe('2026-08-01,Supermarket,movie rental,entertainment,3,25,75');
+});
+
+test('expenseLineItemsToCsv escapes commas and quotes in item fields', () => {
+  const expenses: ExpenseEntry[] = [
+    {
+      id: '1',
+      date: '2026-08-01',
+      category: 'food',
+      merchant: 'Deli, Inc',
+      amount: 10,
+      source: 'receipt',
+      lineItems: [{ description: 'ham, cheese "special"', amount: 10, category: 'food' }],
+    },
+  ];
+
+  const csv = expenseLineItemsToCsv(expenses);
+  expect(csv).toContain('"Deli, Inc"');
+  expect(csv).toContain('"ham, cheese ""special"""');
+});
+
+test('expenseLineItemsToCsv prepends the UTF-8 BOM when asked, header-only included', () => {
+  const withItems: ExpenseEntry[] = [
+    {
+      id: '1',
+      date: '2026-08-01',
+      category: 'food',
+      merchant: 'Shop',
+      amount: 5,
+      source: 'receipt',
+      lineItems: [{ description: 'milk', amount: 5, category: 'food' }],
+    },
+  ];
+  expect(expenseLineItemsToCsv([], true).startsWith('\ufeff')).toBe(true);
+  expect(expenseLineItemsToCsv(withItems, true).startsWith('\ufeff')).toBe(true);
 });

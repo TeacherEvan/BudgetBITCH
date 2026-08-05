@@ -142,7 +142,15 @@ export const PRO_TIPS: ProTip[] = [
   },
 ];
 
-export function getRandomProTip(): ProTip {
+export function getRandomProTip(seed?: string): ProTip {
+  if (seed) {
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+      hash = (hash * 31 + seed.charCodeAt(i)) | 0;
+    }
+    const index = ((hash % PRO_TIPS.length) + PRO_TIPS.length) % PRO_TIPS.length;
+    return PRO_TIPS[index];
+  }
   const index = Math.floor(Math.random() * PRO_TIPS.length);
   return PRO_TIPS[index];
 }

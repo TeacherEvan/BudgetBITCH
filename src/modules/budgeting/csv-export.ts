@@ -45,6 +45,45 @@ export function exportExpensesToCsv(expenses: ExpenseEntry[], includeBom = false
   return includeBom ? UTF8_BOM + csv : csv;
 }
 
+/**
+ * Itemized companion export for `exportExpensesToCsv`.
+ *
+ * The expense CSV is one row per expense, so the `lineItems` captured by a
+ * receipt scan never reach the file. This emits one row per line item instead
+ * (denormalized against its parent expense's date + merchant) so a scanned
+ * receipt's itemization survives an export. Expenses with no line items are
+ * skipped — a receipt-less export therefore yields the header row only.
+ *
+ * Deliberately a separate function: `exportExpensesToCsv`'s header is depended
+ * on by other code and tests and must not change.
+ */
+export function expenseLineItemsToCsv(expenses: ExpenseEntry[], includeBom = false): string {
+  const header = 'date,merchant,item,category,qty,unitPrice,amount';
+  const rows: string[] = [];
+
+  for (const e of expenses ?? []) {
+    if (!e?.lineItems?.length) continue;
+    for (const li of e.lineItems) {
+      rows.push([
+        escapeCsvField(e.date),
+        escapeCsvField(e.merchant),
+        escapeCsvField(li.description),
+        escapeCsvField(li.category),
+        escapeCsvField(li.qty),
+        escapeCsvField(li.unitPrice),
+        escapeCsvField(li.amount),
+      ].join(','));
+    }
+  }
+
+  if (rows.length === 0) {
+    return (includeBom ? UTF8_BOM : '') + header;
+  }
+
+  const csv = [header, ...rows].join('\n');
+  return includeBom ? UTF8_BOM + csv : csv;
+}
+
 export function exportIncomesToCsv(incomes: IncomeEntry[], includeBom = false): string {
   const header = 'date,source,amount,category,frequency,note';
   if (!incomes || incomes.length === 0) {

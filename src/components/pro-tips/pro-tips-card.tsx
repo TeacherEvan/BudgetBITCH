@@ -11,7 +11,7 @@ interface ProTipsCardProps {
 }
 
 export function ProTipsCard({ locale }: ProTipsCardProps) {
-  const [currentTip] = useState<ProTip>(() => getRandomProTip());
+  const [currentTip, setCurrentTip] = useState<ProTip>(() => getRandomProTip(locale));
   const [modalOpen, setModalOpen] = useState(false);
 
   return (

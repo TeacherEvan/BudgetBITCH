@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { formatMoney, type CurrencyCode } from '@/lib/utils/currency';
 import type { ExpenseEntry, ExpenseCategory } from '@/lib/types/budget';
 import { useExpenses } from '@/hooks/use-local-db';
+import { rollupCategoryActuals, flattenLedgerRows } from '@/modules/budgeting/line-item-rollup';
 import {
   ArrowUpDown,
   Sparkles,
@@ -60,6 +61,36 @@ const DEFAULT_BUDGETS: Record<ExpenseCategory, number> = {
 
 type SortField = 'category' | 'budgeted' | 'actual' | 'variance';
 
+/** Ingestion-source pill for a ledger parent row. */
+function SourceBadge({ source }: { source: ExpenseEntry['source'] }) {
+  if (source === 'receipt') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 font-semibold">
+        <Receipt className="w-3 h-3 text-amber-400" /> 📸 Photo Receipt
+      </span>
+    );
+  }
+  if (source === 'import') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-sky-400/20 text-sky-300 font-semibold">
+        <MessageSquare className="w-3 h-3 text-sky-400" /> 📱 SMS/Email Inbox
+      </span>
+    );
+  }
+  if (source === 'voice') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-purple-400/20 text-purple-300 font-semibold">
+        <Mic className="w-3 h-3 text-purple-400" /> 🎤 Voice
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/70">
+      <PenTool className="w-3 h-3 text-white/50" /> Manual
+    </span>
+  );
+}
+
 export function BudgetVarianceGrid({
   expenses: propExpenses,
   currency = 'USD',
@@ -72,10 +103,9 @@ export function BudgetVarianceGrid({
   const [sortAsc, setSortAsc] = useState(true);
 
   const gridData = useMemo(() => {
-    const actualMap: Record<string, number> = {};
-    activeExpenses.forEach(e => {
-      actualMap[e.category] = (actualMap[e.category] || 0) + e.amount;
-    });
+    // Itemized receipts split across their line-item categories; everything
+    // else lands on the expense's own category.
+    const actualMap = rollupCategoryActuals(activeExpenses);
 
     const rows: CategoryBudgetConfig[] = (Object.keys(DEFAULT_BUDGETS) as ExpenseCategory[]).map(cat => ({
       category: cat,
@@ -116,6 +146,12 @@ export function BudgetVarianceGrid({
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     );
   }, [activeExpenses]);
+
+  // Window by PARENT expense (15 receipts), then expand line-item children.
+  const ledgerRows = useMemo(
+    () => flattenLedgerRows(sortedRecentExpenses.slice(0, 15)),
+    [sortedRecentExpenses]
+  );
 
   return (
     <Card className="p-5 border-white/10 bg-neutral-900/90 backdrop-blur-xl relative space-y-6" data-testid="budget-variance-grid">
@@ -201,14 +237,14 @@ export function BudgetVarianceGrid({
               }
 
               return (
-                <tr key={row.category} className="hover:bg-white/5 transition-colors">
+                <tr key={row.category} className="hover:bg-white/5 transition-colors" data-testid={`variance-row-${row.category}`}>
                   <td className="py-2.5 px-3 font-semibold text-white">
                     {row.nameEn}
                   </td>
                   <td className="py-2.5 px-3 text-right text-white/70">
                     {formatMoney(row.budgeted, currency, locale)}
                   </td>
-                  <td className="py-2.5 px-3 text-right font-bold text-white">
+                  <td className="py-2.5 px-3 text-right font-bold text-white" data-testid={`variance-actual-${row.category}`}>
                     {formatMoney(row.actual, currency, locale)}
                   </td>
                   <td className={`py-2.5 px-3 text-right font-bold ${isOver ? 'text-rose-400' : 'text-emerald-400'}`}>
@@ -264,50 +300,62 @@ export function BudgetVarianceGrid({
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {sortedRecentExpenses.slice(0, 15).map(expense => {
-                  const catName = CATEGORY_NAMES[expense.category]?.en ?? expense.category;
-                  let sourceBadge = (
-                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/70">
-                      <PenTool className="w-3 h-3 text-white/50" /> Manual
-                    </span>
-                  );
-                  if (expense.source === 'receipt') {
-                    sourceBadge = (
-                      <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 font-semibold">
-                        <Receipt className="w-3 h-3 text-amber-400" /> 📸 Photo Receipt
-                      </span>
-                    );
-                  } else if (expense.source === 'import') {
-                    sourceBadge = (
-                      <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-sky-400/20 text-sky-300 font-semibold">
-                        <MessageSquare className="w-3 h-3 text-sky-400" /> 📱 SMS/Email Inbox
-                      </span>
-                    );
-                  } else if (expense.source === 'voice') {
-                    sourceBadge = (
-                      <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-purple-400/20 text-purple-300 font-semibold">
-                        <Mic className="w-3 h-3 text-purple-400" /> 🎤 Voice
-                      </span>
+                {ledgerRows.map(row => {
+                  const catName = CATEGORY_NAMES[row.category]?.en ?? row.category;
+
+                  // Scanned-receipt line item — visually subordinate to its parent.
+                  if (row.isChild) {
+                    return (
+                      <tr
+                        key={row.key}
+                        className="bg-black/20 hover:bg-white/5 transition-colors"
+                        data-testid="ledger-line-item-row"
+                      >
+                        <td className="py-1.5 px-3" />
+                        <td className="py-1.5 px-3 pl-8 text-[11px] font-normal text-white/60">
+                          <span className="text-white/30 mr-1.5 font-mono">└</span>
+                          {row.description}
+                          {typeof row.qty === 'number' && (
+                            <span className="text-white/30 ml-1 font-mono">
+                              ×{row.qty}
+                              {typeof row.unitPrice === 'number'
+                                ? ` @ ${formatMoney(row.unitPrice, currency, locale)}`
+                                : ''}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-1.5 px-3 text-[11px] text-white/50">{catName}</td>
+                        <td className="py-1.5 px-3 text-[10px] text-white/30 italic">
+                          {'Line item'}
+                        </td>
+                        <td className="py-1.5 px-3 text-right font-mono text-[11px] text-white/50">
+                          {formatMoney(row.amount, currency, locale)}
+                        </td>
+                      </tr>
                     );
                   }
 
+                  const expense = row.expense;
+
                   return (
-                    <tr key={expense.id} className="hover:bg-white/5 transition-colors">
+                    <tr key={row.key} className="hover:bg-white/5 transition-colors">
                       <td className="py-2.5 px-3 text-white/60 font-mono text-[11px]">
-                        {expense.date}
+                        {row.date}
                       </td>
                       <td className="py-2.5 px-3 font-semibold text-white">
-                        {expense.merchant}
-                        {expense.note && <span className="text-[11px] text-white/40 block font-normal">{expense.note}</span>}
+                        {row.description}
+                        {expense?.note && (
+                          <span className="text-[11px] text-white/40 block font-normal">{expense.note}</span>
+                        )}
                       </td>
                       <td className="py-2.5 px-3 text-white/70">
                         {catName}
                       </td>
                       <td className="py-2.5 px-3">
-                        {sourceBadge}
+                        <SourceBadge source={expense?.source ?? 'manual'} />
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono font-bold text-rose-400">
-                        {formatMoney(expense.amount, currency, locale)}
+                        {formatMoney(row.amount, currency, locale)}
                       </td>
                     </tr>
                   );

@@ -25,6 +25,11 @@ const mockMutation = vi.fn().mockImplementation(async (args: unknown) => {
       },
       confidence: { total: 0.9, merchant: 0.9, category: 0.8, date: 0.9 },
       questions: [],
+      lineItems: [
+        { description: 'Milk 2L', amount: 29.99 },
+        { description: 'Netflix subscription', amount: 199.0 },
+        { description: 'Bread', amount: 15.5 },
+      ],
     };
   }
   return {};
@@ -87,6 +92,26 @@ describe('useReceiptScan hook', () => {
     expect(entry.source).toBe('receipt');
     expect(entry.date).toBe('2026-03-15');
     expect(result.current.draft).toBeNull();
+  });
+
+  test('confirmDraft persists itemized line items mapped to ExpenseCategory', async () => {
+    const { result } = renderHook(() => useReceiptScan());
+
+    await act(async () => {
+      await result.current.scanImage({} as HTMLImageElement, 'ZA');
+    });
+    expect(result.current.draft?.lineItems).toHaveLength(3);
+
+    await act(async () => {
+      await result.current.confirmDraft();
+    });
+
+    const entry = mockAddExpense.mock.calls[0][0];
+    expect(entry.lineItems).toEqual([
+      { description: 'Milk 2L', amount: 29.99, category: 'food' },
+      { description: 'Netflix subscription', amount: 199.0, category: 'subscriptions' },
+      { description: 'Bread', amount: 15.5, category: 'food' },
+    ]);
   });
 
   test('confirmDraft with skipLocalAdd confirms on server but writes no local expense', async () => {
