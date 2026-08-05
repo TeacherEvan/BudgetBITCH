@@ -60,17 +60,10 @@ export default function QuickAddPage() {
   const { draft, scanImage, answerQuestion, confirmDraft } = useReceiptScan();
   const { status: inboxPermStatus, grantPermission, denyPermission } = useInboxPermission();
 
-  // Optional Convex actions for AI vision receipt and message parsing
-  let parseMessageAction: ReturnType<typeof useAction<typeof api.receipts.parseMessage>> | null = null;
-  let proxyReceiptScan: ReturnType<typeof useAction<typeof api.receipts.proxyReceiptScan>> | null = null;
-  try {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    parseMessageAction = useAction(api.receipts.parseMessage);
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    proxyReceiptScan = useAction(api.receipts.proxyReceiptScan);
-  } catch {
-    // Offline or test environment fallback
-  }
+  // Convex action references are created unconditionally; offline fallback is
+  // handled at the call sites below rather than by conditionally invoking hooks.
+  const parseMessageAction = useAction(api.receipts.parseMessage);
+  const proxyReceiptScan = useAction(api.receipts.proxyReceiptScan);
 
   // Load the pending bot-ingested (LINE / TeacherBOY) receipt draft so the
   // scraped amount/merchant surface on Quick Add without hunting the dashboard.
