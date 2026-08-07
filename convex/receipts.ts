@@ -9,6 +9,7 @@ import { scrape as scrapeEngine } from "./lib/receipt/engine";
 import { ingestRequestBodySchema } from "./lib/receipt/ingestSchema";
 import { applyAnswers, generateQuestions } from "./lib/receipt/questions";
 import type { OcrPayload } from "./lib/receipt/types";
+import { clog, clogError, clogMetric, genTraceId } from "./lib/log";
 
 const VALID_CATEGORIES = [
   "food", "transport", "utilities", "entertainment",
@@ -402,6 +403,8 @@ export const saveReceipt = internalMutation({
     questionsAsked: v.optional(v.any()),
     status: v.optional(v.string()),
     lineItems: v.optional(v.any()),
+    // Itemized editable lines (title/type/amount) from the bot/scraper.
+    items: v.optional(v.array(v.object({ title: v.string(), type: v.string(), amount: v.number() }))),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("receipts", args);
@@ -569,6 +572,7 @@ export const scrape = mutation({
       currency: typeof result.fields.currency?.value === "string" ? result.fields.currency.value : undefined,
       questionsAsked: result.questions,
       status: "draft",
+      items: result.items,
     });
 
     return {
@@ -642,6 +646,9 @@ export const confirm = mutation({
     await ctx.db.patch(args.draftId, {
       status: "confirmed",
       corrections: args.overrides,
+      currency: args.overrides?.currency ?? draft.currency,
+      tax: args.overrides?.tax ?? draft.tax,
+      items: args.overrides?.items ?? draft.items,
     });
 
     const merchantName = args.overrides?.merchant || draft.merchant;
@@ -725,6 +732,7 @@ export const syncOfflineDraft = mutation({
       engine: "scraper-bot",
       confidence,
       status: args.confirmed ? "confirmed" : "draft",
+      items: result.items,
     });
 
     return { receiptId, alreadySynced: false };
@@ -757,11 +765,15 @@ export const templateSnapshot = query({
 // Budget Boss: HTTP action for TeacherBOY receipt ingestion
 // Authenticated via Bearer token (CONVEX_SYNC_SECRET), not user session.
 export const ingestReceipt = httpAction(async (ctx, req) => {
+  const traceId = genTraceId();
+  const started = Date.now();
   // Verify Bearer token
   const authHeader = req.headers.get("Authorization") ?? "";
   const expectedToken = process.env.CONVEX_SYNC_SECRET ?? "";
   
   if (!expectedToken || !authHeader.startsWith("Bearer ")) {
+    clog("warn", "ingest_rejected", { traceId, reason: "missing_token" });
+    clogMetric("ingest_requests", 0, "count", { status_class: "unauthorized" });
     return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
       status: 401,
       headers: { "Content-Type": "application/json" },
@@ -771,6 +783,8 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
   const providedToken = authHeader.slice(7);
   // Constant-time comparison
   if (providedToken.length !== expectedToken.length) {
+    clog("warn", "ingest_rejected", { traceId, reason: "token_length" });
+    clogMetric("ingest_requests", 0, "count", { status_class: "unauthorized" });
     return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
       status: 401,
       headers: { "Content-Type": "application/json" },
@@ -782,6 +796,8 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
     if (providedToken.charCodeAt(i) !== expectedToken.charCodeAt(i)) mismatch++;
   }
   if (mismatch > 0) {
+    clog("warn", "ingest_rejected", { traceId, reason: "token_mismatch" });
+    clogMetric("ingest_requests", 0, "count", { status_class: "unauthorized" });
     return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
       status: 401,
       headers: { "Content-Type": "application/json" },
@@ -793,6 +809,8 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
   try {
     rawBody = await req.json();
   } catch {
+    clog("warn", "ingest_rejected", { traceId, reason: "bad_json" });
+    clogMetric("ingest_requests", 0, "count", { status_class: "bad_request" });
     return new Response(JSON.stringify({ success: false, error: "Invalid JSON" }), {
       status: 400,
       headers: { "Content-Type": "application/json" },
@@ -801,6 +819,12 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
 
   const parsed = ingestRequestBodySchema.safeParse(rawBody);
   if (!parsed.success) {
+    clog("warn", "ingest_rejected", {
+      traceId,
+      reason: "schema_invalid",
+      issueCount: parsed.error.issues.length,
+    });
+    clogMetric("ingest_requests", 0, "count", { status_class: "bad_request" });
     return new Response(
       JSON.stringify({
         success: false,
@@ -850,6 +874,8 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
   const existing = await ctx.runQuery(internal.receipts.getReceiptByClientDraftId, { clientDraftId: idempotencyKey });
 
   if (existing) {
+    clog("info", "ingest_idempotent_hit", { traceId, idempotencyKey, alreadySynced: true });
+    clogMetric("ingest_requests", 1, "count", { status_class: "2xx", result: "dedupe" });
     // Return existing draft
     const result = existing as any;
     return new Response(JSON.stringify({
@@ -876,7 +902,6 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
   const date = typeof scraped.fields.date?.value === "string" ? scraped.fields.date.value : undefined;
   const currency = typeof scraped.fields.currency?.value === "string" ? scraped.fields.currency.value : undefined;
   const tax = typeof scraped.fields.tax?.value === "number" ? scraped.fields.tax.value : undefined;
-  const lineItems = scraped.lineItems;
 
   // Insert draft receipt via internal mutation
   const draftId = await ctx.runMutation(internal.receipts.saveReceipt, {
@@ -902,6 +927,9 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
     source: resolvedSource,
     lineItems,
   });
+  clogMetric("ingest_requests", 1, "count", { status_class: "2xx", result: "created" });
+  clogMetric("ingest_duration_ms", Date.now() - started, "ms");
+  clogMetric("ingest_amount", amount, "count", { category });
 
   return new Response(JSON.stringify({
     success: true,
