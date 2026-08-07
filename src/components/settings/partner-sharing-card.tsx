@@ -8,13 +8,15 @@ import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 
  
+import type { UseSharedBoard } from '@/hooks/use-shared-board';
+import { PendingDeletesInbox } from '@/components/shared-board/pending-deletes-inbox';
+
 interface PartnerSharingCardProps {
-  locale: 'th' | 'en';
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  shared: any;
+  locale: string;
+  shared: UseSharedBoard;
 }
 
-export function PartnerSharingCard({ locale, shared }: PartnerSharingCardProps) {
+export function PartnerSharingCard({ shared }: PartnerSharingCardProps) {
   const router = useRouter();
   const [code, setCode] = useState('');
   const [linkError, setLinkError] = useState<string | null>(null);
@@ -32,31 +34,20 @@ export function PartnerSharingCard({ locale, shared }: PartnerSharingCardProps) 
 
   const handleLink = async () => {
     setLinkError(null);
-    const res = await shared.linkByCode(code);
-    if (!res.ok) {
-      setLinkError(res.error);
-    } else {
-      setCode('');
+    try {
+      const res = await shared.linkByCode(code);
+      if (!res.ok) {
+        setLinkError(res.error);
+      } else {
+        setCode('');
+      }
+    } catch (e) {
+      console.error('Linking partner board failed:', e);
+      setLinkError('Could not link right now. Please check the code and try again.');
     }
   };
 
   const l = {
-    th: {
-      sharedBoard: 'แดชบอร์ดคู่',
-      linkedWith: 'เชื่อมต่อกับคู่ของคุณแล้ว',
-      lastSynced: 'ซิงค์ล่าสุด',
-      syncBoardNow: 'ซิงค์ตอนนี้',
-      partnerPending: 'รอซิงค์',
-      syncing: 'กำลังซิงค์...',
-      unlink: 'ยกเลิกการเชื่อมต่อ',
-      yourCode: 'โค้ดของคุณ',
-      copyCode: 'คัดลอก',
-      copied: 'คัดลอกแล้ว!',
-      linkCode: 'เชื่อมต่อด้วยโค้ด',
-      linkPlaceholder: 'วางโค้ดคู่ของคุณ',
-      linkButton: 'เชื่อมต่อ',
-      linking: 'กำลังเชื่อมต่อ...',
-    },
     en: {
       sharedBoard: 'Shared Board',
       linkedWith: 'Linked with your partner',
@@ -73,7 +64,7 @@ export function PartnerSharingCard({ locale, shared }: PartnerSharingCardProps) 
       linkButton: 'Link',
       linking: 'Linking...',
     },
-  }[locale];
+  }.en;
 
   return (
     <section id="settings-shared" className="scroll-mt-24">
@@ -91,14 +82,14 @@ export function PartnerSharingCard({ locale, shared }: PartnerSharingCardProps) 
                   <p className="text-xs text-white/60">{shared.partnerName}</p>
                 )}
                 <p className="text-xs text-white/50">
-                  {locale === 'th' ? `บอร์ด: ${shared.boardId}` : `Board: ${shared.boardId}`}
+                  {`Board: ${shared.boardId}`}
                 </p>
               </div>
             </div>
             {shared.lastSyncedAt && (
               <p className="text-xs text-white/50">
                 {l.lastSynced}:{' '}
-                {format(new Date(shared.lastSyncedAt), locale === 'th' ? 'd MMM yyyy HH:mm' : 'MMM d, yyyy HH:mm')}
+                {format(new Date(shared.lastSyncedAt), 'MMM d, yyyy HH:mm')}
               </p>
             )}
             <Button
@@ -128,6 +119,7 @@ export function PartnerSharingCard({ locale, shared }: PartnerSharingCardProps) 
             >
               {l.unlink}
             </Button>
+            <PendingDeletesInbox />
           </div>
         ) : (
           <div className="space-y-4">
@@ -169,12 +161,10 @@ export function PartnerSharingCard({ locale, shared }: PartnerSharingCardProps) 
           <div className="flex-1 space-y-3">
             <div>
               <h3 className="font-semibold text-white">
-                {locale === 'th' ? 'เชื่อมโยงกับครอบครัว เพื่อน หรือที่ทำงาน' : 'Link with Family, Friends, or Work'}
+                {'Link with Family, Friends, or Work'}
               </h3>
               <p className="text-xs text-white/60 leading-relaxed mt-1">
-                {locale === 'th'
-                  ? 'ระบบบอร์ดคู่รัก (Couple Board) ซิงค์ข้อมูลกับคู่รักได้ 1 คนเท่านั้น หากต้องการแชร์งบประมาณกับคนหลายคนในกลุ่มครอบครัว กลุ่มเพื่อน หรือที่ทำงาน ให้ไปที่เมนูจัดการบัญชีเพื่อสร้าง "บัญชีร่วมกัน" (Shared Account)'
-                  : 'The Couple Board syncs with exactly one partner. To collaborate with multiple family members, friends, or co-workers, create a Shared Account under the Accounts manager.'}
+                {'The Couple Board syncs with exactly one partner. To collaborate with multiple family members, friends, or co-workers, create a Shared Account under the Accounts manager.'}
               </p>
             </div>
             <Button
@@ -182,7 +172,7 @@ export function PartnerSharingCard({ locale, shared }: PartnerSharingCardProps) 
               onClick={() => router.push('/accounts')}
               className="w-full sm:w-auto bg-amber-400/10 hover:bg-amber-400/20 border-amber-400/30 text-amber-300 text-xs py-1.5 h-auto"
             >
-              {locale === 'th' ? 'จัดการบัญชีแชร์' : 'Manage Shared Accounts'}
+              {'Manage Shared Accounts'}
             </Button>
           </div>
         </div>

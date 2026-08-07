@@ -100,7 +100,6 @@ export function useSharedBoard(): UseSharedBoard {
   }, [boardId]);
 
   useEffect(() => {
-     
     checkActiveStatus();
   }, [checkActiveStatus]);
 

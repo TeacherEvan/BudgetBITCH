@@ -22,14 +22,25 @@ vi.mock('@convex-dev/auth/react', () => ({
   useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
 }));
 
+// Single source of truth for the convex/react mock. A previous revision
+// declared TWO vi.mock('convex/react', ...) factories for the same module —
+// only one wins, and which one is not reliably deterministic across runs, so
+// listMyAccounts intermittently resolved to null and the dashboard fallback
+// couldn't resolve a boardId (the real cause of the CI flake). Keep exactly
+// one factory. listMyAccounts takes no args ({}); getAccountBoard takes
+// { boardId }.
+const myAccountsResult: unknown[] = [];
 vi.mock('convex/react', () => ({
   useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
   useConvex: () => ({
     query: async () => null,
   }),
   useMutation: () => pushBoard,
-  useQuery: (_ref: unknown, args: unknown) => {
+  useQuery: (_ref: { __name__?: string } | string, args: unknown) => {
     if (args === 'skip') return undefined;
+    if (args && typeof args === 'object' && Object.keys(args).length === 0) {
+      return myAccountsResult;
+    }
     return queryResults.getBoard ?? null;
   },
 }));
@@ -37,13 +48,31 @@ vi.mock('convex/react', () => ({
 import { useAccountSync } from './use-account-sync';
 
 function HookProbe() {
-  useAccountSync();
-  return null;
+  const { boardId, loading } = useAccountSync();
+  // Expose resolution state so tests can waitFor boardId to settle BEFORE
+  // dispatching an edit. Dispatching while boardId is still null schedules a
+  // push that the boardId-change reset effect then cancels (real race that
+  // made these tests flaky on CI).
+  return (
+    <div
+      data-testid="probe"
+      data-board-id={boardId ?? ''}
+      data-loading={loading ? '1' : '0'}
+    />
+  );
 }
 
 function ProbeWithSyncNow() {
-  const { syncNow } = useAccountSync();
-  return <button data-testid="sync" onClick={() => void syncNow()}>sync</button>;
+  const { syncNow, boardId, loading } = useAccountSync();
+  return (
+    <div
+      data-testid="probe"
+      data-board-id={boardId ?? ''}
+      data-loading={loading ? '1' : '0'}
+    >
+      <button data-testid="sync" onClick={() => void syncNow()}>sync</button>
+    </div>
+  );
 }
 
 
@@ -67,9 +96,26 @@ type FixtureBoard = {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// Wait until HookProbe reports the active board has resolved to `expected`
+// (loading complete). Dispatching an edit before boardId settles schedules a
+// push that the boardId-change reset effect immediately cancels — the real
+// race behind the CI flakes. Polling for the resolved value is deterministic
+// regardless of runner speed.
+async function waitForBoard(
+  result: { getByTestId: (id: string) => HTMLElement },
+  expected: string,
+): Promise<void> {
+  await waitFor(() => {
+    const el = result.getByTestId('probe');
+    expect(el.getAttribute('data-loading')).toBe('0');
+    expect(el.getAttribute('data-board-id')).toBe(expected);
+  });
+}
+
 beforeEach(async () => {
   cleanup();
   queryResults = { getBoard: null };
+  myAccountsResult.length = 0;
   pushBoard.mockClear();
   await clearAllData();
   localStorage.clear();
@@ -155,19 +201,19 @@ describe('useAccountSync', () => {
   });
 
   it('debounces rapid local edits into a single push to the account board', async () => {
-    render(<HookProbe />);
-    // Let the active account's boardId resolve + push listener attach.
-    await act(async () => {
-      await sleep(250);
-    });
+    const result = render(<HookProbe />);
+    // Wait for the active account's boardId to resolve + push listener attach.
+    await waitForBoard(result, 'board_family');
     await act(async () => {
       window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT));
       window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT));
       window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT));
-      await sleep(1000);
     });
 
-    expect(pushBoard).toHaveBeenCalledTimes(1);
+    // Poll past the 800ms debounce instead of a fixed sleep (CI-flake fix).
+    await waitFor(() => expect(pushBoard).toHaveBeenCalledTimes(1), {
+      timeout: 3000,
+    });
     const firstCall = (pushBoard.mock.calls[0] as unknown[])[0] as {
       boardId: string;
     };
@@ -176,73 +222,76 @@ describe('useAccountSync', () => {
 
   it('pushes to personal board when active account is personal', async () => {
     await setCurrentAccountId('personal');
-    render(<HookProbe />);
+    const result = render(<HookProbe />);
+    await waitForBoard(result, 'personal');
     await act(async () => {
       window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT));
-      await sleep(1000);
     });
-    expect(pushBoard).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(pushBoard).toHaveBeenCalledTimes(1), {
+      timeout: 3000,
+    });
     const firstCall = (pushBoard.mock.calls[0] as unknown[])[0] as { boardId: string };
     expect(firstCall.boardId).toBe('personal');
   });
 
   it('queues an offline edit to localStorage instead of pushing', async () => {
     Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
-    render(<HookProbe />);
+    const result = render(<HookProbe />);
 
-    // Let the active account's boardId resolve before editing.
-    await act(async () => {
-      await sleep(50);
-    });
+    // Wait for the active account's boardId to resolve before editing.
+    await waitForBoard(result, 'board_family');
 
     await act(async () => {
       window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT));
-      await sleep(1000);
     });
 
+    // Offline: the edit must queue, never push. Poll the queue instead of a
+    // fixed sleep so we assert on the settled state, not a timing guess.
+    await waitFor(() => {
+      const queue = JSON.parse(localStorage.getItem('budgetbitch:accountBoardQueue') || '[]');
+      expect(queue).toHaveLength(1);
+    }, { timeout: 3000 });
     expect(pushBoard).not.toHaveBeenCalled();
-    const queue = JSON.parse(localStorage.getItem('budgetbitch:accountBoardQueue') || '[]');
-    expect(queue).toHaveLength(1);
+
     await act(async () => {
       Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
       window.dispatchEvent(new Event('online'));
-      await sleep(200);
     });
-    expect(pushBoard).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(pushBoard).toHaveBeenCalledTimes(1), {
+      timeout: 3000,
+    });
   });
 
   it('replays queued pushes on custom budgetbitch:flushQueues event', async () => {
     Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
-    render(<HookProbe />);
+    const result = render(<HookProbe />);
 
-    // Let the active account's boardId resolve before editing.
-    await act(async () => {
-      await sleep(50);
-    });
+    // Wait for the active account's boardId to resolve before editing.
+    await waitForBoard(result, 'board_family');
 
     await act(async () => {
       window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT));
-      await sleep(1000);
     });
 
+    await waitFor(() => {
+      const queue = JSON.parse(localStorage.getItem('budgetbitch:accountBoardQueue') || '[]');
+      expect(queue).toHaveLength(1);
+    }, { timeout: 3000 });
     expect(pushBoard).not.toHaveBeenCalled();
-    const queue = JSON.parse(localStorage.getItem('budgetbitch:accountBoardQueue') || '[]');
-    expect(queue).toHaveLength(1);
-    
+
     await act(async () => {
       Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
       window.dispatchEvent(new Event('budgetbitch:flushQueues'));
-      await sleep(200);
     });
-    expect(pushBoard).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(pushBoard).toHaveBeenCalledTimes(1), {
+      timeout: 3000,
+    });
   });
 
   it('re-resolves boardId and triggers push/pull on active account switch event', async () => {
-    render(<HookProbe />);
-    // Let initial load resolve (family board)
-    await act(async () => {
-      await sleep(50);
-    });
+    const result = render(<HookProbe />);
+    // Wait for initial load to resolve (family board).
+    await waitForBoard(result, 'board_family');
 
     // Switch account to one with board_another
     await act(async () => {
@@ -257,34 +306,36 @@ describe('useAccountSync', () => {
       });
       await setCurrentAccountId('another_account');
       window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT, { detail: { source: 'switch' } }));
-      await sleep(50);
     });
+
+    // Wait for the switch to re-resolve boardId before editing.
+    await waitForBoard(result, 'board_another');
 
     // Verify it schedules a push under the new boardId on subsequent board edits
     await act(async () => {
       window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT));
-      await sleep(1000);
     });
 
-    expect(pushBoard).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(pushBoard).toHaveBeenCalledTimes(1), {
+      timeout: 3000,
+    });
     const lastCall = (pushBoard.mock.calls[0] as unknown[])[0] as { boardId: string };
     expect(lastCall.boardId).toBe('board_another');
   });
 
   it('syncNow forces an immediate push of the active account board', async () => {
     const result = render(<ProbeWithSyncNow />);
-    // Let the active account's boardId resolve before clicking.
-    await act(async () => {
-      await sleep(250);
-    });
+    // Wait for the active account's boardId to resolve before clicking.
+    await waitForBoard(result, 'board_family');
     pushBoard.mockClear();
 
     await act(async () => {
       result.getByTestId('sync').click();
-      await sleep(100);
     });
 
-    expect(pushBoard).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(pushBoard).toHaveBeenCalledTimes(1), {
+      timeout: 3000,
+    });
     const call = (pushBoard.mock.calls[0] as unknown[])[0] as { boardId: string };
     expect(call.boardId).toBe('board_family');
   });
@@ -292,18 +343,53 @@ describe('useAccountSync', () => {
   it('syncNow pushes to the personal board (personal has no boardId but is pushable)', async () => {
     await setCurrentAccountId('personal');
     const result = render(<ProbeWithSyncNow />);
-    await act(async () => {
-      await sleep(250);
-    });
+    await waitForBoard(result, 'personal');
     pushBoard.mockClear();
 
     await act(async () => {
       result.getByTestId('sync').click();
-      await sleep(100);
     });
 
-    expect(pushBoard).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(pushBoard).toHaveBeenCalledTimes(1), {
+      timeout: 3000,
+    });
     const call = (pushBoard.mock.calls[0] as unknown[])[0] as { boardId: string };
     expect(call.boardId).toBe('personal');
+  });
+
+  it('auto-pushes a shared account even when localAccounts is empty (dashboard case)', async () => {
+    // Active account is a shared account, but localAccounts has NO entry for it
+    // — this is the exact dashboard scenario where the bug dropped every push.
+    await setCurrentAccountId('acc-family');
+    // Explicitly leave the local accounts cache empty.
+    await clearAllData();
+    await setCurrentAccountId('acc-family');
+    myAccountsResult.length = 0;
+    myAccountsResult.push({
+      accountId: 'acc-family',
+      boardId: 'board_family',
+      umbrella: 'family',
+      name: 'Family',
+      role: 'owner',
+    });
+
+    const result = render(<HookProbe />);
+    // resolveActiveBoard hits the listMyAccounts fallback (local cache cleared);
+    // wait for boardId to actually resolve before dispatching, so the edit
+    // isn't cancelled by the boardId reset effect (deterministic on CI).
+    await waitForBoard(result, 'board_family');
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT));
+    });
+
+    // The edit listener debounces the push by PUSH_DEBOUNCE_MS (800ms) before
+    // the async doPush chain runs. Poll until the push lands instead of a fixed
+    // sleep so the assertion is deterministic regardless of runner speed.
+    await waitFor(() => expect(pushBoard).toHaveBeenCalledTimes(1), {
+      timeout: 3000,
+    });
+    const call = (pushBoard.mock.calls[0] as unknown[])[0] as { boardId: string };
+    expect(call.boardId).toBe('board_family');
   });
 });

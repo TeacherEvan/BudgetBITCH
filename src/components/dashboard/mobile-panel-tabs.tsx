@@ -4,20 +4,20 @@ import { motion } from "framer-motion";
 import { MoreHorizontal } from "lucide-react";
 import { PANEL_CONFIG, type PanelKey } from "./panelConfig";
 
-const PRIMARY_TABS: PanelKey[] = ['expenses', 'budget', 'goals', 'netWorth', 'budgetAlerts'];
+const PRIMARY_TABS: PanelKey[] = ['spending', 'goals', 'netWorth', 'budgetAlerts'];
 
 interface MobilePanelTabsProps {
   activePanel: PanelKey;
   onSelect: (panel: PanelKey) => void;
   onMore: () => void;
-  locale: 'th' | 'en';
+  locale: string;
   alertCount?: number;
 }
 
-export function MobilePanelTabs({ activePanel, onSelect, onMore, locale, alertCount = 0 }: MobilePanelTabsProps) {
+export function MobilePanelTabs({ activePanel, onSelect, onMore, alertCount = 0 }: MobilePanelTabsProps) {
   return (
     <nav
-      aria-label={locale === 'th' ? 'แผงแดชบอร์ด' : 'Dashboard panels'}
+      aria-label={'Dashboard panels'}
       className="lg:hidden fixed bottom-0 left-0 right-0 z-50 flex items-stretch justify-around gap-1 border-t border-[rgba(201,150,12,0.15)] bg-[#080600] px-2 pb-[max(12px,env(safe-area-inset-bottom))] pt-2"
     >
       {PRIMARY_TABS.map((panel) => {
@@ -57,7 +57,7 @@ export function MobilePanelTabs({ activePanel, onSelect, onMore, locale, alertCo
 
             {/* Label */}
             <span className={`truncate ${isActive ? 'text-[#E8B020] font-extrabold' : 'text-[#F8F3E8]/50'}`}>
-              {config.label[locale]}
+              {config.label.en}
             </span>
           </button>
         );
@@ -66,7 +66,7 @@ export function MobilePanelTabs({ activePanel, onSelect, onMore, locale, alertCo
       <button
         type="button"
         onClick={onMore}
-        aria-label={locale === 'th' ? 'เมนูเพิ่มเติม' : 'More options'}
+        aria-label={'More options'}
         className="relative flex flex-1 flex-col items-center justify-center gap-1 py-1 text-[10px] font-bold leading-tight cursor-pointer select-none"
       >
         {/* Icon */}
@@ -76,7 +76,7 @@ export function MobilePanelTabs({ activePanel, onSelect, onMore, locale, alertCo
 
         {/* Label */}
         <span className="truncate text-[#F8F3E8]/50">
-          {locale === 'th' ? 'เพิ่มเติม' : 'More'}
+          {'More'}
         </span>
 
         {/* Alert Count Badge */}

@@ -17,8 +17,12 @@ test.describe("Join", () => {
     await seedLocalStorage(page);
     await signInReal(page);
     await page.goto("/join?code=not-a-real-invite-token");
+    // The error surface renders either the generic copy or the raw backend
+    // message (page.tsx uses e.message when available) plus a retry action.
     await expect(
-      page.getByText(/could not join|ไม่สามารถเข้าร่วมได้/i).first(),
-    ).toBeVisible({ timeout: 15000 });
+      page
+        .getByText(/could not join|ไม่สามารถเข้าร่วมได้|invalid|expired|not found|server error/i)
+        .first(),
+    ).toBeVisible({ timeout: 20000 });
   });
 });

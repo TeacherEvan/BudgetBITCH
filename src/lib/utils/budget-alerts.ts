@@ -17,7 +17,7 @@ export interface BudgetAlert {
 export function generateBudgetAlerts(
   budgets: BudgetCategory[],
   expenses: { category: ExpenseCategory; amount: number }[],
-  locale: 'th' | 'en' = 'en',
+  locale: string = 'en',
   currency?: CurrencyCode | null
 ): BudgetAlert[] {
   const alerts: BudgetAlert[] = [];
@@ -37,19 +37,15 @@ export function generateBudgetAlerts(
     
     if (limit === 0) return; // No budget set
     
-    const categoryLabel = getCategoryLabel(budget.category, locale);
+    const categoryLabel = getCategoryLabel(budget.category);
 
     if (pct >= 100) {
       alerts.push({
         id: `alert-${budget.category}-critical`,
         type: 'critical',
         category: budget.category,
-        message: locale === 'th'
-          ? `${categoryLabel} เกินงบแล้ว (${formatCurrency(spent, locale, currency)}/${formatCurrency(limit, locale, currency)})`
-          : `${categoryLabel} over budget (${formatCurrency(spent, locale, currency)}/${formatCurrency(limit, locale, currency)})`,
-        actionable: locale === 'th'
-          ? 'พิจารณาลดค่าใช้จ่ายหรือปรับงบประมาณ'
-          : 'Consider reducing spending or adjusting budget',
+        message: `${categoryLabel} over budget (${formatCurrency(spent, locale, currency)}/${formatCurrency(limit, locale, currency)})`,
+        actionable: 'Consider reducing spending or adjusting budget',
         spent,
         limit,
         pct,
@@ -59,12 +55,8 @@ export function generateBudgetAlerts(
         id: `alert-${budget.category}-warning`,
         type: 'warning',
         category: budget.category,
-        message: locale === 'th'
-          ? `${categoryLabel} ใกล้ถึงขีดจำกัด (${Math.round(pct)}%)`
-          : `${categoryLabel} approaching limit (${Math.round(pct)}%)`,
-        actionable: locale === 'th'
-          ? 'ติดตามค่าใช้จ่ายในหมวดนี้'
-          : 'Monitor spending in this category',
+        message: `${categoryLabel} approaching limit (${Math.round(pct)}%)`,
+        actionable: 'Monitor spending in this category',
         spent,
         limit,
         pct,
@@ -75,9 +67,7 @@ export function generateBudgetAlerts(
         id: `alert-${budget.category}-success`,
         type: 'success',
         category: budget.category,
-        message: locale === 'th'
-          ? `${categoryLabel} อยู่ในงบ (${Math.round(pct)}%)`
-          : `${categoryLabel} on track (${Math.round(pct)}%)`,
+        message: `${categoryLabel} on track (${Math.round(pct)}%)`,
         spent,
         limit,
         pct,
@@ -92,22 +82,22 @@ export function generateBudgetAlerts(
   return alerts;
 }
 
-function getCategoryLabel(category: ExpenseCategory, locale: 'th' | 'en'): string {
-  const labels: Record<ExpenseCategory, { th: string; en: string }> = {
-    housing: { th: 'ที่อยู่อาศัย', en: 'Housing' },
-    transport: { th: 'การเดินทาง', en: 'Transport' },
-    food: { th: 'อาหาร', en: 'Food' },
-    utilities: { th: 'ค่าสาธารณูปโภค', en: 'Utilities' },
-    phone_internet: { th: 'โทรศัพท์/อินเตอร์เน็ต', en: 'Phone/Internet' },
-    subscriptions: { th: 'สมัครสมาชิก', en: 'Subscriptions' },
-    entertainment: { th: 'บันเทิง', en: 'Entertainment' },
-    healthcare: { th: 'สุขภาพ', en: 'Healthcare' },
-    insurance: { th: 'ประกันภัย', en: 'Insurance' },
-    debt: { th: 'หนี้สิน', en: 'Debt' },
-    savings: { th: 'เงินออม', en: 'Savings' },
-    other: { th: 'อื่นๆ', en: 'Other' },
+function getCategoryLabel(category: ExpenseCategory, ): string {
+  const labels: Record<ExpenseCategory, { en: string }> = {
+    housing: { en: 'Housing' },
+    transport: { en: 'Transport' },
+    food: { en: 'Food' },
+    utilities: { en: 'Utilities' },
+    phone_internet: { en: 'Phone/Internet' },
+    subscriptions: { en: 'Subscriptions' },
+    entertainment: { en: 'Entertainment' },
+    healthcare: { en: 'Healthcare' },
+    insurance: { en: 'Insurance' },
+    debt: { en: 'Debt' },
+    savings: { en: 'Savings' },
+    other: { en: 'Other' },
   };
-  return labels[category][locale === 'th' ? 'th' : 'en'];
+  return labels[category]['en'];
 }
 
 /** Get summary stats for budget overview */

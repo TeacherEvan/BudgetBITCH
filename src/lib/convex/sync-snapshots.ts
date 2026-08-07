@@ -10,6 +10,7 @@ import {
   getCriticalExpenseCommitment,
   getDB,
   USER_DATA_STORES,
+  RESET_TOMBSTONE_KEY,
 } from '@/lib/db/local-db';
 import { calculateNetWorthBaseline } from '@/lib/utils/budget-calculator';
 import type { WizardProfile } from '@/lib/types/budget';
@@ -165,19 +166,24 @@ function sanitizeForConvex<T>(obj: T): T {
 
 export async function syncDailySnapshot(): Promise<{ success: boolean; date: string }> {
   const today = new Date().toISOString().split('T')[0];
+  // Single-flight guard: the debounced auto-backup (account-sync-mount) can fire
+  // at the same time as a manual "Sync Now" press or wizard completion; drop the
+  // second concurrent entry so we don't gather + push the snapshot twice.
+  if (isSyncingDaily) return { success: false, date: today };
+  isSyncingDaily = true;
 
   try {
     const syncArgs = sanitizeForConvex(await gatherSnapshotData());
 
     const convex = getConvexClient();
     if (!convex) {
-      console.warn('Convex is not configured. Queueing snapshot offline.');
+      console.debug('Convex is not configured. Queueing snapshot offline.');
       await queueOfflineSnapshot(syncArgs);
       return { success: false, date: today };
     }
 
     if (!hasAuthToken()) {
-      console.log('User is not authenticated yet. Queueing snapshot offline.');
+      console.debug('User is not authenticated yet. Queueing snapshot offline.');
       await queueOfflineSnapshot(syncArgs);
       return { success: false, date: today };
     }
@@ -187,7 +193,7 @@ export async function syncDailySnapshot(): Promise<{ success: boolean; date: str
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     if (errorMessage.includes("Authentication required") || errorMessage.includes("Authentication") || errorMessage.includes("Unauthenticated")) {
-      console.log('User is not authenticated yet. Queueing snapshot offline.');
+      console.debug('User is not authenticated yet. Queueing snapshot offline.');
     } else {
       console.error('Sync failed:', error);
     }
@@ -199,6 +205,8 @@ export async function syncDailySnapshot(): Promise<{ success: boolean; date: str
     }
 
     return { success: false, date: today };
+  } finally {
+    isSyncingDaily = false;
   }
 }
 
@@ -214,7 +222,7 @@ export function registerSyncWorker() {
     )
   ) {
     navigator.serviceWorker.register('/sw.js').then((registration) => {
-      console.log('SW registered:', registration.scope);
+      console.debug('SW registered:', registration.scope);
       
       // Request periodic sync if supported
       if ('periodicSync' in registration) {
@@ -227,7 +235,7 @@ export function registerSyncWorker() {
         periodicSync.register('daily-snapshot', {
           minInterval: 24 * 60 * 60 * 1000,
         }).catch((err: unknown) => {
-          console.log('Periodic sync not available:', err);
+          console.debug('Periodic sync not available:', err);
         });
       }
     }).catch((err) => {
@@ -236,14 +244,30 @@ export function registerSyncWorker() {
   }
 }
 
-// Offline queue for when user is offline
+// Offline queue for when user is offline (using IndexedDB to avoid localStorage quota limits)
+export async function getOfflineQueueCount(): Promise<number> {
+  if (typeof window === 'undefined') return 0;
+  try {
+    const db = await getDB();
+    return await db.count('syncQueue');
+  } catch {
+    return 0;
+  }
+}
+
 export async function queueOfflineSnapshot(data: SyncSnapshotArgs) {
   if (typeof window === 'undefined') return;
   
   const cleanData = sanitizeForConvex(data);
-  const queue = JSON.parse(localStorage.getItem('budgetbitch:offlineQueue') || '[]');
-  queue.push({ data: cleanData, timestamp: Date.now() });
-  localStorage.setItem('budgetbitch:offlineQueue', JSON.stringify(queue));
+  try {
+    const db = await getDB();
+    await db.add('syncQueue', {
+      data: cleanData,
+      timestamp: Date.now(),
+    });
+  } catch (err) {
+    console.error('Failed to queue offline snapshot in IndexedDB:', err);
+  }
   
   // Try to sync immediately if online
   if (navigator.onLine) {
@@ -251,44 +275,57 @@ export async function queueOfflineSnapshot(data: SyncSnapshotArgs) {
   }
 }
 
+let isFlushingQueue = false;
+// Single-flight guards for sibling sync paths (RELIABILITY_HARDENING_PLAN step 3):
+// a debounced auto-backup + manual "Sync Now"/wizard-complete can race, and the
+// latestSnapshot query can re-fire before the host effect's restoredSnapshotIdRef
+// is set, so two near-simultaneous runs could both clear + overwrite local stores.
+let isSyncingDaily = false;
+let isRestoringSnapshot = false;
+
 export async function flushOfflineQueue() {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || isFlushingQueue) return;
 
   const convex = getConvexClient();
   if (!convex) {
-    console.log("Convex is not configured. Cannot flush offline queue.");
+    console.debug('Convex is not configured. Cannot flush offline queue.');
     return;
   }
 
   if (!hasAuthToken()) {
-    console.log("User is not authenticated yet. Postponing offline queue flush.");
+    console.debug('User is not authenticated yet. Postponing offline queue flush.');
     return;
   }
 
-  const queue = JSON.parse(localStorage.getItem("budgetbitch:offlineQueue") || "[]");
-  if (queue.length === 0) return;
-  
-  const failed: unknown[] = [];
-  for (const item of queue) {
-    try {
-      const cleanData = sanitizeForConvex(item.data);
-      await convex.mutation(api.snapshots.upsertDailySnapshot, cleanData);
-      console.log('Flushed offline snapshot:', item.timestamp);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes("Authentication required") || errorMessage.includes("Authentication") || errorMessage.includes("Unauthenticated")) {
-        console.log('User is not authenticated yet. Postponing offline queue flush.');
-        // Auth dropped mid-flush: keep the rest of the queue untouched.
-        failed.push(...queue.slice(queue.indexOf(item)));
-        break;
-      } else {
-        console.error('Failed to flush offline snapshot:', error);
-        failed.push(item);
+  isFlushingQueue = true;
+  try {
+    const db = await getDB();
+    const items = await db.getAll('syncQueue');
+    if (items.length === 0) return;
+    
+    for (const item of items) {
+      try {
+        const cleanData = sanitizeForConvex(item.data);
+        await convex.mutation(api.snapshots.upsertDailySnapshot, cleanData as never);
+        if (item.id !== undefined) {
+          await db.delete('syncQueue', item.id);
+        }
+        console.debug('Flushed offline snapshot:', item.timestamp);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes("Authentication required") || errorMessage.includes("Authentication") || errorMessage.includes("Unauthenticated")) {
+          console.log('User is not authenticated yet. Postponing offline queue flush.');
+          break;
+        } else {
+          console.error('Failed to flush offline snapshot:', error);
+        }
       }
     }
+  } catch (err) {
+    console.error('Failed to read syncQueue from IndexedDB:', err);
+  } finally {
+    isFlushingQueue = false;
   }
-  
-  localStorage.setItem('budgetbitch:offlineQueue', JSON.stringify(failed));
 }
 
 // Listen for online/offline events
@@ -299,11 +336,37 @@ if (typeof window !== 'undefined') {
 /**
  * Restores local IndexedDB stores from a Convex cloud snapshot payload.
  */
-export async function restoreFromCloudSnapshot(snapshot: CloudSnapshot): Promise<boolean> {
+export async function restoreFromCloudSnapshot(
+  snapshot: CloudSnapshot,
+  opts: { force?: boolean } = {}
+): Promise<boolean> {
   if (!snapshot || !snapshot.fullBackupData) {
     console.warn('[Sync] Cannot restore: Snapshot contains no backup data');
     return false;
   }
+
+  // Honor the "Reset all data" tombstone. A reset wipes local stores but the
+  // cloud snapshot can still carry the deleted data; without this guard the
+  // auto-restore (AccountSyncMount) would silently re-inject the very entries
+  // the user just wiped. Centralize the check HERE so the auto path is always
+  // protected. The manual "Restore from cloud" button passes force:true — it is
+  // an explicit user choice to recover data, so it may override the tombstone.
+  const resetAt = Number(
+    typeof window !== 'undefined'
+      ? localStorage.getItem(RESET_TOMBSTONE_KEY) || '0'
+      : '0'
+  );
+  const snapshotTime = (snapshot as { createdAt?: number }).createdAt ?? 0;
+  if (!opts.force && resetAt > 0 && snapshotTime > 0 && snapshotTime <= resetAt) {
+    console.log('[Sync] Skipping cloud restore: snapshot predates last reset.');
+    return false;
+  }
+  // Single-flight guard: the latestSnapshot query can re-fire (the host effect's
+  // restoredSnapshotIdRef is set only AFTER this resolves), so two near-simultaneous
+  // runs could both clear + overwrite the local stores. Drop the second concurrent
+  // entry; the in-flight restore already covers it.
+  if (isRestoringSnapshot) return false;
+  isRestoringSnapshot = true;
   try {
     const db = await getDB();
     const backup = snapshot.fullBackupData;
@@ -364,5 +427,7 @@ export async function restoreFromCloudSnapshot(snapshot: CloudSnapshot): Promise
   } catch (err) {
     console.error('Failed to restore from cloud snapshot:', err);
     return false;
+  } finally {
+    isRestoringSnapshot = false;
   }
 }

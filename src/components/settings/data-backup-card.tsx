@@ -7,7 +7,8 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
-import { USER_DATA_STORES, clearAllUserData, getDB, createLocalCheckpoint } from '@/lib/db/local-db';
+import { USER_DATA_STORES, clearAllData, markResetTombstone, getDB, createLocalCheckpoint } from '@/lib/db/local-db';
+import { logUserAction } from '@/lib/utils/action-logger';
 import { createBackupPayload, parseAndValidateBackup, type BackupData } from '@/lib/db/backup-schema';
 import { encryptBackup, decryptBackup } from '@/lib/db/crypto-backup';
 import { formatMoney } from '@/lib/utils/currency';
@@ -24,17 +25,49 @@ import { ChangePasswordModal } from '@/components/settings/change-password-modal
 import { StorageDiagnosticsModal } from '@/components/settings/storage-diagnostics-modal';
 import { DecryptImportModal } from '@/components/settings/decrypt-import-modal';
 
+import { useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+
 type Status = 'idle' | 'success' | 'error';
 
 const RESET_PRESERVE = [
   'budgetbitch:theme',
   'bb-locale',
-  'budgetbitch:offlineQueue',
-  'budgetbitch:boardQueue',
+  'bb:lastResetAt',
 ];
 
+// Push queues that can outlive a reset. A snapshot queued in the IndexedDB
+// 'syncQueue' store before the wipe would otherwise still be flushed to Convex
+// afterwards (flushOfflineQueue -> upsertDailySnapshot), re-uploading data the
+// user just deleted; the localStorage board queues can replay the same way.
+// AccountSyncMount's tombstone only blocks the RESTORE direction, so the push
+// side has to be drained here.
+const RESET_QUEUE_KEYS = [
+  'budgetbitch:offlineQueue',
+  'budgetbitch:boardQueue',
+  'budgetbitch:accountBoardQueue',
+];
+
+/**
+ * Drain every pending outbound sync queue so a reset cannot be undone by a
+ * stale queued push. Client-only; safe to call when the store is absent.
+ */
+export async function clearSyncAndQueues(): Promise<void> {
+  if (typeof window === 'undefined') return;
+  const db = await getDB();
+  if (db.objectStoreNames.contains('syncQueue')) {
+    await db.clear('syncQueue');
+  }
+  if (db.objectStoreNames.contains('receiptDrafts')) {
+    await db.clear('receiptDrafts');
+  }
+  for (const key of RESET_QUEUE_KEYS) {
+    localStorage.removeItem(key);
+  }
+}
+
 interface DataBackupCardProps {
-  locale: 'th' | 'en';
+  locale: string;
   lastSync: string | null;
   setLastSync: (time: string) => void;
   clearProfile?: () => void;
@@ -61,6 +94,9 @@ export function DataBackupCard({
   const [syncStatus, setSyncStatus] = useState<Status>('idle');
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   
+  const deleteAllSnapshotsMut = useMutation(api.snapshots.deleteAllUserSnapshots);
+  const purgeAccountDataMut = useMutation(api.purge.purgeMyAccountData);
+
   // Storage Diagnostics and Encryption states
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [encryptExport, setEncryptExport] = useState(false);
@@ -102,14 +138,52 @@ export function DataBackupCard({
 
   const handleResetConfirm = async () => {
     setResetOpen(false);
-    await clearAllUserData();
+    logUserAction('Reset all data');
+
+    // 1. HARD DELETE the server-side account: private profile (shareCode,
+    //    display name), owned accounts and their boards (the full serialized
+    //    financial data), memberships, invites, pending deletes, cloud
+    //    snapshots, receipts, merchant aliases, push subscriptions and LINE
+    //    identity. Consent records (legalAgreements/cookieConsents) are
+    //    intentionally retained as the compliance audit trail.
+    try {
+      await purgeAccountDataMut();
+    } catch (err) {
+      console.warn('[Reset] Server purge failed (offline or unauthenticated):', err);
+      // Fall back to the narrower snapshot/receipt wipe so an offline reset
+      // still removes what it can reach.
+      try {
+        await deleteAllSnapshotsMut();
+      } catch (fallbackErr) {
+        console.warn('[Reset] Cloud snapshot wipe failed too:', fallbackErr);
+      }
+    }
+
+    // 2. Drain all sync queues, receipt drafts, and offline push queues
+    await clearSyncAndQueues();
+
+    // 3. Clear all IndexedDB stores completely
+    await clearAllData();
+
+    // 4. Mark reset tombstone timestamp in localStorage
+    await markResetTombstone();
+
+    // 5. Clear profile hook state
     clearProfile?.();
+
+    // 6. Clear localStorage keys except RESET_PRESERVE
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i);
       if (key && !RESET_PRESERVE.includes(key)) {
         localStorage.removeItem(key);
       }
     }
+
+    // 7. Clear sessionStorage
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      window.sessionStorage.clear();
+    }
+
     window.location.href = '/';
   };
 
@@ -238,7 +312,7 @@ export function DataBackupCard({
       await executeDataImport(data);
     } catch (err: unknown) {
       console.error('Decryption/Import failed:', err);
-      setImportErrorMessage(locale === 'th' ? 'รหัสผ่านไม่ถูกต้อง หรือไฟล์เสียหาย' : 'Incorrect password or corrupted file');
+      setImportErrorMessage('Incorrect password or corrupted file');
       setImportStatus('error');
     }
   };
@@ -260,44 +334,6 @@ export function DataBackupCard({
   };
 
   const l = {
-    th: {
-      dataSection: 'ข้อมูล',
-      privacySection: 'ความเป็นส่วนตัว',
-      exportData: 'ส่งออกข้อมูล (JSON)',
-      importData: 'นำเข้าข้อมูล (JSON)',
-      exportDesc: 'ดาวน์โหลดข้อมูลทั้งหมดเป็นไฟล์ JSON',
-      importDesc: 'นำเข้าข้อมูลจากไฟล์ JSON',
-      exportSuccess: 'ส่งออกสำเร็จ',
-      importSuccess: 'นำเข้าข้อมูลสำเร็จ',
-      importError: 'ไฟล์ไม่ถูกต้อง',
-      syncNow: 'ซิงค์ตอนนี้',
-      syncing: 'กำลังซิงค์...',
-      syncSuccess: 'ซิงค์ข้อมูลสำเร็จ',
-      syncError: 'ซิงค์ล้มเหลว',
-      neverSynced: 'ยังไม่เคยซิงค์',
-      syncDesc: 'ซิงค์โปรไฟล์และสแนปช็อตของคุณไปยังระบบคลาวด์ (ไม่ใช่บอร์ดคู่)',
-      resetData: 'ล้างข้อมูลทั้งหมด',
-      resetConfirmTitle: 'ยืนยันการล้างข้อมูล',
-      resetConfirmBody: 'ลบข้อมูลทั้งหมด: โปรไฟล์, ค่าใช้จ่าย, งบประมาณ, เป้าหมาย ฯลฯ จะไม่สามารถกู้คืนได้',
-      resetConfirmCancel: 'ยกเลิก',
-      resetConfirmDestructive: 'ลบข้อมูลทั้งหมด',
-      privacyDisclaimer: 'ข้อความยอมรับความเป็นส่วนตัว',
-      privacyBody: 'เราใช้ข้อมูลตำแหน่งของคุณ เพื่อแสดงราคาน้ำมัน บิลล์ และโปรโมชั่นใกล้คุณเท่านั้น ไม่ได้เก็บหรือขายข้อมูลให้บุคคลที่สาม ไม่มีการติดตาม และไม่ใช้เพื่อการตลาดใดๆ',
-      criticalExpense: 'ค่าใช้จ่ายที่ต้องลด',
-      committed: 'ยอมรับแล้ว',
-      notCommitted: 'ยังไม่ได้เลือก',
-      password: 'รหัสผ่าน',
-      changePassword: 'เปลี่ยนรหัสผ่าน',
-      passwordDesc: 'รีเซ็ตรหัสผ่านด้วยลิงก์ในหน้า sign-in หรือใช้ฟอร์มด้านล่าง',
-      encryptBackup: 'เข้ารหัสไฟล์สำรองข้อมูล',
-      enterPassword: 'ป้อนรหัสผ่านสำรองข้อมูล',
-      diagnosticsTitle: 'ความสมบูรณ์และวิเคราะห์หน่วยความจำ',
-      diagnosticsDesc: 'ตรวจสอบพื้นที่การจัดเก็บ สภาพระบบ และสแนปช็อตกู้คืนระบบ',
-      diagnosticsBtn: 'การวิเคราะห์และกู้คืน',
-      importPasswordTitle: 'ต้องการรหัสผ่านเพื่อนำเข้าข้อมูล',
-      importPasswordDesc: 'ข้อมูลสำรองนี้ถูกเข้ารหัส กรุณาป้อนรหัสผ่านที่ตั้งค่าไว้เพื่อถอดรหัสและนำเข้าข้อมูล',
-      submit: 'ตกลง',
-    },
     en: {
       dataSection: 'Data',
       privacySection: 'Privacy',
@@ -316,7 +352,7 @@ export function DataBackupCard({
       syncDesc: 'Sync your profile & daily snapshot to the cloud (not the couple board)',
       resetData: 'Reset All Data',
       resetConfirmTitle: 'Confirm Reset',
-      resetConfirmBody: 'Delete ALL data: profile, expenses, budgets, goals, etc. This cannot be undone.',
+      resetConfirmBody: 'Permanently delete ALL data: your profile, expenses, budgets, goals, shared accounts you own, receipts and cloud backups — on this device and on the server. This cannot be undone.',
       resetConfirmCancel: 'Cancel',
       resetConfirmDestructive: 'Delete All Data',
       privacyDisclaimer: 'Privacy Disclaimer',
@@ -336,7 +372,7 @@ export function DataBackupCard({
       importPasswordDesc: 'This backup file is encrypted. Enter the backup password to decrypt and restore.',
       submit: 'Submit',
     },
-  }[locale];
+  }.en;
 
   return (
     <>
@@ -418,13 +454,13 @@ export function DataBackupCard({
             <div>
               <div className="flex items-center gap-3 mb-3">
                 <Download className="w-5 h-5 text-amber-400" />
-                <h3 className="font-semibold text-white">{locale === 'th' ? 'ส่งออกข้อมูล (CSV)' : 'Export Data (CSV)'}</h3>
+                <h3 className="font-semibold text-white">{'Export Data (CSV)'}</h3>
               </div>
-              <p className="text-sm text-white/50 mb-4">{locale === 'th' ? 'ดาวน์โหลดค่าใช้จ่าย รายรับ และงบประมาณเป็นไฟล์ CSV' : 'Download expenses, incomes and budgets as a CSV file'}</p>
+              <p className="text-sm text-white/50 mb-4">{'Download expenses, incomes and budgets as a CSV file'}</p>
             </div>
             <div>
               <Button variant="secondary" onClick={handleExportCsv} className="w-full" disabled={csvExporting}>
-                {csvExporting ? (locale === 'th' ? 'กำลังส่งออก...' : 'Exporting...') : (locale === 'th' ? 'ส่งออก CSV' : 'Export CSV')}
+                {csvExporting ? ('Exporting...') : ('Export CSV')}
               </Button>
             </div>
           </Card>
@@ -455,7 +491,7 @@ export function DataBackupCard({
               </div>
               <span className="text-xs text-white/50">
                 {lastSync
-                  ? format(new Date(lastSync), locale === 'th' ? 'd MMM yyyy HH:mm' : 'MMM d, yyyy HH:mm')
+                  ? format(new Date(lastSync), 'MMM d, yyyy HH:mm')
                   : l.neverSynced}
               </span>
             </div>
@@ -509,9 +545,7 @@ export function DataBackupCard({
             {commitment && profile && (
               <div className="bg-black/30 rounded-xl p-3 text-sm">
                 <p className="text-white/70">
-                  {locale === 'th'
-                    ? `คุณเลือกลด: ${commitment.expenseKey} | ประหยัดต่อเดือน: ${formatMoney(commitment.estimatedMonthlyCost, override ?? profile.answers.currency ?? 'THB', 'th')}`
-                    : `You chose: ${commitment.expenseKey} | Monthly savings: ${formatMoney(commitment.estimatedMonthlyCost, override ?? profile.answers.currency ?? 'THB', 'en')}`}
+                  {`You chose: ${commitment.expenseKey} | Monthly savings: ${formatMoney(commitment.estimatedMonthlyCost, override ?? profile.answers.currency ?? 'USD', 'en')}`}
                 </p>
               </div>
             )}

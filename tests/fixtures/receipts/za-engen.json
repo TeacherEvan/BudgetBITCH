@@ -1,0 +1,123 @@
+{
+  "id": "za-engen",
+  "payload": {
+    "lines": [
+      {
+        "text": "Engen Quickshop / Fuel",
+        "conf": 90,
+        "y": 20,
+        "words": [
+          {
+            "text": "Engen",
+            "conf": 90,
+            "bbox": [
+              10,
+              20,
+              40,
+              40
+            ]
+          },
+          {
+            "text": "Quickshop",
+            "conf": 90,
+            "bbox": [
+              50,
+              20,
+              80,
+              40
+            ]
+          },
+          {
+            "text": "/",
+            "conf": 90,
+            "bbox": [
+              90,
+              20,
+              120,
+              40
+            ]
+          },
+          {
+            "text": "Fuel",
+            "conf": 90,
+            "bbox": [
+              130,
+              20,
+              160,
+              40
+            ]
+          }
+        ]
+      },
+      {
+        "text": "21/03/2026",
+        "conf": 90,
+        "y": 40,
+        "words": [
+          {
+            "text": "21/03/2026",
+            "conf": 90,
+            "bbox": [
+              10,
+              40,
+              40,
+              60
+            ]
+          }
+        ]
+      },
+      {
+        "text": "TOTAL R 650.00",
+        "conf": 90,
+        "y": 60,
+        "words": [
+          {
+            "text": "TOTAL",
+            "conf": 90,
+            "bbox": [
+              10,
+              60,
+              40,
+              80
+            ]
+          },
+          {
+            "text": "R",
+            "conf": 90,
+            "bbox": [
+              50,
+              60,
+              80,
+              80
+            ]
+          },
+          {
+            "text": "650.00",
+            "conf": 90,
+            "bbox": [
+              90,
+              60,
+              120,
+              80
+            ]
+          }
+        ]
+      }
+    ],
+    "width": 320,
+    "height": 400,
+    "lang": "eng",
+    "engine": "tesseract.js@6",
+    "capturedAt": 1774000000000,
+    "countryHint": "ZA",
+    "currencyHint": "ZAR"
+  },
+  "expected": {
+    "total": 650,
+    "date": "2026-03-21",
+    "merchant": "Engen Quickshop",
+    "currency": "ZAR",
+    "category": "transport",
+    "tax": 84.78
+  }
+}

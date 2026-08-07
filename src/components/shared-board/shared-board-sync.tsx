@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useSharedBoard } from '@/hooks/use-shared-board';
 import { ConflictModal, ConflictData } from './conflict-modal';
+import { notify } from '@/lib/ui/notice';
 
 /**
  * Side-effect-only component that drives couple-board sync (pull/push/offline)
@@ -28,7 +29,12 @@ export function SharedBoardSync() {
   const handleResolve = async (action: 'keep_local' | 'keep_remote' | 'merge') => {
     setConflictData(null);
     if (action === 'keep_local' || action === 'merge') {
-      await syncNow();
+      try {
+        await syncNow();
+      } catch (e) {
+        console.error('Conflict resolution sync failed:', e);
+        notify('Sync failed while resolving the conflict. Your local data is safe.', 'error');
+      }
     }
   };
 

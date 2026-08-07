@@ -1,9 +1,22 @@
 // src/components/launch/golden-splash.test.tsx
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import { GoldenSplash } from './golden-splash';
 
+const mockUseReducedMotion = vi.fn().mockReturnValue(false);
+vi.mock('framer-motion', async (importOriginal) => {
+  const mod = await importOriginal() as Record<string, unknown>;
+  return {
+    ...mod,
+    useReducedMotion: () => mockUseReducedMotion(),
+  };
+});
+
 describe('GoldenSplash', () => {
+  beforeEach(() => {
+    mockUseReducedMotion.mockReturnValue(false);
+  });
+
   it('renders the golden splash screen and calls onProceed when button is clicked', async () => {
     vi.useFakeTimers();
     const handleProceed = vi.fn();
@@ -32,4 +45,29 @@ describe('GoldenSplash', () => {
 
     vi.useRealTimers();
   });
+
+  it('mounts a canvas element when motion is allowed', () => {
+    render(<GoldenSplash onProceed={vi.fn()} />);
+    expect(document.querySelector('canvas')).not.toBeNull();
+  });
+
+  it('does not mount canvas when prefers-reduced-motion', () => {
+    mockUseReducedMotion.mockReturnValue(true);
+    render(<GoldenSplash onProceed={vi.fn()} />);
+    expect(document.querySelector('canvas')).toBeNull();
+  });
+
+  it('renders background particles with the correct updated keyframe name and low opacity style', () => {
+    render(<GoldenSplash onProceed={vi.fn()} />);
+    const styleTag = document.querySelector('style');
+    expect(styleTag).not.toBeNull();
+    expect(styleTag?.textContent).toContain('bb-particle-float-v2');
+
+    // Verify background particles have text-amber-400/5 class
+    const particles = screen.getAllByText(/🪙|💵|\$/);
+    expect(particles.length).toBeGreaterThan(0);
+    expect(particles[0]).toHaveClass('text-amber-400/5');
+  });
 });
+
+

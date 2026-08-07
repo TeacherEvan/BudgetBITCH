@@ -69,4 +69,29 @@ describe("buildSubscriptionTrimHints", () => {
       }),
     ).toEqual([]);
   });
+
+  it("evaluates boundary where subscriptions exactly equal half the status gap", () => {
+    expect(
+      buildSubscriptionTrimHints({
+        monthlyIncome: 1100,
+        fixedBills: 500,
+        essentials: 400,
+        subscriptions: 100,
+        daysLeftInCycle: 10,
+      }),
+    ).toEqual([
+      {
+        id: "trim_subscriptions",
+        label: "Trim subscriptions first.",
+        priority: "high",
+        estimatedRelief: 100,
+      },
+      {
+        id: "pause_extras",
+        label: "Pause extras until the next reset.",
+        priority: "medium",
+        estimatedRelief: 50,
+      },
+    ]);
+  });
 });

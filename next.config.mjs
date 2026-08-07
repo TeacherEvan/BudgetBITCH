@@ -7,9 +7,38 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  allowedDevOrigins: ["127.0.0.1"],
+  outputFileTracingRoot: __dirname,
   turbopack: {
     root: __dirname,
+  },
+  allowedDevOrigins: ["127.0.0.1"],
+  async headers() {
+    // CSP is now applied per-request with a nonce in src/app/proxy.ts
+    // (required so Next.js 16's inline RSC/hydration scripts pass a strict
+    // policy without 'unsafe-inline'). Non-CSP security headers stay here.
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: "X-Frame-Options",
+            value: "DENY",
+          },
+          {
+            key: "X-Content-Type-Options",
+            value: "nosniff",
+          },
+          {
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
+          },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=(self)",
+          },
+        ],
+      },
+    ];
   },
 };
 

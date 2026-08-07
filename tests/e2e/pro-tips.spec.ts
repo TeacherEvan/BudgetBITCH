@@ -1,19 +1,20 @@
-// Feature: BOSS Pro-Tips card renders and opens modal (dashboard surface).
-import { test, expect, signInReal, seedLocalStorage, HAS_CREDS } from "./helpers";
+// Feature: BOSS Pro-Tips card — renders on the signed-out auth surface
+// (src/components/auth/clean-auth-card.tsx embeds ProTipsCard) and opens its
+// modal on click. Targets /sign-in because that route renders CleanAuthCard
+// directly, without the "/" first-launch splash + language-modal gates.
+import { test, expect } from "./helpers";
 
 test.describe("Pro-Tips", () => {
-  test.beforeEach(async ({ page }) => {
-    if (!HAS_CREDS) test.skip(true, "no creds");
-    await seedLocalStorage(page);
-    await signInReal(page);
-  });
-
-  test("pro-tip card visible and modal opens on click", async ({ page }) => {
-    await page.goto("/dashboard");
-    const card = page.getByText(/boss pro-tip|เคล็ดลับฉบับบอส/i);
-    await expect(card.first()).toBeVisible({ timeout: 8000 });
+  test("pro-tip card visible and modal opens on click", async ({ page, errors }) => {
+    await page.goto("/sign-in");
+    const card = page.getByText(/boss pro-tip/i);
+    await expect(card.first()).toBeVisible({ timeout: 10000 });
     await card.first().click();
-    // Modal opens with the tip title.
-    await expect(page.getByRole("dialog").or(page.getByText(/pro.?tip|เคล็ดลับ/i))).toBeVisible({ timeout: 4000 });
+    // Modal opens with the tip content.
+    await expect(
+      page.getByRole("dialog").or(page.getByText(/pro.?tip/i)).first(),
+    ).toBeVisible({ timeout: 4000 });
+    // Assert no JS errors on modal open.
+    errors.assertClean();
   });
 });

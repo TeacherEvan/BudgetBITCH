@@ -6,6 +6,7 @@ import {
   initializeBudgetsFromWizard,
   calculateEmergencyFundTarget,
   calculateNetWorthBaseline,
+  reconcileBudgetWithExpenses,
 } from './budget-calculator';
 
 const mocks = vi.hoisted(() => ({
@@ -160,5 +161,73 @@ describe('initializeBudgetsFromWizard', () => {
   it('persists one budget category per calculated budget', async () => {
     await initializeBudgetsFromWizard(makeProfile());
     expect(mocks.saveBudgetCategory).toHaveBeenCalledTimes(12);
+  });
+});
+
+describe('reconcileBudgetWithExpenses', () => {
+  const now = new Date('2026-07-19T12:00:00.000Z');
+
+  it('subtracts only this month\'s real expenses from the planned pool', () => {
+    const r = reconcileBudgetWithExpenses(
+      makeProfile(),
+      [
+        { date: '2026-07-01', amount: 4000 }, // current month
+        { date: '2026-07-15', amount: 1000 },
+        { date: '2026-06-30', amount: 9999 }, // prior month ignored
+      ],
+      now,
+    );
+    // planDisposable 50500 - 5000 spent in July
+    expect(r.spentThisMonth).toBe(5000);
+    expect(r.remainingDisposable).toBe(45500);
+    expect(r.isOverBudget).toBe(false);
+    expect(r.spentPct).toBe(Math.round((5000 / 50500) * 100));
+  });
+
+  it('flags over budget when spend exceeds the plan', () => {
+    const r = reconcileBudgetWithExpenses(
+      makeProfile(),
+      [{ date: '2026-07-02', amount: 60000 }],
+      now,
+    );
+    expect(r.spentThisMonth).toBe(60000);
+    expect(r.remainingDisposable).toBe(50500 - 60000);
+    expect(r.isOverBudget).toBe(true);
+    expect(r.spentPct).toBe(100); // clamped
+    expect(r.dailyRemaining).toBe(0); // floored at 0
+  });
+
+  it('computes a live daily figure from days left in the month', () => {
+    // July has 31 days; on the 19th there are 12 days left (20..31).
+    const r = reconcileBudgetWithExpenses(
+      makeProfile(),
+      [{ date: '2026-07-05', amount: 500 }],
+      now,
+    );
+    expect(r.daysLeftInMonth).toBe(12);
+    expect(r.dailyRemaining).toBe(Math.max(0, (50500 - 500) / 12));
+  });
+
+  it('returns 0 spentPct when the plan has no disposable income', () => {
+    const r = reconcileBudgetWithExpenses(
+      makeProfile({ income: 10000, rent: 20000, savingsRatePct: 50 }),
+      [{ date: '2026-07-05', amount: 5000 }],
+      now,
+    );
+    expect(r.planDisposable).toBeLessThan(0);
+    expect(r.spentPct).toBe(0);
+    expect(r.isOverBudget).toBe(true);
+  });
+
+  it('ignores non-string or malformed dates defensively', () => {
+    const r = reconcileBudgetWithExpenses(
+      makeProfile(),
+      [
+        { date: 'not-a-date', amount: 1000 },
+        { date: '', amount: 2000 },
+      ] as unknown as { date: string; amount: number }[],
+      now,
+    );
+    expect(r.spentThisMonth).toBe(0);
   });
 });

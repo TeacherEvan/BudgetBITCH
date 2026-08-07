@@ -49,9 +49,13 @@ export function currencyFromLocation(
   return COUNTRY_TO_CURRENCY[code] ?? null;
 }
 
-const LOCALE_TAG: Record<'th' | 'en', string> = {
-  th: 'th-TH',
+const LOCALE_TAG: Record<string, string> = {
   en: 'en-US',
+  es: 'es-ES',
+  fr: 'fr-FR',
+  de: 'de-DE',
+  pt: 'pt-PT',
+  zh: 'zh-CN',
 };
 
 /**
@@ -62,15 +66,15 @@ const LOCALE_TAG: Record<'th' | 'en', string> = {
 export function formatMoney(
   amount: number,
   currency: CurrencyCode | null,
-  locale: 'th' | 'en' = 'en',
+  locale: string = 'en',
 ): string {
   if (currency === null) {
-    return new Intl.NumberFormat(LOCALE_TAG[locale], {
+    return new Intl.NumberFormat(LOCALE_TAG[locale] ?? 'en-US', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
   }
-  return new Intl.NumberFormat(LOCALE_TAG[locale], {
+  return new Intl.NumberFormat(LOCALE_TAG[locale] ?? 'en-US', {
     style: 'currency',
     currency,
     minimumFractionDigits: 0,
@@ -84,11 +88,11 @@ export function formatMoney(
  */
 export function formatCurrency(
   amount: number,
-  locale: 'th' | 'en' = 'en',
+  locale: string = 'en',
   currency?: CurrencyCode | null,
 ): string {
   const resolved =
-    currency === undefined ? (locale === 'th' ? 'THB' : 'USD') : currency;
+    currency === undefined ? ('USD') : currency;
   return formatMoney(amount, resolved, locale);
 }
 

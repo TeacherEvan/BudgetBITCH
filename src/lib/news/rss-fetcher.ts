@@ -5,33 +5,25 @@ import type { NewsItem } from '@/lib/types/budget';
 const parser = new Parser();
 
 const RSS_FEEDS = [
-  // Thai sources
-  { url: 'https://www.bangkokpost.com/rss/data/business.xml', locale: 'th' as const, category: 'finance' as const, source: 'Bangkok Post Business' },
-  { url: 'https://www.bangkokpost.com/rss/data/general.xml', locale: 'th' as const, category: 'local' as const, source: 'Bangkok Post' },
-  { url: 'https://englishnews.thaipbs.or.th/rss', locale: 'th' as const, category: 'local' as const, source: 'Thai PBS' },
-  { url: 'https://www.pptvhd36.com/rss', locale: 'th' as const, category: 'local' as const, source: 'PPTV' },
-  // English sources
+  // International / English sources
   { url: 'https://www.reuters.com/business/finance/rss', locale: 'en' as const, category: 'finance' as const, source: 'Reuters Business' },
   { url: 'https://www.reuters.com/world/rss', locale: 'en' as const, category: 'economy' as const, source: 'Reuters World' },
 ];
 
 function getActionableText(item: { title: string; category: string }): string | undefined {
   const lower = item.title.toLowerCase();
-  
-  if (lower.includes('fuel') || lower.includes('n้ำมัน') || lower.includes('gas') || lower.includes('diesel')) {
-    return 'เช็คราคาน้ำมันก่อนเติม';
+
+  if (lower.includes('fuel') || lower.includes('gas') || lower.includes('diesel')) {
+    return 'Check fuel prices before filling up';
   }
-  if (lower.includes('1+1') || lower.includes('buy 1') || lower.includes('ซื้อ 1 แถม 1')) {
-    return 'เจอโปรโมชั่น 1+1 - จัดซื้อได้เลย';
+  if (lower.includes('1+1') || lower.includes('buy 1')) {
+    return 'Buy-one-get-one promo spotted - stock up';
   }
-  if (lower.includes('discount') || lower.includes('sale') || lower.includes('ลดราคา') || lower.includes('โปรโมชั่น')) {
-    return 'มีส่วนลด - พิจารณาซื้อ';
+  if (lower.includes('discount') || lower.includes('sale')) {
+    return 'Discount running - consider buying now';
   }
-  if (lower.includes('bts') || lower.includes('mrt') || lower.includes('บีทีเอส') || lower.includes('บัตรประจำเดือน')) {
-    return 'เช็คบัตรประจำเดือนประหยัดกว่าซื้อรายวัน';
-  }
-  if (lower.includes('electricity') || lower.includes('ค่าไฟ')) {
-    return 'ตรวจสอบค่าไฟ - อาจมีการปรับราคา';
+  if (lower.includes('electricity') || lower.includes('power tariff')) {
+    return 'Check your electricity tariff - rates may be changing';
   }
   return undefined;
 }
@@ -70,7 +62,7 @@ let newsCache: NewsItem[] | null = null;
 let lastFetch = 0;
 const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
 
-export async function getNewsByLocale(locale: 'th' | 'en'): Promise<NewsItem[]> {
+export async function getNewsByLocale(locale: string): Promise<NewsItem[]> {
   const now = Date.now();
   
   if (newsCache && (now - lastFetch) < CACHE_TTL) {

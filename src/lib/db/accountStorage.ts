@@ -25,7 +25,7 @@ import {
   LocalAccountMeta,
   UmbrellaKey,
 } from "@/lib/types/accounts";
-import { notifyBoardChanged } from "@/lib/types/budget";
+import { notifyBoardChanged, type BoardSnapshot } from "@/lib/types/budget";
 
 // Re-export so callers don't need to know the raw store name.
 export const ACCOUNTS_DATA_STORE = "accountsData";
@@ -35,8 +35,7 @@ export const CURRENT_ACCOUNT_KEY = "bb:currentAccount";
 export interface StashedAccount {
   accountId: string;
   // A full BoardSnapshot clone (the 8 shared stores).
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  snapshot: any;
+  snapshot: BoardSnapshot;
   stashedAt: number;
 }
 
@@ -121,8 +120,7 @@ export async function stashCurrentAccount(accountId: string): Promise<void> {
  * the previous account's records would leak into the new account.
  */
 export async function restoreAccountToActive(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  snapshot: any,
+  snapshot: BoardSnapshot,
 ): Promise<void> {
   await clearAllUserData();
   await replaceBoardData(snapshot);
@@ -174,6 +172,7 @@ export async function switchAccount(
     const blank = {
       wizardProfile: personalProfile ?? null,
       expenses: [],
+      incomes: [],
       budgets: [],
       bills: [],
       savingsGoals: [],
@@ -211,8 +210,7 @@ export async function ensurePersonalAccount(): Promise<void> {
  */
 export async function adoptRemoteAccount(
   meta: LocalAccountMeta,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  snapshot: any,
+  snapshot: BoardSnapshot,
 ): Promise<void> {
   // Stash outgoing before adopting.
   const current = await getCurrentAccountId();

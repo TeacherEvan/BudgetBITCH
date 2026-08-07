@@ -10,7 +10,7 @@ interface DecryptImportModalProps {
   isOpen: boolean;
   onClose: () => void;
   onDecrypt: () => Promise<void>;
-  locale: 'th' | 'en';
+  locale: string;
   importPassword: string;
   setImportPassword: (password: string) => void;
   showImportPassword: boolean;
@@ -18,13 +18,6 @@ interface DecryptImportModalProps {
 }
 
 const COPY = {
-  th: {
-    title: 'ต้องการรหัสผ่านเพื่อนำเข้าข้อมูล',
-    desc: 'ข้อมูลสำรองนี้ถูกเข้ารหัส กรุณาป้อนรหัสผ่านที่ตั้งค่าไว้เพื่อถอดรหัสและนำเข้าข้อมูล',
-    enterPassword: 'ป้อนรหัสผ่านสำรองข้อมูล',
-    cancel: 'ยกเลิก',
-    submit: 'ตกลง',
-  },
   en: {
     title: 'Password Required to Import',
     desc: 'This backup file is encrypted. Enter the backup password to decrypt and restore.',
@@ -38,13 +31,12 @@ export function DecryptImportModal({
   isOpen,
   onClose,
   onDecrypt,
-  locale,
   importPassword,
   setImportPassword,
   showImportPassword,
   setShowImportPassword,
 }: DecryptImportModalProps) {
-  const l = COPY[locale] || COPY.en;
+  const l = COPY.en;
 
   return (
     <Modal

@@ -22,7 +22,7 @@ function mapCategory(raw: string | undefined): ExpenseCategory {
 }
 
 function SmsConfirmInner() {
-  const locale = useLocale() as 'th' | 'en';
+  const locale = useLocale();
   const router = useRouter();
   const params = useSearchParams();
   const text = params.get('text') ?? '';
@@ -43,7 +43,7 @@ function SmsConfirmInner() {
       if (c.type === 'income') {
         await addIncome({
           amount: c.amount,
-          source: c.merchant || (locale === 'th' ? 'รายได้จาก SMS' : 'SMS Income'),
+          source: c.merchant || ('SMS Income'),
           category: 'other',
           frequency: 'one_time',
           date,
@@ -53,7 +53,7 @@ function SmsConfirmInner() {
       } else {
         await addExpense({
           amount: c.amount,
-          merchant: c.merchant || (locale === 'th' ? 'รายจ่ายจาก SMS' : 'SMS Expense'),
+          merchant: c.merchant || ('SMS Expense'),
           category: mapCategory(c.merchant),
           date,
           note: c.rawText,
@@ -63,7 +63,7 @@ function SmsConfirmInner() {
     }
     setStatus('done');
     setTimeout(() => router.push('/dashboard'), 900);
-  }, [addExpense, addIncome, locale, router]);
+  }, [addExpense, addIncome, router]);
 
   const handleDismiss = useCallback(() => router.push('/dashboard'), [router]);
 

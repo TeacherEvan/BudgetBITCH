@@ -13,21 +13,11 @@ interface SmsConfirmProps {
   candidates: TransactionCandidate[];
   onSave: (candidates: TransactionCandidate[]) => void | Promise<void>;
   onDismiss: () => void;
-  locale: 'th' | 'en';
+  locale: string;
   threshold?: number;
 }
 
 const LABELS = {
-  th: {
-    title: 'เพิ่มรายการจาก SMS?',
-    addAll: 'เพิ่มทั้งหมด',
-    dismiss: 'ยกเลิก',
-    confidence: 'ความมั่นใจ',
-    expense: 'จ่าย',
-    income: 'รับ',
-    empty: 'ไม่พบรายการที่น่าเชื่อถือ',
-    saved: 'บันทึกเรียบร้อย',
-  },
   en: {
     title: 'Add these from SMS?',
     addAll: 'Add all',
@@ -45,10 +35,9 @@ export function SmsConfirm({
   candidates,
   onSave,
   onDismiss,
-  locale,
   threshold = DEFAULT_THRESHOLD,
 }: SmsConfirmProps) {
-  const l = LABELS[locale];
+  const l = LABELS.en;
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 

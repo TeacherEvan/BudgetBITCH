@@ -2,24 +2,15 @@
 'use client';
 
 interface StepRiskToleranceProps {
-  locale: 'th' | 'en';
+  locale: string;
   value: 'low' | 'medium' | 'high';
   onChange: (key: 'riskTolerance', value: 'low' | 'medium' | 'high') => void;
   error?: string | null;
   disabled?: boolean;
 }
 
-export function StepRiskTolerance({ locale, value, onChange, error, disabled }: StepRiskToleranceProps) {
+export function StepRiskTolerance({ value, onChange, error, disabled }: StepRiskToleranceProps) {
   const labels = {
-    th: {
-      title: 'จุดรับความเสี่ยง',
-      subtitle: 'คุณสบายใจกับความเสี่ยงของเงินได้แค่ไหน',
-      options: {
-        low: { label: 'ต่ำ', desc: '🛡️ ฉันแค่อยากให้เงินอยู่ในบัญชีปลอดภัย ไม่เครียด', icon: '🛡️' },
-        medium: { label: 'กลาง', desc: '⚖️ ยอมรับความขึ้นลงนิดหน่อย ให้มันโตได้', icon: '⚖️' },
-        high: { label: 'สูง', desc: '🚀 อยากลองหุ้นหรือคริปโต รู้ว่าอาจเสียบ้าง แต่หวังกำไรใหญ่', icon: '🚀' },
-      },
-    },
     en: {
       title: 'Risk Tolerance',
       subtitle: 'How comfortable are you with financial risk?',
@@ -31,7 +22,7 @@ export function StepRiskTolerance({ locale, value, onChange, error, disabled }: 
     },
   };
 
-  const l = labels[locale];
+  const l = labels.en;
   const options = ['low', 'medium', 'high'] as const;
 
   return (
@@ -67,7 +58,7 @@ export function StepRiskTolerance({ locale, value, onChange, error, disabled }: 
                     <span className="font-semibold text-white">{option.label}</span>
                     {isSelected && (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 font-medium">
-                        {locale === 'th' ? 'เลือกแล้ว' : 'Selected'}
+                        {'Selected'}
                       </span>
                     )}
                   </div>

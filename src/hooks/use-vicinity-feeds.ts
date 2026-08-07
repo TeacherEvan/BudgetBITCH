@@ -15,13 +15,14 @@ interface VicinityFeedResult {
 const CACHE_KEY = 'bb:vicinityNewsCache';
 const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
 
-export function useVicinityFeeds(locale: 'th' | 'en'): VicinityFeedResult {
+export function useVicinityFeeds(locale: string): VicinityFeedResult {
   const { location, country } = useResolvedLocation();
   const [items, setItems] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const isFetchingRef = useRef(false);
+  const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchNews = useCallback(async () => {
     if (!location || isFetchingRef.current) {
@@ -62,8 +63,8 @@ export function useVicinityFeeds(locale: 'th' | 'en'): VicinityFeedResult {
       setError(null);
 
       localStorage.setItem(CACHE_KEY, JSON.stringify({ items: sorted, timestamp: Date.now(), locale }));
-    } catch (_err) {
-      setError(locale === 'th' ? 'โหลดข่าวไม่สำเร็จ' : 'Failed to load news');
+    } catch {
+      setError('Failed to load news');
       const cached = localStorage.getItem(CACHE_KEY);
       if (cached) {
         const { items, timestamp } = JSON.parse(cached);
@@ -88,12 +89,19 @@ export function useVicinityFeeds(locale: 'th' | 'en'): VicinityFeedResult {
       fetchNews();
     } else if (!location) {
       // Use setTimeout to avoid setState in effect
-      setTimeout(() => {
+      if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
+      clearTimerRef.current = setTimeout(() => {
         setItems([]);
         setLoading(false);
         fetchedLocationRef.current = null;
       }, 0);
     }
+    return () => {
+      if (clearTimerRef.current) {
+        clearTimeout(clearTimerRef.current);
+        clearTimerRef.current = null;
+      }
+    };
   }, [location, locale, country, fetchNews]);
 
   return { items, loading, error, lastUpdated, refresh: fetchNews };

@@ -50,7 +50,7 @@ describe('ErrorBoundary', () => {
 
     expect(openSpy).toHaveBeenCalledTimes(1);
     expect(openSpy).toHaveBeenCalledWith(
-      expect.stringContaining('mailto:admin@budgetbitch.app'),
+      expect.stringContaining('mailto:support@budgetboss.app'),
       '_blank'
     );
 

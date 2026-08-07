@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore, useState } from "react";
 import { detectWebView } from "@/lib/webview";
+import { isNative } from "@/lib/native";
 
 const DISMISS_KEY = "bb:webview-banner-dismissed";
 
@@ -12,6 +13,10 @@ function subscribe() {
 
 function getSnapshot(): boolean {
   if (typeof window === "undefined") return false;
+  // A first-party native shell (Capacitor) is not a hostile third-party
+  // webview; its auth uses localStorage tokens, so never nag to "open in
+  // browser" there.
+  if (isNative()) return false;
   if (!detectWebView()) return false;
   if (sessionStorage.getItem(DISMISS_KEY) === "true") return false;
   return true;
@@ -42,7 +47,7 @@ export function WebViewBanner() {
   return (
     <div className="fixed inset-x-0 top-0 z-[60] bg-amber-500 px-4 py-3 text-center text-sm font-semibold text-black">
       <p className="mb-1">
-        For the full Budget-BOSS experience (including sign-in), open this page
+        For the full Budget Boss experience (including sign-in), open this page
         in your browser.
       </p>
       <div className="flex items-center justify-center gap-3">

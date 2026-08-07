@@ -24,7 +24,6 @@ export function useNewsPrefs() {
   const [disabledGenres, setDisabledGenresState] = useState<NewsGenre[]>([]);
 
   useEffect(() => {
-     
     setDisabledGenresState(readGenres());
   }, []);
 

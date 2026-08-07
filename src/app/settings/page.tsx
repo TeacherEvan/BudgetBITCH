@@ -15,6 +15,7 @@ import {
   User,
   Newspaper,
   LogOut,
+  X,
 } from 'lucide-react';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { useWizardProfile } from '@/hooks/use-local-db';
@@ -22,6 +23,7 @@ import { useCriticalExpense } from '@/hooks/use-critical-expense';
 import { useSharedBoard } from '@/hooks/use-shared-board';
 import { useDisplayPrefs } from '@/hooks/use-display-prefs';
 import { useNewsPrefs } from '@/hooks/use-news-prefs';
+import { useDisplayDetection } from '@/hooks/use-display-detection';
 import { Button } from '@/components/ui/button';
 import { RequireAuth } from '@/components/auth/require-auth';
 import { useCurrencyOverride } from '@/hooks/use-currency-override';
@@ -29,8 +31,15 @@ import { AccountSettingsCard } from '@/components/settings/account-settings-card
 import { PreferenceSettingsCard } from '@/components/settings/preference-settings-card';
 import { PartnerSharingCard } from '@/components/settings/partner-sharing-card';
 import { DataBackupCard } from '@/components/settings/data-backup-card';
+import { notify } from '@/lib/ui/notice';
 
-type SettingsLocale = 'th' | 'en';
+import { BugReportModal } from '@/components/bug-report/bug-report-modal';
+import { AdminBugReports } from '@/components/admin/admin-bug-reports';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import { Bug } from 'lucide-react';
+
+type SettingsLocale = string;
 
 export default function SettingsPage() {
   const localeRaw = useLocale();
@@ -44,7 +53,22 @@ export default function SettingsPage() {
       router.replace('/');
     } catch (e) {
       console.error('Sign out failed:', e);
+      notify('Sign out failed. Please try again.', 'error');
     }
+  };
+
+  // `window.close()` is a no-op for any tab the script did not open, so the
+  // button used to do nothing at all in a normal browser. Only offer it where
+  // it can actually work, and tell the user when it cannot.
+  const handleCloseApp = () => {
+    const before = Date.now();
+    window.close();
+    // If we are still alive a tick later the platform refused to close us.
+    setTimeout(() => {
+      if (Date.now() - before >= 0 && !window.closed) {
+        notify('Your browser will not let the app close this window — close the tab manually.', 'info');
+      }
+    }, 300);
   };
 
   const { profile, clear: clearProfile } = useWizardProfile();
@@ -53,6 +77,12 @@ export default function SettingsPage() {
   const { graphType, setGraphType, accentColor, setAccentColor } = useDisplayPrefs();
   const { isGenreEnabled, toggleGenre } = useNewsPrefs();
   const { override, setOverride } = useCurrencyOverride();
+  const { isStandalone } = useDisplayDetection();
+
+  const [showBugModal, setShowBugModal] = useState(false);
+  const currentUser = useQuery(api.feedback.getCurrentUser);
+  const amAdmin = useQuery(api.feedback.isAdmin);
+  const isAdmin = amAdmin === true;
 
   const [lastSync, setLastSync] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
@@ -70,13 +100,13 @@ export default function SettingsPage() {
               <button
                 type="button"
                 onClick={() => router.push('/dashboard')}
-                aria-label={locale === 'th' ? 'กลับ' : 'Back'}
+                aria-label={'Back'}
                 className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-white/70 transition-colors hover:border-[rgba(201,150,12,0.4)] hover:text-[#E8B020]"
               >
                 <ArrowLeft className="h-5 w-5" />
               </button>
               <h1 className="text-xl font-bold text-white">
-                {locale === 'th' ? 'ตั้งค่า' : 'Settings'}
+                {'Settings'}
               </h1>
             </div>
             <Button
@@ -86,8 +116,20 @@ export default function SettingsPage() {
               className="flex items-center gap-1.5 border-rose-500/30 text-rose-400 hover:bg-rose-500/10 hover:text-rose-300"
             >
               <LogOut className="h-4 w-4" />
-              <span>{locale === 'th' ? 'ออกจากระบบ' : 'Sign Out'}</span>
+              <span>{'Sign Out'}</span>
             </Button>
+            {isStandalone && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleCloseApp}
+                title={'Best-effort: closes the standalone app window if the platform allows it'}
+                className="flex items-center gap-1.5 border-white/10 text-white/60 hover:bg-white/5 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+                <span>{'Close'}</span>
+              </Button>
+            )}
           </div>
 
           {/* Section nav tabs */}
@@ -97,14 +139,14 @@ export default function SettingsPage() {
           >
             {(
               [
-                { id: 'general', label: { en: 'General', th: 'ทั่วไป' }, icon: <Globe className="w-3.5 h-3.5" /> },
-                { id: 'profile', label: { en: 'Profile', th: 'โปรไฟล์' }, icon: <User className="w-3.5 h-3.5" /> },
-                { id: 'display', label: { en: 'Display', th: 'การแสดงผล' }, icon: <Palette className="w-3.5 h-3.5" /> },
-                { id: 'news', label: { en: 'News', th: 'ข่าวสาร' }, icon: <Newspaper className="w-3.5 h-3.5" /> },
-                { id: 'preferences', label: { en: 'Preferences', th: 'การตั้งค่า' }, icon: <Settings className="w-3.5 h-3.5" /> },
-                { id: 'data', label: { en: 'Data', th: 'ข้อมูล' }, icon: <Download className="w-3.5 h-3.5" /> },
-                { id: 'shared', label: { en: 'Shared Board', th: 'บอร์ดคู่' }, icon: <Users className="w-3.5 h-3.5" /> },
-                { id: 'privacy', label: { en: 'Privacy', th: 'ความเป็นส่วนตัว' }, icon: <Shield className="w-3.5 h-3.5" /> },
+                { id: 'general', label: { en: 'General' }, icon: <Globe className="w-3.5 h-3.5" /> },
+                { id: 'profile', label: { en: 'Profile' }, icon: <User className="w-3.5 h-3.5" /> },
+                { id: 'display', label: { en: 'Display' }, icon: <Palette className="w-3.5 h-3.5" /> },
+                { id: 'news', label: { en: 'News' }, icon: <Newspaper className="w-3.5 h-3.5" /> },
+                { id: 'data', label: { en: 'Data' }, icon: <Download className="w-3.5 h-3.5" /> },
+                { id: 'shared', label: { en: 'Shared Board' }, icon: <Users className="w-3.5 h-3.5" /> },
+                { id: 'privacy', label: { en: 'Privacy' }, icon: <Shield className="w-3.5 h-3.5" /> },
+                { id: 'feedback', label: { en: 'Feedback' }, icon: <Settings className="w-3.5 h-3.5" /> },
               ] as const
             ).map((tab) => (
               <a
@@ -113,7 +155,7 @@ export default function SettingsPage() {
                 className="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-white/60 transition-colors hover:border-[rgba(201,150,12,0.4)] hover:text-[#E8B020] flex-shrink-0"
               >
                 {tab.icon}
-                {tab.label[locale]}
+                {tab.label.en}
               </a>
             ))}
           </nav>
@@ -154,33 +196,60 @@ export default function SettingsPage() {
             override={override}
           />
 
-          {/* Feedback / Bug report — free mailto, no paid service */}
+          {/* Feedback / Bug report section */}
           <section id="settings-feedback" className="scroll-mt-24">
             <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#C9960C] mb-4">
-              {locale === 'th' ? 'แจ้งปัญหา / ข้อเสนอแนะ' : 'Report & Feedback'}
+              {'Report Bug & Feedback'}
             </h2>
             <div className="p-4 rounded-2xl border border-white/10 bg-white/5 space-y-3">
               <p className="text-sm text-white/60">
-                {locale === 'th'
-                  ? 'พบบั๊กหรือมีข้อเสนอแนะ? แจ้งผู้ดูแลได้โดยตรง'
-                  : 'Found a bug or have a suggestion? Tell the admin directly.'}
+                {'Found a bug or issue? Report to the in-app admin dashboard with attached 20 action logs.'}
               </p>
               <Button
                 variant="primary"
-                className="w-full gap-2 justify-center"
-                onClick={() => {
-                  const subject = encodeURIComponent('Budget-BOSS Bug Report');
-                  const body = encodeURIComponent(
-                    `What happened?\n\n\n--- Context ---\nLocale: ${locale}\nUser-Agent: ${typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'}`,
-                  );
-                  window.location.href = `mailto:admin@budgetbitch.app?subject=${subject}&body=${body}`;
-                }}
+                className="w-full gap-2 justify-center bg-amber-400 text-black hover:bg-amber-300 font-semibold"
+                onClick={() => setShowBugModal(true)}
               >
-                {locale === 'th' ? 'แจ้งปัญหา / ส่งข้อเสนอแนะ' : 'Report Bug / Send Feedback'}
+                <Bug className="w-4 h-4" />
+                {'Report Bug (with 20 Action Logs)'}
               </Button>
             </div>
           </section>
+
+          {/* Admin Dashboard view (visible to ewieboth@gmail.com) */}
+          {isAdmin && (
+            <div className="pt-6 border-t border-amber-400/20">
+              <AdminBugReports locale={locale} />
+            </div>
+          )}
+
+          {/* Close / Exit — only meaningful in PWA / standalone mode where the
+              browser's own close control is hidden. In a normal tab
+              window.close() is a no-op, so we don't render a dead button. */}
+          {isStandalone && (
+            <section className="pt-6">
+              <div className="p-4 rounded-2xl border border-white/10 bg-white/5 space-y-3">
+                <p className="text-sm text-white/60">
+                  {'Close the app (useful in PWA / standalone mode where the window close control is hidden).'}
+                </p>
+                <Button
+                  variant="secondary"
+                  className="w-full gap-2 justify-center"
+                  onClick={handleCloseApp}
+                >
+                  {'Close App'}
+                </Button>
+              </div>
+            </section>
+          )}
         </main>
+
+        <BugReportModal
+          isOpen={showBugModal}
+          onClose={() => setShowBugModal(false)}
+          userEmail={currentUser?.email || undefined}
+          locale={locale}
+        />
       </div>
     </RequireAuth>
   );

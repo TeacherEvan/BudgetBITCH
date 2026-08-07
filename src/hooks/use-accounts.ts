@@ -18,6 +18,7 @@ import { useConvexAuth } from "@convex-dev/auth/react";
 import { api } from "../../convex/_generated/api";
 import { PERSONAL_ACCOUNT_ID } from "@/lib/types/accounts";
 import type { LocalAccountMeta } from "@/lib/types/accounts";
+import type { BoardSnapshot } from "@/lib/types/budget";
 import {
   switchAccount as localSwitch,
   adoptRemoteAccount,
@@ -124,13 +125,26 @@ export function useNetWorth() {
 
   useDatabaseListener(load);
 
+  // Seed an empty snapshot when none exists yet, otherwise the first
+  // Add Asset / Add Liability on a fresh install is a silent no-op.
+  const baseSnapshot = useCallback((): NetWorthSnapshot => {
+    return (
+      snapshot ?? {
+        date: new Date().toISOString().slice(0, 10),
+        assets: [],
+        liabilities: [],
+        netWorth: 0,
+      }
+    );
+  }, [snapshot]);
+
   const addAsset = useCallback(async (asset: Asset) => {
-    if (!snapshot) return;
-    const newAssets = [...snapshot.assets, { ...asset, id: generateId() }];
-    const newSnapshot = { ...snapshot, assets: newAssets };
+    const base = baseSnapshot();
+    const newAssets = [...base.assets, { ...asset, id: generateId() }];
+    const newSnapshot = { ...base, assets: newAssets };
     await saveNetWorthSnapshot(newSnapshot);
     setSnapshot(newSnapshot);
-  }, [snapshot]);
+  }, [baseSnapshot]);
 
   const updateAsset = useCallback(async (asset: Asset) => {
     if (!snapshot) return;
@@ -149,12 +163,12 @@ export function useNetWorth() {
   }, [snapshot]);
 
   const addLiability = useCallback(async (liability: Liability) => {
-    if (!snapshot) return;
-    const newLiabilities = [...snapshot.liabilities, { ...liability, id: generateId() }];
-    const newSnapshot = { ...snapshot, liabilities: newLiabilities };
+    const base = baseSnapshot();
+    const newLiabilities = [...base.liabilities, { ...liability, id: generateId() }];
+    const newSnapshot = { ...base, liabilities: newLiabilities };
     await saveNetWorthSnapshot(newSnapshot);
     setSnapshot(newSnapshot);
-  }, [snapshot]);
+  }, [baseSnapshot]);
 
   const updateLiability = useCallback(async (liability: Liability) => {
     if (!snapshot) return;
@@ -402,7 +416,7 @@ export function useAccounts(): UseAccounts {
             data: Record<string, { value: unknown; updatedAt: number }> | null;
           } | null;
           if (board?.data) {
-            await adoptRemoteAccount(meta, board.data);
+            await adoptRemoteAccount(meta, board.data as unknown as BoardSnapshot);
           } else {
             await localSwitch(accountId);
           }

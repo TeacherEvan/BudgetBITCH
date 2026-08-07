@@ -5,6 +5,7 @@ import { useState, useMemo } from 'react';
 import { Plus, Trash2, Edit, FileSpreadsheet } from 'lucide-react';
 import { useExpenses, useBudgets } from '@/hooks/use-local-db';
 import { addExpense, generateId } from '@/lib/db/local-db';
+import { repeatExpense } from '@/lib/db/stores/expenses-store';
 import type { ExpenseEntry } from '@/lib/types/budget';
 import type { ParsedExpense } from '@/modules/budgeting/csv-import';
 import { ImportCsvModal } from './import-csv-modal';
@@ -15,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useCurrency } from '@/hooks/use-currency';
 import { usePurchaseNotes } from '@/hooks/use-purchase-notes';
+import { hasTrustworthyLineItems } from '@/modules/budgeting/line-item-rollup';
 import type { ExpenseCategory } from '@/lib/types/budget';
 
 interface Expense {
@@ -24,26 +26,28 @@ interface Expense {
   category: ExpenseCategory;
   date: string;
   note?: string;
-  source: 'manual' | 'voice' | 'import';
+  source: 'manual' | 'voice' | 'import' | 'receipt';
+  /** Date the entry was recorded in-app; distinct from `date` (purchase date). */
+  entryDate?: string;
 }
 
-const CATEGORIES: { value: ExpenseCategory; label: { th: string; en: string } }[] = [
-  { value: 'housing', label: { th: 'ที่อยู่อาศัย', en: 'Housing' } },
-  { value: 'transport', label: { th: 'การเดินทาง', en: 'Transport' } },
-  { value: 'food', label: { th: 'อาหาร', en: 'Food' } },
-  { value: 'utilities', label: { th: 'ค่าสาธารณูปโภค', en: 'Utilities' } },
-  { value: 'phone_internet', label: { th: 'โทรศัพท์/อินเตอร์เน็ต', en: 'Phone/Internet' } },
-  { value: 'subscriptions', label: { th: 'สมัครสมาชิก', en: 'Subscriptions' } },
-  { value: 'entertainment', label: { th: 'บันเทิง', en: 'Entertainment' } },
-  { value: 'healthcare', label: { th: 'สุขภาพ', en: 'Healthcare' } },
-  { value: 'insurance', label: { th: 'ประกันภัย', en: 'Insurance' } },
-  { value: 'debt', label: { th: 'หนี้สิน', en: 'Debt' } },
-  { value: 'savings', label: { th: 'เงินออม', en: 'Savings' } },
-  { value: 'other', label: { th: 'อื่นๆ', en: 'Other' } },
+const CATEGORIES: { value: ExpenseCategory; label: { en: string } }[] = [
+  { value: 'housing', label: { en: 'Housing' } },
+  { value: 'transport', label: { en: 'Transport' } },
+  { value: 'food', label: { en: 'Food' } },
+  { value: 'utilities', label: { en: 'Utilities' } },
+  { value: 'phone_internet', label: { en: 'Phone/Internet' } },
+  { value: 'subscriptions', label: { en: 'Subscriptions' } },
+  { value: 'entertainment', label: { en: 'Entertainment' } },
+  { value: 'healthcare', label: { en: 'Healthcare' } },
+  { value: 'insurance', label: { en: 'Insurance' } },
+  { value: 'debt', label: { en: 'Debt' } },
+  { value: 'savings', label: { en: 'Savings' } },
+  { value: 'other', label: { en: 'Other' } },
 ];
 
 interface ExpenseTrackerProps {
-  locale?: 'th' | 'en';
+  locale?: string;
 }
 
 interface FormData {
@@ -52,7 +56,7 @@ interface FormData {
   category: ExpenseCategory;
   date: string;
   note: string;
-  source: 'manual' | 'voice' | 'import';
+  source: 'manual' | 'voice' | 'import' | 'receipt';
 }
 
 export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
@@ -65,6 +69,14 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
   const [noteExpenseId, setNoteExpenseId] = useState<string | null>(null);
+  const [expandedItemIds, setExpandedItemIds] = useState<string[]>([]);
+  const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({ show: false, message: '', type: 'success' });
+
+  const toggleItemBreakdown = (id: string) => {
+    setExpandedItemIds(prev =>
+      prev.includes(id) ? prev.filter(existing => existing !== id) : [...prev, id]
+    );
+  };
   
   const [formData, setFormData] = useState<FormData>({
     merchant: '',
@@ -93,6 +105,8 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
 
   const handleImportRows = async (rows: ParsedExpense[]) => {
     // Persist each parsed row as an ExpenseEntry with a generated id.
+    // Errors propagate to ImportCsvModal.handleConfirm, which reports them
+    // instead of silently closing as if the import worked.
     await Promise.all(
       rows.map((row) =>
         addExpense({
@@ -145,6 +159,14 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
     remove(id);
   };
 
+  const handleRepeat = async (id: string) => {
+    const clone = await repeatExpense(id);
+    if (clone) {
+      // The list auto-refreshes via the IndexedDB mutation listener; surface a toast.
+      setToast({ show: true, message: `Repeated: ${clone.merchant} — ${clone.amount}`, type: 'success' });
+    }
+  };
+
   const resetForm = () => {
     setEditingId(null);
     setShowForm(false);
@@ -160,7 +182,7 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
 
   const categoryOptions = CATEGORIES.map(c => ({
     value: c.value,
-    label: locale === 'th' ? c.label.th : c.label.en,
+    label: c.label.en,
   }));
 
   return (
@@ -168,7 +190,7 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="text-lg font-semibold text-white flex items-center gap-2">
           <span className="text-xl">💸</span>
-          {locale === 'th' ? 'บันทึกค่าใช้จ่าย' : 'Expense Tracker'}
+          {'Expense Tracker'}
         </h3>
         <div className="flex gap-2">
           <Button
@@ -179,11 +201,11 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
             data-testid="import-csv-btn"
           >
             <FileSpreadsheet className="w-4 h-4" />
-            <span className="hidden @xs:inline">{locale === 'th' ? 'นำเข้า' : 'Import'}</span>
+            <span className="hidden @xs:inline">{'Import'}</span>
           </Button>
           <Button variant="primary" size="sm" onClick={() => { setEditingId(null); resetForm(); setShowForm(true); }} className="flex items-center">
             <Plus className="w-4 h-4 @xs:mr-1" />
-            <span className="hidden @xs:inline">{locale === 'th' ? 'เพิ่ม' : 'Add'}</span>
+            <span className="hidden @xs:inline">{'Add'}</span>
           </Button>
         </div>
       </div>
@@ -201,14 +223,14 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
           <form onSubmit={handleSubmit} className="space-y-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <Input
-                label={locale === 'th' ? 'รายการ' : 'Merchant'}
+                label={'Merchant'}
                 value={formData.merchant}
                 onChange={e => setFormData({ ...formData, merchant: e.target.value })}
-                placeholder={locale === 'th' ? 'เช่น Grab, Lotus' : 'e.g. Grab, Walmart'}
+                placeholder={'e.g. Grab, Walmart'}
                 required
               />
               <Input
-                label={locale === 'th' ? 'จำนวนเงิน' : 'Amount'}
+                label={'Amount'}
                 type="number"
                 step="0.01"
                 min="0"
@@ -218,29 +240,29 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
               />
             </div>
             <Select
-              label={locale === 'th' ? 'หมวดหมู่' : 'Category'}
+              label={'Category'}
               value={formData.category}
               onChange={e => setFormData({ ...formData, category: e.target.value as ExpenseCategory })}
               options={categoryOptions}
             />
             <Input
-              label={locale === 'th' ? 'วันที่' : 'Date'}
+              label={'Date'}
               type="date"
               value={formData.date}
               onChange={e => setFormData({ ...formData, date: e.target.value })}
             />
             <Input
-              label={locale === 'th' ? 'หมายเหตุ' : 'Note'}
+              label={'Note'}
               value={formData.note}
               onChange={e => setFormData({ ...formData, note: e.target.value })}
-              placeholder={locale === 'th' ? 'บันทึกเพิ่มเติม...' : 'Optional note...'}
+              placeholder={'Optional note...'}
             />
             <div className="flex gap-2">
               <Button type="submit" className="flex-1">
-                {editingId ? (locale === 'th' ? 'อัปเดต' : 'Update') : (locale === 'th' ? 'เพิ่ม' : 'Add')}
+                {editingId ? ('Update') : ('Add')}
               </Button>
               <Button type="button" variant="secondary" onClick={resetForm}>
-                {locale === 'th' ? 'ยกเลิก' : 'Cancel'}
+                {'Cancel'}
               </Button>
             </div>
           </form>
@@ -250,11 +272,11 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
       <div className="space-y-2">
         {loading ? (
           <div className="text-center py-8 text-white/50">
-            {locale === 'th' ? 'กำลังโหลด...' : 'Loading...'}
+            {'Loading...'}
           </div>
         ) : expenses.length === 0 ? (
           <div className="text-center py-8 text-white/50">
-            {locale === 'th' ? 'ยังไม่มีค่าใช้จ่าย เพิ่มรายการแรกได้เลย!' : 'No expenses yet. Add your first expense!'}
+            {'No expenses yet. Add your first expense!'}
           </div>
         ) : (
           <div className="space-y-2">
@@ -264,61 +286,118 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
                 const budget = categoryBudgets.get(expense.category);
                 const spent = categorySpending.get(expense.category) || 0;
                 const cat = CATEGORIES.find(c => c.value === expense.category);
-                const catLabel = locale === 'th' ? cat?.label.th : cat?.label.en;
+                const catLabel = cat?.label.en;
                 const overBudget = budget && spent > budget;
                 
                 const sourceIcon = expense.source === 'voice' ? '🎤' : 
                                   expense.source === 'import' ? '📥' : '✏️';
 
+                const lineItems = expense.lineItems ?? [];
+                const itemsReconcile = hasTrustworthyLineItems(expense);
+                const itemsExpanded = expandedItemIds.includes(expense.id);
+
                 return (
                   <div
                     key={expense.id}
-                    className="flex items-center gap-3 p-3 rounded-xl bg-black/30 border border-white/10"
+                    className="rounded-xl bg-black/30 border border-white/10"
                   >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-white truncate">{expense.merchant}</span>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/70">
-                          {catLabel || expense.category}
+                    <div className="flex items-center gap-3 p-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-white truncate">{expense.merchant}</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/70">
+                            {catLabel || expense.category}
+                          </span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-400">
+                            {sourceIcon}
+                          </span>
+                          {lineItems.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => toggleItemBreakdown(expense.id)}
+                              aria-expanded={itemsExpanded}
+                              aria-label={'Toggle line items'}
+                              data-testid={`toggle-line-items-${expense.id}`}
+                              className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/70 border border-white/10 hover:border-[rgba(201,150,12,0.4)] transition-colors"
+                            >
+                              🧾 {lineItems.length} {itemsExpanded ? '▴' : '▾'}
+                            </button>
+                          )}
+                          {overBudget && <span className="text-xs px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400">
+                            {'Over Budget'}
+                          </span>}
+                          {boardId && (
+                            <button
+                              type="button"
+                              onClick={() => setNoteExpenseId(expense.id)}
+                              aria-label={'Shared note'}
+                              className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${
+                                notes[expense.id]
+                                  ? 'bg-amber-400/20 text-amber-400 border-amber-400/30'
+                                  : 'bg-white/10 text-white/70 border-white/10 hover:border-[rgba(201,150,12,0.4)]'
+                              }`}
+                            >
+                              📝 {notes[expense.id] ? '✓' : ''}
+                            </button>
+                          )}
+                        </div>
+                        <p className="text-xs text-white/50 mt-0.5 truncate">
+                          {new Date(expense.date).toLocaleDateString('en-US')} • {formatCurrency(expense.amount, locale)}
+                          {expense.note && ` • ${expense.note}`}
+                          {notes[expense.id] && ` • 📝 ${notes[expense.id].note}`}
+                          {expense.entryDate && expense.entryDate !== expense.date && (
+                            <span className="text-white/40" data-testid={`entry-date-${expense.id}`}>
+                              {` • Entered ${expense.entryDate}`}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`font-mono text-white ${overBudget ? 'text-rose-400' : ''}`}>
+                          {formatCurrency(expense.amount, locale)}
                         </span>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-400">
-                          {sourceIcon}
-                        </span>
-                        {overBudget && <span className="text-xs px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400">
-                          {locale === 'th' ? 'เกินงบ' : 'Over Budget'}
-                        </span>}
-                        {boardId && (
-                          <button
-                            type="button"
-                            onClick={() => setNoteExpenseId(expense.id)}
-                            aria-label={locale === 'th' ? 'บันทึกการซื้อร่วม' : 'Shared note'}
-                            className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${
-                              notes[expense.id]
-                                ? 'bg-amber-400/20 text-amber-400 border-amber-400/30'
-                                : 'bg-white/10 text-white/70 border-white/10 hover:border-[rgba(201,150,12,0.4)]'
-                            }`}
-                          >
-                            📝 {notes[expense.id] ? '✓' : ''}
-                          </button>
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(expense)} aria-label="Edit">
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleRepeat(expense.id)} aria-label="Repeat purchase">
+                          <Plus className="w-4 h-4 text-emerald-400" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDelete(expense.id)} aria-label="Delete">
+                          <Trash2 className="w-4 h-4 text-rose-400" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {lineItems.length > 0 && itemsExpanded && (
+                      <div
+                        className="border-t border-white/10 px-3 py-2 space-y-1"
+                        data-testid={`expense-line-items-${expense.id}`}
+                      >
+                        {lineItems.map((item, index) => {
+                          const itemCat = CATEGORIES.find(c => c.value === item.category);
+                          return (
+                            <div
+                              key={`${expense.id}:item:${index}`}
+                              className="flex items-center gap-2 text-xs text-white/60"
+                            >
+                              <span className="text-white/30 font-mono">└</span>
+                              <span className="flex-1 min-w-0 truncate">{item.description}</span>
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/50 shrink-0">
+                                {itemCat?.label.en || item.category}
+                              </span>
+                              <span className="font-mono text-white/70 shrink-0">
+                                {formatCurrency(item.amount, locale)}
+                              </span>
+                            </div>
+                          );
+                        })}
+                        {!itemsReconcile && (
+                          <p className="text-[10px] text-white/40 pt-1">
+                            {`Items don't add up to the total — counted under ${catLabel || expense.category}.`}
+                          </p>
                         )}
                       </div>
-                      <p className="text-xs text-white/50 mt-0.5 truncate">
-                        {new Date(expense.date).toLocaleDateString(locale === 'th' ? 'th-TH' : 'en-US')} • {formatCurrency(expense.amount, locale)}
-                        {expense.note && ` • ${expense.note}`}
-                        {notes[expense.id] && ` • 📝 ${notes[expense.id].note}`}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`font-mono text-white ${overBudget ? 'text-rose-400' : ''}`}>
-                        {formatCurrency(expense.amount, locale)}
-                      </span>
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(expense)} aria-label="Edit">
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(expense.id)} aria-label="Delete">
-                        <Trash2 className="w-4 h-4 text-rose-400" />
-                      </Button>
-                    </div>
+                    )}
                   </div>
                 );
               })}
@@ -336,6 +415,12 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
           if (noteExpenseId) return setNote(noteExpenseId, note);
         }}
       />
+
+      {toast.show && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-emerald-500/90 text-white text-xs font-medium shadow-lg animate-in fade-in">
+          {toast.message}
+        </div>
+      )}
     </div>
   );
 }

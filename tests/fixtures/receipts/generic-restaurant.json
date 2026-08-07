@@ -1,0 +1,107 @@
+{
+  "id": "generic-restaurant",
+  "payload": {
+    "lines": [
+      {
+        "text": "THE RUSTIC BISTRO",
+        "conf": 93,
+        "y": 20,
+        "words": [
+          { "text": "THE", "conf": 94, "bbox": [10, 20, 50, 40] },
+          { "text": "RUSTIC", "conf": 93, "bbox": [60, 20, 130, 40] },
+          { "text": "BISTRO", "conf": 92, "bbox": [140, 20, 210, 40] }
+        ]
+      },
+      {
+        "text": "123 MAIN STREET",
+        "conf": 89,
+        "y": 45,
+        "words": [
+          { "text": "123", "conf": 90, "bbox": [10, 45, 40, 60] },
+          { "text": "MAIN", "conf": 89, "bbox": [50, 45, 90, 60] },
+          { "text": "STREET", "conf": 88, "bbox": [100, 45, 160, 60] }
+        ]
+      },
+      {
+        "text": "DATE: 2026-03-22",
+        "conf": 92,
+        "y": 70,
+        "words": [
+          { "text": "DATE:", "conf": 94, "bbox": [10, 70, 60, 85] },
+          { "text": "2026-03-22", "conf": 90, "bbox": [70, 70, 160, 85] }
+        ]
+      },
+      {
+        "text": "1x GRILLED SALMON $ 24.50",
+        "conf": 90,
+        "y": 100,
+        "words": [
+          { "text": "1x", "conf": 92, "bbox": [10, 100, 30, 115] },
+          { "text": "GRILLED", "conf": 90, "bbox": [40, 100, 110, 115] },
+          { "text": "SALMON", "conf": 89, "bbox": [120, 100, 180, 115] },
+          { "text": "$", "conf": 92, "bbox": [210, 100, 220, 115] },
+          { "text": "24.50", "conf": 87, "bbox": [230, 100, 280, 115] }
+        ]
+      },
+      {
+        "text": "2x ICED TEA $ 8.00",
+        "conf": 91,
+        "y": 120,
+        "words": [
+          { "text": "2x", "conf": 93, "bbox": [10, 120, 30, 135] },
+          { "text": "ICED", "conf": 91, "bbox": [40, 120, 80, 135] },
+          { "text": "TEA", "conf": 90, "bbox": [90, 120, 120, 135] },
+          { "text": "$", "conf": 92, "bbox": [210, 120, 220, 135] },
+          { "text": "8.00", "conf": 88, "bbox": [230, 120, 280, 135] }
+        ]
+      },
+      {
+        "text": "SUBTOTAL $ 32.50",
+        "conf": 92,
+        "y": 150,
+        "words": [
+          { "text": "SUBTOTAL", "conf": 94, "bbox": [10, 150, 90, 165] },
+          { "text": "$", "conf": 93, "bbox": [210, 150, 220, 165] },
+          { "text": "32.50", "conf": 89, "bbox": [230, 150, 280, 165] }
+        ]
+      },
+      {
+        "text": "TAX 10% $ 3.25",
+        "conf": 89,
+        "y": 170,
+        "words": [
+          { "text": "TAX", "conf": 91, "bbox": [10, 170, 40, 185] },
+          { "text": "10%", "conf": 89, "bbox": [50, 170, 80, 185] },
+          { "text": "$", "conf": 90, "bbox": [210, 170, 220, 185] },
+          { "text": "3.25", "conf": 86, "bbox": [230, 170, 280, 185] }
+        ]
+      },
+      {
+        "text": "AMOUNT DUE $ 35.75",
+        "conf": 93,
+        "y": 195,
+        "words": [
+          { "text": "AMOUNT", "conf": 95, "bbox": [10, 195, 70, 215] },
+          { "text": "DUE", "conf": 94, "bbox": [80, 195, 110, 215] },
+          { "text": "$", "conf": 93, "bbox": [210, 195, 220, 215] },
+          { "text": "35.75", "conf": 90, "bbox": [230, 195, 280, 215] }
+        ]
+      }
+    ],
+    "width": 300,
+    "height": 380,
+    "lang": "eng",
+    "engine": "tesseract.js@6",
+    "capturedAt": 1774180000000,
+    "countryHint": "US",
+    "currencyHint": "USD"
+  },
+  "expected": {
+    "total": 35.75,
+    "date": "2026-03-22",
+    "merchant": "THE RUSTIC BISTRO",
+    "currency": "USD",
+    "category": "dining",
+    "tax": 3.25
+  }
+}

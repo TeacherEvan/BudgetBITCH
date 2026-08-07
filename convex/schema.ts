@@ -28,7 +28,13 @@ export default defineSchema({
     data: v.any(),
     updatedAt: v.number(),
     updatedBy: v.id("users"),
-  }).index("by_boardId", ["boardId"]),
+  })
+    .index("by_boardId", ["boardId"])
+    // Needed by the account purge (Reset All Data): a couple board must be
+    // reachable from either member without an unbounded table scan, even when
+    // the user's userProfiles.linkedBoardId has already been cleared.
+    .index("by_memberA", ["memberA"])
+    .index("by_memberB", ["memberB"]),
 
   // Accounts feature: per-user account metadata (umbrella grouping + shareable invite).
   accounts: defineTable({
@@ -83,7 +89,30 @@ export default defineSchema({
   })
     .index("by_toUser_status", ["toUserId", "status"])
     .index("by_board", ["boardId"])
+    // Invites the user SENT — needed so an account purge can remove them
+    // without scanning the table.
+    .index("by_fromUser", ["fromUserId"])
     .index("by_token", ["token"]),
+
+  // Two-party consent for destructive item deletes on a shared board.
+  // Either member of a shared board may request deletion of an item; the
+  // DELETE ONLY EXECUTES once the OTHER member approves it. A requester can
+  // cancel their own pending request; an approver (the other member) can
+  // accept or reject. This prevents one user from unilaterally destroying
+  // shared financial data.
+  pendingDeletes: defineTable({
+    boardId: v.string(),
+    store: v.string(), // 'expenses' | 'incomes' | 'bills'
+    itemId: v.string(),
+    requestedBy: v.id("users"),
+    requestedAt: v.number(),
+    status: v.string(), // 'pending' | 'approved' | 'rejected' | 'cancelled'
+    // Snapshot of the deleted item so approval can apply it deterministically
+    // on the board (and re-push), even if the item was later edited locally.
+    itemSnapshot: v.optional(v.any()),
+  })
+    .index("by_board_status", ["boardId", "status"])
+    .index("by_requestedBy", ["requestedBy"]),
 
   dailySnapshots: defineTable({
     userId: v.id("users"),
@@ -165,16 +194,17 @@ export default defineSchema({
     message: v.string(),
     email: v.optional(v.string()),
     context: v.optional(v.string()),
+    actionLogs: v.optional(v.array(v.string())),
     userAgent: v.optional(v.string()),
     locale: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_createdAt", ["createdAt"]),
 
-  // Parsed receipts from AI scanner — linked to user + account for audit trail.
+  // Parsed receipts from AI or scraper bot — linked to user + account for audit trail.
   receipts: defineTable({
     userId: v.id("users"),
     accountId: v.optional(v.string()), // optional: which account/board this belongs to
-    // Parsed fields from Gemini
+    // Parsed fields
     amount: v.number(),
     merchant: v.string(),
     category: v.string(),
@@ -186,8 +216,67 @@ export default defineSchema({
     // Processing metadata
     parsedAt: v.number(),
     geminiModel: v.string(), // e.g. "gemini-2.5-flash"
+    // Scraper bot fields (optional for backwards compatibility)
+    clientDraftId: v.optional(v.string()),
+    engine: v.optional(v.string()), // 'scraper-bot' | 'gemini'
+    templateId: v.optional(v.string()),
+    confidence: v.optional(v.any()),
+    evidence: v.optional(v.any()),
+    ocrText: v.optional(v.string()),
+    lineItems: v.optional(v.any()),
+    tax: v.optional(v.number()),
+    currency: v.optional(v.string()),
+    questionsAsked: v.optional(v.any()),
+    corrections: v.optional(v.any()),
+    status: v.optional(v.string()), // 'draft' | 'confirmed'
+    // Ingestion source: "app" (default, from the web app) | "line" (from the LINE receipt bot)
+    source: v.optional(v.string()),
   })
     .index("by_user", ["userId"])
     .index("by_user_and_account", ["userId", "accountId"])
-    .index("by_parsedAt", ["parsedAt"]),
+    .index("by_parsedAt", ["parsedAt"])
+    .index("by_clientDraftId", ["clientDraftId"]),
+
+  // LINE (LIFF) identity mapping: links a LINE user ID to a Convex user/account
+  // so the LINE receipt-bot webhook can resolve the correct owner for an upload.
+  lineUsers: defineTable({
+    lineUserId: v.string(),
+    userId: v.id("users"),
+    accountId: v.optional(v.string()),
+    linkedAt: v.number(),
+  })
+    .index("by_lineUserId", ["lineUserId"])
+    // Purge path: unlink every LINE identity bound to a user.
+    .index("by_user", ["userId"]),
+
+  // Merchant receipt layout templates
+  receiptTemplates: defineTable({
+    templateId: v.string(),
+    version: v.string(),
+    country: v.string(),
+    fingerprint: v.any(),
+    fields: v.any(),
+    currency: v.optional(v.string()),
+    vatRate: v.optional(v.number()),
+    dateOrder: v.optional(v.string()),
+    enabled: v.boolean(),
+    stats: v.optional(v.any()),
+    updatedAt: v.number(),
+  })
+    .index("by_templateId", ["templateId"])
+    .index("by_country", ["country"])
+    .index("by_enabled", ["enabled"]),
+
+  // User-learned merchant aliases and category overrides
+  merchantAliases: defineTable({
+    userId: v.id("users"),
+    normalised: v.string(),
+    displayName: v.string(),
+    category: v.string(),
+    hits: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user_and_normalised", ["userId", "normalised"])
+    // Purge path: delete every alias for a user without a table scan.
+    .index("by_user", ["userId"]),
 });

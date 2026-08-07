@@ -7,6 +7,7 @@ import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { ProgressRing } from '@/components/ui/progress-ring';
 import { Card } from '@/components/ui/card';
+import { notify } from '@/lib/ui/notice';
 import { CRITICAL_EXPENSES, CriticalExpenseKey } from '@/lib/types/budget';
 import { calculateCompoundProjection, getSuggestedCriticalExpenseCost } from '@/lib/utils/compound-calculator';
 import { useCurrency } from '@/hooks/use-currency';
@@ -16,7 +17,7 @@ import { useWizardProfile } from '@/hooks/use-local-db';
 interface CriticalExpensesModalProps {
   isOpen: boolean;
   onClose: () => void;
-  locale: 'th' | 'en';
+  locale: string;
 }
 
 export function CriticalExpensesModal({ isOpen, onClose, locale }: CriticalExpensesModalProps) {
@@ -49,16 +50,21 @@ export function CriticalExpensesModal({ isOpen, onClose, locale }: CriticalExpen
     if (amount <= 0) return;
 
     const projection = calculateCompoundProjection({ monthlySavings: amount });
-    
-    await saveCommitment({
-      month: new Date().toISOString().slice(0, 7),
-      expenseKey: selectedExpense,
-      estimatedMonthlyCost: amount,
-      committedAt: new Date().toISOString(),
-      status: 'active',
-      compoundProjection: projection,
-    });
-    onClose();
+
+    try {
+      await saveCommitment({
+        month: new Date().toISOString().slice(0, 7),
+        expenseKey: selectedExpense,
+        estimatedMonthlyCost: amount,
+        committedAt: new Date().toISOString(),
+        status: 'active',
+        compoundProjection: projection,
+      });
+      onClose();
+    } catch (e) {
+      console.error('Saving commitment failed:', e);
+      notify('Could not save your commitment. Please try again.', 'error');
+    }
   };
 
   const currentCommitment = commitment;
@@ -76,10 +82,8 @@ export function CriticalExpensesModal({ isOpen, onClose, locale }: CriticalExpen
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={locale === 'th' ? 'ค่าใช้จ่ายที่ควรลด' : 'Cut One Expense This Month'}
-      description={locale === 'th' 
-        ? 'เลือกหนึ่งรายการที่จะลด และดูเงินที่จะประหยัดได้' 
-        : 'Pick one expense to cut and see your savings'}
+      title={'Cut One Expense This Month'}
+      description={'Pick one expense to cut and see your savings'}
       size="lg"
       showCloseButton={true}
     >
@@ -95,7 +99,7 @@ export function CriticalExpensesModal({ isOpen, onClose, locale }: CriticalExpen
             <div className="flex items-center justify-center gap-3 mb-4">
               <Target className="h-8 w-8 text-amber-400" />
               <h3 className="text-xl font-semibold text-white">
-                {locale === 'th' ? 'คุณได้เลือกแล้วในเดือนนี้' : 'Already Committed This Month'}
+                {'Already Committed This Month'}
               </h3>
             </div>
             
@@ -109,13 +113,13 @@ export function CriticalExpensesModal({ isOpen, onClose, locale }: CriticalExpen
               />
               <div className="text-left">
                 <p className="text-2xl font-bold text-amber-400 font-mono">
-                  {CRITICAL_EXPENSES[committedExpense][locale === 'th' ? 'labelTh' : 'labelEn']}
+                  {CRITICAL_EXPENSES[committedExpense]['labelEn']}
                 </p>
                 <p className="text-white/70">
-                  {locale === 'th' ? 'คัดลอก' : 'Cut'} ฿{currentCommitment?.estimatedMonthlyCost?.toLocaleString()}/mo
+                  {'Cut'} {currentCommitment?.estimatedMonthlyCost?.toLocaleString()}/mo
                 </p>
                 <p className="text-sm text-white/50 mt-1">
-                  {locale === 'th' ? 'จะได้' : 'Will save'} 
+                  {'Will save'} 
                   {formatCurrency(currentCommitment?.compoundProjection.oneYear || 0, locale)}/yr
                 </p>
               </div>
@@ -143,7 +147,7 @@ export function CriticalExpensesModal({ isOpen, onClose, locale }: CriticalExpen
             </div>
 
             <Button variant="secondary" className="w-full mt-4" onClick={() => { clearCommitment(); }}>
-              {locale === 'th' ? 'เปลี่ยนรายการ' : 'Change Selection'}
+              {'Change Selection'}
             </Button>
           </Card>
         </div>
@@ -154,12 +158,10 @@ export function CriticalExpensesModal({ isOpen, onClose, locale }: CriticalExpen
             <Calculator className="h-8 w-8 text-amber-400" />
             <div>
               <p className="font-semibold text-white">
-                {locale === 'th' ? 'กฎ: เลือกแค่ 1 อย่างต่อเดือน' : 'Rule: Pick ONLY 1 per month'}
+                {'Rule: Pick ONLY 1 per month'}
               </p>
               <p className="text-sm text-white/60">
-                {locale === 'th' 
-                  ? 'ลงทุนเงินที่ประหยัดได้ที่อัตรา 7% ต่อปี' 
-                  : 'Invest savings at 7% annual return'}
+                {'Invest savings at 7% annual return'}
               </p>
             </div>
           </div>
@@ -188,20 +190,19 @@ export function CriticalExpensesModal({ isOpen, onClose, locale }: CriticalExpen
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-white">
-                          {locale === 'th' ? expense.labelTh : expense.labelEn}
+                          {expense.labelEn}
                         </span>
                         {isSelected && (
                           <span className="text-xs px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 font-medium">
-                            {locale === 'th' ? 'เลือกแล้ว' : 'Selected'}
+                            {'Selected'}
                           </span>
                         )}
                       </div>
-                      <p className="mt-1 text-sm text-white/60">{expense.thaiContext}</p>
                       
                       {suggested > 0 && (
                         <div className="mt-2 flex items-center gap-2">
                           <span className="text-xs text-white/50">
-                            {locale === 'th' ? 'แนะนำ' : 'Suggested'}:
+                            {'Suggested'}:
                           </span>
                           <span className="text-sm font-mono text-amber-400">
                             {formatCurrency(suggested, locale)}/mo
@@ -226,8 +227,8 @@ export function CriticalExpensesModal({ isOpen, onClose, locale }: CriticalExpen
           {selectedExpense && (
             <Card variant="strong" className="p-3 sm:p-4">
               <h4 className="font-semibold text-white mb-4">
-                {locale === 'th' ? 'ตั้งค่าจำนวนเงิน' : 'Set Amount'}:
-                {CRITICAL_EXPENSES[selectedExpense][locale === 'th' ? 'labelTh' : 'labelEn']}
+                {'Set Amount'}:
+                {CRITICAL_EXPENSES[selectedExpense]['labelEn']}
               </h4>
               
               <div className="space-y-4">
@@ -240,10 +241,10 @@ export function CriticalExpensesModal({ isOpen, onClose, locale }: CriticalExpen
                     value={customAmount}
                     onChange={(e) => setCustomAmount(e.target.value)}
                     className="w-full text-2xl font-mono text-center bg-black/30 border border-white/10 rounded-xl px-4 py-4 text-white placeholder:text-white/30 outline-none focus:border-amber-400"
-                    placeholder={locale === 'th' ? 'เช่น 3000' : 'e.g. 3000'}
+                    placeholder={'e.g. 3000'}
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50">
-                    {locale === 'th' ? '฿' : '$'}
+                    {'$'}
                   </span>
                 </div>
 
@@ -270,19 +271,19 @@ export function CriticalExpensesModal({ isOpen, onClose, locale }: CriticalExpen
                       <div className="text-xl font-bold text-amber-400 font-mono">
                         {formatCurrency(calculateCompoundProjection({ monthlySavings: Number(customAmount) }).oneYear, locale)}
                       </div>
-                      <div className="text-xs text-white/60">{locale === 'th' ? '1 ปี' : '1 Year'}</div>
+                      <div className="text-xs text-white/60">{'1 Year'}</div>
                     </div>
                     <div className="bg-black/30 rounded-xl p-3">
                       <div className="text-xl font-bold text-amber-400 font-mono">
                         {formatCurrency(calculateCompoundProjection({ monthlySavings: Number(customAmount) }).fiveYears, locale)}
                       </div>
-                      <div className="text-xs text-white/60">{locale === 'th' ? '5 ปี' : '5 Years'}</div>
+                      <div className="text-xs text-white/60">{'5 Years'}</div>
                     </div>
                     <div className="bg-black/30 rounded-xl p-3">
                       <div className="text-xl font-bold text-amber-400 font-mono">
                         {formatCurrency(calculateCompoundProjection({ monthlySavings: Number(customAmount) }).tenYears, locale)}
                       </div>
-                      <div className="text-xs text-white/60">{locale === 'th' ? '10 ปี' : '10 Years'}</div>
+                      <div className="text-xs text-white/60">{'10 Years'}</div>
                     </div>
                   </div>
                 )}
@@ -294,7 +295,7 @@ export function CriticalExpensesModal({ isOpen, onClose, locale }: CriticalExpen
                   onClick={handleSave}
                   disabled={!customAmount || Number(customAmount) <= 0}
                 >
-                  {locale === 'th' ? 'ยืนยันและเริ่มลด' : 'Commit & Start Cutting'}
+                  {'Commit & Start Cutting'}
                 </Button>
               </div>
             </Card>

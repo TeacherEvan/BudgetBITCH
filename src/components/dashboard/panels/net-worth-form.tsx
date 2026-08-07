@@ -12,18 +12,18 @@ interface NetWorthFormProps {
   isOpen: boolean;
   onClose: () => void;
   isEditing: boolean;
-  locale: 'th' | 'en';
+  locale: string;
   title: string;
   initialData: AssetInput | LiabilityInput;
   onSubmit: (data: AssetInput | LiabilityInput) => void;
   type: 'asset' | 'liability';
 }
 
-export function NetWorthForm({ isOpen, onClose, isEditing, locale, title, initialData, onSubmit, type }: NetWorthFormProps) {
+export function NetWorthForm({ isOpen, onClose, isEditing, title, initialData, onSubmit, type }: NetWorthFormProps) {
   const [formData, setFormData] = useState<AssetInput | LiabilityInput>(initialData);
 
-  const assetTypeOptions = ASSET_TYPES.map(t => ({ value: t.value, label: locale === 'th' ? t.label.th : t.label.en }));
-  const liabilityTypeOptions = LIABILITY_TYPES.map(t => ({ value: t.value, label: locale === 'th' ? t.label.th : t.label.en }));
+  const assetTypeOptions = ASSET_TYPES.map(t => ({ value: t.value, label: t.label.en }));
+  const liabilityTypeOptions = LIABILITY_TYPES.map(t => ({ value: t.value, label: t.label.en }));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,14 +43,14 @@ export function NetWorthForm({ isOpen, onClose, isEditing, locale, title, initia
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
-            label={locale === 'th' ? 'ชื่อ' : 'Name'}
+            label={'Name'}
             value={formData.name}
             onChange={e => setFormData({ ...formData, name: e.target.value })}
             required
             autoFocus
           />
           <Input
-            label={locale === 'th' ? 'มูลค่า' : 'Value'}
+            label={'Value'}
             type="number"
             step="0.01"
             min="0"
@@ -59,17 +59,17 @@ export function NetWorthForm({ isOpen, onClose, isEditing, locale, title, initia
             required
           />
           <Select
-            label={locale === 'th' ? 'ประเภท' : 'Type'}
+            label={'Type'}
             value={formData.type}
             onChange={e => setFormData({ ...formData, type: e.target.value as AssetInput['type'] })}
             options={assetTypeOptions}
           />
           <div className="flex gap-2 pt-2">
             <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
-              {locale === 'th' ? 'ยกเลิก' : 'Cancel'}
+              {'Cancel'}
             </Button>
             <Button type="submit" className="flex-1">
-              {isEditing ? (locale === 'th' ? 'อัปเดต' : 'Update') : (locale === 'th' ? 'เพิ่ม' : 'Add')}
+              {isEditing ? ('Update') : ('Add')}
             </Button>
           </div>
         </form>
@@ -88,14 +88,14 @@ export function NetWorthForm({ isOpen, onClose, isEditing, locale, title, initia
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
-          label={locale === 'th' ? 'ชื่อ' : 'Name'}
+          label={'Name'}
           value={formData.name}
           onChange={e => setFormData({ ...formData, name: e.target.value })}
           required
           autoFocus
         />
         <Input
-          label={locale === 'th' ? 'จำนวนเงิน' : 'Value'}
+          label={'Value'}
           type="number"
           step="0.01"
           min="0"
@@ -104,17 +104,17 @@ export function NetWorthForm({ isOpen, onClose, isEditing, locale, title, initia
           required
         />
         <Select
-          label={locale === 'th' ? 'ประเภท' : 'Type'}
+          label={'Type'}
           value={formData.type}
           onChange={e => setFormData({ ...formData, type: e.target.value as LiabilityInput['type'] })}
           options={liabilityTypeOptions}
         />
         <div className="flex gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
-            {locale === 'th' ? 'ยกเลิก' : 'Cancel'}
+            {'Cancel'}
           </Button>
           <Button type="submit" className="flex-1">
-            {isEditing ? (locale === 'th' ? 'อัปเดต' : 'Update') : (locale === 'th' ? 'เพิ่ม' : 'Add')}
+            {isEditing ? ('Update') : ('Add')}
           </Button>
         </div>
       </form>

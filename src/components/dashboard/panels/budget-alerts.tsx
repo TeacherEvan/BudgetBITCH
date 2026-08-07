@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import type { BudgetCategory, ExpenseEntry } from '@/lib/types/budget';
 
 interface BudgetAlertsProps {
-  locale?: 'th' | 'en';
+  locale?: string;
 }
 
 const ICONS = {
@@ -53,9 +53,7 @@ export function BudgetAlerts({ locale = 'en' }: BudgetAlertsProps) {
     return (
       <Card className="p-4 text-center">
         <p className="text-white/50">
-          {locale === 'th' 
-            ? '👋 สวัสดี! เพื่อดูสุขภาพงบประมาณ ให้ทำแบบสอบถามตั้งค่า 2 นาทีให้เสร็จก่อน → ไปที่ตั้งค่า'
-            : '👋 Hey! To see your budget health, finish the quick 2-minute setup first → Go to Setup'}
+          {'👋 Hey! To see your budget health, finish the quick 2-minute setup first → Go to Setup'}
         </p>
         <Button
           variant="secondary"
@@ -63,7 +61,7 @@ export function BudgetAlerts({ locale = 'en' }: BudgetAlertsProps) {
           className="mt-3"
           onClick={() => { window.location.href = '/wizard'; }}
         >
-          {locale === 'th' ? 'ไปตั้งค่า' : 'Go to Setup'}
+          {'Go to Setup'}
         </Button>
       </Card>
     );
@@ -83,7 +81,7 @@ export function BudgetAlerts({ locale = 'en' }: BudgetAlertsProps) {
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-white flex items-center gap-2">
           <TrendingUp className="text-amber-400" />
-          {locale === 'th' ? 'การแจ้งเตือนงบประมาณ' : 'Budget Alerts'}
+          {'Budget Alerts'}
         </h3>
         <div className="flex items-center gap-2">
           {criticalCount > 0 && (
@@ -101,15 +99,15 @@ export function BudgetAlerts({ locale = 'en' }: BudgetAlertsProps) {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 @sm:grid-cols-3 gap-3 mb-4">
         <Card className="p-3 bg-amber-400/10 border-amber-400/30">
-          <p className="text-xs text-amber-400">{locale === 'th' ? 'งบประมาณรวม' : 'Total Budget'}</p>
+          <p className="text-xs text-amber-400">{'Total Budget'}</p>
           <p className="font-mono text-lg text-white">{formatCurrency(summary.totalBudget, locale)}</p>
         </Card>
         <Card className="p-3 bg-rose-400/10 border-rose-400/30">
-          <p className="text-xs text-rose-400">{locale === 'th' ? 'ใช้ไปแล้ว' : 'Spent'}</p>
+          <p className="text-xs text-rose-400">{'Spent'}</p>
           <p className="font-mono text-lg text-white">{formatCurrency(summary.totalSpent, locale)}</p>
         </Card>
         <Card className="p-3 bg-emerald-400/10 border-emerald-400/30">
-          <p className="text-xs text-emerald-400">{locale === 'th' ? 'คงเหลือ' : 'Remaining'}</p>
+          <p className="text-xs text-emerald-400">{'Remaining'}</p>
           <p className="font-mono text-lg text-white">{formatCurrency(summary.totalRemaining, locale)}</p>
         </Card>
       </div>
@@ -120,9 +118,7 @@ export function BudgetAlerts({ locale = 'en' }: BudgetAlertsProps) {
           <Card className="p-6 text-center">
             <CheckCircle className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
             <p className="text-white/60">
-              {locale === 'th' 
-                ? 'ยังไม่มีการแจ้งเตือน งบประมาณดูดี'
-                : 'No alerts yet. Budget looking good!'}
+              {'No alerts yet. Budget looking good!'}
             </p>
           </Card>
         ) : (
@@ -163,15 +159,15 @@ export function BudgetAlerts({ locale = 'en' }: BudgetAlertsProps) {
       <div className="grid grid-cols-1 @sm:grid-cols-3 gap-2 text-center pt-2 border-t border-white/10">
         <div className={summary.categoriesOverBudget > 0 ? 'text-rose-400' : 'text-white/50'}>
           <p className="text-2xl font-bold">{summary.categoriesOverBudget}</p>
-          <p className="text-xs">{locale === 'th' ? 'เกินงบ' : 'Over Budget'}</p>
+          <p className="text-xs">{'Over Budget'}</p>
         </div>
         <div className={summary.categoriesNearLimit > 0 ? 'text-amber-400' : 'text-white/50'}>
           <p className="text-2xl font-bold">{summary.categoriesNearLimit}</p>
-          <p className="text-xs">{locale === 'th' ? 'ใกล้เต็ม' : 'Near Limit'}</p>
+          <p className="text-xs">{'Near Limit'}</p>
         </div>
         <div className="text-emerald-400">
           <p className="text-2xl font-bold">{summary.categoriesOnTrack}</p>
-          <p className="text-xs">{locale === 'th' ? 'อยู่ในงบ' : 'On Track'}</p>
+          <p className="text-xs">{'On Track'}</p>
         </div>
       </div>
     </div>

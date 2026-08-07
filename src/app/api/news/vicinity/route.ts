@@ -3,40 +3,24 @@ import Parser from 'rss-parser';
 import { resolveVicinityFeeds, VicinityFeedWithMeta } from '@/lib/news/vicinity-resolver';
 import type { NewsItem } from '@/lib/types/budget';
 
+export const dynamic = 'force-dynamic';
+
 const parser = new Parser();
 
-function getActionableText(item: { title: string; category: string }, locale: 'th' | 'en'): string | undefined {
+function getActionableText(item: { title: string; category: string }): string | undefined {
   const lower = item.title.toLowerCase();
 
-  if (locale === 'th') {
-    if (lower.includes('fuel') || lower.includes('น้ำมัน') || lower.includes('gas') || lower.includes('diesel')) {
-      return 'เช็คราคาน้ำมันก่อนเติม';
-    }
-    if (lower.includes('1+1') || lower.includes('buy 1') || lower.includes('ซื้อ 1 แถม 1')) {
-      return 'เจอโปรโมชั่น 1+1 - จัดซื้อได้เลย';
-    }
-    if (lower.includes('discount') || lower.includes('sale') || lower.includes('ลดราคา') || lower.includes('โปรโมชั่น')) {
-      return 'มีส่วนลด - พิจารณาซื้อ';
-    }
-    if (lower.includes('bts') || lower.includes('mrt') || lower.includes('บีทีเอส') || lower.includes('บัตรประจำเดือน')) {
-      return 'เช็คบัตรประจำเดือนประหยัดกว่าซื้อรายวัน';
-    }
-    if (lower.includes('electricity') || lower.includes('ค่าไฟ')) {
-      return 'ตรวจสอบค่าไฟ - อาจมีการปรับราคา';
-    }
-  } else {
-    if (lower.includes('fuel') || lower.includes('gas') || lower.includes('diesel') || lower.includes('petrol')) {
-      return 'Check fuel prices before filling up';
-    }
-    if (lower.includes('1+1') || lower.includes('buy 1 get 1') || lower.includes('buy one get one')) {
-      return 'Found 1+1 deal - buy now';
-    }
-    if (lower.includes('discount') || lower.includes('sale') || lower.includes('promo') || lower.includes('offer')) {
-      return 'Discount available - consider buying';
-    }
-    if (lower.includes('electricity') || lower.includes('power bill')) {
-      return 'Check electricity rates - prices may change';
-    }
+  if (lower.includes('fuel') || lower.includes('gas') || lower.includes('diesel') || lower.includes('petrol')) {
+    return 'Check fuel prices before filling up';
+  }
+  if (lower.includes('1+1') || lower.includes('buy 1 get 1') || lower.includes('buy one get one')) {
+    return 'Found 1+1 deal - buy now';
+  }
+  if (lower.includes('discount') || lower.includes('sale') || lower.includes('promo') || lower.includes('offer')) {
+    return 'Discount available - consider buying';
+  }
+  if (lower.includes('electricity') || lower.includes('power bill')) {
+    return 'Check electricity rates - prices may change';
   }
   return undefined;
 }
@@ -45,7 +29,7 @@ async function fetchFeedItems(feed: VicinityFeedWithMeta): Promise<NewsItem[]> {
   try {
     const parsed = await parser.parseURL(feed.url);
     return parsed.items.map(parsedItem => {
-      const actionable = getActionableText({ title: parsedItem.title || '', category: feed.category }, feed.locale);
+      const actionable = getActionableText({ title: parsedItem.title || '', category: feed.category });
       return {
         title: parsedItem.title || 'Untitled',
         link: parsedItem.link || '',

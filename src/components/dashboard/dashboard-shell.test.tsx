@@ -21,6 +21,7 @@ vi.mock('@/hooks/use-local-db', () => ({
   useWizardProfile: () => ({ profile: null, loading: false }),
   useBudgets: () => ({ budgets: [], loading: false, save: vi.fn(), get: vi.fn() }),
   useBills: () => ({ bills: [], loading: false, add: vi.fn(), update: vi.fn(), remove: vi.fn() }),
+  useExpenses: () => ({ expenses: [], loading: false, add: vi.fn(), remove: vi.fn(), update: vi.fn() }),
 }));
 
 vi.mock('@/hooks/use-critical-expense', () => ({
@@ -37,15 +38,29 @@ vi.mock('@/components/ui/sync-status-indicator', () => ({
 
 vi.mock('lottie-react', () => ({
   __esModule: true,
-  default: ({ animationData: _animationData, ...props }: { animationData: unknown; [key: string]: unknown }) => (
-    <div data-testid="lottie-animation" {...props} />
-  ),
-  Lottie: ({ animationData: _animationData, ...props }: { animationData: unknown; [key: string]: unknown }) => (
-    <div data-testid="lottie-animation" {...props} />
-  ),
+  default: ({ animationData, ...props }: { animationData?: unknown; [key: string]: unknown }) => {
+    void animationData;
+    return <div data-testid="lottie-animation" {...props} />;
+  },
+  Lottie: ({ animationData, ...props }: { animationData?: unknown; [key: string]: unknown }) => {
+    void animationData;
+    return <div data-testid="lottie-animation" {...props} />;
+  },
   LottiePlayer: () => null,
   useLottie: () => null,
   useLottieInteractivity: () => null,
+}));
+
+// Mock convex/react so the shell test isolates panel switching, not the
+// receipts data layer (ReceiptDraftsList is rendered inside the shell).
+vi.mock('convex/react', () => ({
+  useQuery: () => undefined,
+  useMutation: () => vi.fn(),
+}));
+
+// ReceiptDraftsList imports addExpense; stub it so it no-ops in the shell test.
+vi.mock('@/lib/db/stores/expenses-store', () => ({
+  addExpense: vi.fn(),
 }));
 
 // The AccountSwitcher child uses useAccounts (Convex); mock it so the shell
@@ -72,14 +87,9 @@ vi.mock('@/hooks/use-accounts', () => ({
 
 // Mock panel modules so the test only exercises the shell's mobile panel switching,
 // not the panels' internal data hooks. Factories must be self-contained (vi.mock is hoisted).
-vi.mock('@/components/dashboard/panels/expense-tracker', () => ({
-  ExpenseTracker: () => {
-    return React.createElement('div', null, 'Expenses');
-  }
-}));
-vi.mock('@/components/dashboard/panels/budget-visual', () => ({
-  BudgetVisual: () => {
-    return React.createElement('div', null, 'Budget');
+vi.mock('@/components/dashboard/panels/spending-panel', () => ({
+  SpendingPanel: () => {
+    return React.createElement('div', null, 'Spending');
   }
 }));
 vi.mock('@/components/dashboard/panels/savings-goals', () => ({
@@ -138,19 +148,19 @@ describe('DashboardShell (mobile)', () => {
     })
   })
 
-  it('renders exactly one panel card in the mobile region by default (budget)', () => {
+  it('renders exactly one panel card in the mobile region by default (spending)', () => {
     renderShell()
     const mobileRegion = screen.getByTestId('mobile-panels')
     const cards = within(mobileRegion).getAllByTestId('panel-card')
     expect(cards).toHaveLength(1)
-    expect(cardTitle(cards[0])).toMatch(/budget/i)
+    expect(cardTitle(cards[0])).toMatch(/spending/i)
   })
 
   it('swaps the single rendered mobile panel when a bottom tab is clicked', () => {
     renderShell()
     const mobileRegion = screen.getByTestId('mobile-panels')
     expect(within(mobileRegion).getAllByTestId('panel-card')).toHaveLength(1)
-    expect(cardTitle(within(mobileRegion).getByTestId('panel-card'))).toMatch(/budget/i)
+    expect(cardTitle(within(mobileRegion).getByTestId('panel-card'))).toMatch(/spending/i)
 
     fireEvent.click(screen.getByTestId('mobile-tab-goals'))
 
@@ -164,9 +174,9 @@ describe('DashboardShell (mobile)', () => {
     const sheet = screen.getByTestId('mobile-sheet');
     // Cut One Expense lives in the mobile sheet (primary mobile access point).
     expect(within(sheet).getByRole('button', { name: /pick one expense to cut this month/i })).toBeInTheDocument();
-    // All 12 panels are reachable from the sheet, plus the account switcher.
-    // 16 = close(X) + Cut One + Market Watch + AccountSwitcher + 12 panels.
-    expect(within(sheet).getAllByRole('button')).toHaveLength(16);
+    // All 11 panels are reachable from the sheet, plus the account switcher.
+    // 15 = close(X) + Cut One + Market Watch + AccountSwitcher + 11 panels.
+    expect(within(sheet).getAllByRole('button')).toHaveLength(15);
   });
 
   it('does not render the floating FAB', () => {

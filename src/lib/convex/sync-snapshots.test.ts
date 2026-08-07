@@ -2,6 +2,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as localDb from '@/lib/db/local-db';
 
+interface SyncQueueItem {
+  id?: number;
+  data: unknown;
+  timestamp: number;
+}
+
+let syncQueueStore: SyncQueueItem[] = [];
+let autoIncId = 1;
+
 vi.mock('@/lib/db/local-db', () => ({
   getWizardProfile: vi.fn(),
   getExpenses: vi.fn(),
@@ -9,9 +18,24 @@ vi.mock('@/lib/db/local-db', () => ({
   getLatestNetWorthSnapshot: vi.fn(),
   getCriticalExpenseCommitment: vi.fn(),
   getCurrentAccountId: vi.fn().mockResolvedValue('personal'),
-  getDB: vi.fn().mockResolvedValue({
-    getAll: vi.fn().mockResolvedValue([]),
-  }),
+  getDB: vi.fn().mockImplementation(async () => ({
+    getAll: vi.fn().mockImplementation(async (store: string) => {
+      if (store === 'syncQueue') return syncQueueStore;
+      return [];
+    }),
+    add: vi.fn().mockImplementation(async (store: string, val: SyncQueueItem) => {
+      if (store === 'syncQueue') {
+        const item = { ...val, id: autoIncId++ };
+        syncQueueStore.push(item);
+        return item.id;
+      }
+    }),
+    delete: vi.fn().mockImplementation(async (store: string, id: number) => {
+      if (store === 'syncQueue') {
+        syncQueueStore = syncQueueStore.filter((i) => i.id !== id);
+      }
+    }),
+  })),
   USER_DATA_STORES: [
     'wizardProfile',
     'expenses',
@@ -22,6 +46,7 @@ vi.mock('@/lib/db/local-db', () => ({
     'netWorthSnapshots',
     'debts',
     'criticalExpenseCommitments',
+    'syncQueue',
   ],
 }));
 
@@ -29,9 +54,7 @@ vi.mock('@/lib/db/accountStorage', () => ({
   getCurrentAccountId: vi.fn().mockResolvedValue('personal'),
 }));
 
-// We cannot easily mock the private getConvexClient, so for the success-path
-// assertion we just confirm gatherSnapshotData runs the data-gathering once.
-import { gatherSnapshotData, syncDailySnapshot } from './sync-snapshots';
+import { gatherSnapshotData, syncDailySnapshot, flushOfflineQueue } from './sync-snapshots';
 
 const mocked = vi.mocked(localDb);
 
@@ -64,6 +87,8 @@ function seedLocalDb() {
 describe('gatherSnapshotData (C3 dedup)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    syncQueueStore = [];
+    autoIncId = 1;
   });
 
   it('calls each local-db reader exactly once', async () => {
@@ -101,7 +126,7 @@ describe('gatherSnapshotData (C3 dedup)', () => {
     mocked.getExpenses.mockResolvedValue([
       {
         id: '1',
-        date: '2026-07-05',
+        date: new Date().toISOString().slice(0, 7) + '-05',
         category: 'food',
         merchant: 'test',
         amount: 10000,
@@ -119,23 +144,18 @@ describe('gatherSnapshotData (C3 dedup)', () => {
 describe('syncDailySnapshot (C3 dedup)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Ensure no Convex client is configured so the function queues offline.
+    syncQueueStore = [];
+    autoIncId = 1;
     vi.stubEnv('NEXT_PUBLIC_CONVEX_URL', '');
-    // localStorage queue is available in jsdom
-    localStorage.removeItem('budgetbitch:offlineQueue');
   });
 
   it('gathers data exactly once even when offline (catch path)', async () => {
     seedLocalDb();
     const result = await syncDailySnapshot();
 
-    // No Convex configured => success false, queued offline.
     expect(result.success).toBe(false);
-    // The data-gathering must have run exactly once (not duplicated in catch).
     expect(mocked.getWizardProfile).toHaveBeenCalledTimes(1);
-
-    const queued = JSON.parse(localStorage.getItem('budgetbitch:offlineQueue') || '[]');
-    expect(queued).toHaveLength(1);
+    expect(syncQueueStore).toHaveLength(1);
   });
 });
 
@@ -145,27 +165,23 @@ vi.mock('@/components/providers/convex-client-provider', () => ({
   },
 }));
 
-import { flushOfflineQueue } from './sync-snapshots';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mockConvex = (await import('@/components/providers/convex-client-provider')).convex as any;
 
 describe('flushOfflineQueue (no item-skip on partial failure)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Configure a Convex URL so getConvexClient returns the shared client.
+    syncQueueStore = [];
+    autoIncId = 1;
     vi.stubEnv('NEXT_PUBLIC_CONVEX_URL', 'https://test.convex.cloud');
-    // Simulate an authenticated user so auth gate passes.
     localStorage.setItem('__convexAuthJWT_test', 'valid-token');
-    localStorage.removeItem('budgetbitch:offlineQueue');
   });
 
   it('retains only the items that actually failed; never skips the next item', async () => {
-    // Queue: item[0] fails with a non-auth error, item[1] succeeds.
-    const queue = [
-      { data: { totals: { income: 1 } }, timestamp: 1 },
-      { data: { totals: { income: 2 } }, timestamp: 2 },
+    syncQueueStore = [
+      { id: 1, data: { totals: { income: 1 } }, timestamp: 1 },
+      { id: 2, data: { totals: { income: 2 } }, timestamp: 2 },
     ];
-    localStorage.setItem('budgetbitch:offlineQueue', JSON.stringify(queue));
 
     let call = 0;
     mockConvex.mutation.mockImplementation(async () => {
@@ -176,26 +192,22 @@ describe('flushOfflineQueue (no item-skip on partial failure)', () => {
 
     await flushOfflineQueue();
 
-    // Only the failed (first) item should remain; the second was flushed.
-    const remaining = JSON.parse(localStorage.getItem('budgetbitch:offlineQueue') || '[]');
-    expect(remaining).toHaveLength(1);
-    expect(remaining[0].timestamp).toBe(1);
+    expect(syncQueueStore).toHaveLength(1);
+    expect(syncQueueStore[0].timestamp).toBe(1);
     expect(mockConvex.mutation).toHaveBeenCalledTimes(2);
   });
 
   it('keeps the whole tail when auth drops mid-flush', async () => {
-    const queue = [
-      { data: { totals: { income: 1 } }, timestamp: 1 },
-      { data: { totals: { income: 2 } }, timestamp: 2 },
-      { data: { totals: { income: 3 } }, timestamp: 3 },
+    syncQueueStore = [
+      { id: 1, data: { totals: { income: 1 } }, timestamp: 1 },
+      { id: 2, data: { totals: { income: 2 } }, timestamp: 2 },
+      { id: 3, data: { totals: { income: 3 } }, timestamp: 3 },
     ];
-    localStorage.setItem('budgetbitch:offlineQueue', JSON.stringify(queue));
 
     mockConvex.mutation.mockRejectedValueOnce(new Error('Unauthenticated'));
 
     await flushOfflineQueue();
 
-    const remaining = JSON.parse(localStorage.getItem('budgetbitch:offlineQueue') || '[]');
-    expect(remaining).toHaveLength(3);
+    expect(syncQueueStore).toHaveLength(3);
   });
 });

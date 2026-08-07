@@ -12,12 +12,6 @@ describe('ProTipsCard', () => {
     expect(screen.getByRole('heading')).toBeInTheDocument();
   });
 
-  it('renders Thai label when locale is th', () => {
-    render(<ProTipsCard locale="th" />);
-    
-    expect(screen.getByText('เคล็ดลับฉบับบอส')).toBeInTheDocument();
-  });
-
   it('opens ProTipsModal details when card is clicked', () => {
     render(<ProTipsCard locale="en" />);
     

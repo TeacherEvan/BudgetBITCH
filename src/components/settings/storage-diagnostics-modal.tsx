@@ -10,7 +10,9 @@ import {
   getStorageEstimate, 
   getLocalCheckpoints, 
   restoreCheckpoint, 
-  auditAndRepairDatabase 
+  auditAndRepairDatabase,
+  requestPersistentStorage,
+  createLocalCheckpoint,
 } from '@/lib/db/local-db';
 import { restoreFromCloudSnapshot } from '@/lib/convex/sync-snapshots';
 import { Shield, Database, Activity } from 'lucide-react';
@@ -19,10 +21,10 @@ import { format } from 'date-fns';
 interface StorageDiagnosticsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  locale: 'th' | 'en';
+  locale: string;
 }
 
-export function StorageDiagnosticsModal({ isOpen, onClose, locale }: StorageDiagnosticsModalProps) {
+export function StorageDiagnosticsModal({ isOpen, onClose}: StorageDiagnosticsModalProps) {
   const [storageInfo, setStorageInfo] = useState<{ persisted: boolean; usage: number; quota: number }>({
     persisted: false,
     usage: 0,
@@ -33,6 +35,8 @@ export function StorageDiagnosticsModal({ isOpen, onClose, locale }: StorageDiag
   const [auditStatus, setAuditStatus] = useState<'idle' | 'running' | 'success' | 'failed'>('idle');
   const [restoringCheckpoint, setRestoringCheckpoint] = useState<number | null>(null);
   const [restoringCloud, setRestoringCloud] = useState<string | null>(null);
+  const [requestingPersist, setRequestingPersist] = useState(false);
+  const [creatingCheckpoint, setCreatingCheckpoint] = useState(false);
 
   // Fetch Convex cloud snapshots list
   const cloudSnapshots = useQuery(api.snapshots.listCloudSnapshots) ?? [];
@@ -46,10 +50,29 @@ export function StorageDiagnosticsModal({ isOpen, onClose, locale }: StorageDiag
 
   useEffect(() => {
     if (isOpen) {
-       
       loadStorageInfo();
     }
   }, [isOpen]);
+
+  const handleRequestPersistence = async () => {
+    setRequestingPersist(true);
+    try {
+      await requestPersistentStorage();
+      await loadStorageInfo();
+    } finally {
+      setRequestingPersist(false);
+    }
+  };
+
+  const handleCreateCheckpoint = async () => {
+    setCreatingCheckpoint(true);
+    try {
+      await createLocalCheckpoint('Manual Checkpoint');
+      await loadStorageInfo();
+    } finally {
+      setCreatingCheckpoint(false);
+    }
+  };
 
   const handleRunAudit = async () => {
     setAuditStatus('running');
@@ -67,20 +90,20 @@ export function StorageDiagnosticsModal({ isOpen, onClose, locale }: StorageDiag
   };
 
   const handleRestoreCheckpoint = async (timestamp: number) => {
-    if (!confirm(locale === 'th' ? 'กู้คืนข้อมูลจากสแนปช็อตนี้หรือไม่? ข้อมูลปัจจุบันจะถูกเขียนทับ' : 'Restore from this checkpoint? Current local data will be overwritten.')) return;
+    if (!confirm('Restore from this checkpoint? Current local data will be overwritten.')) return;
     setRestoringCheckpoint(timestamp);
     const success = await restoreCheckpoint(timestamp);
     if (success) {
-      alert(locale === 'th' ? 'กู้คืนสำเร็จแล้ว!' : 'Restored successfully!');
+      alert('Restored successfully!');
       window.location.reload();
     } else {
-      alert(locale === 'th' ? 'เกิดข้อผิดพลาดในการกู้คืน' : 'Failed to restore checkpoint.');
+      alert('Failed to restore checkpoint.');
     }
     setRestoringCheckpoint(null);
   };
 
   const handleRestoreCloud = async (snapshotId: string, snapshotDate: string) => {
-    if (!confirm(locale === 'th' ? `กู้คืนข้อมูลของวันที่ ${snapshotDate} จากคลาวด์หรือไม่?` : `Restore cloud backup from ${snapshotDate}?`)) return;
+    if (!confirm(`Restore cloud backup from ${snapshotDate}?`)) return;
     setRestoringCloud(snapshotId);
     try {
       // Import snapshots.getSnapshotById internally or fetch
@@ -92,9 +115,9 @@ export function StorageDiagnosticsModal({ isOpen, onClose, locale }: StorageDiag
       const snapshot = await convex.query(api.snapshots.getSnapshotById, { snapshotId: snapshotId as Id<"dailySnapshots"> });
       
       if (snapshot) {
-        const success = await restoreFromCloudSnapshot(snapshot);
+        const success = await restoreFromCloudSnapshot(snapshot, { force: true });
         if (success) {
-          alert(locale === 'th' ? 'กู้คืนข้อมูลสำเร็จ!' : 'Restored from cloud successfully!');
+          alert('Restored from cloud successfully!');
           window.location.reload();
         } else {
           throw new Error('Restore method returned false');
@@ -104,7 +127,7 @@ export function StorageDiagnosticsModal({ isOpen, onClose, locale }: StorageDiag
       }
     } catch (err: unknown) {
       const errMessage = err instanceof Error ? err.message : String(err);
-      alert((locale === 'th' ? 'กู้คืนจากคลาวด์ล้มเหลว: ' : 'Cloud restore failed: ') + errMessage);
+      alert(('Cloud restore failed: ') + errMessage);
     } finally {
       setRestoringCloud(null);
     }
@@ -119,26 +142,6 @@ export function StorageDiagnosticsModal({ isOpen, onClose, locale }: StorageDiag
   };
 
   const l = {
-    th: {
-      title: 'การวิเคราะห์และกู้คืนฐานข้อมูล',
-      desc: 'ตรวจสอบสถานะความคงทน ตรวจสอบความถูกต้องของข้อมูล และกู้คืนข้อมูลจากสแนปช็อต',
-      storageQuota: 'โควต้าการจัดเก็บข้อมูล',
-      persisted: 'ปกป้องจากการลบโดยอัตโนมัติ',
-      yes: 'ใช่ (ปลอดภัย)',
-      no: 'ไม่ (มีความเสี่ยงถูกลบ)',
-      auditTitle: 'ตรวจสอบความถูกต้องของฐานข้อมูล',
-      runAudit: 'เริ่มตรวจสอบ',
-      auditSuccess: 'ตรวจสอบเรียบร้อย',
-      auditRunning: 'กำลังตรวจสอบ...',
-      checkpointTitle: 'สแนปช็อตในเครื่อง (ประวัติย้อนหลัง)',
-      noCheckpoints: 'ไม่มีสแนปช็อตในเครื่อง',
-      cloudBackupTitle: 'สแนปช็อตบนคลาวด์ (กู้คืนข้ามอุปกรณ์)',
-      noCloudBackups: 'ไม่มีข้อมูลสำรองบนคลาวด์',
-      restore: 'กู้คืน',
-      restoring: 'กำลังกู้คืน...',
-      usageText: 'ใช้ไป',
-      close: 'ปิด',
-    },
     en: {
       title: 'Database Diagnostics & Recovery',
       desc: 'Verify storage persistence, run data health audits, and restore from local checkpoints or cloud snapshots.',
@@ -158,8 +161,12 @@ export function StorageDiagnosticsModal({ isOpen, onClose, locale }: StorageDiag
       restoring: 'Restoring...',
       usageText: 'Used',
       close: 'Close',
+      requestPersist: 'Request Protection',
+      requesting: 'Requesting...',
+      createCheckpoint: '+ Create Checkpoint Now',
+      creating: 'Creating...',
     },
-  }[locale];
+  }.en;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={l.title} size="md">
@@ -193,6 +200,18 @@ export function StorageDiagnosticsModal({ isOpen, onClose, locale }: StorageDiag
               {storageInfo.persisted ? l.yes : l.no}
             </span>
           </div>
+          {!storageInfo.persisted && (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="w-full"
+              onClick={handleRequestPersistence}
+              disabled={requestingPersist}
+              data-testid="request-persistence-btn"
+            >
+              {requestingPersist ? l.requesting : l.requestPersist}
+            </Button>
+          )}
         </div>
 
         {/* 2. Database Audit Tool */}
@@ -225,7 +244,18 @@ export function StorageDiagnosticsModal({ isOpen, onClose, locale }: StorageDiag
 
         {/* 3. Local Checkpoints */}
         <div className="space-y-3">
-          <h3 className="text-amber-400 font-semibold border-b border-white/10 pb-1.5">{l.checkpointTitle}</h3>
+          <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
+            <h3 className="text-amber-400 font-semibold">{l.checkpointTitle}</h3>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleCreateCheckpoint}
+              disabled={creatingCheckpoint}
+              data-testid="create-checkpoint-btn"
+            >
+              {creatingCheckpoint ? l.creating : l.createCheckpoint}
+            </Button>
+          </div>
           {localCheckpoints.length === 0 ? (
             <p className="text-white/40 italic">{l.noCheckpoints}</p>
           ) : (

@@ -14,8 +14,9 @@ import { AssetItem } from './net-worth-asset-item';
 import { LiabilityItem } from './net-worth-liability-item';
 import { Asset, Liability, AssetInput, LiabilityInput } from './net-worth-types';
 import { generateId } from '@/lib/db/local-db';
+import { notify } from '@/lib/ui/notice';
 
-export function NetWorth({ locale = 'en' }: { locale?: 'th' | 'en' }) {
+export function NetWorth({ locale = 'en' }: { locale?: string }) {
   const {
     snapshot,
     loading,
@@ -46,23 +47,33 @@ export function NetWorth({ locale = 'en' }: { locale?: 'th' | 'en' }) {
   const handleAssetSubmit = async (data: AssetInput | LiabilityInput) => {
     const assetData = data as AssetInput;
     const assetWithId: Asset = { ...assetData, id: editingAsset?.id || generateId() };
-    if (editingAsset) {
-      await updateAsset(assetWithId);
-    } else {
-      await addAsset(assetWithId);
+    try {
+      if (editingAsset) {
+        await updateAsset(assetWithId);
+      } else {
+        await addAsset(assetWithId);
+      }
+      setEditingAsset(null);
+    } catch (e) {
+      console.error('Saving asset failed:', e);
+      notify('Could not save that asset. Please try again.', 'error');
     }
-    setEditingAsset(null);
   };
 
   const handleLiabilitySubmit = async (data: AssetInput | LiabilityInput) => {
     const liabilityData = data as LiabilityInput;
     const liabilityWithId: Liability = { ...liabilityData, id: editingLiability?.id || generateId() };
-    if (editingLiability) {
-      await updateLiability(liabilityWithId);
-    } else {
-      await addLiability(liabilityWithId);
+    try {
+      if (editingLiability) {
+        await updateLiability(liabilityWithId);
+      } else {
+        await addLiability(liabilityWithId);
+      }
+      setEditingLiability(null);
+    } catch (e) {
+      console.error('Saving liability failed:', e);
+      notify('Could not save that liability. Please try again.', 'error');
     }
-    setEditingLiability(null);
   };
 
   const openAssetForm = (asset?: Asset) => {
@@ -110,11 +121,11 @@ export function NetWorth({ locale = 'en' }: { locale?: 'th' | 'en' }) {
         <div className="flex gap-2">
           <Button variant="primary" size="sm" onClick={() => openAssetForm()}>
             <Plus className="w-4 h-4" />
-            <span className="hidden @xs:inline ml-1">{locale === 'th' ? 'ทรัพย์สิน' : 'Asset'}</span>
+            <span className="hidden @xs:inline ml-1">{'Asset'}</span>
           </Button>
           <Button variant="secondary" size="sm" onClick={() => openLiabilityForm()}>
             <Plus className="w-4 h-4" />
-            <span className="hidden @xs:inline ml-1">{locale === 'th' ? 'หนี้สิน' : 'Liability'}</span>
+            <span className="hidden @xs:inline ml-1">{'Liability'}</span>
           </Button>
         </div>
       </motion.div>
@@ -129,12 +140,12 @@ export function NetWorth({ locale = 'en' }: { locale?: 'th' | 'en' }) {
 
       {/* Assets Section */}
       <NetWorthSection<Asset>
-        title={locale === 'th' ? 'ทรัพย์สิน' : 'Assets'}
-        addLabel={locale === 'th' ? 'เพิ่ม' : 'Add'}
+        title={'Assets'}
+        addLabel={'Add'}
         items={assets}
-        emptyTitle={locale === 'th' ? 'ยังไม่มีทรัพย์สิน' : 'No assets yet'}
-        emptyDescription={locale === 'th' ? 'เริ่มต้นโดยเพิ่มทรัพย์สินแรกของคุณ' : 'Get started by adding your first asset'}
-        emptyActionLabel={locale === 'th' ? 'เพิ่มทรัพย์สิน' : 'Add Asset'}
+        emptyTitle={'No assets yet'}
+        emptyDescription={'Get started by adding your first asset'}
+        emptyActionLabel={'Add Asset'}
         onAdd={() => openAssetForm()}
         renderItem={(asset, index) => (
           <AssetItem
@@ -151,12 +162,12 @@ export function NetWorth({ locale = 'en' }: { locale?: 'th' | 'en' }) {
       {/* Liabilities Section */}
       <div className="pt-4 border-t border-white/10">
         <NetWorthSection<Liability>
-          title={locale === 'th' ? 'หนี้สิน' : 'Liabilities'}
-          addLabel={locale === 'th' ? 'เพิ่ม' : 'Add'}
+          title={'Liabilities'}
+          addLabel={'Add'}
           items={liabilities}
-          emptyTitle={locale === 'th' ? 'ยังไม่มีหนี้สิน' : 'No liabilities yet'}
-          emptyDescription={locale === 'th' ? 'เริ่มต้นโดยเพิ่มหนี้สินแรกของคุณ' : 'Get started by adding your first liability'}
-          emptyActionLabel={locale === 'th' ? 'เพิ่มหนี้สิน' : 'Add Liability'}
+          emptyTitle={'No liabilities yet'}
+          emptyDescription={'Get started by adding your first liability'}
+          emptyActionLabel={'Add Liability'}
           onAdd={() => openLiabilityForm()}
           renderItem={(liability, index) => (
             <LiabilityItem
@@ -177,7 +188,7 @@ export function NetWorth({ locale = 'en' }: { locale?: 'th' | 'en' }) {
         onClose={() => { setIsAssetFormOpen(false); setEditingAsset(null); }}
         isEditing={!!editingAsset}
         locale={locale}
-        title={editingAsset ? (locale === 'th' ? 'แก้ไขทรัพย์สิน' : 'Edit Asset') : (locale === 'th' ? 'เพิ่มทรัพย์สิน' : 'Add Asset')}
+        title={editingAsset ? ('Edit Asset') : ('Add Asset')}
         initialData={editingAsset ? { name: editingAsset.name, value: editingAsset.value, type: editingAsset.type } : assetInitialData}
         onSubmit={handleAssetSubmit}
         type="asset"
@@ -189,7 +200,7 @@ export function NetWorth({ locale = 'en' }: { locale?: 'th' | 'en' }) {
         onClose={() => { setIsLiabilityFormOpen(false); setEditingLiability(null); }}
         isEditing={!!editingLiability}
         locale={locale}
-        title={editingLiability ? (locale === 'th' ? 'แก้ไขหนี้สิน' : 'Edit Liability') : (locale === 'th' ? 'เพิ่มหนี้สิน' : 'Add Liability')}
+        title={editingLiability ? ('Edit Liability') : ('Add Liability')}
         initialData={editingLiability ? { name: editingLiability.name, value: editingLiability.value, type: editingLiability.type } : liabilityInitialData}
         onSubmit={handleLiabilitySubmit}
         type="liability"

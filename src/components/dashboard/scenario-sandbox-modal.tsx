@@ -21,7 +21,7 @@ interface ScenarioSandboxModalProps {
   onClose: () => void;
   profile: WizardProfile | null;
   currency?: CurrencyCode | null;
-  locale?: 'th' | 'en';
+  locale?: string;
   onApplyScenario?: (updatedProfile: Partial<WizardProfile>) => void;
 }
 
@@ -29,7 +29,6 @@ const PRESETS = [
   {
     id: 'defensive',
     nameEn: 'Shield & Protect',
-    nameTh: 'ตั้งรับ (เงินเฟ้อ +10%)',
     descEn: 'Income -10%, Fixed Expenses +10%',
     incomeMod: -0.1,
     fixedMod: 0.1,
@@ -40,7 +39,6 @@ const PRESETS = [
   {
     id: 'fire',
     nameEn: 'F.I.R.E. Speedrun',
-    nameTh: 'เร่งออม F.I.R.E.',
     descEn: 'Wants -35%, Savings +40%',
     incomeMod: 0,
     fixedMod: 0,
@@ -51,7 +49,6 @@ const PRESETS = [
   {
     id: 'hustle',
     nameEn: 'Side Hustle Surge',
-    nameTh: 'เพิ่มรายได้ +25%',
     descEn: 'Income +25%',
     incomeMod: 0.25,
     fixedMod: 0,
@@ -62,7 +59,6 @@ const PRESETS = [
   {
     id: 'stress',
     nameEn: 'Income Shock Test',
-    nameTh: 'กรณีฉุกเฉิน (รายได้ -30%)',
     descEn: 'Income -30%',
     incomeMod: -0.3,
     fixedMod: 0,
@@ -76,11 +72,10 @@ export function ScenarioSandboxModal({
   isOpen,
   onClose,
   profile,
-  currency = 'THB',
+  currency = 'USD',
   locale = 'en',
   onApplyScenario,
 }: ScenarioSandboxModalProps) {
-  const isTh = locale === 'th';
   const baseIncome = profile?.answers?.income ?? 45000;
   const baseFixed = (profile?.answers?.income ?? 45000) * 0.45;
   const baseVariable = (profile?.answers?.income ?? 45000) * 0.35;
@@ -134,11 +129,9 @@ export function ScenarioSandboxModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isTh ? '📊 What-If Scenario Sandbox (Excel Goal Seek)' : '📊 What-If Scenario Sandbox (Excel Goal Seek)'}
+      title={'📊 What-If Scenario Sandbox (Excel Goal Seek)'}
       description={
-        isTh
-          ? 'จำลองสถานการณ์การเงิน ปรับรายได้/รายจ่ายแบบเรียลไทม์ คำนวณเงินออมล่วงหน้า 12 เดือน'
-          : 'Simulate financial scenarios, adjust income/spending in real-time, and calculate 12-month wealth growth.'
+        'Simulate financial scenarios, adjust income/spending in real-time, and calculate 12-month wealth growth.'
       }
       size="lg"
     >
@@ -146,7 +139,7 @@ export function ScenarioSandboxModal({
         {/* Preset Selector */}
         <div>
           <label className="block text-xs font-semibold uppercase tracking-wider text-amber-400 mb-2">
-            {isTh ? 'เลือกสถานการณ์จำลองสำเร็จรูป' : 'Quick Scenario Presets'}
+            {'Quick Scenario Presets'}
           </label>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {PRESETS.map(p => {
@@ -164,7 +157,7 @@ export function ScenarioSandboxModal({
                   }`}
                 >
                   <Icon className="w-4 h-4 mb-1" />
-                  <p className="text-xs font-bold leading-tight">{isTh ? p.nameTh : p.nameEn}</p>
+                  <p className="text-xs font-bold leading-tight">{p.nameEn}</p>
                   <p className="text-[10px] opacity-70 mt-0.5">{p.descEn}</p>
                 </button>
               );
@@ -176,7 +169,7 @@ export function ScenarioSandboxModal({
         <div className="grid gap-4 sm:grid-cols-3 bg-neutral-900/60 p-4 rounded-2xl border border-white/10">
           <div>
             <div className="flex justify-between text-xs font-medium mb-1">
-              <span className="text-emerald-400">{isTh ? 'รายได้ประจำเดือน' : 'Monthly Income'}</span>
+              <span className="text-emerald-400">{'Monthly Income'}</span>
               <span className="text-white font-bold">{formatMoney(income, currency, locale)}</span>
             </div>
             <input
@@ -195,7 +188,7 @@ export function ScenarioSandboxModal({
 
           <div>
             <div className="flex justify-between text-xs font-medium mb-1">
-              <span className="text-rose-400">{isTh ? 'รายจ่ายจำเป็น (Needs)' : 'Fixed Needs'}</span>
+              <span className="text-rose-400">{'Fixed Needs'}</span>
               <span className="text-white font-bold">{formatMoney(fixedExpenses, currency, locale)}</span>
             </div>
             <input
@@ -214,7 +207,7 @@ export function ScenarioSandboxModal({
 
           <div>
             <div className="flex justify-between text-xs font-medium mb-1">
-              <span className="text-amber-400">{isTh ? 'รายจ่ายผันแปร (Wants)' : 'Discretionary Wants'}</span>
+              <span className="text-amber-400">{'Discretionary Wants'}</span>
               <span className="text-white font-bold">{formatMoney(variableExpenses, currency, locale)}</span>
             </div>
             <input
@@ -235,7 +228,7 @@ export function ScenarioSandboxModal({
         {/* Real-Time Goal Seek Metrics */}
         <div className="grid gap-3 sm:grid-cols-4">
           <div className="p-3 bg-white/5 border border-white/10 rounded-2xl">
-            <p className="text-[11px] text-white/60">{isTh ? 'กระแสเงินสดคงเหลือ/เดือน' : 'Net Monthly Cash Flow'}</p>
+            <p className="text-[11px] text-white/60">{'Net Monthly Cash Flow'}</p>
             <p
               className={`text-lg font-bold mt-0.5 ${
                 calculations.netMonthlySurplus >= 0 ? 'text-emerald-400' : 'text-rose-400'
@@ -246,23 +239,23 @@ export function ScenarioSandboxModal({
           </div>
 
           <div className="p-3 bg-white/5 border border-white/10 rounded-2xl">
-            <p className="text-[11px] text-white/60">{isTh ? 'อัตราการออม' : 'Savings Rate'}</p>
+            <p className="text-[11px] text-white/60">{'Savings Rate'}</p>
             <p className="text-lg font-bold text-amber-400 mt-0.5">{calculations.savingsRate.toFixed(1)}%</p>
           </div>
 
           <div className="p-3 bg-white/5 border border-white/10 rounded-2xl">
-            <p className="text-[11px] text-white/60">{isTh ? 'ระยะเวลาอยู่รอด' : 'Runway Buffer'}</p>
+            <p className="text-[11px] text-white/60">{'Runway Buffer'}</p>
             <p className="text-lg font-bold text-cyan-400 mt-0.5">
-              {calculations.emergencyRunwayMonths.toFixed(1)} {isTh ? 'เดือน' : 'mos'}
+              {calculations.emergencyRunwayMonths.toFixed(1)} {'mos'}
             </p>
           </div>
 
           <div className="p-3 bg-white/5 border border-white/10 rounded-2xl">
-            <p className="text-[11px] text-white/60">{isTh ? 'เป้าหมาย 100K THB' : 'Time to 100K Goal'}</p>
+            <p className="text-[11px] text-white/60">{'Time to 100K Goal'}</p>
             <p className="text-lg font-bold text-purple-400 mt-0.5">
               {calculations.monthsToTargetGoal === Infinity
                 ? '∞'
-                : `${calculations.monthsToTargetGoal} ${isTh ? 'เดือน' : 'mos'}`}
+                : `${calculations.monthsToTargetGoal} ${'mos'}`}
             </p>
           </div>
         </div>
@@ -272,7 +265,7 @@ export function ScenarioSandboxModal({
           <div className="flex justify-between items-center mb-3">
             <span className="text-xs font-semibold text-white/80 flex items-center gap-1.5">
               <TrendingUp className="w-4 h-4 text-emerald-400" />
-              {isTh ? 'ประมาณการการเติบโตเงินออม 12 เดือน' : '12-Month Projected Wealth Growth'}
+              {'12-Month Projected Wealth Growth'}
             </span>
             <span className="text-xs text-emerald-400 font-bold">
               +
@@ -305,12 +298,12 @@ export function ScenarioSandboxModal({
         <div className="flex items-center justify-between pt-2">
           <Button variant="ghost" onClick={resetSliders} className="text-xs text-white/60 hover:text-white">
             <RefreshCw className="w-3.5 h-3.5 mr-1" />
-            {isTh ? 'รีเซ็ตเป็นค่าเริ่มต้น' : 'Reset Sliders'}
+            {'Reset Sliders'}
           </Button>
 
           <div className="flex gap-2">
             <Button variant="secondary" onClick={onClose}>
-              {isTh ? 'ปิด' : 'Close'}
+              {'Close'}
             </Button>
             {onApplyScenario && (
               <Button
@@ -330,7 +323,7 @@ export function ScenarioSandboxModal({
                 className="bg-amber-400 text-black font-semibold hover:bg-amber-300"
               >
                 <CheckCircle2 className="w-4 h-4 mr-1.5" />
-                {isTh ? 'นำสถานการณ์นี้ไปใช้กับงบจริง' : 'Apply to My Budget'}
+                {'Apply to My Budget'}
               </Button>
             )}
           </div>

@@ -38,6 +38,8 @@ permissions:
 
 env:
   NODE_VERSION: "22"
+  # Force Node-20-targeted actions onto the runner's Node 24 (see ci.yml note).
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   rollback:

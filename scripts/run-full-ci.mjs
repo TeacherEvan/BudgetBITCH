@@ -5,14 +5,17 @@ const isCI = process.env.CI === 'true';
 const hasConvexUrl = !!process.env.NEXT_PUBLIC_CONVEX_URL;
 
 const steps = [
-  { name: '1/8 Linting (ESLint)', cmd: 'npm', args: ['run', 'lint'] },
-  { name: '2/8 Type Checking (tsc)', cmd: 'npm', args: ['run', 'typecheck'] },
-  { name: '3/8 IndexedDB Schema Guard', cmd: 'node', args: ['scripts/check-idb-stores.mjs'] },
-  { name: '4/8 Unit & Component Tests (Vitest)', cmd: 'npm', args: ['test'] },
-  { name: '5/8 Convex Backend Tests', cmd: 'npm', args: ['run', 'test:convex'] },
-  { name: '6/8 Production Build (Next.js)', cmd: 'npm', args: ['run', 'build'] },
-  { name: '7/8 Security Audit (npm audit)', cmd: 'npm', args: ['audit', '--audit-level=high'], skipLocal: true },
-  { name: '8/8 Deploy Guard (Convex URL check)', cmd: 'node', args: ['scripts/check-convex-deployment.mjs'], skipLocal: !hasConvexUrl && !isCI },
+  { name: '1/11 Linting (ESLint)', cmd: 'npm', args: ['run', 'lint'] },
+  { name: '2/11 Type Checking (tsc)', cmd: 'npm', args: ['run', 'typecheck'] },
+  { name: '3/11 IndexedDB Schema Guard', cmd: 'node', args: ['scripts/check-idb-stores.mjs'] },
+  { name: '4/11 CSP / Source-host Drift Guard', cmd: 'node', args: ['scripts/check-csp-hosts.mjs'] },
+  { name: '5/11 Convex Import Resolution Guard', cmd: 'node', args: ['scripts/check-convex-imports.mjs'], skipLocal: true },
+  { name: '6/11 Unit & Component Tests (Vitest)', cmd: 'npm', args: ['test'] },
+  { name: '7/11 Convex Backend Tests', cmd: 'npm', args: ['run', 'test:convex'] },
+  { name: '8/11 Production Build (Next.js)', cmd: 'npm', args: ['run', 'build'] },
+  { name: '9/11 Security Audit (npm audit)', cmd: 'npm', args: ['audit', '--audit-level=high'], skipLocal: true },
+  { name: '10/11 Stale Bug-comment Guard', cmd: 'node', args: ['scripts/check-stale-bug-comments.mjs'] },
+  { name: '11/11 Deploy Guard (Convex URL check)', cmd: 'node', args: ['scripts/check-convex-deployment.mjs'], skipLocal: !hasConvexUrl && !isCI },
 ];
 
 console.log('\n======================================================');

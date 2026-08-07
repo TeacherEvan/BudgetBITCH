@@ -8,12 +8,6 @@ import { ShieldCheck } from 'lucide-react';
 const STORAGE_KEY = 'budgetbitch:privacyDisclaimerWeek';
 
 const LABELS = {
-  th: {
-    title: 'ความเป็นส่วนตัวของคุณ คือคำมั่นสัญญาของเรา',
-    body: 'ไม่มีข้อมูลส่วนตัวใดออกจากโทรศัพท์ของคุณ ข้อมูลส่วนตัวทั้งหมดถูกเข้ารหัสก่อนถึงเซิร์ฟเวอร์ของเรา',
-    learnMore: 'เรียนรู้วิธีที่ข้อมูลของคุณปลอดภัย →',
-    dismiss: 'รับทราบ',
-  },
   en: {
     title: 'Your privacy, our promise',
     body: 'No personal information leaves your phone. All private data is encrypted before it ever reaches our servers.',
@@ -58,8 +52,8 @@ function getClientSnapshot(): boolean {
   }
 }
 
-export function WeeklyPrivacyDisclaimer({ locale }: { locale: 'th' | 'en' }) {
-  const l = LABELS[locale];
+export function WeeklyPrivacyDisclaimer() {
+  const l = LABELS.en;
   const storedOpen = useSyncExternalStore(
     subscribeToStorage,
     getClientSnapshot,
@@ -81,7 +75,7 @@ export function WeeklyPrivacyDisclaimer({ locale }: { locale: 'th' | 'en' }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm pointer-events-none"
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 p-4 backdrop-blur-md pointer-events-auto"
       data-testid="privacy-disclaimer"
       role="dialog"
       aria-modal="true"

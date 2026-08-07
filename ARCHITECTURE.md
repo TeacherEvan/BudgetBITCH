@@ -2,119 +2,204 @@
 
 ## Purpose
 
-This repository is a single Next.js + Convex codebase: the **BudgetBITCH app** at the repository root. Extend the root app unless a task explicitly says otherwise. (A prior nested `budgetbitch/` AuthKit prototype subtree was removed on 2026-07-20.)
+This repository is a single Next.js + Convex codebase: the **Budget Boss** app
+(`BudgetBITCH` repo/package name) at the repository root. Extend the root app
+unless a task explicitly says otherwise. (A prior nested `budgetbitch/` AuthKit
+prototype subtree was removed on 2026-07-20.)
 
 ## 1) Root App Architecture
 
 ### Stack
 
-- Next.js App Router (v16)
-- React 19 + TypeScript (strict)
-- **Convex** for backend (auth, database, realtime, HTTP endpoints)
+- Next.js App Router (v14)
+- React 18 + TypeScript (strict)
+- **Convex** 1.34 for backend (auth, database, realtime, HTTP endpoints)
 - **IndexedDB** (via `idb`) for local-first offline data
 - **Service Worker** (`public/sw.js`) for PWA sync & background updates
-- **next-intl** (v4) for i18n (Thai/English)
+- **next-intl** (v4) for i18n — en, es, fr, de, pt, zh; cookie `bb-locale`
 - **Tailwind CSS** (v4) for styling
 - **framer-motion** for animations
 - **recharts** for data visualization
 - **zod** for validation
+- **tesseract.js** for client-side receipt OCR
 - **lottie-react** + **@rive-app/canvas** for lightweight brand motion
 - **qrcode.react** for shared-board / account invite QR codes
 - **web-push** (+ VAPID) for Web Push notifications (Convex action)
+- **rss-parser** for Market Watch feeds
 - **Vitest** + **React Testing Library** for unit tests
 - **Playwright** for E2E tests
 - **Vercel** for deployment
 
+Not present: Prisma, Postgres, Inngest, Clerk, Sentry. `next-auth` is installed
+but the Google scaffold in `src/auth.ts` is unwired — shipped auth is Convex Auth.
+
 ### Directory Boundaries
 
-- `src/app/**` — routes, route groups, layouts, API handlers (Convex Auth HTTP via `/api/convex-auth`, registered in `convex/http.ts`), and the standalone `/quick-add` widget route ([page.tsx](src/app/quick-add/page.tsx))
+- `src/app/**` — routes, route groups, layouts, and route handlers (Convex Auth
+  HTTP is registered in `convex/http.ts`; the standalone `/quick-add` widget and
+  the `/share-target` POST endpoint live here)
 - `src/components/**` — reusable UI
-  - `auth/` — Account recovery, entry panel, password form
-  - `accounts/` — Multi-board shared budgeting (board/umbrella management, QR/link invite) + automatic cross-account sync. Includes in-app "Sharing & Collaboration Guidance" to explain how users can invite others and set up shared budgets for family, friends, or work.
-  - `dashboard/` — Dashboard shell, panels, alerts sidebar, critical expenses modal, daily disposable hero
-  - `i18n/` — Locale switcher
+  - `accounts/` — Multi-board shared budgeting (board/umbrella management,
+    QR/link invite) + automatic cross-account sync and sharing guidance
+  - `admin/` — Admin bug-report review view
+  - `auth/` — Clean auth card, Convex password form, recovery, entry panel
+  - `bug-report/` — Bug-report modal (submits the last 20 logged actions)
+  - `dashboard/` — Dashboard shell, bento grid, panels, alerts sidebar,
+    priority guide, daily disposable hero, scenario sandbox, add-income modal
+  - `launch/` — Cinematic splash, manifesto interstitial/notification
   - `layout/` — Header bar
   - `legal/` — Cookie consent banner, site footer, legal pages
-  - `launch/` — Cinematic splash, manifesto interstitial/notification
-  - `mobile/` — Mobile panel frame
-  - `onboarding/` — Language select modal
-  - `pwa/` — Install prompt (globally mounted in [layout.tsx](src/app/layout.tsx))
-  - `providers/` — App-level React context providers
+  - `mobile/` — Mobile panel frame, fixed screen shell
+  - `onboarding/` — Language select modal (6 locales)
+  - `privacy/` — Weekly privacy disclaimer
+  - `pro-tips/` — Pro tips card + modal
+  - `providers/` — Convex client provider, theme provider
+  - `pwa/` — Service worker registration, install prompt
+  - `receipt/` — Receipt verification sheet
+  - `settings/` — Account, preferences, data backup, partner sharing,
+    change-password, decrypt-import, storage diagnostics
   - `shared-board/` — Shared couple-board UI (keyed-merge sync)
+  - `sms/` — SMS confirm surface for shared bank messages
   - `start-smart/` — Money Survival Blueprint panels
-  - `ui/` — Primitive components (accordion, button, card, input, modal, progress-ring, select, slider, toggle) and interactive tools like the `SyncStatusIndicator` popover.
+  - `ui/` — Primitives (accordion, button, card, input, modal, progress-ring,
+    select, slider, toggle, theme-toggle, confetti, error-boundary,
+    money-sync-loading) and the `SyncStatusIndicator` popover
+  - `webview/` — In-app webview banner
   - `welcome/` — Welcome window
-  - `wizard/` — Onboarding wizard (shell, progress, voice toggle, 10 steps)
-- `src/hooks/` — Custom hooks (`use-accounts`, `use-account-sync`, `use-critical-expense`, `use-currency`, `use-display-prefs`, `use-haptic`, `use-local-db`, `use-shared-board`, `use-accounts`, `use-account-sync`, `use-currency`, `use-display-prefs`, `use-haptic`, `use-voice`)
-- `src/i18n/` — Internationalization (messages, request, server)
+  - `wizard/` — Onboarding wizard shell, progress, and 10 step components
+- `src/hooks/` — `use-accounts`, `use-account-sync`, `use-budgets`,
+  `use-critical-expense`, `use-currency`, `use-currency-override`,
+  `use-display-detection`, `use-display-prefs`, `use-expenses`, `use-haptic`,
+  `use-local-db`, `use-news-prefs`, `use-purchase-notes`, `use-receipt-scan`,
+  `use-resolved-location`, `use-shake`, `use-shared-board`, `use-shimmer-pref`,
+  `use-vicinity-feeds`
+- `src/i18n/` — locale catalogs (`locales/{en,es,fr,de,pt,zh}.ts`), `messages.ts`,
+  `request.ts`, `server.ts`
 - `src/lib/`
-  - `auth/` — Auth utilities (`e2e-auth-override`, `route-guard`, `routes`)
-  - `convex/` — Convex HTTP client, sync snapshots
-  - `db/` — Local IndexedDB wrapper (`local-db.ts`)
-  - `http/` — HTTP utilities
-  - `legal/` — Legal agreement / consent recording helpers
-  - `news/` — RSS fetcher
-  - `types/` — Budget types
-  - `utils/` — `cn`, `compound-calculator`, `currency`, `thai-category-mapper`
-  - `animation/` — Animation presets
-  - `colors/` — Theme color tokens
-- `src/middleware.ts` — Convex Auth Next.js middleware (protects `/dashboard`, `/settings`, `/wizard`, `/api/v1/auth/bootstrap`). Note: `src/lib/auth/routes.ts` defines `AUTH_ROUTES.continue = "/auth/continue"`, but no page implements that route and it is not in the protected prefixes; post-auth users land on `/dashboard`.
+  - `animation/` — Motion utilities
+  - `auth/` — `e2e-auth-override`, `route-guard`, `routes`, `session`,
+    `session-claims`
+  - `colors/` — Category color tokens
+  - `convex/` — Convex HTTP client, snapshot sync (+ restore)
+  - `data/` — Static content (pro tips)
+  - `db/` — IndexedDB wrapper (`local-db.ts`), stores, crypto backup,
+    backup schema, data migration
+  - `http/` — Client IP / geolocation resolution
+  - `legal/` — Legal versions + content
+  - `news/` — RSS fetcher, vicinity registry/resolver, Market Watch API
+  - `notifications/` — Notification preferences
+  - `receipt/` — Client OCR worker, image preprocessing, engine client
+  - `sms-parser/` — Bank SMS detection + regional patterns (eu, sg, us, generic)
+  - `types/` — Budget and account types
+  - `utils/` — `action-logger`, `budget-alerts`, `budget-calculator`, `cn`,
+    `compound-calculator`, `currency`, `date`
+- There is **no** `src/middleware.ts`. Auth protection is client-side via
+  `<RequireAuth />` and `src/lib/auth/routes.ts`, with `localStorage` token
+  storage for webview compatibility. `AUTH_ROUTES.continue = "/auth/continue"`
+  is a constant with no page behind it; post-auth users land on `/dashboard`.
 - `src/test/` — Test setup, smoke test
-- `src/types/` — TypeScript declarations (Next PWA, Speech API)
+- `src/types/` — Ambient declarations (jest-axe, next-auth, Speech API, test utils)
 - `convex/` — Convex backend
-  - `auth.ts` — Convex Auth config (Password provider)
+  - `auth.ts` / `auth.config.ts` — Convex Auth (Password provider, Resend email)
   - `http.ts` — HTTP router (auth routes)
-  - `schema.ts` — Convex schema (`authTables`, `userProfiles`, `sharedBoards`, `accounts`, `boardMembers`, `accountBoards`, `invites`, `dailySnapshots`, `legalAgreements`, `cookieConsents`)
+  - `schema.ts` — `authTables`, `userProfiles`, `sharedBoards`, `accounts`,
+    `boardMembers`, `accountBoards`, `invites`, `dailySnapshots`,
+    `legalAgreements`, `cookieConsents`, `pushSubscriptions`, `feedbackReports`,
+    `receipts`, `receiptTemplates`, `merchantAliases`
+  - `accounts/` — Account CRUD, invites, board sync, purchase notes
+  - `boardMerge.ts` — Keyed-merge logic for shared boards
   - `snapshots.ts` — `upsertDailySnapshot` mutation (daily backup from SW)
-  - `receipts.ts` — `parseReceipt` Convex Action calling the Gemini 2.5 Flash API to extract receipt text/data ([receipts.ts](convex/receipts.ts))
+  - `receipts.ts` — `parseReceipt` action (Gemini 2.5 Flash) + scrape/answer/
+    confirm mutations, offline draft sync, template snapshot query
+  - `lib/receipt/` — Deterministic scraper engine shared with the client
+    (normalise, amounts, dates, merchant/total extraction, validation,
+    confidence, learning, templates)
+  - `push.ts` / `pushSend.ts` — Web Push subscriptions and VAPID sender
+  - `feedback.ts` — Bug-report sink with admin email notification
+  - `legal.ts` — Legal agreement + cookie consent recording
   - `lib/auth.ts` — Auth helpers (`requireIdentity`, `getAuthUserId`)
-  - `_generated/` — Convex generated types
+  - `_generated/` — Convex generated types + `ai/guidelines.md`
 
 ### Runtime Flow
 
-The root app is auth-first, local-first PWA:
+The root app is an auth-first, local-first PWA:
 
-1. `/` decides whether the visitor stays on the welcome window, enters the launch wizard, or lands on the main board.
-2. Language selection → stored in `localStorage` (`budgetbitch:locale`).
-3. PWA install prompt is mounted globally in [layout.tsx](src/app/layout.tsx), making the installation action available on all pages rather than only after the initial language selection.
-4. Signed-in users → redirect to `/wizard` (if not complete) or `/dashboard` (if complete).
-5. Protected surfaces: `/dashboard`, `/settings`, `/wizard`, `/api/v1/auth/bootstrap`. (`/auth/continue` is a route constant in `src/lib/auth/routes.ts` but has no page implementation and is not protected.)
-6. Convex handles auth, realtime data, and daily snapshot persistence; Accounts/Invites tables power multi-board shared budgeting with automatic lossless cross-account sync.
-7. IndexedDB + Service Worker provide offline-first UX; data syncs to Convex daily.
-8. Market Watch surfaces localized finance news (RSS via `/api/news`) inside the dashboard; legal pages record consent server-side (`legalAgreements`, `cookieConsents`).
+1. `/` decides whether the visitor stays on the welcome window, enters the
+   launch wizard, or lands on the main board.
+2. Language selection → stored in `localStorage` (`budgetbitch:locale`) and
+   mirrored to the `bb-locale` cookie consumed by next-intl on the server.
+3. Signed-in users → `/wizard` (if the launch profile is incomplete) or
+   `/dashboard`.
+4. Protected surfaces: `/dashboard`, `/accounts`, `/settings`, `/wizard`,
+   `/api/v1/auth/bootstrap`.
+5. Convex handles auth, realtime data, and daily snapshot persistence;
+   Accounts/Invites tables power multi-board shared budgeting with automatic
+   lossless cross-account sync.
+6. IndexedDB + Service Worker provide offline-first UX; data syncs to Convex daily.
+7. Market Watch surfaces localized finance news (RSS via `/api/news` and
+   `/api/news/vicinity`) inside the dashboard; legal pages record consent
+   server-side (`legalAgreements`, `cookieConsents`).
+8. Receipts are parsed locally (tesseract.js + the shared scraper engine) with a
+   Gemini-backed Convex action as the server path; SMS shares arrive via the PWA
+   share target and are confirmed at `/sms-confirm`.
 
 ### Data Ownership
 
-- **Convex** — Authoritative backend: auth, `dailySnapshots` table, realtime subscriptions.
-- **IndexedDB** — Local cache for offline reads/writes; budget wizard profile, transactions, settings.
-- **Service Worker** — Background sync: posts daily snapshots to Convex via `upsertDailySnapshot`.
-- **Server-side secrets** — Convex Auth config, environment variables.
+- **Convex** — Authoritative backend: auth, all server tables, realtime.
+- **IndexedDB** — Local cache for offline reads/writes: wizard profile,
+  transactions, expenses, incomes, accounts, receipt drafts, snapshots, settings.
+- **Service Worker** — Background sync: posts daily snapshots via
+  `upsertDailySnapshot`.
+- **Server-side secrets** — Convex environment variables only; never in the client.
 
 ### Security, Web App & Sync Settings
 
-- **Cross-Origin-Embedder-Policy (COEP)**: The `require-corp` header was removed from [vercel.json](vercel.json) to ensure third-party resources and script files load successfully inside restricted mobile webviews (in-app browsers).
-- **Content-Security-Policy (CSP)**: The `connect-src` directive in [vercel.json](vercel.json) is updated with wildcard patterns for Convex backends (`https://*.convex.cloud wss://*.convex.cloud https://*.convex.site wss://*.convex.site`) to facilitate direct, real-time client-to-backend socket and HTTP requests.
-- **Global PWA Prompt**: The `PWAInstallPrompt` (from [install-prompt.tsx](src/components/pwa/install-prompt.tsx)) is globally mounted inside [layout.tsx](src/app/layout.tsx) to ensure the app-install option remains available across all views.
-- **Interactive Sync Status Popover**: The [sync-status-indicator.tsx](src/components/ui/sync-status-indicator.tsx) provides an interactive popover detailing active queues (Shared Accounts queue, Couple Board queue, and Offline/Security Snapshots queue) to keep the user informed of local-first sync progress.
-- **PWA Quick Add Widget**: The standalone widget route [/quick-add](src/app/quick-add/page.tsx) handles rapid transaction entry with a toggleable +/- sign flow to log immediate expenses to local IndexedDB or update monthly income profile values directly.
-- **Smart Receipt Scanner**: Uses the device camera via HTML file upload to scan receipt images, sending them to the `parseReceipt` Convex action ([receipts.ts](convex/receipts.ts)) which calls the Gemini 2.5 Flash API to extract transaction details.
-- **App Shortcuts**: Declared in [manifest.json](public/manifest.json) under `shortcuts` to allow launching directly into the `/quick-add` widget from the device home screen shortcut menu.
+- **COEP**: `require-corp` was removed from [vercel.json](vercel.json) so
+  third-party resources load inside restricted mobile webviews.
+- **CSP**: `connect-src` in [vercel.json](vercel.json) includes wildcard Convex
+  patterns (`https://*.convex.cloud wss://*.convex.cloud https://*.convex.site
+  wss://*.convex.site`) for direct realtime traffic.
+- **Interactive Sync Status Popover**:
+  [sync-status-indicator.tsx](src/components/ui/sync-status-indicator.tsx)
+  details active queues (shared accounts, couple board, offline snapshots).
+- **PWA Quick Add Widget**: [/quick-add](src/app/quick-add/page.tsx) has
+  exactly three features — Camera, Inbox, Income; manual amount entry is not
+  one of them. The Camera path is: photo → `proxyReceiptScan` action
+  ([convex/receipts.ts](convex/receipts.ts); user derived server-side from
+  the Convex Auth session, `CONVEX_SYNC_SECRET` never ships to the client) →
+  POST `{BUDGETBOSS_BOT_URL}/receipt/scan` (HF Space `EvilEvan/TeacherBOY`,
+  Gemini vision) → bot POSTs the scrape back to `/receipts/ingest` with
+  `lineUserId="app:<convexUserId>"` (no LINE mapping — the `app:` prefix is
+  resolved directly as a Convex user id) → the action returns the full
+  scraped fields/lineItems/questions inline → the review card renders them
+  as editable fields (amount, merchant, category, purchase date, tax/VAT,
+  line items). Nothing auto-commits; Save writes IndexedDB-first and stamps
+  `entryDate` separately from the receipt's purchase `date`. When the
+  scanned merchant matches a prior expense, a **Repeat Purchase** "+" button
+  clones that purchase with today's date. Offline/bot-down fallback:
+  client-side tesseract.js OCR via `useReceiptScan`.
+- **Web Share Target**: `share_target` in
+  [manifest.json](public/manifest.json) POSTs to
+  [share-target/route.ts](src/app/share-target/route.ts), which 303-redirects the
+  shared SMS text to `/sms-confirm`.
+- **App Shortcuts**: declared under `shortcuts` in
+  [manifest.json](public/manifest.json) to launch straight into `/quick-add`.
 
 ### Root App Rules
 
-- Keep route logic thin; move business rules into `src/components/` or `src/lib/`.
+- Keep route logic thin; move business rules into `src/modules/` or `src/lib/`.
 - Keep UI reusable and scan-friendly in `src/components/**`.
-- Keep auth and redirect safety centralized through `src/middleware.ts`, `src/lib/auth/routes.ts`, and shared auth helpers under `src/lib/auth/**`.
+- Centralize auth and redirect safety through `src/lib/auth/routes.ts`.
 - Local-first: write to IndexedDB immediately, sync to Convex asynchronously.
 - Use Convex realtime for live updates where needed (auth state, snapshots).
 
 ## 2) Testing and Verification
 
-### Root App
-
-- Unit/component tests live beside source under `src/**/*.test.tsx`.
-- E2E tests live under `tests/e2e/`.
-- Validation scripts: `npm run lint`, `npm test`, `npm run build`.
+- Unit/component tests live beside source under `src/**/*.test.ts[x]`.
+- Convex backend tests use `convex-test` (`npm run test:convex`).
+- E2E tests live under `tests/e2e/` (25 Playwright specs).
+- Validation: `npm run lint`, `npm run typecheck`, `npm run check:idb`,
+  `npm test`, `npm run test:convex`, `npm run build` — or `npm run ci`.
 
 ## 3) Practical Navigation Rule
 
@@ -122,21 +207,32 @@ Work in the root app by default.
 
 ## 4) Key Convex Patterns (from guidelines)
 
-- **Auth:** `ctx.auth.getUserIdentity()` in queries/mutations/actions; never accept `userId` as argument.
-- **Schema:** Define in `convex/schema.ts`; use `defineTable`, `v.*` validators; index naming `by_field1_and_field2`.
-- **Queries:** Use `.withIndex()` not `.filter()`; prefer `.take()` or pagination over `.collect()`.
-- **Mutations:** Use `ctx.db.patch` / `ctx.db.replace`; batch large operations with `ctx.scheduler.runAfter`.
-- **Actions:** `"use node";` at top for Node.js built-ins; no `ctx.db` access; `fetch()` available in default runtime.
-- **HTTP:** Defined in `convex/http.ts` with `httpAction`; registered at exact path.
-- **Testing:** Use `convex-test` with `vitest`, `environment: "edge-runtime"`, module map from `import.meta.glob`.
+- **Auth:** `ctx.auth.getUserIdentity()` in queries/mutations/actions; never
+  accept `userId` as an argument.
+- **Schema:** define in `convex/schema.ts`; use `defineTable`, `v.*` validators;
+  index naming `by_field1_and_field2`.
+- **Queries:** use `.withIndex()` not `.filter()`; prefer `.take()` or pagination
+  over `.collect()`.
+- **Mutations:** use `ctx.db.patch` / `ctx.db.replace`; batch large operations
+  with `ctx.scheduler.runAfter`.
+- **Actions:** `"use node";` at the top for Node built-ins; no `ctx.db` access;
+  `fetch()` is available in the default runtime.
+- **HTTP:** defined in `convex/http.ts` with `httpAction`, registered at an exact path.
+- **Testing:** `convex-test` with vitest, `environment: "edge-runtime"`, module
+  map from `import.meta.glob`.
 
 ## 5) CI/CD & Automated Reliability Pipeline
 
-The repository operates a 9-stage shift-left quality gate pipeline in GitHub Actions (`.github/workflows/ci.yml`) and local execution via `npm run ci`:
+GitHub Actions (`.github/workflows/ci.yml`) runs nine jobs; `npm run ci` runs the
+local gate chain.
 
-- **Static Quality Gates**: `lint` (ESLint v9 Flat Config), `typecheck` (`tsc --noEmit`), `idb-schema-guard` (`scripts/check-idb-stores.mjs`).
-- **Test Automation**: Vitest unit/component suite (`npm test`), Convex backend test suite (`npm run test:convex`), Playwright E2E integration suite (`npm run test:e2e`).
-- **Deployment Guards**: Production Convex URL deployment guard (`scripts/check-convex-deployment.mjs`) running during Vercel production prebuilds to prevent client environment variable drift.
-- **Rollback Mechanics**: Instant zero-rebuild production rollbacks via `.github/workflows/rollback.yml` (`npx vercel rollback`).
-- **Detailed Handbook**: Refer to [docs/CI_CD.md](docs/CI_CD.md) for full pipeline specs, secrets, and runbooks.
-
+- **Static gates**: `lint` (ESLint), `typecheck` (`tsc --noEmit`),
+  `idb-schema-guard` (`scripts/check-idb-stores.mjs`).
+- **Tests**: Vitest unit/component (`npm test`), Convex backend
+  (`npm run test:convex`), Playwright E2E (`npm run test:e2e`).
+- **Guards**: Convex import resolution (`scripts/check-convex-imports.mjs`) and
+  the production Convex URL deploy guard
+  (`scripts/check-convex-deployment.mjs`, run as a Vercel prebuild).
+- **Rollback**: zero-rebuild production rollbacks via
+  `.github/workflows/rollback.yml` (`npx vercel rollback`).
+- **Handbook**: see [docs/CI_CD.md](docs/CI_CD.md).

@@ -4,20 +4,20 @@
 import { useConvexAuth } from '@convex-dev/auth/react';
 import { PushGate } from '@/components/pwa/push-gate';
 import { WeeklyPrivacyDisclaimer } from '@/components/privacy/weekly-disclaimer';
+import { PWAInstallPrompt } from '@/components/pwa/install-prompt';
 
 /**
- * Client-only mounts for privacy + push surfaces. The weekly disclaimer shows
- * to everyone (no auth needed); the push prompt is gated on authentication so
- * anonymous visitors are never asked.
+ * Client-only mounts for privacy, PWA install, and push surfaces.
  */
-export function AppShellExtras({ locale }: { locale: 'th' | 'en' }) {
+export function AppShellExtras({ locale }: { locale: string }) {
   const auth = useConvexAuth();
   const isAuthenticated = auth?.isAuthenticated ?? false;
 
   return (
     <>
-      <WeeklyPrivacyDisclaimer locale={locale} />
+      <WeeklyPrivacyDisclaimer />
       <PushGate locale={locale} isAuthenticated={isAuthenticated} />
+      <PWAInstallPrompt locale={locale} />
     </>
   );
 }

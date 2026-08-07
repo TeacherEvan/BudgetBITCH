@@ -70,11 +70,6 @@ describe('PushPermission', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('supports Thai locale labels', () => {
-    render(<PushPermission locale="th" onSubscribe={() => {}} onClose={() => {}} />);
-    expect(screen.getByTestId('push-allow-btn')).toHaveTextContent('อนุญาต');
-  });
-
   it('displays error when VAPID key is not configured', async () => {
     delete process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
     const onSubscribe = vi.fn();

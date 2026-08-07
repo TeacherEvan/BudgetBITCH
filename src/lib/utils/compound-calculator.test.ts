@@ -44,15 +44,15 @@ describe('calculateCompoundProjection', () => {
 
 describe('formatCurrency', () => {
   it('formats THB without decimals', () => {
-    expect(formatCurrency(12345, 'th', 'THB')).toContain('12,345');
+    expect(formatCurrency(12345, 'THB')).toContain('12,345');
   });
 
   it('formats USD without decimals', () => {
-    expect(formatCurrency(12345, 'en', 'USD')).toContain('12,345');
+    expect(formatCurrency(12345, 'USD')).toContain('12,345');
   });
 
   it('falls back to null currency path with plain number', () => {
-    expect(formatCurrency(12345, 'en', null)).toContain('12,345');
+    expect(formatCurrency(12345, null)).toContain('12,345');
   });
 });
 

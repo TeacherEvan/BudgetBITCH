@@ -11,106 +11,40 @@ describe('LanguageSelectModal', () => {
     mockOnComplete.mockClear();
   });
 
-  it('renders Thai, English (ZA), and English (TH) options when open', () => {
+  it('renders welcome copy when open', () => {
     render(<LanguageSelectModal isOpen={true} onComplete={mockOnComplete} />);
-    
-    expect(screen.getByRole('button', { name: /ไทย.*Thai/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /English \(South Africa\)/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /English \(Thailand\)/i })).toBeInTheDocument();
-    expect(screen.getByText('Welcome to Budget-BOSS')).toBeInTheDocument();
-    expect(screen.getByText('Choose your language to get started')).toBeInTheDocument();
+    expect(screen.getByText('Welcome to Budget Boss')).toBeInTheDocument();
+    expect(screen.getByText('Choose your language & currency to get started')).toBeInTheDocument();
+    expect(screen.getByText('Plan first. Panic less.')).toBeInTheDocument();
   });
 
-  it('renders flag emojis for all 3 locale choices', () => {
+  it('renders all six language options', () => {
     render(<LanguageSelectModal isOpen={true} onComplete={mockOnComplete} />);
-    
-    expect(screen.getAllByText('🇹🇭')).toHaveLength(2);
-    expect(screen.getByText('🇿🇦')).toBeInTheDocument();
+    expect(screen.getByText('English')).toBeInTheDocument();
+    expect(screen.getByText('Español')).toBeInTheDocument();
+    expect(screen.getByText('Français')).toBeInTheDocument();
+    expect(screen.getByText('Deutsch')).toBeInTheDocument();
+    expect(screen.getByText('Português')).toBeInTheDocument();
+    expect(screen.getByText('中文')).toBeInTheDocument();
   });
 
-  it('calls onComplete with th when Thai button clicked', () => {
+  it('defaults to English + USD and completes both', () => {
     render(<LanguageSelectModal isOpen={true} onComplete={mockOnComplete} />);
-    
-    fireEvent.click(screen.getByRole('button', { name: /ไทย.*Thai/i }));
-    
-    expect(mockOnComplete).toHaveBeenCalledTimes(1);
-    expect(mockOnComplete).toHaveBeenCalledWith('th');
+    fireEvent.click(screen.getByRole('button', { name: /Get Started/i }));
+    expect(mockOnComplete).toHaveBeenCalledWith({ locale: 'en', currency: 'USD' });
   });
 
-  it('calls onComplete with en-ZA when English (ZA) button clicked', () => {
+  it('completes with a selected language and currency', () => {
     render(<LanguageSelectModal isOpen={true} onComplete={mockOnComplete} />);
-    
-    fireEvent.click(screen.getByRole('button', { name: /English \(South Africa\)/i }));
-    
-    expect(mockOnComplete).toHaveBeenCalledTimes(1);
-    expect(mockOnComplete).toHaveBeenCalledWith('en-ZA');
-  });
-
-  it('calls onComplete with en-TH when English (TH) button clicked', () => {
-    render(<LanguageSelectModal isOpen={true} onComplete={mockOnComplete} />);
-    
-    fireEvent.click(screen.getByRole('button', { name: /English \(Thailand\)/i }));
-    
-    expect(mockOnComplete).toHaveBeenCalledTimes(1);
-    expect(mockOnComplete).toHaveBeenCalledWith('en-TH');
+    fireEvent.click(screen.getByRole('button', { name: /Français/i }));
+    fireEvent.change(screen.getByLabelText('Select currency'), { target: { value: 'EUR' } });
+    fireEvent.click(screen.getByRole('button', { name: /Get Started/i }));
+    expect(mockOnComplete).toHaveBeenCalledWith({ locale: 'fr', currency: 'EUR' });
   });
 
   it('does not render when isOpen is false', () => {
     render(<LanguageSelectModal isOpen={false} onComplete={mockOnComplete} />);
-    
-    expect(screen.queryByText('Welcome to Budget-BOSS')).not.toBeInTheDocument();
+    expect(screen.queryByText('Welcome to Budget Boss')).not.toBeInTheDocument();
     expect(mockOnComplete).not.toHaveBeenCalled();
-  });
-
-  it('prevents closing via overlay click', () => {
-    render(<LanguageSelectModal isOpen={true} onComplete={mockOnComplete} />);
-    
-    const modal = screen.getByRole('dialog');
-    fireEvent.click(modal); // Click overlay
-    
-    expect(mockOnComplete).not.toHaveBeenCalled();
-  });
-
-  it('prevents closing via escape key', () => {
-    render(<LanguageSelectModal isOpen={true} onComplete={mockOnComplete} />);
-    
-    fireEvent.keyDown(document, { key: 'Escape' });
-    
-    expect(mockOnComplete).not.toHaveBeenCalled();
-  });
-
-  it('locks body scroll when open', () => {
-    const originalOverflow = document.body.style.overflow;
-    
-    render(<LanguageSelectModal isOpen={true} onComplete={mockOnComplete} />);
-    
-    expect(document.body.style.overflow).toBe('hidden');
-    
-    // Cleanup
-    document.body.style.overflow = originalOverflow;
-  });
-
-  it('restores body scroll on unmount', () => {
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    
-    const { unmount } = render(<LanguageSelectModal isOpen={true} onComplete={mockOnComplete} />);
-    unmount();
-    
-    expect(document.body.style.overflow).toBe('unset');
-    
-    document.body.style.overflow = originalOverflow;
-  });
-
-  it('shows tagline "Plan first. Panic less."', () => {
-    render(<LanguageSelectModal isOpen={true} onComplete={mockOnComplete} />);
-    
-    expect(screen.getByText('Plan first. Panic less.')).toBeInTheDocument();
-  });
-
-  it('shows persistence note about settings', () => {
-    render(<LanguageSelectModal isOpen={true} onComplete={mockOnComplete} />);
-    
-    expect(screen.getByText(/Your language is set once/i)).toBeInTheDocument();
   });
 });

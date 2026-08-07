@@ -123,13 +123,9 @@ describe('mapCategory', () => {
     expect(mapCategory('subscriptions')).toBe('subscriptions');
   });
 
-  it('maps thai/english merchant text via the existing mapper', () => {
-    expect(mapCategory('Netflix')).toBe('subscriptions');
-    expect(mapCategory('ค่าเช่า')).toBe('housing');
-  });
-
-  it('falls back to other for unknown input', () => {
+  it('falls back to other for unknown / free-text input (no merchant inference)', () => {
     expect(mapCategory('mystery')).toBe('other');
+    expect(mapCategory('Netflix')).toBe('other');
     expect(mapCategory(undefined)).toBe('other');
   });
 });
@@ -172,11 +168,11 @@ describe('parseImport', () => {
     });
   });
 
-  it('infers category from merchant text when the column is missing', () => {
+  it('leaves category as other when no category column and merchant text is not a known category', () => {
     const csv = ['date,merchant,amount', '2026-03-01,Netflix,429'].join('\n');
     const result = parseImport(csv);
     expect(result.errors).toHaveLength(0);
-    expect(result.valid[0].category).toBe('subscriptions');
+    expect(result.valid[0].category).toBe('other');
   });
 
   it('defaults merchant to Imported when absent', () => {

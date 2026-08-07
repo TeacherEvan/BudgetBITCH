@@ -22,25 +22,40 @@ describe('MoneySyncLoading', () => {
     expect(screen.getByText('FUNDS AVAILABLE (NET)')).toBeInTheDocument();
   });
 
-  it('renders Thai localized strings when locale is th', () => {
-    render(<MoneySyncLoading locale="th" />);
+  it('renders English UI strings when locale is en', () => {
+    render(<MoneySyncLoading locale="en" />);
 
-    expect(screen.getByText('กำลังซิงค์กระแสเงิน')).toBeInTheDocument();
-    expect(screen.getByText('เงินเข้า (MONEY IN)')).toBeInTheDocument();
-    expect(screen.getByText('เงินออก (MONEY OUT)')).toBeInTheDocument();
-    expect(screen.getByText('เงินคงเหลือสุทธิ (FUNDS AVAILABLE)')).toBeInTheDocument();
+    expect(screen.getByText('MONEY FLOW ENGINE')).toBeInTheDocument();
+    expect(screen.getByText('MONEY IN')).toBeInTheDocument();
+    expect(screen.getByText('MONEY OUT')).toBeInTheDocument();
+    expect(screen.getByText('FUNDS AVAILABLE (NET)')).toBeInTheDocument();
   });
 
-  it('calls onComplete after minimum display duration', () => {
+  it('calls onComplete after minimum display duration (default 5s)', () => {
     const onComplete = vi.fn();
     render(<MoneySyncLoading locale="en" onComplete={onComplete} />);
 
     expect(onComplete).not.toHaveBeenCalled();
 
     act(() => {
-      vi.advanceTimersByTime(10000);
+      vi.advanceTimersByTime(5000);
     });
 
+    expect(onComplete).toHaveBeenCalledTimes(1);
+  });
+
+  it('respects a custom minDurationMs override', () => {
+    const onComplete = vi.fn();
+    render(<MoneySyncLoading locale="en" minDurationMs={3000} onComplete={onComplete} />);
+
+    act(() => {
+      vi.advanceTimersByTime(2999);
+    });
+    expect(onComplete).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
@@ -49,7 +64,7 @@ describe('MoneySyncLoading', () => {
     render(<MoneySyncLoading locale="en" onComplete={onComplete} />);
 
     act(() => {
-      vi.advanceTimersByTime(5000);
+      vi.advanceTimersByTime(4000);
     });
 
     expect(onComplete).not.toHaveBeenCalled();
@@ -62,7 +77,7 @@ describe('MoneySyncLoading', () => {
     unmount();
 
     act(() => {
-      vi.advanceTimersByTime(10000);
+      vi.advanceTimersByTime(5000);
     });
 
     expect(onComplete).not.toHaveBeenCalled();

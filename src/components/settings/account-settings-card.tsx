@@ -8,16 +8,16 @@ import { Button } from '@/components/ui/button';
 import { useAccounts } from '@/hooks/use-accounts';
 import type { WizardProfile } from '@/lib/types/budget';
 import type { CurrencyOverride } from '@/hooks/use-currency-override';
+import { PendingDeletesInbox } from '@/components/shared-board/pending-deletes-inbox';
 
 interface AccountSettingsCardProps {
-  locale: 'th' | 'en';
+  locale: string;
   profile: WizardProfile | null;
   override: CurrencyOverride;
   clearProfile?: () => void;
 }
 
 export function AccountSettingsCard({
-  locale,
   profile,
   override,
   clearProfile,
@@ -30,7 +30,7 @@ export function AccountSettingsCard({
   return (
     <section id="settings-profile" className="scroll-mt-24">
       <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#C9960C] mb-4">
-        {locale === 'th' ? 'โปรไฟล์' : 'Profile'}
+        {'Profile'}
       </h2>
       <Card className="p-4 space-y-4">
         {profile?.answers ? (
@@ -40,10 +40,10 @@ export function AccountSettingsCard({
             </div>
             <div className="min-w-0">
               <p className="font-semibold text-white truncate">
-                {override ?? profile.answers.currency ?? 'THB'} {locale === 'th' ? 'โปรไฟล์' : 'Profile'}
+                {override ?? profile.answers.currency ?? 'USD'} {'Profile'}
               </p>
               <p className="text-xs text-white/50 mt-0.5">
-                {locale === 'th' ? 'รายรับต่อเดือน: ' : 'Monthly income: '}
+                {'Monthly income: '}
                 <span className="text-[#E8B020] font-mono">
                   {typeof profile.answers.income === 'number' ? profile.answers.income.toLocaleString() : '—'}
                 </span>
@@ -52,21 +52,21 @@ export function AccountSettingsCard({
           </div>
         ) : (
           <p className="text-sm text-white/50">
-            {locale === 'th' ? 'ยังไม่ได้ตั้งค่าโปรไฟล์' : 'No profile set up yet'}
+            {'No profile set up yet'}
           </p>
         )}
 
         <div className="space-y-2">
           <label className="text-xs font-medium uppercase tracking-[0.1em] text-white/60">
-            {locale === 'th' ? 'ชื่อที่แสดง (สำหรับบอร์ดคู่)' : 'Display name (shared boards)'}
+            {'Display name (shared boards)'}
           </label>
           <div className="flex gap-2">
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder={locale === 'th' ? 'เช่น Evan, Leandi' : 'e.g. Evan, Leandi'}
+              placeholder={'e.g. Evan, Leandi'}
               maxLength={40}
-              aria-label={locale === 'th' ? 'ชื่อที่แสดง' : 'Display name'}
+              aria-label={'Display name'}
             />
             <Button
               type="button"
@@ -82,13 +82,11 @@ export function AccountSettingsCard({
                 }
               }}
             >
-              {saving ? (locale === 'th' ? 'บันทึก...' : 'Save...') : (locale === 'th' ? 'บันทึก' : 'Save')}
+              {saving ? ('Save...') : ('Save')}
             </Button>
           </div>
           <p className="text-xs text-white/40">
-            {locale === 'th'
-              ? 'แสดงให้สมาชิกบอร์ดคนอื่นเห็นแทนอีเมล'
-              : 'Shown to other board members instead of your email'}
+            {'Shown to other board members instead of your email'}
           </p>
         </div>
 
@@ -96,12 +94,16 @@ export function AccountSettingsCard({
           type="button"
           onClick={() => {
             clearProfile?.();
-            router.push('/dashboard');
+            if (typeof window !== 'undefined') {
+              sessionStorage.setItem('bb:wizard-redo', '1');
+            }
+            router.push('/dashboard?redo=true');
           }}
-          className="flex w-full items-center gap-2 rounded-xl border border-[rgba(201,150,12,0.3)] bg-[rgba(201,150,12,0.08)] px-4 py-3 text-sm font-medium text-[#E8B020] transition-colors hover:bg-[rgba(201,150,12,0.15)]"
+          className="flex w-full items-center gap-2 rounded-xl border border-[rgba(201,150,12,0.3)] bg-[rgba(201,150,12,0.08)] px-4 py-3 text-sm font-medium text-[#E8B020] transition-colors hover:bg-[rgba(201,150,12,0.15)] cursor-pointer"
         >
-          🔄 {locale === 'th' ? 'เริ่มวิซาร์ดตั้งค่าใหม่อีกครั้ง' : 'Re-run Setup Wizard'}
+          🔄 {'Re-run Setup Wizard'}
         </button>
+        <PendingDeletesInbox />
       </Card>
     </section>
   );

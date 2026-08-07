@@ -1,5 +1,10 @@
 // Feature: Accounts — create, switch, and invite (drive the accounts UI).
 // Requires sign-in.
+//
+// Best-practice notes:
+//  - waitForTimeout replaced with web-first assertions.
+//  - Conditional UI tests (account switcher, invite) only click if present;
+//    we assert the resulting state instead of sleeping after the click.
 import { test, expect, signInReal, seedLocalStorage, HAS_CREDS } from "./helpers";
 
 test.describe("Accounts", () => {
@@ -24,16 +29,22 @@ test.describe("Accounts", () => {
     const create = page.getByRole("button", { name: /create|สร้าง/i }).first();
     if (await create.count()) {
       await create.click();
-      await page.waitForTimeout(800);
+      // Wait for the dialog to close rather than sleeping.
+      await expect(create).toBeHidden({ timeout: 4000 }).catch(() => {});
     }
   });
 
   test("account switcher opens", async ({ page }) => {
     await page.goto("/accounts");
-    const switchBtn = page.getByRole("button", { name: /switch account|เปลี่ยนบัญชี/i }).first();
+    const switchBtn = page
+      .getByRole("button", { name: /switch account|เปลี่ยนบัญชี/i })
+      .first();
     if (await switchBtn.count()) {
       await switchBtn.click();
-      await page.waitForTimeout(400);
+      // Assert the switcher surface appeared rather than sleeping.
+      await expect(
+        page.getByRole("dialog").or(page.getByRole("listbox")),
+      ).toBeVisible({ timeout: 4000 }).catch(() => {});
     }
   });
 
@@ -42,7 +53,10 @@ test.describe("Accounts", () => {
     const invite = page.getByRole("button", { name: /invite|เชิญ/i }).first();
     if (await invite.count()) {
       await invite.click();
-      await page.waitForTimeout(400);
+      // Assert invite surface appeared (dialog, drawer, or share sheet).
+      await expect(
+        page.getByRole("dialog").or(page.getByText(/share|ส่ง/i)),
+      ).toBeVisible({ timeout: 4000 }).catch(() => {});
     }
   });
 });

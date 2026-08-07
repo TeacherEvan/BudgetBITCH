@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useRef, useMemo } from 'react';
+import type { CurrencyCode } from '@/lib/utils/currency';
 import Link from 'next/link';
 import { X, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -12,8 +13,11 @@ import { AlertsSidebar } from '@/components/dashboard/alerts-sidebar';
 import { PriorityGuide } from '@/components/dashboard/priority-guide';
 import { Modal } from '@/components/ui/modal';
 import { useCriticalExpense } from '@/hooks/use-critical-expense';
-import { useWizardProfile, useBudgets, useBills } from '@/hooks/use-local-db';
+import { useWizardProfile, useBudgets, useBills, useExpenses } from '@/hooks/use-local-db';
 import { useResolvedLocation } from '@/hooks/use-resolved-location';
+import { useResolvedCurrency } from '@/hooks/use-currency';
+import { useShimmerPref } from '@/hooks/use-shimmer-pref';
+import { CurrencyConverterCard } from '@/components/dashboard/currency-converter-card';
 import { BentoGrid, type PanelConfig } from '@/components/dashboard/bento-grid';
 import { MobilePanelTabs } from '@/components/dashboard/mobile-panel-tabs';
 import { ScenarioSandboxModal } from '@/components/dashboard/scenario-sandbox-modal';
@@ -23,10 +27,11 @@ import { BudgetVarianceGrid } from '@/components/dashboard/budget-variance-grid'
 import { buildPanels } from '@/components/dashboard/panels';
 import { PANEL_CONFIG, PANEL_ORDER, type PanelKey } from '@/components/dashboard/panelConfig';
 import { DailyDisposableHero } from '@/components/dashboard/daily-disposable-hero';
+import { ReceiptDraftsList } from '@/components/receipt/receipt-drafts-list';
 
 interface DashboardShellProps {
-  locale: 'th' | 'en';
-  onLocaleChange?: (locale: 'th' | 'en') => void;
+  locale: string;
+  onLocaleChange?: (locale: string) => void;
   onSetup?: () => void;
 }
 
@@ -35,17 +40,31 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
   const { profile } = useWizardProfile();
   const { budgets, loading: budgetsLoading } = useBudgets();
   const { bills } = useBills();
+  const { expenses } = useExpenses();
   const [criticalExpenseOpen, setCriticalExpenseOpen] = useState(false);
-  const [openPanels, setOpenPanels] = useState<PanelKey[]>(['budget']);
+  const [openPanels, setOpenPanels] = useState<PanelKey[]>(['spending']);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [marketWatchOpen, setMarketWatchOpen] = useState(false);
-  const [mobileActivePanel, setMobileActivePanel] = useState<PanelKey>('budget');
+  const [mobileActivePanel, setMobileActivePanel] = useState<PanelKey>('spending');
   const [scenarioModalOpen, setScenarioModalOpen] = useState(false);
   const [excelTab, setExcelTab] = useState<'standard' | 'variance' | 'cashflow' | 'pivot'>('standard');
 
   // Location determines Market Watch availability (location-specific feeds only)
-  const { location } = useResolvedLocation();
+  const { location, requestLocation } = useResolvedLocation();
+  const currency = useResolvedCurrency();
+  const resolvedCurrency = (currency ?? 'USD') as CurrencyCode;
+  const { enabled: shimmerOn, setEnabled: setShimmerOn } = useShimmerPref();
   const hasLocation = location !== null;
+  const [requestingLoc, setRequestingLoc] = useState(false);
+
+  const handleRequestLocation = async () => {
+    setRequestingLoc(true);
+    try {
+      await requestLocation();
+    } finally {
+      setRequestingLoc(false);
+    }
+  };
 
 
   // T5: direction-aware panel transitions. Direction is decided in the
@@ -118,72 +137,76 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
             <span className="text-2xl">🏦</span>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-white">
-                {locale === 'th' ? 'จัดการบัญชีร่วมกัน' : 'Manage Accounts'}
+                {'Manage Accounts'}
               </p>
               <p className="text-[10px] text-white/50 leading-tight">
-                {locale === 'th' ? 'แชร์บอร์ดกับครอบครัว เพื่อน หรือที่ทำงาน' : 'Share budget with family, friends, or work'}
+                {'Share budget with family, friends, or work'}
               </p>
             </div>
           </Link>
-          <div className="mb-6 mt-4 space-y-3" role="region" aria-label={locale === 'th' ? 'คุณลักษณะพิเศษ' : 'Special features'}>
+          <div className="mb-6 mt-4 space-y-3" role="region" aria-label={'Special features'}>
             <div className="bb-kicker" role="heading" aria-level={2}>
-              {locale === 'th' ? 'ค่าใช้จ่ายที่ต้องลด' : 'Cut One Expense'}
+              {'Cut One Expense'}
             </div>
             <button
               onClick={() => setCriticalExpenseOpen(true)}
               className="flex w-full items-center gap-3 rounded-xl border border-[var(--gold-border-strong)] bg-[var(--gold-base)]/10 p-3 text-left transition-colors hover:bg-[var(--gold-base)]/20 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={commitmentLoading}
-              aria-label={locale === 'th' ? 'เลือกค่าใช้จ่าย 1 อย่างเพื่อลดในเดือนนี้ ดูศักยภาพการประหยัด' : 'Pick one expense to cut this month, see savings potential'}
+              aria-label={'Pick one expense to cut this month, see savings potential'}
             >
               <span className="text-2xl" aria-hidden="true">🎯</span>
               <div className="flex-1 text-left min-w-0">
                 <p className="text-sm font-medium text-[var(--text-1)] truncate">
-                  {locale === 'th' ? 'เลือก 1 อย่างลดในเดือนนี้' : 'Pick 1 to cut this month'}
+                  {'Pick 1 to cut this month'}
                 </p>
                 <p className="text-xs text-[var(--text-2)]">
-                  {locale === 'th' ? 'ดูเงินที่จะประหยัดได้' : 'See your savings potential'}
+                  {'See your savings potential'}
                 </p>
               </div>
               <ChevronDown className="text-[var(--gold-bright)]" aria-hidden="true" />
             </button>
-            {commitmentLoading && <p className="text-center text-xs text-[var(--text-2)]">{locale === 'th' ? 'กำลังโหลด...' : 'Loading...'}</p>}
+            {commitmentLoading && <p className="text-center text-xs text-[var(--text-2)]">{'Loading...'}</p>}
 
             {/* Market Watch - desktop sidebar, only below xl */}
             <div className="bb-kicker" role="heading" aria-level={2}>
-              {locale === 'th' ? 'ข่าวและข้อมูลล่าสุด' : 'Market Watch'}
+              {'Market Watch'}
             </div>
             {hasLocation ? (
               <button
                 data-testid="market-watch-trigger"
                 onClick={() => setMarketWatchOpen(true)}
                 className="xl:hidden flex w-full items-center gap-3 rounded-xl border border-sky-400/30 bg-sky-400/10 p-3 text-left transition-colors hover:bg-sky-400/20"
-                aria-label={locale === 'th' ? 'เปิด Market Watch ดูราคาน้ำมัน โปรโมชั่น ข่าว' : 'Open Market Watch for fuel prices, deals, and news'}
+                aria-label={'Open Market Watch for fuel prices, deals, and news'}
               >
                 <span className="text-2xl" aria-hidden="true">📰</span>
                 <div className="flex-1 text-left min-w-0">
                   <p className="text-sm font-medium text-[var(--text-1)] truncate">
-                    {locale === 'th' ? 'ข่าวและข้อมูลล่าสุด' : 'Market Watch'}
+                    {'Market Watch'}
                   </p>
                   <p className="text-xs text-[var(--text-2)]">
-                    {locale === 'th' ? 'ดูราคาน้ำมัน โปรโมชั่น ข่าว' : 'Fuel, deals & news'}
+                    {'Fuel, deals & news'}
                   </p>
                 </div>
                 <ChevronDown className="text-sky-400" aria-hidden="true" />
               </button>
             ) : (
               <button
+                type="button"
                 data-testid="market-watch-location-locked"
-                disabled
-                className="xl:hidden flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3 text-left cursor-not-allowed opacity-60"
-                aria-label={locale === 'th' ? 'เปิดการใช้งานตำแหน่งที่ตั้งเพื่อดู Market Watch' : 'Enable location to use Market Watch'}
+                disabled={requestingLoc}
+                onClick={handleRequestLocation}
+                className="xl:hidden flex w-full items-center gap-3 rounded-xl border border-sky-400/30 bg-sky-400/10 p-3 text-left transition-colors hover:bg-sky-400/20 cursor-pointer disabled:opacity-50"
+                aria-label={'Enable location to use Market Watch'}
               >
                 <span className="text-2xl" aria-hidden="true">📍</span>
                 <div className="flex-1 text-left min-w-0">
                   <p className="text-sm font-medium text-[var(--text-1)] truncate">
-                    {locale === 'th' ? 'เปิดการใช้งานตำแหน่งที่ตั้ง' : 'Enable Location'}
+                    {requestingLoc
+                      ? ('Requesting location...')
+                      : ('Enable Location')}
                   </p>
                   <p className="text-xs text-[var(--text-2)]">
-                    {locale === 'th' ? 'จำเป็นสำหรับข่าวและราคาน้ำมันในพื้นที่' : 'Required for local news & fuel'}
+                    {'Required for local news & fuel'}
                   </p>
                 </div>
               </button>
@@ -214,7 +237,7 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
                   )}
                   <span className="text-xl">{config.icon}</span>
                   <span className={`flex-1 text-left text-sm font-medium truncate ${isOpen ? 'text-[var(--gold-bright)]' : 'text-[var(--text-2)]'}`}>
-                    {config.label[locale]}
+                    {config.label.en}
                   </span>
                   {isOpen ? <ChevronUp className="text-[var(--text-muted)]" /> : <ChevronDown className="text-[var(--text-muted)]" />}
                 </button>
@@ -227,6 +250,9 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
         <div className="bb-scroll-zone flex flex-col px-4 py-4 sm:px-5 lg:px-6">
           {/* Daily Disposable Hero */}
           <DailyDisposableHero locale={locale} onSetup={onSetup} />
+
+          {/* Bot-ingested receipt drafts: review & save as expenses */}
+          <ReceiptDraftsList />
 
           {/* Excel Power Budgeting Control Bar */}
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 p-3 bg-neutral-900/80 backdrop-blur-xl rounded-2xl border border-white/10">
@@ -283,25 +309,25 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
               className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-500 to-amber-500 text-white font-bold text-xs shadow-lg hover:brightness-110 transition-all flex items-center gap-1.5 shrink-0 w-full sm:w-auto justify-center"
             >
               <span>⚙️</span>
-              <span>{locale === 'th' ? 'What-If Sandbox (Goal Seek)' : 'What-If Sandbox (Goal Seek)'}</span>
+              <span>{'What-If Sandbox (Goal Seek)'}</span>
             </button>
           </div>
 
           {/* Panels or Excel Views */}
           <div className="mt-4">
             {excelTab === 'variance' && (
-              <BudgetVarianceGrid locale={locale} currency={profile?.answers?.currency ?? 'THB'} />
+              <BudgetVarianceGrid locale={locale} currency={resolvedCurrency} expenses={expenses} />
             )}
             {excelTab === 'cashflow' && (
               <CashFlowProjectionCard
                 locale={locale}
-                currency={profile?.answers?.currency ?? 'THB'}
+                currency={resolvedCurrency}
                 currentCashBalance={35000}
                 monthlyIncome={profile?.answers?.income ?? 45000}
               />
             )}
             {excelTab === 'pivot' && (
-              <CategoryPivotCard locale={locale} currency={profile?.answers?.currency ?? 'THB'} profile={profile} />
+              <CategoryPivotCard locale={locale} currency={resolvedCurrency} profile={profile} />
             )}
             {excelTab === 'standard' && (
               <>
@@ -323,11 +349,33 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
             )}
           </div>
 
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <CurrencyConverterCard baseCurrency={resolvedCurrency} amount={100} />
+            <div className="rounded-2xl border border-[var(--gold-border-soft)] bg-[var(--bg-surface-1)] p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-white">{'Shimmer Animation'}</h3>
+                  <p className="mt-0.5 text-xs text-white/50">{'Gold edge glow on buttons & cards'}</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={shimmerOn}
+                  onClick={() => setShimmerOn(!shimmerOn)}
+                  aria-label="Toggle shimmer animation"
+                  className={`relative h-6 w-11 rounded-full transition-colors ${shimmerOn ? 'bg-[var(--gold-bright)]' : 'bg-white/15'}`}
+                >
+                  <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${shimmerOn ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                </button>
+              </div>
+            </div>
+          </div>
+
           <ScenarioSandboxModal
             isOpen={scenarioModalOpen}
             onClose={() => setScenarioModalOpen(false)}
             profile={profile}
-            currency={profile?.answers?.currency ?? 'THB'}
+            currency={resolvedCurrency}
             locale={locale}
           />
         </div>
@@ -351,19 +399,19 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
       <div data-testid="mobile-sheet" className={`lg:hidden fixed bottom-0 left-0 right-0 z-40 transform rounded-t-2xl border-t bg-[var(--bg-base)]/95 p-4 backdrop-blur-xl transition-transform duration-300 ${mobileMenuOpen ? 'translate-y-0' : 'translate-y-full'}`} style={{ maxHeight: '82vh', overflowY: 'auto' }}>
         <button
           onClick={() => setMobileMenuOpen(false)}
-          aria-label={locale === 'th' ? 'ปิดเมนู' : 'Close menu'}
+          aria-label={'Close menu'}
           className="absolute -top-3 right-4 flex h-10 w-10 items-center justify-center rounded-full border border-[var(--gold-border-soft)] bg-[var(--bg-base)]/80"
         >
           <X className="h-5 w-5 text-[var(--text-muted)]" />
         </button>
         <div className="space-y-4 pt-2">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-[var(--text-1)]">{locale === 'th' ? 'เมนู' : 'Menu'}</h2>
+            <h2 className="font-semibold text-[var(--text-1)]">{'Menu'}</h2>
           </div>
-          <button className="flex w-full items-center gap-3 rounded-xl border border-[var(--gold-border-strong)] bg-[var(--gold-base)]/10 p-3 text-left disabled:cursor-not-allowed disabled:opacity-50" onClick={() => { setCriticalExpenseOpen(true); setMobileMenuOpen(false); }} disabled={commitmentLoading} aria-label={locale === 'th' ? 'เลือกค่าใช้จ่าย 1 อย่างเพื่อลดในเดือนนี้' : 'Pick one expense to cut this month'}>
+          <button className="flex w-full items-center gap-3 rounded-xl border border-[var(--gold-border-strong)] bg-[var(--gold-base)]/10 p-3 text-left disabled:cursor-not-allowed disabled:opacity-50" onClick={() => { setCriticalExpenseOpen(true); setMobileMenuOpen(false); }} disabled={commitmentLoading} aria-label={'Pick one expense to cut this month'}>
             <span className="text-2xl" aria-hidden="true">🎯</span>
             <div className="min-w-0">
-              <p className="font-medium text-[var(--text-1)] truncate">{locale === 'th' ? 'เลือก 1 อย่างลดในเดือนนี้' : 'Pick 1 to cut this month'}</p>
+              <p className="font-medium text-[var(--text-1)] truncate">{'Pick 1 to cut this month'}</p>
             </div>
           </button>
           {hasLocation ? (
@@ -371,23 +419,29 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
               data-testid="market-watch-trigger"
               className="flex w-full items-center gap-3 rounded-xl border border-sky-400/30 bg-sky-400/10 p-3 text-left"
               onClick={() => { setMarketWatchOpen(true); setMobileMenuOpen(false); }}
-              aria-label={locale === 'th' ? 'เปิด Market Watch' : 'Open Market Watch'}
+              aria-label={'Open Market Watch'}
             >
               <span className="text-2xl" aria-hidden="true">📰</span>
               <div className="min-w-0">
-                <p className="font-medium text-[var(--text-1)] truncate">{locale === 'th' ? 'ข่าวและข้อมูลล่าสุด' : 'Market Watch'}</p>
+                <p className="font-medium text-[var(--text-1)] truncate">{'Market Watch'}</p>
               </div>
             </button>
           ) : (
             <button
+              type="button"
               data-testid="market-watch-location-locked"
-              disabled
-              className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3 text-left cursor-not-allowed opacity-60"
-              aria-label={locale === 'th' ? 'เปิดการใช้งานตำแหน่งที่ตั้งเพื่อดู Market Watch' : 'Enable location to use Market Watch'}
+              disabled={requestingLoc}
+              onClick={handleRequestLocation}
+              className="flex w-full items-center gap-3 rounded-xl border border-sky-400/30 bg-sky-400/10 p-3 text-left transition-colors hover:bg-sky-400/20 cursor-pointer disabled:opacity-50"
+              aria-label={'Enable location to use Market Watch'}
             >
               <span className="text-2xl" aria-hidden="true">📍</span>
               <div className="min-w-0">
-                <p className="font-medium text-[var(--text-1)] truncate">{locale === 'th' ? 'เปิดการใช้งานตำแหน่งที่ตั้ง' : 'Enable Location'}</p>
+                <p className="font-medium text-[var(--text-1)] truncate">
+                  {requestingLoc
+                    ? ('Requesting location...')
+                    : ('Enable Location')}
+                </p>
               </div>
             </button>
           )}
@@ -402,10 +456,10 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
             <span className="text-2xl">🏦</span>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-white">
-                {locale === 'th' ? 'จัดการบัญชีร่วมกัน' : 'Manage Accounts'}
+                {'Manage Accounts'}
               </p>
               <p className="text-[10px] text-white/50 leading-tight">
-                {locale === 'th' ? 'แชร์บอร์ดกับครอบครัว เพื่อน หรือที่ทำงาน' : 'Share budget with family, friends, or work'}
+                {'Share budget with family, friends, or work'}
               </p>
             </div>
           </Link>
@@ -421,7 +475,7 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
                 }`}
               >
                 <span className="text-xl">{config.icon}</span>
-                <span className={`flex-1 text-left text-sm font-medium truncate ${isActive ? 'text-[var(--gold-bright)]' : 'text-[var(--text-2)]'}`}>{config.label[locale]}</span>
+                <span className={`flex-1 text-left text-sm font-medium truncate ${isActive ? 'text-[var(--gold-bright)]' : 'text-[var(--text-2)]'}`}>{config.label.en}</span>
               </button>
             );
           })}
@@ -441,7 +495,7 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
         onClose={() => setMarketWatchOpen(false)}
         showCloseButton={true}
         size="2xl"
-        title={locale === 'th' ? 'ข่าวและข้อมูลล่าสุด' : 'Market Watch'}
+        title={'Market Watch'}
       >
         <AlertsSidebar locale={locale} isModal={true} />
       </Modal>
@@ -450,7 +504,7 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
       <div className="fixed bottom-20 right-4 z-30 lg:hidden">
         <Link
           href="/quick-add"
-          aria-label={locale === 'th' ? 'เพิ่มรายการด่วน' : 'Quick Add Widget'}
+          aria-label={'Quick Add Widget'}
           className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black shadow-[0_0_24px_rgba(245,215,66,0.5)] transition-all hover:scale-105 active:scale-95"
         >
           <span className="text-2xl font-black">+</span>

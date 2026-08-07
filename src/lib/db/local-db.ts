@@ -69,7 +69,7 @@ export interface BudgetBITCHDB extends DBSchema {
   settings: {
     key: string;
     value: {
-      preferredLocale: 'th' | 'en';
+      preferredLocale: string;
       voiceSettings: { enabled: boolean; rate: number; pitch: number };
       privacyDisclaimerAccepted: boolean;
     };
@@ -106,15 +106,31 @@ export interface BudgetBITCHDB extends DBSchema {
     key: string;
     value: number;
   };
+  // Offline receipt scraper drafts queue
+  receiptDrafts: {
+    key: string; // clientDraftId
+    value: {
+      clientDraftId: string;
+      payload: unknown;
+      result: unknown;
+      answers?: Record<string, string>;
+      confirmed?: boolean;
+      createdAt: number;
+    };
+  };
+  // Offline sync snapshots queue
+  syncQueue: {
+    key: number;
+    value: {
+      id?: number;
+      data: unknown;
+      timestamp: number;
+    };
+  };
 }
 
 const DB_NAME = 'budgetbitch';
-// Bumped to 5: forces the IndexedDB upgrade callback to run for existing clients
-// whose database version was frozen (at 3) before the `incomes` store was added
-// (commit 08757d2). Without the bump the upgrade callback never executes, so
-// `incomes` is never created and reads throw
-// "IDBDatabase.transaction: 'incomes' is not a known object store name".
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 let dbInstance: IDBPDatabase<BudgetBITCHDB> | null = null;
 let dbPromise: Promise<IDBPDatabase<BudgetBITCHDB>> | null = null;
 
@@ -217,6 +233,8 @@ export async function getDB(): Promise<IDBPDatabase<BudgetBITCHDB>> {
       if (!db.objectStoreNames.contains('localAccounts')) db.createObjectStore('localAccounts');
       if (!db.objectStoreNames.contains('bbMeta')) db.createObjectStore('bbMeta');
       if (!db.objectStoreNames.contains('localWrites')) db.createObjectStore('localWrites');
+      if (!db.objectStoreNames.contains('receiptDrafts')) db.createObjectStore('receiptDrafts');
+      if (!db.objectStoreNames.contains('syncQueue')) db.createObjectStore('syncQueue', { keyPath: 'id', autoIncrement: true });
 
       // Version-specific migrations
       if (oldVersion > 0 && oldVersion < 3) {
@@ -385,7 +403,7 @@ export async function addNewsItem(item: NewsItem): Promise<void> {
   await db.put('newsCache', item);
 }
 
-export async function getNewsByLocale(locale: 'th' | 'en'): Promise<NewsItem[]> {
+export async function getNewsByLocale(locale: string): Promise<NewsItem[]> {
   const db = await getDB();
   return db.getAllFromIndex('newsCache', 'by-locale', locale);
 }
@@ -419,7 +437,7 @@ export async function getLocationCache(): Promise<LocationCache | undefined> {
 
 // Settings
 export async function saveSettings(settings: { 
-  preferredLocale: 'th' | 'en'; 
+  preferredLocale: string; 
   voiceSettings: { enabled: boolean; rate: number; pitch: number };
   privacyDisclaimerAccepted: boolean;
 }): Promise<void> {
@@ -428,7 +446,7 @@ export async function saveSettings(settings: {
 }
 
 export async function getSettings(): Promise<{ 
-  preferredLocale: 'th' | 'en'; 
+  preferredLocale: string; 
   voiceSettings: { enabled: boolean; rate: number; pitch: number };
   privacyDisclaimerAccepted: boolean;
 } | undefined> {
@@ -456,7 +474,8 @@ export async function clearAllData(): Promise<void> {
     'wizardProfile', 'expenses', 'incomes', 'budgets', 'bills', 'savingsGoals',
     'netWorthSnapshots', 'debts', 'criticalExpenseCommitments', 'newsCache',
     'locationCache', 'settings',
-    'accountsData', 'localAccounts', 'bbMeta',
+    'accountsData', 'localAccounts', 'bbMeta', 'localWrites',
+    'receiptDrafts', 'syncQueue',
   ] as const;
   const activeStores = db.objectStoreNames
     ? stores.filter((store) => db.objectStoreNames.contains(store))
@@ -467,6 +486,22 @@ export async function clearAllData(): Promise<void> {
     await tx.objectStore(store).clear();
   }
   await tx.done;
+}
+
+/**
+ * Tombstone written by the "Reset All Data" flow. `AccountSyncMount` reads this
+ * before auto-restoring a cloud snapshot and refuses to restore any snapshot
+ * taken before the reset — otherwise a reset that empties the local board would
+ * immediately re-pull the "deleted" data back from the cloud.
+ */
+export const RESET_TOMBSTONE_KEY = 'bb:lastResetAt';
+
+export async function markResetTombstone(): Promise<void> {
+  try {
+    localStorage.setItem(RESET_TOMBSTONE_KEY, String(Date.now()));
+  } catch {
+    // localStorage may be unavailable (private mode); best-effort only.
+  }
 }
 
 export async function clearAllUserData(): Promise<void> {
@@ -739,4 +774,5 @@ export * from './stores/expenses-store';
 export * from './stores/snapshots-store';
 export * from './stores/accounts-store';
 export * from './stores/incomes-store';
+export * from './stores/receipt-drafts-store';
 

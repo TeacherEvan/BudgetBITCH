@@ -16,7 +16,6 @@ type WelcomeWindowProps = {
 
 const sloganMap = {
   en: 'Shut up and do it!!!',
-  th: 'หุบปากแล้วทำซะ!!!',
   zh: '别废话，开干！！！'
 };
 
@@ -29,12 +28,10 @@ export function WelcomeWindow({ signInHref, signUpHref }: WelcomeWindowProps) {
   const prefersReduced = useReducedMotion();
 
   // Safe locale extraction from next-intl (defaulting to 'en')
-  let currentLocale: 'en' | 'th' | 'zh' = 'en';
+  let currentLocale: 'en' | 'zh' = 'en';
   try {
     const rawLocale = t('brand'); // trigger locale lookup or check translation keys
-    if (rawLocale.includes('บอร์ด')) {
-      currentLocale = 'th';
-    } else if (rawLocale.includes('控制板')) {
+    if (rawLocale.includes('控制板')) {
       currentLocale = 'zh';
     }
   } catch {
@@ -272,7 +269,7 @@ export function WelcomeWindow({ signInHref, signUpHref }: WelcomeWindowProps) {
 
             {/* Random Pro-Tips Widget Integration */}
             <div className="mt-8">
-              <ProTipsCard locale={currentLocale === 'th' ? 'th' : 'en'} />
+              <ProTipsCard locale={'en'} />
             </div>
 
             {/* Features list */}

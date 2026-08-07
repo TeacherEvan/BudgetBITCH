@@ -5,7 +5,7 @@ export interface WizardProfile {
   completed: true;
   completedAt: string; // ISO
   version: 1;
-  locale: 'th' | 'en' | 'en-ZA' | 'en-TH'; // SET FIRST, NEVER CHANGES WITHOUT USER ACTION
+  locale: string | 'en-ZA' | 'en-TH'; // SET FIRST, NEVER CHANGES WITHOUT USER ACTION
   answers: {
     income: number;           // Step 1
     locationConsent: boolean; // Step 2
@@ -46,61 +46,55 @@ export type CriticalExpenseKey =
   | 'ride_hailing'
   | 'impulse_shopping';
 
-export const CRITICAL_EXPENSES: Record<CriticalExpenseKey, { 
-  labelTh: string; 
+export const CRITICAL_EXPENSES: Record<CriticalExpenseKey, {
   labelEn: string; 
   icon: string;
-  thaiContext: string;
 }> = {
-  sugar: { 
-    labelTh: 'น้ำตาลและขนมหวาน', 
+  sugar: {
     labelEn: 'Sugar & sweets', 
     icon: '🍬',
-    thaiContext: 'ชาเย็น, กาแฟหวาน, เค้ก, ขนมไทย'
   },
-  coffee: { 
-    labelTh: 'คาเฟ่ทุกวัน', 
+  coffee: {
     labelEn: 'Daily coffee', 
     icon: '☕',
-    thaiContext: 'สตาร์บัคส์, แอมازอน, คาเฟ่ห้องทำงาน'
   },
-  takeaways: { 
-    labelTh: 'สั่งอาหาร (GrabFood/Foodpanda)', 
+  takeaways: {
     labelEn: 'Takeaways/delivery', 
     icon: '🍕',
-    thaiContext: 'สั่งกลับบ้าน/ทำงาน แทนทำกินเอง'
   },
-  alcohol: { 
-    labelTh: 'แอลกอฮอล์', 
+  alcohol: {
     labelEn: 'Alcohol', 
     icon: '🍺',
-    thaiContext: 'เบียร์, เหล้าขาว, ดื่มกับเพื่อน'
   },
-  cigarettes_vaping: { 
-    labelTh: 'บุหรี่/วูป', 
+  cigarettes_vaping: {
     labelEn: 'Cigarettes/Vaping', 
     icon: '🚬',
-    thaiContext: 'บุหรี่ม้วน, วูป, IQOS'
   },
-  streaming: { 
-    labelTh: 'สตรีมมิง (Netflix/Disney+/TrueID)', 
+  streaming: {
     labelEn: 'Streaming subscriptions', 
     icon: '📺',
-    thaiContext: 'Netflix, Disney+, HBO GO, TrueID, Viu'
   },
-  ride_hailing: { 
-    labelTh: 'แกร็บ/โบลท์', 
+  ride_hailing: {
     labelEn: 'Ride-hailing (Grab/Bolt)', 
     icon: '🚗',
-    thaiContext: 'GrabCar, GrabBike, Bolt, รถเมล์/BTS ที่นั่งสบาย'
   },
-  impulse_shopping: { 
-    labelTh: 'ช็อปปิ้งอิมพัลส์ (Lazada/Shopee/TikTok Shop)', 
+  impulse_shopping: {
     labelEn: 'Impulse online shopping', 
     icon: '🛍️',
-    thaiContext: 'Flash sale, ไลฟ์สดขายของ, ซื้อไม่ได้ลอง'
   },
 };
+
+/** Receipt line item captured by the deterministic scraper bot. */
+export interface ReceiptLineItem {
+  description: string;
+  amount: number;
+  /** Inferred from the description via mapCategory; always a valid ExpenseCategory. */
+  category: ExpenseCategory;
+  /** Quantity, when the receipt encoded a `qty x unit = total` pattern. */
+  qty?: number;
+  /** Unit price, when the receipt encoded a `qty x unit = total` pattern. */
+  unitPrice?: number;
+}
 
 /** Expense entry — local only */
 export interface ExpenseEntry {
@@ -112,10 +106,23 @@ export interface ExpenseEntry {
   note?: string;
   isRecurring?: boolean;
   recurringId?: string; // for subscription detection
-  source: 'manual' | 'voice' | 'import';
+  source: 'manual' | 'voice' | 'import' | 'receipt';
   cycle?: 'monthly' | 'yearly'; // for subscriptions
   createdBy?: string; // shared-account: creator user id
   createdByName?: string; // shared-account: creator display name
+  /** Itemized lines from a scanned receipt (deterministic bot). Undefined for manual entries. */
+  lineItems?: ReceiptLineItem[];
+  /** Tax/VAT extracted from a scanned receipt. */
+  tax?: number;
+  /** ID of the original expense this was repeated from (Repeat Purchase feature). */
+  repeatedFrom?: string;
+  /**
+   * Date the entry was recorded in the app (YYYY-MM-DD), set once at save
+   * time. Distinct from `date`, the purchase date printed on the receipt —
+   * a receipt scanned days late keeps its original `date` while `entryDate`
+   * records when it entered the ledger. Never user-editable.
+   */
+  entryDate?: string;
 }
 
 export type ExpenseCategory =
@@ -148,19 +155,6 @@ export interface IncomeEntry {
   createdByName?: string; // shared-account: creator display name
   createdAt: string;
 }
-
-/** Thai-specific category aliases for voice/input */
-export const THAI_CATEGORY_ALIASES: Record<string, ExpenseCategory> = {
-  'ค่าเช่า': 'housing', 'ค่าคอนโด': 'housing', 'บ้าน': 'housing',
-  'ค่าเดินทาง': 'transport', 'บีทีเอส': 'transport', 'รถไฟฟ้า': 'transport', 'แกร็บ': 'transport', 'แกรบ': 'transport', 'กรับ': 'transport', 'น้ำมัน': 'transport',
-  'ค่าอาหาร': 'food', 'กินข้าว': 'food',
-  'ค่าน้ำค่าไฟ': 'utilities', 'อินเตอร์เน็ต': 'phone_internet', 'โทรศัพท์': 'phone_internet',
-  'สมัครสมาชิก': 'subscriptions', 'เน็ตฟลิกซ์': 'subscriptions', 'สปอตตี้': 'subscriptions',
-  'บันเทิง': 'entertainment', 'ดูหนัง': 'entertainment', 'เล่นเกม': 'entertainment',
-  'ค่ายา': 'healthcare', 'ทันตกรรม': 'healthcare', 'โรงพยาบาล': 'healthcare',
-  'ประกัน': 'insurance', 'หนี้': 'debt', 'เงินกู้': 'debt', 'บัตรเครดิต': 'debt',
-  'ออม': 'savings', 'กองทุน': 'savings',
-};
 
 /** Budget category with limit */
 export interface BudgetCategory {
@@ -216,7 +210,7 @@ export interface NewsItem {
   pubDate: string;
   source: string;
   category: 'finance' | 'economy' | 'local' | 'eco_tips' | 'fuel' | 'deals';
-  locale: 'th' | 'en';
+  locale: string;
   actionable?: string; // e.g., "Fill up today - price drops tomorrow"
 }
 
@@ -239,7 +233,7 @@ export interface LocationCache {
 export interface BoardSnapshot {
   wizardProfile: WizardProfile | null;
   expenses: ExpenseEntry[];
-  incomes: IncomeEntry[];
+  incomes?: IncomeEntry[];
   budgets: BudgetCategory[];
   bills: Bill[];
   savingsGoals: SavingsGoal[];

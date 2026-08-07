@@ -14,7 +14,7 @@ interface WizardClientProps {
 
 export function WizardClient({ wizardCompleted: initialWizardCompleted }: WizardClientProps) {
   const router = useRouter();
-  const locale = useLocale() as 'th' | 'en';
+  const locale = useLocale();
   
   const [wizardCompleted, setWizardCompleted] = useState(initialWizardCompleted);
   const [isLoading, setIsLoading] = useState(false);

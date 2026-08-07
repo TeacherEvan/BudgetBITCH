@@ -22,15 +22,23 @@ import { api } from "../../convex/_generated/api";
 import {
   serializeBoardForSync,
   applyRemoteBoard,
+  RESET_TOMBSTONE_KEY,
 } from "@/lib/db/local-db";
 import {
   getCurrentAccountId,
   getLocalAccount,
+  saveLocalAccount,
 } from "@/lib/db/accountStorage";
+import { PERSONAL_ACCOUNT_ID, UmbrellaKey } from "@/lib/types/accounts";
 import { BOARD_CHANGED_EVENT } from "@/lib/types/budget";
 
 const BOARD_QUEUE_KEY = "budgetbitch:accountBoardQueue";
 const PUSH_DEBOUNCE_MS = 800;
+
+// Single-flight guard (RELIABILITY_HARDENING_PLAN step 3): the 'online' and
+// 'budgetbitch:flushQueues' listeners both call flushQueue, so two near-simultaneous
+// events could re-read the queue before the first deletes, double-pushing a board.
+let isFlushingBoard = false;
 
 export interface QueuedPush {
   boardId: string;
@@ -82,6 +90,14 @@ export function useAccountSync(): UseAccountSync {
     boardId && isAuthenticated ? { boardId } : "skip"
   );
   const pushBoard = useMutation(api.accounts.pushAccountBoard);
+  // Listing of the user's accounts (with server boardId) — used as a fallback
+  // when the local accounts cache hasn't been populated yet (e.g. on the
+  // dashboard, where useAccounts() isn't mounted). Without this, boardId can
+  // resolve to null and every auto-push is silently dropped.
+  const myAccounts = useQuery(
+    api.accounts.listMyAccounts,
+    isAuthenticated ? {} : "skip"
+  );
 
   // Guard so a reactive re-fire of getAccountBoard (e.g. our own push echoed
   // back) doesn't re-apply an already-applied board and clobber local edits.
@@ -94,14 +110,44 @@ export function useAccountSync(): UseAccountSync {
   const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingRef = useRef(false);
 
-  // Resolve the active account's boardId from local storage.
+  // Resolve the active account's boardId from local storage, falling back to
+  // the Convex account listing when the local cache is empty.
   const resolveActiveBoard = useCallback(async () => {
     const accountId = await getCurrentAccountId();
+    if (accountId === PERSONAL_ACCOUNT_ID) {
+      boardIdRef.current = "personal";
+      setBoardId("personal");
+      return;
+    }
+
     const meta = await getLocalAccount(accountId);
-    const activeBid = meta?.boardId ?? (accountId === "personal" ? "personal" : null);
-    boardIdRef.current = activeBid;
-    setBoardId(activeBid);
-  }, []);
+    if (meta?.boardId) {
+      boardIdRef.current = meta.boardId;
+      setBoardId(meta.boardId);
+      return;
+    }
+
+    // Local cache miss — ask the server for this account's boardId.
+    const remote = (myAccounts as Array<{ accountId: string; boardId: string | null }> | undefined)
+      ?.find((a) => a.accountId === accountId);
+    if (remote?.boardId) {
+      // Cache it locally so subsequent resolves are instant.
+      await saveLocalAccount({
+        accountId,
+        umbrella: "personal" as UmbrellaKey,
+        name: accountId,
+        boardId: remote.boardId,
+        inviteCode: null,
+        role: "member",
+      });
+      boardIdRef.current = remote.boardId;
+      setBoardId(remote.boardId);
+      return;
+    }
+
+    boardIdRef.current = null;
+    setBoardId(null);
+  }, [myAccounts]);
 
   useEffect(() => {
     let cancelled = false;
@@ -127,34 +173,42 @@ export function useAccountSync(): UseAccountSync {
 
   const flushQueue = useCallback(async () => {
     if (!isAuthenticated || !isOnline()) return;
+    // Single-flight guard: drop a concurrent entry; the in-flight flush drains
+    // the whole queue, so no queued board is lost.
+    if (isFlushingBoard) return;
     const q = getQueue();
     if (q.length === 0) return;
 
-    const remaining: QueuedPush[] = [];
-    setSyncing(true);
-    for (const item of q) {
-      try {
-        const res = (await pushBoard({
-          boardId: item.boardId,
-          data: item.data as never,
-          updatedAt: item.updatedAt,
-        })) as { success?: boolean; reason?: string } | undefined;
+    isFlushingBoard = true;
+    try {
+      const remaining: QueuedPush[] = [];
+      setSyncing(true);
+      for (const item of q) {
+        try {
+          const res = (await pushBoard({
+            boardId: item.boardId,
+            data: item.data as never,
+            updatedAt: item.updatedAt,
+          })) as { success?: boolean; reason?: string } | undefined;
 
-        if (res && res.success === false) {
-          console.warn("Skipping unpushable queued board:", item.boardId, res.reason);
-          continue;
-        }
-      } catch (e) {
-        console.error("Failed to push queued board:", item.boardId, e);
-        const errStr = e instanceof Error ? e.message : String(e);
-        if (!errStr.includes("Board not found") && !errStr.includes("Not a member")) {
-          remaining.push(item);
+          if (res && res.success === false) {
+            console.warn("Skipping unpushable queued board:", item.boardId, res.reason);
+            continue;
+          }
+        } catch (e) {
+          console.error("Failed to push queued board:", item.boardId, e);
+          const errStr = e instanceof Error ? e.message : String(e);
+          if (!errStr.includes("Board not found") && !errStr.includes("Not a member")) {
+            remaining.push(item);
+          }
         }
       }
+      setQueue(remaining);
+      setSyncing(false);
+      setPushPending(remaining.length > 0);
+    } finally {
+      isFlushingBoard = false;
     }
-    setQueue(remaining);
-    setSyncing(false);
-    setPushPending(remaining.length > 0);
   }, [isAuthenticated, pushBoard]);
 
   const doPush = useCallback(async () => {
@@ -270,6 +324,20 @@ export function useAccountSync(): UseAccountSync {
     if (!remote.data) return;
     if (remote.updatedAt <= lastAppliedAt.current) return;
     if (applyingRemote.current) return;
+
+    // Honor "Reset all data": never re-inject a shared account board the user
+    // just wiped. The local wipe clears stores, but the Convex board survives;
+    // without this guard the next pull would resurrect the old entries.
+    const resetAt = Number(
+      typeof window !== "undefined"
+        ? localStorage.getItem(RESET_TOMBSTONE_KEY) || "0"
+        : "0"
+    );
+    if (resetAt > 0 && remote.updatedAt <= resetAt) {
+      console.log("[AccountSync] Skipping board pull: board predates last reset.");
+      lastAppliedAt.current = remote.updatedAt;
+      return;
+    }
 
     (async () => {
       applyingRemote.current = true;

@@ -1,60 +1,66 @@
-# BudgetBITCH Documentation Hub
+# Budget Boss Documentation Hub
 
-Welcome to the documentation hub for **BudgetBITCH**, a cinematic, privacy-first budgeting application built using Next.js App Router, Convex backend, and local-first IndexedDB sync.
+Documentation for **Budget Boss** (repo/package name `BudgetBITCH`), a
+cinematic, privacy-first budgeting PWA built on Next.js App Router, a Convex
+backend, and local-first IndexedDB sync.
 
-This directory serves as the documentation repository. Both Human developers and AI agents can use this hub to quickly orient themselves within the codebase.
-
----
-
-## 📋 Core Documentation Map
-
-- **[System Architecture](../ARCHITECTURE.md)**: Deep dive into the stack components (Next.js, Convex, Service Worker, next-intl), directory boundaries, runtime startup/language flows, and data ownership structure.
-- **[CI/CD & Automated Reliability](CI_CD.md)**: Operations manual for the 9-stage quality gate pipeline, GitHub Actions workflows, custom build/schema guards, Vercel git integration, and emergency production rollbacks.
-- **[Codebase Directory Index](CODEBASE_INDEX.md)**: Orientation graph and detailed description of directories, Next.js page routes, React UI components, database schemas, and shared modules.
-- **[Developer Tree Diagram](dev-tree-diagram.md)**: High-level visual map of the workspace structure and quick reference cheat sheet for file priority, data flow, and standard commands.
-- **[Design Context & Identity](../DESIGN_CONTEXT.md)**: Guidelines on user persona, direct unsentimental brand personality, color modes (light/dark themes), and design principles.
-- **[Feature Ideas & Backlog](FEATURE_IDEAS.md)**: Backlog of upcoming features such as user onboarding wizards by persona, silly interactive educational guides, and external integration ideas.
-- **[Agent Rules & instructions](../AGENTS.md)**: Workspace instruction rules for Convex coding patterns, schema migrations, and helper tools.
+Both human developers and AI agents can use this hub to orient in the codebase.
 
 ---
 
-## 🛠️ Developer Workflow Commands
+## Core documentation map
 
-To work on BudgetBITCH, use these standard commands from the repository root:
+- **[System Architecture](../ARCHITECTURE.md)** — stack, directory boundaries,
+  runtime flow, data ownership, Convex patterns.
+- **[Codebase Index](CODEBASE_INDEX.md)** — route map, component/hook/library
+  index, Convex schema, testing map, CI infrastructure.
+- **[CI/CD & Automated Reliability](CI_CD.md)** — quality gates, GitHub Actions
+  workflows, custom build/schema guards, production rollback runbook.
+- **[Agent & Contributor Rules](../AGENTS.md)** — conventions, Convex rules,
+  auth model, pitfalls. Mirrored in [CLAUDE.md](../CLAUDE.md).
+- **[Design Context & Identity](../DESIGN_CONTEXT.md)** — user persona, brand
+  personality, accent themes, design principles.
+- **[Feature Ideas & Backlog](FEATURE_IDEAS.md)** — prospective features, not
+  shipped work.
+- **[Project README](../README.md)** — features, tech stack, local setup,
+  environment variables.
+
+---
+
+## Developer workflow commands
+
+Run from the repository root:
 
 ```bash
-# 1. Start the local development server (Frontend + next-intl)
+# Local dev server (sanitized env wrapper)
 npm run dev
 
-# 2. Start the Convex backend sync/local development terminal
+# Convex backend dev / sync
 npx convex dev
 
-# 3. Run full local CI quality gate pipeline (lint, typecheck, check:idb, test, test:convex, build)
+# Full local quality gate chain
 npm run ci
 
-# 4. Run type-checking
-npm run typecheck
-
-# 5. Run unit and component tests (Vitest)
-npm test
-
-# 6. Run IndexedDB schema guard check
-npm run check:idb
-
-# 7. Run end-to-end integration tests (Playwright)
-npm run test:e2e
-
-# 8. Run linting
+# Individual gates
 npm run lint
-
-# 9. Compile production build
+npm run typecheck
+npm run check:idb
+npm test
+npm run test:convex
 npm run build
+
+# End-to-end (Playwright, dev server on port 3100)
+npm run test:e2e
 ```
 
 ---
 
-## 🗃️ Archived Audits & Analysis
+## Archived audits
 
-Historical audit reports and analysis documents are preserved for reference under [docs/.archive/](.archive/):
-- **[Optimization Audit (June 2026)](.archive/optimization-audit-2026-06-13.md)**: Comprehensive codebase optimization and audit findings.
-- **[Frontend Audit (April 2026)](.archive/frontend-audit-2026-04-07.md)**: Architectural analysis of frontend component boundaries.
+Historical audit reports are preserved under [docs/.archive/](.archive/):
+
+- **[Optimization Audit (June 2026)](.archive/optimization-audit-2026-06-13.md)**
+- **[Frontend Audit (April 2026)](.archive/frontend-audit-2026-04-07.md)**
+
+Working plan and idea documents live under `docs/plans/` and `docs/ideas/`,
+which are intentionally git-ignored local working sets.

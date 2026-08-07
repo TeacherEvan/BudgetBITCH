@@ -4,8 +4,8 @@
 import { useState, useRef } from 'react';
 import { Camera, Upload, CheckCircle2, SkipForward, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAction } from 'convex/react';
-import { api } from '../../../../convex/_generated/api';
+import { useReceiptScan } from '@/hooks/use-receipt-scan';
+import { ReceiptVerifySheet } from '@/components/receipt/receipt-verify-sheet';
 
 interface StepReceiptScanProps {
   locale: string;
@@ -16,70 +16,52 @@ interface StepReceiptScanProps {
 }
 
 export function StepReceiptScan({
-  locale,
-  value: _value,
   onChange,
   error,
   disabled = false,
 }: StepReceiptScanProps) {
-  const isThai = locale === 'th';
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanResult, setScanResult] = useState<{
-    amount: number;
-    merchant: string;
-    category: string;
-    date: string | null;
-  } | null>(null);
+  const { isScanning, progress, draft, scanImage, answerQuestion, confirmDraft } = useReceiptScan();
   const [scanError, setScanError] = useState<string | null>(null);
-
-  // Convex parseReceipt action (called unconditionally to respect Rules of Hooks)
-  const parseReceiptAction = useAction(api.receipts.parseReceipt);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setIsScanning(true);
     setScanError(null);
 
-    try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
+    const img = new Image();
+    const url = URL.createObjectURL(file);
 
-      if (parseReceiptAction) {
-        const result = await parseReceiptAction({ base64Image: base64 });
-        setScanResult(result);
-      } else {
-        // Fallback simulation for test environment
-        setScanResult({
-          amount: 149.50,
-          merchant: 'Pick n Pay / 7-Eleven',
-          category: 'groceries',
-          date: new Date().toISOString().split('T')[0],
-        });
+    img.onload = async () => {
+      try {
+        await scanImage(img, 'ZA');
+        onChange('receiptScanned', true);
+      } catch (err) {
+        console.error('Receipt scan error:', err);
+        setScanError(
+          'Could not parse receipt. Please try another image or skip.'
+        );
+      } finally {
+        URL.revokeObjectURL(url);
       }
-      onChange('receiptScanned', true);
-    } catch (err) {
-      console.error('Receipt scan error:', err);
-      setScanError(
-        isThai
-          ? 'ไม่สามารถอ่านใบเสร็จได้ กรุณาลองใหม่อีกครั้งหรือกดข้าม'
-          : 'Could not parse receipt. Please try another image or skip.'
-      );
-    } finally {
-      setIsScanning(false);
-    }
+    };
+    img.src = url;
   };
 
   const handleSkip = () => {
     onChange('receiptScanned', false);
   };
+
+  const scanResult = draft
+    ? {
+        amount: Number(draft.fields.total?.value ?? 0),
+        merchant: String(draft.fields.merchant?.value ?? 'Unknown'),
+        category: String(draft.fields.category?.value ?? 'other'),
+        date: draft.fields.date?.value ? String(draft.fields.date.value) : null,
+      }
+    : null;
 
   return (
     <div className="space-y-6 text-center animate-in fade-in duration-300">
@@ -88,12 +70,10 @@ export function StepReceiptScan({
           <Camera className="w-8 h-8 text-amber-400" />
         </div>
         <h2 className="text-xl font-semibold text-white">
-          {isThai ? 'สแกนใบเสร็จแรกของคุณ' : 'Scan Your First Receipt'}
+          {'Scan Your First Receipt'}
         </h2>
         <p className="mt-1 text-sm text-white/70">
-          {isThai
-            ? 'ถ่ายรูปหรืออัปโหลดใบเสร็จ AI จะสกัดข้อมูลรายจ่ายให้อัตโนมัติ'
-            : 'Snap a photo or upload a receipt. AI will extract expense details automatically.'}
+          {'Snap a photo or upload a receipt to extract expense details automatically.'}
         </p>
       </div>
 
@@ -114,7 +94,7 @@ export function StepReceiptScan({
               <div className="py-6 flex flex-col items-center gap-3">
                 <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
                 <p className="text-sm font-medium text-white">
-                  {isThai ? 'กำลังวิเคราะห์ใบเสร็จด้วย AI...' : 'Analyzing receipt with AI...'}
+                  {`Analyzing receipt (${Math.round(progress * 100)}%)...`}
                 </p>
               </div>
             ) : (
@@ -127,7 +107,7 @@ export function StepReceiptScan({
                   disabled={disabled || isScanning}
                 >
                   <Upload className="w-5 h-5" />
-                  {isThai ? 'ถ่ายรูป / อัปโหลดใบเสร็จ' : 'Take Photo / Upload Receipt'}
+                  {'Take Photo / Upload Receipt'}
                 </Button>
               </div>
             )}
@@ -143,7 +123,7 @@ export function StepReceiptScan({
               data-testid="skip-receipt-btn"
             >
               <SkipForward className="w-4 h-4" />
-              {isThai ? 'ข้ามขั้นตอน (ป้อนรายจ่ายด้วยตนเอง)' : 'Skip for now (enter manually later)'}
+              {'Skip for now (enter manually later)'}
             </Button>
           </div>
         </div>
@@ -151,26 +131,26 @@ export function StepReceiptScan({
         <div className="bg-white/5 border border-amber-400/30 rounded-2xl p-5 space-y-3 text-left">
           <div className="flex items-center gap-2 text-amber-400 font-medium">
             <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
-            <span>{isThai ? 'สแกนสำเร็จ!' : 'Receipt Scanned Successfully!'}</span>
+            <span>{'Receipt Scanned Successfully!'}</span>
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-sm text-white/80 pt-2 border-t border-white/10">
             <div>
-              <span className="text-xs text-white/40 block">{isThai ? 'ร้านค้า' : 'Merchant'}</span>
+              <span className="text-xs text-white/40 block">{'Merchant'}</span>
               <span className="font-semibold">{scanResult.merchant}</span>
             </div>
             <div>
-              <span className="text-xs text-white/40 block">{isThai ? 'จำนวนเงิน' : 'Amount'}</span>
+              <span className="text-xs text-white/40 block">{'Amount'}</span>
               <span className="font-semibold text-amber-400">
                 {scanResult.amount.toFixed(2)}
               </span>
             </div>
             <div>
-              <span className="text-xs text-white/40 block">{isThai ? 'หมวดหมู่' : 'Category'}</span>
+              <span className="text-xs text-white/40 block">{'Category'}</span>
               <span className="capitalize">{scanResult.category}</span>
             </div>
             <div>
-              <span className="text-xs text-white/40 block">{isThai ? 'วันที่' : 'Date'}</span>
+              <span className="text-xs text-white/40 block">{'Date'}</span>
               <span>{scanResult.date || 'Today'}</span>
             </div>
           </div>
@@ -181,7 +161,16 @@ export function StepReceiptScan({
             className="w-full mt-2"
             onClick={() => fileInputRef.current?.click()}
           >
-            {isThai ? 'สแกนอีกใบ' : 'Scan Another Receipt'}
+            {'Scan Another Receipt'}
+          </Button>
+
+          <Button
+            variant="primary"
+            size="sm"
+            className="w-full mt-2"
+            onClick={() => confirmDraft()}
+          >
+            {'Save Expense'}
           </Button>
         </div>
       )}
@@ -191,6 +180,13 @@ export function StepReceiptScan({
           {scanError || error}
         </p>
       )}
+
+      <ReceiptVerifySheet
+        isOpen={Boolean(draft && draft.questions && draft.questions.length > 0)}
+        questions={draft?.questions ?? []}
+        onAnswer={answerQuestion}
+        onClose={() => confirmDraft()}
+      />
     </div>
   );
 }

@@ -9,7 +9,7 @@ import { useCurrency } from '@/hooks/use-currency';
 interface SyncedAccountDashboardProps {
   expenses: ExpenseEntry[];
   incomes: IncomeEntry[];
-  locale: 'th' | 'en';
+  locale: string;
   membersCount?: number;
 }
 
@@ -30,8 +30,8 @@ export function SyncedAccountDashboard({
 }: SyncedAccountDashboardProps) {
   const formatCurrency = useCurrency();
 
-  const t = (en: string, th: string) => (locale === 'th' ? th : en);
-  const defaultName = t('Primary Member', 'สมาชิกหลัก');
+  const t = (en: string) => en;
+  const defaultName = t('Primary Member');
 
   const { memberSummaries, totalIncomeAll, totalExpenseAll, netAccountBalance } = useMemo(() => {
     const totalInc = incomes.reduce((sum, i) => sum + i.amount, 0);
@@ -93,15 +93,15 @@ export function SyncedAccountDashboard({
           </div>
           <div>
             <h2 className="text-base font-bold text-white flex items-center gap-2">
-              {t('Synced Account Dashboard', 'แดชบอร์ดสรุปยอดสมาชิกร่วม')}
+              {t('Synced Account Dashboard')}
             </h2>
             <p className="text-xs text-[var(--text-muted)]">
-              {t('Who spent what & who provided the income', 'สรุปยอดผู้จ่ายค่าใช้จ่ายและผู้จัดหารายได้')}
+              {t('Who spent what & who provided the income')}
             </p>
           </div>
         </div>
         <span className="rounded-full bg-sky-400/10 border border-sky-400/30 px-3 py-1 text-xs font-bold text-sky-400">
-          {membersCount} {t('Members', 'สมาชิก')}
+          {membersCount} {t('Members')}
         </span>
       </div>
 
@@ -109,7 +109,7 @@ export function SyncedAccountDashboard({
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-4">
           <div className="flex items-center justify-between text-xs text-emerald-400">
-            <span>{t('Total Shared Income', 'รายได้รวมทั้งหมด')}</span>
+            <span>{t('Total Shared Income')}</span>
             <ArrowUpRight className="h-4 w-4" />
           </div>
           <p className="mt-2 font-mono text-xl font-bold text-white">
@@ -119,7 +119,7 @@ export function SyncedAccountDashboard({
 
         <div className="rounded-xl border border-rose-500/30 bg-rose-950/20 p-4">
           <div className="flex items-center justify-between text-xs text-rose-400">
-            <span>{t('Total Shared Expenses', 'ค่าใช้จ่ายรวมทั้งหมด')}</span>
+            <span>{t('Total Shared Expenses')}</span>
             <ArrowDownRight className="h-4 w-4" />
           </div>
           <p className="mt-2 font-mono text-xl font-bold text-white">
@@ -129,7 +129,7 @@ export function SyncedAccountDashboard({
 
         <div className="rounded-xl border border-[var(--gold-border-strong)] bg-[var(--gold-base)]/10 p-4">
           <div className="flex items-center justify-between text-xs text-[var(--gold-bright)]">
-            <span>{t('Net Shared Balance', 'ยอดคงเหลือสุทธิ')}</span>
+            <span>{t('Net Shared Balance')}</span>
             <Wallet className="h-4 w-4" />
           </div>
           <p className={`mt-2 font-mono text-xl font-bold ${netAccountBalance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
@@ -145,7 +145,7 @@ export function SyncedAccountDashboard({
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
               <TrendingUp className="h-4 w-4" />
-              {t('Who Provided Income', 'ผู้จัดหารายได้')}
+              {t('Who Provided Income')}
             </h3>
             <span className="text-xs text-white/50">{formatCurrency(totalIncomeAll, locale)}</span>
           </div>
@@ -175,7 +175,7 @@ export function SyncedAccountDashboard({
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
               <TrendingDown className="h-4 w-4" />
-              {t('Who Spent What', 'ผู้จ่ายค่าใช้จ่าย')}
+              {t('Who Spent What')}
             </h3>
             <span className="text-xs text-white/50">{formatCurrency(totalExpenseAll, locale)}</span>
           </div>
@@ -204,7 +204,7 @@ export function SyncedAccountDashboard({
       {/* Individual Net Contribution Cards */}
       <div className="space-y-3 pt-2">
         <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--gold-muted)]">
-          {t('Member Net Contribution Summary', 'สรุปยอดสุทธิรายบุคคล')}
+          {t('Member Net Contribution Summary')}
         </h3>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -225,7 +225,7 @@ export function SyncedAccountDashboard({
                 </div>
               </div>
               <div className="text-right">
-                <span className="block text-[10px] text-white/50 uppercase">{t('Net', 'สุทธิ')}</span>
+                <span className="block text-[10px] text-white/50 uppercase">{t('Net')}</span>
                 <span className={`font-mono font-bold text-sm ${m.netContribution >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                   {m.netContribution >= 0 ? '+' : ''}{formatCurrency(m.netContribution, locale)}
                 </span>

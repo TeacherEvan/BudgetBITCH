@@ -11,7 +11,7 @@ import { KeyRound, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 interface ChangePasswordModalProps {
   isOpen: boolean;
   onClose: () => void;
-  locale?: 'th' | 'en';
+  locale?: string;
 }
 
 const COPY = {
@@ -30,26 +30,11 @@ const COPY = {
     passwordLength: 'New password must be at least 8 characters.',
     genericError: 'Failed to update password. Please check your current password.',
   },
-  th: {
-    title: 'เปลี่ยนรหัสผ่าน',
-    description: 'กรอกรหัสผ่านปัจจุบันและรหัสผ่านใหม่ของคุณด้านล่าง',
-    oldPasswordLabel: 'รหัสผ่านปัจจุบัน',
-    newPasswordLabel: 'รหัสผ่านใหม่',
-    confirmPasswordLabel: 'ยืนยันรหัสผ่านใหม่',
-    submit: 'อัปเดตรหัสผ่าน',
-    updating: 'กำลังอัปเดตรหัสผ่าน...',
-    successTitle: 'เปลี่ยนรหัสผ่านเรียบร้อย!',
-    successMessage: 'อัปเดตรหัสผ่านของคุณสำเร็จแล้ว DONE!',
-    close: 'ปิด',
-    passwordsMismatch: 'รหัสผ่านใหม่ไม่ตรงกัน',
-    passwordLength: 'รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 8 ตัวอักษร',
-    genericError: 'ไม่สามารถอัปเดตรหัสผ่านได้ โปรดตรวจสอบรหัสผ่านปัจจุบันของคุณ',
-  },
 };
 
-export function ChangePasswordModal({ isOpen, onClose, locale = 'en' }: ChangePasswordModalProps) {
+export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProps) {
   const changePassword = useAction(api.accounts.changePassword);
-  const copy = COPY[locale] || COPY.en;
+  const copy = COPY.en;
 
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');

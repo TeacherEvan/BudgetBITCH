@@ -1,22 +1,22 @@
 // components/dashboard/panels/net-worth-types.ts
 
 export const ASSET_TYPES = [
-  { value: 'cash', label: { th: 'เงินสด', en: 'Cash' }, icon: '💵' },
-  { value: 'investment', label: { th: 'การลงทุน', en: 'Investment' }, icon: '📈' },
-  { value: 'property', label: { th: 'อสังหาริมทรัพย์', en: 'Property' }, icon: '🏠' },
-  { value: 'vehicle', label: { th: 'ยานพาหนะ', en: 'Vehicle' }, icon: '🚗' },
-  { value: 'gold', label: { th: 'ทองคำ', en: 'Gold' }, icon: '🥇' },
-  { value: 'crypto', label: { th: 'คริปโต', en: 'Crypto' }, icon: '₿' },
-  { value: 'other', label: { th: 'อื่นๆ', en: 'Other' }, icon: '📦' },
+  { value: 'cash', label: { en: 'Cash' }, icon: '💵' },
+  { value: 'investment', label: { en: 'Investment' }, icon: '📈' },
+  { value: 'property', label: { en: 'Property' }, icon: '🏠' },
+  { value: 'vehicle', label: { en: 'Vehicle' }, icon: '🚗' },
+  { value: 'gold', label: { en: 'Gold' }, icon: '🥇' },
+  { value: 'crypto', label: { en: 'Crypto' }, icon: '₿' },
+  { value: 'other', label: { en: 'Other' }, icon: '📦' },
 ] as const;
 
 export const LIABILITY_TYPES = [
-  { value: 'credit_card', label: { th: 'บัตรเครดิต', en: 'Credit Card' } },
-  { value: 'personal_loan', label: { th: 'กู้ยืมส่วนตัว', en: 'Personal Loan' } },
-  { value: 'car_loan', label: { th: 'กู้รถ', en: 'Car Loan' } },
-  { value: 'mortgage', label: { th: 'กู้บ้าน/คอนโด', en: 'Mortgage' } },
-  { value: 'family', label: { th: 'หนี้ครอบครัว', en: 'Family Loan' } },
-  { value: 'other', label: { th: 'อื่นๆ', en: 'Other' } },
+  { value: 'credit_card', label: { en: 'Credit Card' } },
+  { value: 'personal_loan', label: { en: 'Personal Loan' } },
+  { value: 'car_loan', label: { en: 'Car Loan' } },
+  { value: 'mortgage', label: { en: 'Mortgage' } },
+  { value: 'family', label: { en: 'Family Loan' } },
+  { value: 'other', label: { en: 'Other' } },
 ] as const;
 
 export type AssetType = typeof ASSET_TYPES[number]['value'];

@@ -28,19 +28,19 @@ describe('WeeklyPrivacyDisclaimer', () => {
   afterEach(() => localStorage.clear());
 
   it('shows the modal when no week has been acknowledged', () => {
-    render(<WeeklyPrivacyDisclaimer locale="en" />);
+    render(<WeeklyPrivacyDisclaimer />);
     expect(screen.getByTestId('privacy-disclaimer')).toBeInTheDocument();
     expect(screen.getByText(/your privacy/i)).toBeInTheDocument();
   });
 
   it('does NOT show when the current week is already stored', () => {
     localStorage.setItem(KEY, isoWeekNow());
-    render(<WeeklyPrivacyDisclaimer locale="en" />);
+    render(<WeeklyPrivacyDisclaimer />);
     expect(screen.queryByTestId('privacy-disclaimer')).toBeNull();
   });
 
   it('stores the current ISO week and closes on "Got it"', async () => {
-    render(<WeeklyPrivacyDisclaimer locale="en" />);
+    render(<WeeklyPrivacyDisclaimer />);
     fireEvent.click(screen.getByTestId('privacy-gotit-btn'));
 
     await waitFor(() => {
@@ -50,14 +50,8 @@ describe('WeeklyPrivacyDisclaimer', () => {
   });
 
   it('"Learn more" links to /security', () => {
-    render(<WeeklyPrivacyDisclaimer locale="en" />);
+    render(<WeeklyPrivacyDisclaimer />);
     const link = screen.getByTestId('privacy-learn-more') as HTMLAnchorElement;
     expect(link.getAttribute('href')).toBe('/security');
-  });
-
-  it('supports Thai locale', () => {
-    render(<WeeklyPrivacyDisclaimer locale="th" />);
-    expect(screen.getByTestId('privacy-disclaimer')).toBeInTheDocument();
-    expect(screen.getByTestId('privacy-gotit-btn')).toHaveTextContent(/รับทราบ|ตกลง/);
   });
 });

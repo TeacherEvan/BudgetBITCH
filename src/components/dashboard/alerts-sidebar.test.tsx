@@ -9,12 +9,14 @@ vi.mock('@/hooks/use-vicinity-feeds');
 // Mock Lottie properly - default export is the Lottie component
 vi.mock('lottie-react', () => ({
   __esModule: true,
-  default: ({ animationData: _animationData, ...props }: { animationData: unknown; [key: string]: unknown }) => (
-    <div data-testid="lottie-animation" {...props} />
-  ),
-  Lottie: ({ animationData: _animationData, ...props }: { animationData: unknown; [key: string]: unknown }) => (
-    <div data-testid="lottie-animation" {...props} />
-  ),
+  default: ({ animationData, ...props }: { animationData?: unknown; [key: string]: unknown }) => {
+    void animationData;
+    return <div data-testid="lottie-animation" {...props} />;
+  },
+  Lottie: ({ animationData, ...props }: { animationData?: unknown; [key: string]: unknown }) => {
+    void animationData;
+    return <div data-testid="lottie-animation" {...props} />;
+  },
   LottiePlayer: () => null,
   useLottie: () => null,
   useLottieInteractivity: () => null,
@@ -28,7 +30,7 @@ describe('AlertsSidebar', () => {
   it('renders heading and feed items via AnimatedFeedList', async () => {
     (useVicinityFeeds as Mock).mockReturnValue({
       items: [
-        { title: 'Test News', link: 'https://a.com', pubDate: new Date().toISOString(), source: 'Test', category: 'finance', locale: 'th' },
+        { title: 'Test News', link: 'https://a.com', pubDate: new Date().toISOString(), source: 'Test', category: 'finance', locale: 'en' },
       ],
       loading: false,
       error: null,
@@ -36,26 +38,13 @@ describe('AlertsSidebar', () => {
       refresh: vi.fn(),
     });
 
-    render(<AlertsSidebar locale="th" />);
+    render(<AlertsSidebar locale="en" />);
 
     // Should render heading
-    expect(screen.getByText('ข่าวและข้อมูลล่าสุด')).toBeInTheDocument();
+    expect(screen.getByText('Latest Updates')).toBeInTheDocument();
     
     // Should render feed card via AnimatedFeedList
     expect(screen.getByText('Test News')).toBeInTheDocument();
-  });
-
-  it('renders Thai heading when locale is th', () => {
-    (useVicinityFeeds as Mock).mockReturnValue({
-      items: [],
-      loading: false,
-      error: null,
-      lastUpdated: Date.now(),
-      refresh: vi.fn(),
-    });
-
-    render(<AlertsSidebar locale="th" />);
-    expect(screen.getByText('ข่าวและข้อมูลล่าสุด')).toBeInTheDocument();
   });
 
   it('renders English heading when locale is en', () => {
@@ -74,7 +63,7 @@ describe('AlertsSidebar', () => {
   it('renders modal variant correctly', () => {
     (useVicinityFeeds as Mock).mockReturnValue({
       items: [
-        { title: 'Test News', link: 'https://a.com', pubDate: new Date().toISOString(), source: 'Test', category: 'finance', locale: 'th' },
+        { title: 'Test News', link: 'https://a.com', pubDate: new Date().toISOString(), source: 'Test', category: 'finance', locale: 'en' },
       ],
       loading: false,
       error: null,
@@ -82,8 +71,8 @@ describe('AlertsSidebar', () => {
       refresh: vi.fn(),
     });
 
-    render(<AlertsSidebar locale="th" isModal={true} />);
-    expect(screen.getByText('ข่าวและข้อมูลล่าสุด')).toBeInTheDocument();
+    render(<AlertsSidebar locale="en" isModal={true} />);
+    expect(screen.getByText('Latest Updates')).toBeInTheDocument();
     expect(screen.getByText('Test News')).toBeInTheDocument();
   });
 });

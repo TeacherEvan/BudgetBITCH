@@ -1,6 +1,23 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter, Space_Grotesk } from 'next/font/google';
+import { Inter, Space_Grotesk, Roboto_Mono } from 'next/font/google';
 import './globals.css';
+import { ThemeProvider } from '@/components/providers/theme-provider';
+import { ConvexClientProvider } from '@/components/providers/convex-client-provider';
+import { SharedBoardSync } from '@/components/shared-board/shared-board-sync';
+import { SharedDeleteGuardMount } from '@/components/shared-board/shared-delete-guard-mount';
+import { AccountSyncMount } from '@/components/accounts/account-sync-mount';
+import { PWARegister } from '@/components/pwa/pwa-register';
+import { AppShellExtras } from '@/components/pwa/app-shell-extras';
+import { WebViewBanner } from '@/components/webview/webview-banner';
+import { NativeBridge } from '@/components/native/native-bridge';
+import { SiteFooter } from '@/components/legal/site-footer';
+import { CookieConsentBanner } from '@/components/legal/cookie-consent-banner';
+import { WebVitalsInitializer } from '@/components/web-vitals-initializer';
+import { NextIntlClientProvider } from 'next-intl';
+import { cookies } from 'next/headers';
+import { resolveLocale, getLocaleMessages, localeCookieName } from '@/i18n/messages';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
+import { NoticeHost } from '@/components/ui/notice-host';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -11,19 +28,6 @@ export const viewport: Viewport = {
     { media: '(prefers-color-scheme: light)', color: '#f5d742' },
   ],
 };
-import { ThemeProvider } from '@/components/providers/theme-provider';
-import { ConvexClientProvider } from '@/components/providers/convex-client-provider';
-import { SharedBoardSync } from '@/components/shared-board/shared-board-sync';
-import { AccountSyncMount } from '@/components/accounts/account-sync-mount';
-import { PWARegister } from '@/components/pwa/pwa-register';
-import { PWAInstallPrompt } from '@/components/pwa/install-prompt';
-import { AppShellExtras } from '@/components/pwa/app-shell-extras';
-import { WebViewBanner } from '@/components/webview/webview-banner';
-import { SiteFooter } from '@/components/legal/site-footer';
-import { CookieConsentBanner } from '@/components/legal/cookie-consent-banner';
-import { NextIntlClientProvider } from 'next-intl';
-import { cookies } from 'next/headers';
-import { resolveLocale, getLocaleMessages, localeCookieName } from '@/i18n/messages';
 
 const inter = Inter({
   variable: '--font-inter',
@@ -37,18 +41,22 @@ const spaceGrotesk = Space_Grotesk({
   display: 'swap',
 });
 
+const robotoMono = Roboto_Mono({
+  variable: '--font-roboto-mono',
+  subsets: ['latin'],
+  display: 'swap',
+});
+
 export const metadata: Metadata = {
-  title: 'BudgetBITCH — Cinematic Privacy-First Budgeting',
+  title: 'Budget Boss — Cinematic Privacy-First Budgeting',
   description: 'Track money in, money out, net worth, and budget goals with end-to-end local privacy and couple sync.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'BudgetBITCH',
+    title: 'Budget Boss',
   },
 };
-
-import { ErrorBoundary } from '@/components/ui/error-boundary';
 
 export default async function RootLayout({
   children,
@@ -56,12 +64,11 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const cookieStore = await cookies();
-  const rawLocale = resolveLocale(cookieStore.get(localeCookieName)?.value);
-  const locale = rawLocale === 'th' ? 'th' : 'en';
-  const messages = getLocaleMessages(rawLocale);
+  const locale = resolveLocale(cookieStore.get(localeCookieName)?.value);
+  const messages = getLocaleMessages(locale);
 
   return (
-    <html lang={locale} suppressHydrationWarning className={`${inter.variable} ${spaceGrotesk.variable} antialiased`}>
+    <html lang={locale} suppressHydrationWarning className={`${inter.variable} ${spaceGrotesk.variable} ${robotoMono.variable} antialiased`}>
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="manifest" href="/manifest.json" />
@@ -72,18 +79,22 @@ export default async function RootLayout({
             <NextIntlClientProvider messages={messages} locale={locale}>
               <ThemeProvider>
                 <SharedBoardSync />
-                <AccountSyncMount />
-                <PWARegister />
-                <PWAInstallPrompt locale={locale} />
-                <AppShellExtras locale={locale} />
-                <WebViewBanner />
-                {children}
-                <SiteFooter />
-                <CookieConsentBanner />
+                <SharedDeleteGuardMount>
+                  <AccountSyncMount />
+                  <PWARegister />
+                  <AppShellExtras locale={locale} />
+                  <WebViewBanner />
+                  <NativeBridge />
+                  {children}
+                  <SiteFooter />
+                  <CookieConsentBanner />
+                  <NoticeHost />
+                </SharedDeleteGuardMount>
               </ThemeProvider>
             </NextIntlClientProvider>
           </ConvexClientProvider>
         </ErrorBoundary>
+        <WebVitalsInitializer />
       </body>
     </html>
   );

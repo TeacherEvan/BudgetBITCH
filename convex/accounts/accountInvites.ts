@@ -52,20 +52,12 @@ export const inviteByCode = mutation({
       throw new ConvexError("Cannot invite yourself");
     }
 
-    const existingMember = await ctx.db
-      .query("boardMembers")
-      .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
-      .collect();
-    if (existingMember.some((r) => r.userId === invitee.userId)) {
+    if (memberRows.some((r) => r.userId === invitee.userId)) {
       return { alreadyMember: true };
     }
 
-    const pending = await ctx.db
-      .query("invites")
-      .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
-      .collect();
     if (
-      pending.some(
+      pendingInviteRows.some(
         (r) => r.toUserId === invitee.userId && r.status === "pending",
       )
     ) {

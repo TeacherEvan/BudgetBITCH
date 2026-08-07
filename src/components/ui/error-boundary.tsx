@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
-  locale?: 'th' | 'en';
+  locale?: string;
 }
 
 interface ErrorBoundaryState {
@@ -34,17 +34,16 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   private handleReport = () => {
     const { error } = this.state;
     const context = error ? `${error.name}: ${error.message}\n${error.stack ?? ''}` : '';
-    const subject = encodeURIComponent('BudgetBITCH Bug Report');
+    const subject = encodeURIComponent('Budget Boss Bug Report');
     const body = encodeURIComponent(
       `What happened?\n\n\n--- Technical context (auto-captured) ---\n${context}\n\nUser-Agent: ${typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'}`,
     );
-    const mailto = `mailto:admin@budgetbitch.app?subject=${subject}&body=${body}`;
+    const mailto = `mailto:support@budgetboss.app?subject=${subject}&body=${body}`;
     window.open(mailto, '_blank');
   };
 
   render() {
     if (this.state.hasError) {
-      const isThai = this.props.locale === 'th';
       const { error } = this.state;
       return (
         <div className="min-h-screen bg-black flex items-center justify-center p-6">
@@ -53,7 +52,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               <AlertTriangle className="w-8 h-8 text-rose-400" />
             </div>
             <h1 className="text-xl font-semibold text-white">
-              {isThai ? 'เกิดข้อผิดพลาด' : 'Something Went Wrong'}
+              {'Something Went Wrong'}
             </h1>
             {error?.message && (
               <p className="text-sm text-white/60 break-words">
@@ -61,9 +60,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               </p>
             )}
             <p className="text-sm text-white/60">
-              {isThai
-                ? 'แอปพบข้อผิดพลาด คุณสามารถรายงานปัญหาได้หรือโหลดหน้าใหม่'
-                : 'The app hit an unexpected error. You can report it or reload.'}
+              {'The app hit an unexpected error. You can report it or reload.'}
             </p>
             <div className="flex flex-col gap-2 pt-2">
               <Button
@@ -73,10 +70,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                 data-testid="report-bug-btn"
               >
                 <Send className="w-4 h-4" />
-                {isThai ? 'รายงานปัญหา' : 'Report Bug'}
+                {'Report Bug'}
               </Button>
               <Button variant="secondary" onClick={() => window.location.reload()} className="w-full">
-                {isThai ? 'โหลดใหม่' : 'Reload'}
+                {'Reload'}
               </Button>
             </div>
           </div>

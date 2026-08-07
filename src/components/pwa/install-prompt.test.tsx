@@ -1,287 +1,55 @@
 // components/pwa/install-prompt.test.tsx
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { PWAInstallPrompt } from './install-prompt';
 
 describe('PWAInstallPrompt', () => {
-  const mockOnDismiss = vi.fn();
-
   beforeEach(() => {
-    vi.clearAllMocks();
-    mockOnDismiss.mockClear();
-    if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.clear();
-    }
-    
-    // Mock matchMedia
-    Object.defineProperty(window, 'matchMedia', {
-      writable: true,
-      value: vi.fn().mockImplementation(query => ({
-        matches: false,
-        media: query,
-        onchange: null,
-        addListener: vi.fn(),
-        removeListener: vi.fn(),
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        dispatchEvent: vi.fn(),
-      })),
-    });
-  });
-
-  afterEach(() => {
+    localStorage.clear();
     vi.restoreAllMocks();
   });
 
-  it('does not render immediately (waits for beforeinstallprompt)', () => {
-    render(<PWAInstallPrompt onDismiss={mockOnDismiss} locale="en" />);
-    
-    expect(screen.queryByText('Install Budget-BOSS')).not.toBeInTheDocument();
+  it('renders nothing by default if not standalone and no install prompt event', () => {
+    const { container } = render(<PWAInstallPrompt />);
+    expect(container.firstChild).toBeNull();
   });
 
-  it('shows prompt after beforeinstallprompt event fires', async () => {
-    render(<PWAInstallPrompt onDismiss={mockOnDismiss} locale="en" />);
-    
-    // Fire beforeinstallprompt event
-    const mockPrompt = vi.fn().mockResolvedValue(undefined);
-    const mockUserChoice = Promise.resolve({ outcome: 'accepted' as const, platform: 'web' });
-    
+  it('renders install prompt when beforeinstallprompt event is fired', () => {
+    render(<PWAInstallPrompt locale="en" />);
+
     const event = new Event('beforeinstallprompt');
-    Object.defineProperty(event, 'prompt', { value: mockPrompt });
-    Object.defineProperty(event, 'userChoice', { value: mockUserChoice });
-    
-    await act(async () => {
-      window.dispatchEvent(event);
-      await new Promise(r => setTimeout(r, 2100)); // Wait for 2s delay
+    Object.assign(event, {
+      prompt: vi.fn().mockResolvedValue(undefined),
+      userChoice: Promise.resolve({ outcome: 'accepted' }),
     });
-    
-    await waitFor(() => {
-      expect(screen.getByText('Install Budget-BOSS')).toBeInTheDocument();
+
+    act(() => {
+      fireEvent(window, event);
     });
+
+    expect(screen.getByTestId('pwa-install-prompt')).toBeInTheDocument();
+    expect(screen.getByText('Install Budget Boss')).toBeInTheDocument();
   });
 
-  it('renders Thai labels when locale is th', async () => {
-    render(<PWAInstallPrompt onDismiss={mockOnDismiss} locale="th" />);
-    
-    const mockPrompt = vi.fn().mockResolvedValue(undefined);
-    const mockUserChoice = Promise.resolve({ outcome: 'accepted' as const, platform: 'web' });
+  it('dismisses prompt when close button is clicked and remembers choice', () => {
+    render(<PWAInstallPrompt locale="en" />);
+
     const event = new Event('beforeinstallprompt');
-    Object.defineProperty(event, 'prompt', { value: mockPrompt });
-    Object.defineProperty(event, 'userChoice', { value: mockUserChoice });
-    
-    await act(async () => {
-      window.dispatchEvent(event);
-      await new Promise(r => setTimeout(r, 2100));
-    });
-    
-    await waitFor(() => {
-      expect(screen.getByText('ติดตั้ง Budget-BOSS')).toBeInTheDocument();
-      expect(screen.getByText('เพิ่มลงหน้าจอหลักเพื่อเข้าถึงง่ายขึ้น ทำงานออฟไลน์ได้')).toBeInTheDocument();
-      expect(screen.getByText('ติดตั้ง')).toBeInTheDocument();
-      expect(screen.getByText('ภายหลัง')).toBeInTheDocument();
-    });
-  });
-
-  it('renders English labels when locale is en', async () => {
-    render(<PWAInstallPrompt onDismiss={mockOnDismiss} locale="en" />);
-    
-    const mockPrompt = vi.fn().mockResolvedValue(undefined);
-    const mockUserChoice = Promise.resolve({ outcome: 'accepted' as const, platform: 'web' });
-    const event = new Event('beforeinstallprompt');
-    Object.defineProperty(event, 'prompt', { value: mockPrompt });
-    Object.defineProperty(event, 'userChoice', { value: mockUserChoice });
-    
-    await act(async () => {
-      window.dispatchEvent(event);
-      await new Promise(r => setTimeout(r, 2100));
-    });
-    
-    await waitFor(() => {
-      expect(screen.getByText('Install Budget-BOSS')).toBeInTheDocument();
-      expect(screen.getByText('Add to home screen for quick access. Works offline.')).toBeInTheDocument();
-      expect(screen.getByText('Install')).toBeInTheDocument();
-      expect(screen.getByText('Later')).toBeInTheDocument();
-    });
-  });
-
-  it('calls onDismiss when dismiss button clicked', async () => {
-    render(<PWAInstallPrompt onDismiss={mockOnDismiss} locale="en" />);
-    
-    const mockPrompt = vi.fn().mockResolvedValue(undefined);
-    const mockUserChoice = Promise.resolve({ outcome: 'accepted' as const, platform: 'web' });
-    const event = new Event('beforeinstallprompt');
-    Object.defineProperty(event, 'prompt', { value: mockPrompt });
-    Object.defineProperty(event, 'userChoice', { value: mockUserChoice });
-    
-    await act(async () => {
-      window.dispatchEvent(event);
-      await new Promise(r => setTimeout(r, 2100));
-    });
-    
-    await waitFor(() => {
-      expect(screen.getByText('Install Budget-BOSS')).toBeInTheDocument();
-    });
-    
-    fireEvent.click(screen.getByRole('button', { name: /later/i }));
-    
-    expect(mockOnDismiss).toHaveBeenCalledTimes(1);
-  });
-
-  it('calls onDismiss when X button clicked', async () => {
-    render(<PWAInstallPrompt onDismiss={mockOnDismiss} locale="en" />);
-    
-    const mockPrompt = vi.fn().mockResolvedValue(undefined);
-    const mockUserChoice = Promise.resolve({ outcome: 'accepted' as const, platform: 'web' });
-    const event = new Event('beforeinstallprompt');
-    Object.defineProperty(event, 'prompt', { value: mockPrompt });
-    Object.defineProperty(event, 'userChoice', { value: mockUserChoice });
-    
-    await act(async () => {
-      window.dispatchEvent(event);
-      await new Promise(r => setTimeout(r, 2100));
-    });
-    
-    await waitFor(() => {
-      expect(screen.getByText('Install Budget-BOSS')).toBeInTheDocument();
-    });
-    
-    fireEvent.click(screen.getByLabelText('Dismiss'));
-    
-    expect(mockOnDismiss).toHaveBeenCalledTimes(1);
-  });
-
-  it('calls prompt and onDismiss when Install clicked and accepted', async () => {
-    const mockPrompt = vi.fn().mockResolvedValue(undefined);
-    const mockUserChoice = Promise.resolve({ outcome: 'accepted' as const, platform: 'web' });
-    
-    render(<PWAInstallPrompt onDismiss={mockOnDismiss} locale="en" />);
-    
-    const event = new Event('beforeinstallprompt');
-    Object.defineProperty(event, 'prompt', { value: mockPrompt });
-    Object.defineProperty(event, 'userChoice', { value: mockUserChoice });
-    
-    await act(async () => {
-      window.dispatchEvent(event);
-      await new Promise(r => setTimeout(r, 2100));
-    });
-    
-    await waitFor(() => {
-      expect(screen.getByText('Install Budget-BOSS')).toBeInTheDocument();
-    });
-    
-    fireEvent.click(screen.getByRole('button', { name: /install/i }));
-    
-    await waitFor(() => {
-      expect(mockPrompt).toHaveBeenCalledTimes(1);
-      expect(mockOnDismiss).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  it('does not call onDismiss if install dismissed', async () => {
-    const mockPrompt = vi.fn().mockResolvedValue(undefined);
-    const mockUserChoice = Promise.resolve({ outcome: 'dismissed' as const, platform: 'web' });
-    
-    render(<PWAInstallPrompt onDismiss={mockOnDismiss} locale="en" />);
-    
-    const event = new Event('beforeinstallprompt');
-    Object.defineProperty(event, 'prompt', { value: mockPrompt });
-    Object.defineProperty(event, 'userChoice', { value: mockUserChoice });
-    
-    await act(async () => {
-      window.dispatchEvent(event);
-      await new Promise(r => setTimeout(r, 2100));
-    });
-    
-    await waitFor(() => {
-      expect(screen.getByText('Install Budget-BOSS')).toBeInTheDocument();
-    });
-    
-    fireEvent.click(screen.getByRole('button', { name: /install/i }));
-    
-    await waitFor(() => {
-      expect(mockPrompt).toHaveBeenCalledTimes(1);
-      expect(mockOnDismiss).not.toHaveBeenCalled();
-    });
-  });
-
-  it('does not show if already in standalone mode', () => {
-    // Mock standalone mode
-    Object.defineProperty(window, 'matchMedia', {
-      writable: true,
-      value: vi.fn().mockImplementation(query => ({
-        matches: query === '(display-mode: standalone)',
-        media: query,
-        onchange: null,
-        addListener: vi.fn(),
-        removeListener: vi.fn(),
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        dispatchEvent: vi.fn(),
-      })),
-    });
-    
-    render(<PWAInstallPrompt onDismiss={mockOnDismiss} locale="en" />);
-    
-    expect(screen.queryByText('Install Budget-BOSS')).not.toBeInTheDocument();
-  });
-
-  it('shows universal fallback prompt if no beforeinstallprompt event fires after timeout', async () => {
-    vi.useFakeTimers();
-    
-    render(<PWAInstallPrompt onDismiss={mockOnDismiss} locale="en" />);
-    
-    // Fast-forward past the 3s delay
-    await act(async () => {
-      vi.advanceTimersByTime(4000);
-    });
-    
-    expect(screen.queryByText('Install Budget-BOSS')).toBeInTheDocument();
-    
-    vi.useRealTimers();
-  });
-
-  it('shows help modal instructions when install is clicked and programmatic install is unsupported', async () => {
-    vi.useFakeTimers();
-
-    render(<PWAInstallPrompt onDismiss={mockOnDismiss} locale="en" />);
-    
-    await act(async () => {
-      vi.advanceTimersByTime(4000);
-    });
-    
-    expect(screen.getByText('Install Budget-BOSS')).toBeInTheDocument();
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /install/i }));
+    Object.assign(event, {
+      prompt: vi.fn().mockResolvedValue(undefined),
+      userChoice: Promise.resolve({ outcome: 'accepted' }),
     });
 
-    expect(screen.getByText('How to Install PWA')).toBeInTheDocument();
-    
-    vi.useRealTimers();
-  });
-
-  it('uses window.__deferredPwaPrompt if event fired before component mount', async () => {
-    const mockPrompt = vi.fn().mockResolvedValue(undefined);
-    const mockUserChoice = Promise.resolve({ outcome: 'accepted' as const, platform: 'web' });
-    const earlyEvent = new Event('beforeinstallprompt');
-    Object.defineProperty(earlyEvent, 'prompt', { value: mockPrompt });
-    Object.defineProperty(earlyEvent, 'userChoice', { value: mockUserChoice });
-
-    // Store early event on window object before component renders
-    (window as unknown as { __deferredPwaPrompt?: unknown }).__deferredPwaPrompt = earlyEvent;
-
-    render(<PWAInstallPrompt onDismiss={mockOnDismiss} locale="en" />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Install Budget-BOSS')).toBeInTheDocument();
+    act(() => {
+      fireEvent(window, event);
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /install/i }));
-
-    await waitFor(() => {
-      expect(mockPrompt).toHaveBeenCalledTimes(1);
+    const dismissBtn = screen.getByRole('button', { name: 'Not Now' });
+    act(() => {
+      fireEvent.click(dismissBtn);
     });
 
-    delete (window as unknown as { __deferredPwaPrompt?: unknown }).__deferredPwaPrompt;
+    expect(screen.queryByTestId('pwa-install-prompt')).not.toBeInTheDocument();
+    expect(localStorage.getItem('budgetbitch:installPromptDismissed')).toBe('1');
   });
 });

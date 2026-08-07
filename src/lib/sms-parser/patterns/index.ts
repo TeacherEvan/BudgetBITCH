@@ -5,14 +5,12 @@
 
 import type { SMSPattern } from '../types';
 import { genericPatterns } from './generic';
-import { thaiPatterns } from './th';
 import { usPatterns } from './us';
 import { sgPatterns } from './sg';
 import { euPatterns } from './eu';
 
 // All patterns sorted by priority (highest first)
 export const allPatterns: SMSPattern[] = [
-  ...thaiPatterns,
   ...usPatterns,
   ...sgPatterns,
   ...euPatterns,
@@ -25,7 +23,6 @@ export function getPatternsForCountry(country: string): SMSPattern[] {
 }
 
 export { genericPatterns } from './generic';
-export { thaiPatterns } from './th';
 export { usPatterns } from './us';
 export { sgPatterns } from './sg';
 export { euPatterns } from './eu';
