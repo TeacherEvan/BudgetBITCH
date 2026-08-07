@@ -9,7 +9,9 @@ import { saveOfflineDraft } from '../lib/db/stores/receipt-drafts-store';
 import { addExpense } from '../lib/db/stores/expenses-store';
 import { generateId } from '../lib/db/local-db';
 import { categorizeReceipt } from '../../convex/lib/receipt/categorize';
+import { mapCategory } from '../lib/receipt/map-category';
 import type { ScrapeResult } from '../../convex/lib/receipt/types';
+import type { ReceiptLineItem } from '@/lib/types/budget';
 
 export function useReceiptScan() {
   const [isScanning, setIsScanning] = useState(false);
@@ -119,6 +121,15 @@ export function useReceiptScan() {
         amount: Math.round(amount * 100) / 100,
         note: `Receipt scan${draft.draftId ? ` (draft ${draft.draftId})` : ''}`,
         source: 'receipt' as const,
+        lineItems: draft.lineItems?.length
+          ? draft.lineItems.map(
+              (li): ReceiptLineItem => ({
+                description: li.description,
+                amount: Math.round((li.amount ?? 0) * 100) / 100,
+                category: mapCategory(li.description),
+              })
+            )
+          : undefined,
       };
 
       try {

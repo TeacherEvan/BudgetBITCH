@@ -1,16 +1,19 @@
 // app/quick-add/page.tsx
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQuery, useMutation } from 'convex/react';
 import { Plus, Minus, Camera, Save, ArrowLeft, Loader2, Check, AlertCircle, MessageSquare, ShieldCheck, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useExpenses, useWizardProfile, useIncomes } from '@/hooks/use-local-db';
 import { useReceiptScan } from '@/hooks/use-receipt-scan';
 import { useInboxPermission } from '@/hooks/use-inbox-permission';
 import { parseSMS, getBestCandidate } from '@/lib/sms-parser';
+import { repeatExpense } from '@/lib/db/stores/expenses-store';
 import { ReceiptVerifySheet } from '@/components/receipt/receipt-verify-sheet';
-import { type ExpenseCategory, type IncomeCategory } from '@/lib/types/budget';
+import { type ExpenseCategory, type IncomeCategory, type ReceiptLineItem } from '@/lib/types/budget';
+import { mapCategory, reconcileLineItems } from '@/lib/receipt/map-category';
 import { useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
@@ -40,23 +43,7 @@ const labels = {
     extractBtn: 'Scrape & Auto-Fill',
     close: 'Close',
   }
-};
-
-const mapCategory = (cat: string): ExpenseCategory => {
-  const normalized = cat.toLowerCase().replace(/[\s_-]+/g, '');
-  if (normalized.includes('food') || normalized.includes('dining') || normalized.includes('restaurant') || normalized.includes('starbucks') || normalized.includes('mcdonald')) return 'food';
-  if (normalized.includes('transport') || normalized.includes('taxi') || normalized.includes('ride') || normalized.includes('fuel') || normalized.includes('car') || normalized.includes('grab') || normalized.includes('bolt') || normalized.includes('uber')) return 'transport';
-  if (normalized.includes('utilities') || normalized.includes('electricity') || normalized.includes('water')) return 'utilities';
-  if (normalized.includes('housing') || normalized.includes('rent') || normalized.includes('mortgage')) return 'housing';
-  if (normalized.includes('phone') || normalized.includes('internet') || normalized.includes('telecom')) return 'phone_internet';
-  if (normalized.includes('sub') || normalized.includes('netflix') || normalized.includes('spotify')) return 'subscriptions';
-  if (normalized.includes('entertainment') || normalized.includes('movie') || normalized.includes('game')) return 'entertainment';
-  if (normalized.includes('health') || normalized.includes('medical') || normalized.includes('doctor') || normalized.includes('hospital')) return 'healthcare';
-  if (normalized.includes('insurance')) return 'insurance';
-  if (normalized.includes('debt') || normalized.includes('loan')) return 'debt';
-  if (normalized.includes('savings') || normalized.includes('invest')) return 'savings';
-  return 'other';
-};
+}
 
 export default function QuickAddPage() {
   const router = useRouter();
@@ -65,21 +52,29 @@ export default function QuickAddPage() {
   const { add: addExpense } = useExpenses();
   const { add: addIncome } = useIncomes();
   const { profile, save: saveProfile } = useWizardProfile();
+  // Existing expenses feed the Repeat Purchase "+" on the scanned-receipt
+  // review card: when the scanned merchant matches a prior purchase, offer a
+  // one-tap repeat alongside Save. (useExpenses exposes the full list.)
+  const { expenses: existingExpenses } = useExpenses();
   
   const { draft, scanImage, answerQuestion, confirmDraft } = useReceiptScan();
   const { status: inboxPermStatus, grantPermission, denyPermission } = useInboxPermission();
 
-  // Optional Convex actions for AI vision receipt and message parsing
-  let parseReceiptAction: ReturnType<typeof useAction<typeof api.receipts.parseReceipt>> | null = null;
-  let parseMessageAction: ReturnType<typeof useAction<typeof api.receipts.parseMessage>> | null = null;
-  try {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    parseReceiptAction = useAction(api.receipts.parseReceipt);
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    parseMessageAction = useAction(api.receipts.parseMessage);
-  } catch {
-    // Offline or test environment fallback
-  }
+  // Convex action references are created unconditionally; offline fallback is
+  // handled at the call sites below rather than by conditionally invoking hooks.
+  const parseMessageAction = useAction(api.receipts.parseMessage);
+  const proxyReceiptScan = useAction(api.receipts.proxyReceiptScan);
+
+  // Load the pending bot-ingested (LINE / TeacherBOY) receipt draft so the
+  // scraped amount/merchant surface on Quick Add without hunting the dashboard.
+  // The bot writes drafts to Convex (status: 'draft', source: 'line').
+  const botDrafts = useQuery(api.receipts.listReceipts, {
+    source: 'line',
+    status: 'draft',
+    limit: 1,
+  });
+  const confirmBotDraft = useMutation(api.receipts.confirm);
+  const [botDraftId, setBotDraftId] = useState<string | null>(null);
 
   // UI States
   const [isExpense, setIsExpense] = useState(true);
@@ -94,6 +89,8 @@ export default function QuickAddPage() {
   const [scannedMerchant, setScannedMerchant] = useState('');
   const [scannedCategory, setScannedCategory] = useState<ExpenseCategory>('other');
   const [scannedDate, setScannedDate] = useState('');
+  const [scannedTax, setScannedTax] = useState('');
+  const [scannedLineItems, setScannedLineItems] = useState<ReceiptLineItem[] | undefined>(undefined);
 
   // Permission & SMS Modal States
   const [showPermModal, setShowPermModal] = useState(false);
@@ -162,6 +159,22 @@ export default function QuickAddPage() {
       setScannedCategory((catVal as ExpenseCategory) ?? 'other');
       setScannedDate(dateVal);
 
+      // Carry the engine's itemization into the review card. The bot-ingest
+      // path below does the same; without this a CAMERA scan silently lost its
+      // line items and the whole receipt total landed in one category.
+      // `unit_price` is the engine's snake_case field -> `unitPrice` on ours.
+      const rawItems = Array.isArray(draft.lineItems) ? draft.lineItems : [];
+      const mappedItems: ReceiptLineItem[] = rawItems.map((li) => ({
+        description: String(li.description ?? ''),
+        amount: Math.round((Number(li.amount) || 0) * 100) / 100,
+        category: mapCategory(li.description),
+        ...(Number.isFinite(li.qty) ? { qty: Number(li.qty) } : {}),
+        ...(Number.isFinite(li.unit_price)
+          ? { unitPrice: Math.round((Number(li.unit_price) || 0) * 100) / 100 }
+          : {}),
+      }));
+      setScannedLineItems(mappedItems.length > 0 ? mappedItems : undefined);
+
       // Pre-fill the combined amount+merchant input so the user can still edit
       // the free-text field if they prefer that path.
       const prefill = [
@@ -186,6 +199,42 @@ export default function QuickAddPage() {
     }
   }, [draft]);
 
+  // Surface a bot-ingested (LINE / TeacherBOY) draft on Quick Add. The bot
+  // writes drafts to Convex; load the latest pending one and fill the scanned
+  // review fields so the scraped amount/merchant are visible and editable.
+  // Skips if the user scanned a receipt in this session (local `draft` wins).
+  useEffect(() => {
+    if (draft) return; // session scan takes precedence
+    const bot = botDrafts?.receipts?.[0];
+    if (!bot) {
+      if (botDraftId) setBotDraftId(null);
+      return;
+    }
+    setIsExpense(true);
+    setEntrySource('receipt');
+    setBotDraftId(bot._id as string);
+    setScannedAmount(bot.amount ? String(bot.amount) : '');
+    setScannedMerchant(String(bot.merchant ?? ''));
+    setScannedCategory((bot.category as ExpenseCategory) ?? 'other');
+    setScannedLineItems(
+      Array.isArray(bot.lineItems)
+        ? (bot.lineItems as Array<{ description?: string; amount?: number }>).map((li) => ({
+            description: String(li.description ?? ''),
+            amount: Math.round((Number(li.amount) || 0) * 100) / 100,
+            category: mapCategory(li.description),
+          }))
+        : undefined,
+    );
+    setScannedDate(
+      bot.date
+        ? String(bot.date)
+        : new Date(bot._creationTime ?? Date.now()).toISOString().split('T')[0],
+    );
+    if (bot.amount) {
+      setInputText(`${bot.amount} ${bot.merchant ?? ''}`.trim());
+    }
+  }, [draft, botDrafts, botDraftId]);
+
   // Persist the reviewed receipt fields. We fill the shared form state and reuse
   // the manual Save path so there is exactly one write into the expense store.
   const handleSaveScannedReceipt = async () => {
@@ -196,20 +245,44 @@ export default function QuickAddPage() {
     }
     try {
       setLoading(true);
+      const date = scannedDate || new Date().toISOString().split('T')[0];
+      const roundedAmount = Math.round(amtVal * 100) / 100;
+      // Only persist an itemization that reconciles with the reviewed total —
+      // a half-parsed item set would misreport per-category spend downstream.
+      const trustedItems = reconcileLineItems(scannedLineItems, roundedAmount);
       await addExpense({
-        amount: Math.round(amtVal * 100) / 100,
+        amount: roundedAmount,
         merchant: scannedMerchant.trim() || 'Photo Receipt',
         category: scannedCategory,
-        date: scannedDate || new Date().toISOString().split('T')[0],
+        date,
         source: 'receipt',
         note: 'Scanned receipt photo',
+        lineItems: trustedItems,
+        tax: scannedTax ? parseFloat(scannedTax) || undefined : undefined,
       });
+      if (botDraftId) {
+        // Confirm the bot-ingested Convex draft (idempotent; flips status to
+        // confirmed and stores the reviewed overrides).
+        await confirmBotDraft({
+          draftId: botDraftId as never,
+          overrides: {
+            amount: Math.round(amtVal * 100) / 100,
+            merchant: scannedMerchant.trim() || 'Photo Receipt',
+            category: scannedCategory,
+            date,
+          },
+        });
+        setBotDraftId(null);
+      } else {
+        // Session scan path: reuse the hook's confirm (skips the duplicate add).
+        await confirmDraft(undefined, { skipLocalAdd: true });
+      }
       setToast({ show: true, message: `📸 Saved receipt: ${amtVal} @ ${scannedMerchant || 'Photo Receipt'}`, type: 'success' });
-      // Clear the scanned state + draft (skip the hook's internal add; we just wrote it).
-      await confirmDraft(undefined, { skipLocalAdd: true });
       setScannedAmount('');
       setScannedMerchant('');
       setScannedDate('');
+      setScannedTax('');
+      setScannedLineItems(undefined);
       setInputText('');
       setDetectedCategory('other');
       setEntrySource('manual');
@@ -221,23 +294,56 @@ export default function QuickAddPage() {
     }
   };
 
+  // Update one editable line item in the scanned receipt review card.
+  const updateScannedLineItem = (idx: number, field: 'description' | 'amount' | 'qty', value: string | number | undefined) => {
+    setScannedLineItems((prev) =>
+      prev?.map((item, i) => (i === idx ? { ...item, [field]: value } : item)),
+    );
+  };
+
+  // Repeat Purchase "+" on the review card: the most recent prior expense
+  // with the same merchant (case-insensitive) as the scanned receipt.
+  const repeatCandidate = useMemo(() => {
+    if (entrySource !== 'receipt') return undefined;
+    const merchant = scannedMerchant.trim().toLowerCase();
+    if (!merchant) return undefined;
+    return (existingExpenses ?? [])
+      .filter((e) => e.merchant?.trim().toLowerCase() === merchant)
+      .sort((a, b) => (a.date < b.date ? 1 : -1))[0];
+  }, [entrySource, scannedMerchant, existingExpenses]);
+
+  // One-tap repeat of the matched purchase. Independent of Save: the review
+  // card stays open so the user can still save the (edited) scan as new.
+  const handleRepeatPurchase = async () => {
+    if (!repeatCandidate) return;
+    try {
+      setLoading(true);
+      const clone = await repeatExpense(repeatCandidate.id);
+      if (clone) {
+        setToast({
+          show: true,
+          message: `🔁 Repeated: ${clone.merchant} — ${clone.amount}`,
+          type: 'success',
+        });
+      }
+    } catch (err) {
+      console.error('Repeat purchase failed:', err);
+      setToast({ show: true, message: `Repeat failed: ${err instanceof Error ? err.message : String(err)}`, type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Handle manual or verified save
   const handleSave = async () => {
     const trimmed = inputText.trim();
-    if (!trimmed) {
-      setToast({ show: true, message: l.invalidAmount, type: 'error' });
-      return;
-    }
 
-    // Extract first number found
+    // Amount is optional on Quick Add: a note-only entry is saved as amount 0
+    // so the user is never blocked from recording a spend. The manual/verified
+    // save path below tolerates amountVal === 0.
     const numberMatch = trimmed.match(/(\d+(?:\.\d+)?)/);
-    if (!numberMatch) {
-      setToast({ show: true, message: l.invalidAmount, type: 'error' });
-      return;
-    }
-
-    const amountVal = parseFloat(numberMatch[1]);
-    const noteVal = trimmed.replace(numberMatch[0], '').trim();
+    const amountVal = numberMatch ? parseFloat(numberMatch[1]) : 0;
+    const noteVal = (numberMatch ? trimmed.replace(numberMatch[0], '') : trimmed).trim();
 
     try {
       setLoading(true);
@@ -249,7 +355,8 @@ export default function QuickAddPage() {
           category: detectedCategory,
           date: new Date().toISOString().split('T')[0],
           source: entrySource,
-          note: noteVal || undefined
+          note: noteVal || undefined,
+          lineItems: entrySource === 'receipt' ? scannedLineItems : undefined,
         });
         setToast({ show: true, message: l.successAdded, type: 'success' });
       } else {
@@ -322,34 +429,60 @@ export default function QuickAddPage() {
     reader.onload = async () => {
       const dataUrl = reader.result as string;
 
-      // First attempt: Gemini AI Vision Receipt Parser via Convex (if online & action available)
-      if (parseReceiptAction && typeof navigator !== 'undefined' && navigator.onLine) {
+      // First attempt: send the photo to the TeacherBOY HuggingFace bot via the
+      // Convex proxy (Gemini vision scrape). The proxy keeps CONVEX_SYNC_SECRET
+      // server-side and the user is derived from the Convex Auth session.
+      if (proxyReceiptScan && typeof navigator !== 'undefined' && navigator.onLine) {
         try {
-          const aiRes = await parseReceiptAction({ base64Image: dataUrl });
-          if (aiRes && aiRes.amount > 0) {
-            const amt = aiRes.amount;
-            const merch = aiRes.merchant || 'Receipt';
-            const cat = mapCategory(aiRes.category || 'other');
+          const res = await proxyReceiptScan({
+            base64Image: dataUrl,
+            idempotencyKey: `app_${crypto.randomUUID()}`,
+            countryHint: profile?.locale?.includes('TH') ? 'TH' : (profile?.locale?.includes('ZA') ? 'ZA' : undefined),
+          });
 
-            await addExpense({
-              amount: amt,
-              merchant: merch,
-              category: cat,
-              date: aiRes.date || new Date().toISOString().split('T')[0],
-              source: 'receipt',
-              note: 'Scanned receipt photo'
-            });
-
-            setInputText(`${amt} ${merch}`);
-            setDetectedCategory(cat);
+          const fields = (res as { fields?: Record<string, { value?: unknown } | null> }).fields;
+          if (res && fields) {
+            setIsExpense(true);
             setEntrySource('receipt');
-            setToast({ show: true, message: `📸 AI Scraped & Saved: ${amt} @ ${merch}`, type: 'success' });
+            setScannedAmount(String((fields.total?.value as number) ?? ''));
+            setScannedMerchant(String((fields.merchant?.value as string) ?? ''));
+            setScannedCategory(mapCategory(String((fields.category?.value as string) ?? 'other')));
+            setScannedDate(
+              fields.date?.value != null ? String(fields.date.value) : new Date().toISOString().split('T')[0],
+            );
+            setScannedTax(
+              fields.tax?.value != null ? String(fields.tax.value) : '',
+            );
+
+            const items = Array.isArray((res as unknown as { lineItems?: unknown }).lineItems)
+              ? ((res as unknown as { lineItems: Array<{ description?: string; amount?: number; qty?: number; unit_price?: number }> }).lineItems)
+              : [];
+            const mappedItems: ReceiptLineItem[] = items.map((li) => ({
+              description: String(li.description ?? ''),
+              amount: Math.round((Number(li.amount) || 0) * 100) / 100,
+              category: mapCategory(li.description),
+              ...(Number.isFinite(li.qty) ? { qty: Number(li.qty) } : {}),
+              ...(Number.isFinite(li.unit_price) ? { unitPrice: Number(li.unit_price) } : {}),
+            }));
+            setScannedLineItems(mappedItems.length > 0 ? mappedItems : undefined);
+
+            const prefill = [
+              String((fields.total?.value as number) ?? ''),
+              String((fields.merchant?.value as string) ?? ''),
+            ].filter(Boolean).join(' ').trim();
+            setInputText(prefill);
+
+            setToast({
+              show: true,
+              message: `📸 Scanned: ${String((fields.merchant?.value as string) ?? 'Receipt')} — review & save`,
+              type: 'success',
+            });
             setLoading(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
             return;
           }
-        } catch (aiErr) {
-          console.warn("Server AI receipt parse failed, falling back to OCR engine:", aiErr);
+        } catch (botErr) {
+          console.warn('HF bot scan failed, falling back to client OCR:', botErr);
         }
       }
 
@@ -358,7 +491,7 @@ export default function QuickAddPage() {
       const url = URL.createObjectURL(file);
       img.onload = async () => {
         try {
-          await scanImage(img, 'ZA');
+          await scanImage(img, profile?.locale?.includes('TH') ? 'TH' : (profile?.locale?.includes('ZA') ? 'ZA' : undefined));
           setEntrySource('receipt');
         } catch (err) {
           console.error("Receipt scanning failed:", err);
@@ -648,11 +781,60 @@ export default function QuickAddPage() {
                 className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none focus:border-amber-400/50 text-white outline-none"
                 data-testid="scanned-category-select"
               >
-                {['food', 'transport', 'shopping', 'utilities', 'entertainment', 'medical', 'housing', 'personal', 'education', 'income', 'other'].map((c) => (
+                {(['food', 'transport', 'utilities', 'entertainment', 'housing', 'phone_internet', 'subscriptions', 'healthcare', 'insurance', 'debt', 'savings', 'other'] as ExpenseCategory[]).map((c) => (
                   <option key={c} value={c} className="bg-[#0a0a0a]">{c}</option>
                 ))}
               </select>
             </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] uppercase font-bold text-white/50 tracking-wider">{'Tax / VAT'}</label>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={scannedTax}
+                onChange={(e) => setScannedTax(e.target.value)}
+                placeholder="0.00"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-white/30 text-sm focus:outline-none focus:border-amber-400/50"
+                data-testid="scanned-tax-input"
+              />
+            </div>
+
+            {scannedLineItems && scannedLineItems.length > 0 && (
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase font-bold text-white/50 tracking-wider">{'Line Items (editable)'}</label>
+                {scannedLineItems.map((item, idx) => (
+                  <div key={idx} className="grid grid-cols-12 gap-1.5">
+                    <input
+                      type="text"
+                      value={item.description}
+                      onChange={(e) => updateScannedLineItem(idx, 'description', e.target.value)}
+                      placeholder="Item"
+                      className="col-span-6 bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white"
+                      data-testid={`scanned-line-item-desc-${idx}`}
+                    />
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={String(item.amount)}
+                      onChange={(e) => updateScannedLineItem(idx, 'amount', parseFloat(e.target.value) || 0)}
+                      placeholder="0.00"
+                      className="col-span-3 bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white"
+                      data-testid={`scanned-line-item-amount-${idx}`}
+                    />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={item.qty != null ? String(item.qty) : ''}
+                      onChange={(e) => updateScannedLineItem(idx, 'qty', e.target.value ? parseInt(e.target.value) || undefined : undefined)}
+                      placeholder="qty"
+                      className="col-span-3 bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white"
+                      data-testid={`scanned-line-item-qty-${idx}`}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
 
             <Button
               variant="primary"
@@ -664,6 +846,19 @@ export default function QuickAddPage() {
               <Save className="w-4 h-4 text-slate-950" />
               <span>{'Save Scanned Receipt'}</span>
             </Button>
+
+            {repeatCandidate && (
+              <Button
+                variant="secondary"
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl text-xs font-semibold"
+                onClick={handleRepeatPurchase}
+                isLoading={loading}
+                data-testid="repeat-purchase-btn"
+              >
+                <Plus className="w-4 h-4 text-amber-400" />
+                <span>{`Repeat last ${repeatCandidate.merchant} purchase`}</span>
+              </Button>
+            )}
           </div>
         ) : null}
 
@@ -720,7 +915,9 @@ export default function QuickAddPage() {
           variant="primary"
           onClick={handleSave}
           isLoading={loading}
+          disabled={isExpense && entrySource === 'manual' && !verifiedSmsData}
           className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-xs font-bold shadow-lg"
+          data-testid="quick-add-save-btn"
         >
           <Save className="w-4 h-4 text-slate-950" />
           <span>{l.save}</span>

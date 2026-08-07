@@ -18,6 +18,7 @@ const mockProfile = {
 vi.mock('@/hooks/use-local-db', () => ({
   useExpenses: () => ({
     add: mockAddExpense,
+    expenses: mockExpenses,
   }),
   useIncomes: () => ({
     add: mockAddIncome,
@@ -27,6 +28,22 @@ vi.mock('@/hooks/use-local-db', () => ({
     save: mockSaveProfile,
   }),
 }));
+
+// Mock the Repeat Purchase store action. The page matches a scanned merchant
+// against existing expenses and offers a one-tap repeat of the last purchase.
+const mockRepeatExpense = vi.fn();
+vi.mock('@/lib/db/stores/expenses-store', () => ({
+  repeatExpense: (...args: unknown[]) => mockRepeatExpense(...args),
+}));
+
+let mockExpenses: Array<{
+  id: string;
+  date: string;
+  category: string;
+  merchant: string;
+  amount: number;
+  source: string;
+}> = [];
 
 // Mock Next Navigation
 const mockPush = vi.fn();
@@ -42,11 +59,12 @@ vi.mock('next-intl', () => ({
 }));
 
 // Mock Convex
-const mockParseReceipt = vi.fn();
+const mockProxyScan = vi.fn();
 const mockConvexMutation = vi.fn();
 vi.mock('convex/react', () => ({
-  useAction: () => mockParseReceipt,
+  useAction: () => mockProxyScan,
   useMutation: () => mockConvexMutation,
+  useQuery: () => undefined,
 }));
 
 // Mock the deterministic receipt scraper hook.
@@ -54,6 +72,7 @@ type MockDraft = {
   draftId: string;
   fields: Record<string, { value: unknown }>;
   questions: unknown[];
+  lineItems?: Array<{ description: string; amount: number; qty?: number; unit_price?: number }>;
 } | null;
 
 let mockDraft: MockDraft = null;
@@ -78,6 +97,7 @@ describe('QuickAddPage', () => {
     vi.clearAllMocks();
     localStorage.clear();
     mockDraft = null;
+    mockExpenses = [];
   });
 
   it('renders quick add components correctly', () => {
@@ -103,18 +123,22 @@ describe('QuickAddPage', () => {
     expect(screen.getByRole('button', { name: /expense \(-\)/i })).toBeInTheDocument();
   });
 
-  it('validates empty inputs on save', async () => {
+  it('guards: manual expense entry is disabled — Save does NOT write from a typed note-only input (quick-add has no manual amount feature)', async () => {
     render(<QuickAddPage />);
+    const input = screen.getByPlaceholderText('Type amount then note, e.g. 120 lunch');
     const saveButton = screen.getByRole('button', { name: /save/i });
-    
+
+    // Note-only entry (no number) must NOT save — there is no manual-amount feature.
+    fireEvent.change(input, { target: { value: 'lunch with team' } });
     fireEvent.click(saveButton);
 
+    // Button is disabled in expense + manual mode, so no write happens.
     await waitFor(() => {
-      expect(screen.getByText('Please enter a valid amount')).toBeInTheDocument();
+      expect(mockAddExpense).not.toHaveBeenCalled();
     });
   });
 
-  it('parses amount and note, then calls addExpense on save for expenses', async () => {
+  it('guards: typed amount + note does NOT save as a manual expense (no manual amount feature)', async () => {
     render(<QuickAddPage />);
     const input = screen.getByPlaceholderText('Type amount then note, e.g. 120 lunch');
     const saveButton = screen.getByRole('button', { name: /save/i });
@@ -123,13 +147,7 @@ describe('QuickAddPage', () => {
     fireEvent.click(saveButton);
 
     await waitFor(() => {
-      expect(mockAddExpense).toHaveBeenCalledTimes(1);
-      expect(mockAddExpense).toHaveBeenCalledWith(expect.objectContaining({
-        amount: 150.50,
-        merchant: 'delicious dinner',
-        source: 'manual',
-      }));
-      expect(screen.getByText('Expense recorded successfully!')).toBeInTheDocument();
+      expect(mockAddExpense).not.toHaveBeenCalled();
     });
   });
 
@@ -187,6 +205,56 @@ describe('QuickAddPage', () => {
     // ...but no expense was written yet. The previous bug auto-committed
     // silently, so this asserts the fix: scanned data sits in fields first.
     expect(mockAddExpense).not.toHaveBeenCalled();
+  });
+
+  it('offers a Repeat Purchase "+" in the review card when a same-merchant expense exists', async () => {
+    mockExpenses = [
+      { id: 'exp-prev-1', date: '2026-07-28', category: 'food', merchant: 'Supermarket', amount: 400, source: 'receipt' },
+    ];
+    mockDraft = {
+      draftId: 'draft-r1',
+      fields: {
+        total: { value: 450 },
+        merchant: { value: 'supermarket' }, // case-insensitive match
+        category: { value: 'food' },
+      },
+      questions: [],
+    };
+
+    render(<QuickAddPage />);
+
+    const repeatBtn = await screen.findByTestId('repeat-purchase-btn');
+    fireEvent.click(repeatBtn);
+
+    await waitFor(() => {
+      expect(mockRepeatExpense).toHaveBeenCalledWith('exp-prev-1');
+    });
+    // Repeat and Save are independent: the review card must still be open
+    // and nothing was saved by the repeat tap itself.
+    expect(screen.getByTestId('scanned-receipt-card')).toBeInTheDocument();
+    expect(mockAddExpense).not.toHaveBeenCalled();
+  });
+
+  it('hides the Repeat Purchase button when no prior expense matches the merchant', async () => {
+    mockExpenses = [
+      { id: 'exp-other', date: '2026-07-28', category: 'food', merchant: 'Corner Cafe', amount: 60, source: 'manual' },
+    ];
+    mockDraft = {
+      draftId: 'draft-r2',
+      fields: {
+        total: { value: 450 },
+        merchant: { value: 'Supermarket' },
+        category: { value: 'food' },
+      },
+      questions: [],
+    };
+
+    render(<QuickAddPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('scanned-receipt-card')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('repeat-purchase-btn')).not.toBeInTheDocument();
   });
 
   it('saves the scanned receipt via the review card: one expense write + draft confirm (no double write)', async () => {
@@ -247,6 +315,69 @@ describe('QuickAddPage', () => {
         source: 'receipt',
       }));
     });
+  });
+
+  it('carries camera-scanned line items into the saved expense with per-item categories', async () => {
+    // Regression guard: the camera-scan effect previously ignored draft.lineItems
+    // (only the LINE-bot path populated them) AND handleSaveScannedReceipt wrote
+    // the expense without lineItems — so a scanned receipt's itemization never
+    // reached the store and the whole total landed in one category.
+    mockDraft = {
+      draftId: 'draft-items',
+      fields: {
+        total: { value: 100 },
+        merchant: { value: 'Supermarket' },
+        category: { value: 'food' },
+      },
+      questions: [],
+      lineItems: [
+        { description: 'bread', amount: 25 },
+        { description: 'milk', amount: 18.5 },
+        { description: 'movie rental', amount: 56.5 },
+      ],
+    };
+
+    render(<QuickAddPage />);
+    fireEvent.click(await screen.findByTestId('save-scanned-receipt-btn'));
+
+    await waitFor(() => {
+      expect(mockAddExpense).toHaveBeenCalledTimes(1);
+    });
+
+    const entry = mockAddExpense.mock.calls[0][0];
+    expect(entry.source).toBe('receipt');
+    expect(entry.lineItems).toEqual([
+      { description: 'bread', amount: 25, category: 'food' },
+      { description: 'milk', amount: 18.5, category: 'food' },
+      { description: 'movie rental', amount: 56.5, category: 'entertainment' },
+    ]);
+  });
+
+  it('drops a line-item set that does not reconcile with the reviewed total', async () => {
+    // Half-parsed receipt: OCR captured only 30 of a 450 total. Persisting those
+    // items would misreport per-category spend, so they must be discarded and
+    // the receipt saved as a single unsplit expense.
+    mockDraft = {
+      draftId: 'draft-mismatch',
+      fields: {
+        total: { value: 450 },
+        merchant: { value: 'Supermarket' },
+        category: { value: 'food' },
+      },
+      questions: [],
+      lineItems: [{ description: 'bread', amount: 30 }],
+    };
+
+    render(<QuickAddPage />);
+    fireEvent.click(await screen.findByTestId('save-scanned-receipt-btn'));
+
+    await waitFor(() => {
+      expect(mockAddExpense).toHaveBeenCalledTimes(1);
+    });
+
+    const entry = mockAddExpense.mock.calls[0][0];
+    expect(entry.amount).toBe(450);
+    expect(entry.lineItems).toBeUndefined();
   });
 
   it('handles Inbox SMS permission prompt with remember tick box and scrapes message', async () => {
@@ -335,5 +466,65 @@ describe('QuickAddPage', () => {
       expect(screen.getByText('Please select a valid image file.')).toBeInTheDocument();
     });
     expect(mockScanImage).not.toHaveBeenCalled();
+  });
+
+  it('app camera path: HF bot scan populates editable fields and does NOT auto-commit (fix: AI-scan-no-autocommit)', async () => {
+    // Regression guard: the camera path previously called addExpense directly
+    // and returned early, bypassing the editable review card entirely. Now it
+    // routes through the Convex proxy → HF bot and populates the scanned fields
+    // for the user to review before pressing Save.
+    mockProxyScan.mockResolvedValueOnce({
+      success: true,
+      draftId: 'd-app-1',
+      fields: {
+        total: { value: 250 },
+        merchant: { value: 'AI Supermarket' },
+        category: { value: 'food' },
+        date: { value: '2026-08-03' },
+        tax: { value: 17.5 },
+      },
+      lineItems: [
+        { description: 'groceries', amount: 200 },
+        { description: 'movie ticket', amount: 50 },
+      ],
+    });
+
+    render(<QuickAddPage />);
+
+    const file = new File(['fake-image'], 'receipt.jpg', { type: 'image/jpeg' });
+    const fileInput = screen.getByTestId('camera-file-input');
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    // The editable review card appears with the bot-scanned values
+    await waitFor(() => {
+      expect(screen.getByTestId('scanned-receipt-card')).toBeInTheDocument();
+    });
+    const amountInput = screen.getByTestId('scanned-amount-input') as HTMLInputElement;
+    const merchantInput = screen.getByTestId('scanned-merchant-input') as HTMLInputElement;
+    const taxInput = screen.getByTestId('scanned-tax-input') as HTMLInputElement;
+    expect(amountInput.value).toBe('250');
+    expect(merchantInput.value).toBe('AI Supermarket');
+    expect(taxInput.value).toBe('17.5');
+
+    // Line items render and are editable
+    expect(screen.getByTestId('scanned-line-item-desc-0')).toBeInTheDocument();
+
+    // No expense was auto-committed — user must press Save
+    expect(mockAddExpense).not.toHaveBeenCalled();
+
+    // Saving writes once with the bot-scanned values + line items
+    fireEvent.click(screen.getByTestId('save-scanned-receipt-btn'));
+    await waitFor(() => {
+      expect(mockAddExpense).toHaveBeenCalledTimes(1);
+      const entry = mockAddExpense.mock.calls[0][0];
+      expect(entry.amount).toBe(250);
+      expect(entry.merchant).toBe('AI Supermarket');
+      expect(entry.source).toBe('receipt');
+      expect(entry.tax).toBe(17.5);
+      expect(entry.lineItems).toEqual([
+        { description: 'groceries', amount: 200, category: 'food' },
+        { description: 'movie ticket', amount: 50, category: 'entertainment' },
+      ]);
+    });
   });
 });

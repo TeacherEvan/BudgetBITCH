@@ -49,4 +49,22 @@ describe("ingestRequestBodySchema", () => {
     });
     expect(res.success).toBe(true);
   });
+
+  test("accepts the TeacherBOY contract where hints are JSON null (Python None)", () => {
+    const res = ingestRequestBodySchema.safeParse({
+      lineUserId: "U1",
+      idempotencyKey: "line_abc",
+      payload: {
+        lines: [{ text: "Total 150.00 THB", conf: 85, y: 0, words: [] }],
+        width: 1024,
+        height: 200,
+        lang: "en",
+        engine: "gemini-vision@1",
+        capturedAt: 1_700_000_000,
+        countryHint: "TH",
+        currencyHint: null,
+      },
+    });
+    expect(res.success).toBe(true);
+  });
 });
