@@ -92,6 +92,23 @@ export const proxyReceiptScan = action({
       throw new ConvexError("Receipt bot is not configured");
     }
 
+    // Upload the image to Convex storage for audit trail
+    let imageStorageId: Id<"_storage"> | undefined;
+    try {
+      const match = args.base64Image.match(/^data:([^;]+);base64,(.+)$/);
+      let mimeType = "image/jpeg";
+      let data = args.base64Image;
+      if (match) {
+        mimeType = match[1];
+        data = match[2];
+      }
+      const buffer = Buffer.from(data, "base64");
+      imageStorageId = await ctx.storage.store(new Blob([buffer], { type: mimeType }));
+    } catch (storageError) {
+      console.warn("Failed to store receipt image in Convex storage:", storageError);
+      // Continue without storage ID - receipt still created
+    }
+
     const res = await fetch(`${botUrl.replace(/\/$/, "")}/receipt/scan`, {
       method: "POST",
       headers: {
@@ -163,6 +180,16 @@ export const parseReceipt = action({
 
     // Calculate image size in bytes (approximate from base64)
     const imageSizeBytes = Math.floor(data.length * 0.75);
+
+    // Upload the image to Convex storage for audit trail
+    let imageStorageId: Id<"_storage"> | undefined;
+    try {
+      const buffer = Buffer.from(data, "base64");
+      imageStorageId = await ctx.storage.store(new Blob([buffer], { type: mimeType }));
+    } catch (storageError) {
+      console.warn("Failed to store receipt image in Convex storage:", storageError);
+      // Continue without storage ID - receipt still created
+    }
 
     const prompt = `Analyze the receipt in the image. You must extract:
 1. Total amount spent (as a number, do not include currency symbols).
@@ -255,6 +282,7 @@ Do not include any formatting, markdown wrappers, or extra text. Output ONLY the
         rawGeminiResponse: cleanText,
         imageMimeType: mimeType,
         imageSizeBytes,
+        imageStorageId,
         parsedAt,
         geminiModel: GEMINI_MODEL,
         lineItems: lineItems.length > 0 ? lineItems : undefined,
@@ -389,6 +417,7 @@ export const saveReceipt = internalMutation({
     rawGeminiResponse: v.optional(v.string()),
     imageMimeType: v.string(),
     imageSizeBytes: v.number(),
+    imageStorageId: v.optional(v.id("_storage")), // Convex storage ID for the original receipt photo
     parsedAt: v.number(),
     geminiModel: v.string(),
     source: v.optional(v.string()), // "app" (default) | "line"
@@ -405,6 +434,32 @@ export const saveReceipt = internalMutation({
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("receipts", args);
+  },
+});
+
+// Internal mutation to update receipt fields (called from ingestReceipt to preserve imageStorageId)
+export const updateReceiptFields = internalMutation({
+  args: {
+    draftId: v.id("receipts"),
+    amount: v.number(),
+    merchant: v.string(),
+    category: v.string(),
+    date: v.optional(v.string()),
+    geminiModel: v.string(),
+    confidence: v.optional(v.any()),
+    evidence: v.optional(v.any()),
+    ocrText: v.optional(v.string()),
+    tax: v.optional(v.number()),
+    currency: v.optional(v.string()),
+    questionsAsked: v.optional(v.any()),
+    status: v.optional(v.string()),
+    source: v.optional(v.string()),
+    lineItems: v.optional(v.any()),
+  },
+  handler: async (ctx, args) => {
+    const { draftId, ...fields } = args;
+    await ctx.db.patch(draftId, fields);
+    return { success: true };
   },
 });
 
@@ -846,26 +901,6 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
 
   const resolvedSource = requestSource ?? "line";
 
-  // Check idempotency - look for existing draft with this clientDraftId
-  const existing = await ctx.runQuery(internal.receipts.getReceiptByClientDraftId, { clientDraftId: idempotencyKey });
-
-  if (existing) {
-    // Return existing draft
-    const result = existing as any;
-    return new Response(JSON.stringify({
-      success: true,
-      draftId: existing._id,
-      alreadySynced: true,
-      fields: result.fields,
-      confidence: result.confidence,
-      questions: result.questionsAsked,
-      source: resolvedSource,
-    }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
   // Run the scraper engine (validated payload is structurally an OcrPayload)
   const scraped = scrapeEngine(payload as OcrPayload);
 
@@ -877,6 +912,44 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
   const currency = typeof scraped.fields.currency?.value === "string" ? scraped.fields.currency.value : undefined;
   const tax = typeof scraped.fields.tax?.value === "number" ? scraped.fields.tax.value : undefined;
   const lineItems = scraped.lineItems;
+
+  // Check idempotency - look for existing draft with this clientDraftId
+  const existing = await ctx.runQuery(internal.receipts.getReceiptByClientDraftId, { clientDraftId: idempotencyKey });
+
+  if (existing) {
+    // Update existing draft with scraped data (preserve imageStorageId from proxyReceiptScan)
+    await ctx.runMutation(internal.receipts.updateReceiptFields, {
+      draftId: existing._id,
+      amount,
+      merchant,
+      category,
+      date,
+      geminiModel: "gemini-2.5-flash",
+      confidence: scraped.confidence,
+      evidence: scraped.evidence,
+      ocrText: payload.lines?.map((l: any) => l.text).join("\n"),
+      tax,
+      currency,
+      questionsAsked: scraped.questions,
+      status: "draft",
+      source: resolvedSource,
+      lineItems,
+    });
+    return new Response(JSON.stringify({
+      success: true,
+      draftId: existing._id,
+      alreadySynced: true,
+      fields: scraped.fields,
+      confidence: scraped.confidence,
+      evidence: scraped.evidence,
+      questions: scraped.questions,
+      lineItems,
+      source: resolvedSource,
+    }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 
   // Insert draft receipt via internal mutation
   const draftId = await ctx.runMutation(internal.receipts.saveReceipt, {
