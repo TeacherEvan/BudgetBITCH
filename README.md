@@ -77,7 +77,7 @@ See [docs/CI_CD.md](docs/CI_CD.md) for gate specifications, build guard mechanic
 
 ## Tech stack
 
-- Next.js 14 (App Router)
+- Next.js 16.2.12 (App Router)
 - React 18
 - TypeScript (strict)
 - Convex 1.34 (auth, database, realtime, HTTP endpoints)

@@ -11,7 +11,7 @@ prototype subtree was removed on 2026-07-20.)
 
 ### Stack
 
-- Next.js App Router (v14)
+- Next.js App Router (v16.2.12)
 - React 18 + TypeScript (strict)
 - **Convex** 1.34 for backend (auth, database, realtime, HTTP endpoints)
 - **IndexedDB** (via `idb`) for local-first offline data
