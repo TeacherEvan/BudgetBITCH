@@ -18,7 +18,7 @@ import { test, expect, signInReal, seedLocalStorage, HAS_CREDS } from "./helpers
 // ─── Shared setup ───────────────────────────────────────────────────────────
 async function signedInTh(page: import("@playwright/test").Page) {
   if (!HAS_CREDS) test.skip(true, "E2E credentials not set");
-  await seedLocalStorage(page, "th");
+  await seedLocalStorage(page);
   await signInReal(page);
 }
 

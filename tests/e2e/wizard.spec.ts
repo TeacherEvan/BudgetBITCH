@@ -118,7 +118,7 @@ test.describe("Wizard — 3-step onboarding", () => {
   });
 
   test("renders Thai labels when locale=th", async ({ page }) => {
-    await seedLocalStorage(page, "th");
+    await seedLocalStorage(page);
     await page.goto("/wizard");
     await expect(
       page.getByRole("button", { name: /^(ถัดไป|เสร็จสิ้น)$/i }),
