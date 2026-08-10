@@ -7,10 +7,11 @@
 //  - The real-sign-in test is conditionally declared with
 //    `(HAS_CREDS ? test : test.skip)` so it is reported as Skipped rather than
 //    just silently passing a no-op.
-import { test, expect, HAS_CREDS, TEST_EMAIL, TEST_PASSWORD } from "./helpers";
+import { test, expect, HAS_CREDS, TEST_EMAIL, TEST_PASSWORD, seedLocalStorage } from "./helpers";
 
 test.describe("Auth — sign-in page", () => {
   test.beforeEach(async ({ page }) => {
+    await seedLocalStorage(page);
     await page.goto("/sign-in");
   });
 
@@ -83,6 +84,10 @@ test.describe("Auth — route guard", () => {
 });
 
 test.describe("First-launch language select", () => {
+  test.beforeEach(async ({ page }) => {
+    await seedLocalStorage(page);
+  });
+
   test("shows the language modal on first root visit and persists the choice", async ({
     page,
   }) => {

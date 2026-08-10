@@ -54,6 +54,7 @@
 
   --shadow-soft: 0 24px 80px rgba(8, 6, 0, 0.5);
   --shadow-card: 0 18px 48px rgba(0, 0, 0, 0.5);
+  --shadow-header: 0 1px 0 rgba(201, 150, 12, 0.08);
   --radius-panel: 1.5rem;
   --radius-card: 1.2rem;
   --radius-badge: 0.9rem;
@@ -146,7 +147,9 @@
     font-family: var(--font-display);
     font-weight: 700;
     letter-spacing: 0;
-    text-wrap: balance;
+    @supports (text-wrap: balance) {
+      text-wrap: balance;
+    }
   }
 
   h1 {
@@ -164,7 +167,9 @@
 
   p {
     color: var(--text-2);
-    text-wrap: pretty;
+    @supports (text-wrap: pretty) {
+      text-wrap: pretty;
+    }
   }
   ::selection {
     background: color-mix(in srgb, var(--accent-strong) 40%, transparent 60%);
@@ -236,7 +241,7 @@ select,
 .bb-mono {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum";
+  font-feature-settings: 'tnum';
 }
 
 .bb-status-strip {

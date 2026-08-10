@@ -150,19 +150,18 @@ export function __closeDbForTest(): void {
 }
 
 // Singleton proxy for SSR rendering to avoid re-allocating proxies per SSR invocation
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const DUMMY_SSR_DB = new Proxy({} as any, {
-  get(target, prop) {
+const DUMMY_SSR_DB = new Proxy({} as IDBPDatabase<BudgetBITCHDB>, {
+  get(_target, prop: string | symbol) {
     if (prop === 'then') {
       return undefined;
     }
     if (prop === 'transaction') {
       return () => ({
         store: new Proxy({}, {
-          get(t, p) {
+          get(_t, p) {
             if (p === 'index') {
               return () => new Proxy({}, {
-                get(ti, pi) {
+                get(_ti, pi) {
                   if (pi === 'iterate') {
                     return async function* () {};
                   }
@@ -559,7 +558,11 @@ export async function createLocalCheckpoint(label: string): Promise<void> {
   try {
     const db = await getDB();
     const backup: Record<string, unknown> = {};
-    for (const store of USER_DATA_STORES) {
+    // `settings` has no keyPath and is persisted under a fixed 'current' key
+    // (see saveSettings); include it alongside the keyed stores so a checkpoint
+    // can fully restore app preferences.
+    const backupStores = [...USER_DATA_STORES, 'settings'] as const;
+    for (const store of backupStores) {
       backup[store] = await db.getAll(store);
     }
     const checkpointData = {
@@ -610,28 +613,26 @@ export async function restoreCheckpoint(timestamp: number): Promise<boolean> {
     const checkpoint = checkpointsList.find((c) => c.timestamp === timestamp);
     if (!checkpoint) return false;
 
-    // Clear existing stores
-    const tx = db.transaction(USER_DATA_STORES, 'readwrite');
-    for (const store of USER_DATA_STORES) {
+    // Clear existing stores. Include `settings` (no keyPath, persisted under
+    // a fixed 'current' key) so a restore fully replaces prior preferences.
+    const restoreStores = [...USER_DATA_STORES, 'settings'] as const;
+    const tx = db.transaction(restoreStores, 'readwrite');
+    for (const store of restoreStores) {
       await tx.objectStore(store).clear();
     }
     await tx.done;
 
     // Restore data from checkpoint
-    const putDb = db as unknown as { put: (store: string, val: unknown, key?: string) => Promise<unknown> };
-    for (const [store, items] of Object.entries(checkpoint.backup)) {
-      if (!USER_DATA_STORES.includes(store as typeof USER_DATA_STORES[number])) continue;
+    for (const [storeName, items] of Object.entries(checkpoint.backup)) {
+      if (!restoreStores.includes(storeName as (typeof restoreStores)[number])) continue;
+      const store = storeName as (typeof restoreStores)[number];
       if (Array.isArray(items)) {
         for (const item of items) {
-          // wizardProfile & settings have no keyPath; restore under their
-          // fixed 'current' key so the app (which only reads 'current') sees them.
-          if (
-            (store === 'wizardProfile' || store === 'settings') &&
-            item && typeof item === 'object'
-          ) {
-            await putDb.put(store, item, 'current');
+          if ((store === 'wizardProfile' || store === 'settings') && item && typeof item === 'object') {
+            await db.put(store, item as never, 'current');
           } else {
-            await putDb.put(store, item);
+            // Store specific items with key paths defined on store schemas
+            await (db.put as (s: string, val: unknown) => Promise<unknown>)(store, item);
           }
         }
       }
@@ -642,6 +643,25 @@ export async function restoreCheckpoint(timestamp: number): Promise<boolean> {
     console.error('Failed to restore checkpoint:', err);
     return false;
   }
+}
+
+// Helper sanitizers for database health auditing
+function sanitizeNonNegative(val: unknown, fallback = 0): { value: number; patched: boolean } {
+  const isInvalid = typeof val !== 'number' || isNaN(val) || val < 0;
+  const num = isInvalid ? Math.max(0, Number(val) || fallback) : (val as number);
+  return { value: num, patched: isInvalid };
+}
+
+function sanitizePositive(val: unknown, fallback: number): { value: number; patched: boolean } {
+  const isInvalid = typeof val !== 'number' || isNaN(val) || val <= 0;
+  const num = isInvalid ? Math.max(fallback, Number(val) || fallback) : (val as number);
+  return { value: num, patched: isInvalid };
+}
+
+function sanitizeBoundedDay(val: unknown): { value: number; patched: boolean } {
+  const isInvalid = typeof val !== 'number' || isNaN(val) || val < 1 || val > 31;
+  const num = isInvalid ? Math.min(31, Math.max(1, Number(val) || 1)) : (val as number);
+  return { value: num, patched: isInvalid };
 }
 
 // Database Health Audit & Repair
@@ -673,11 +693,10 @@ export async function auditAndRepairDatabase(): Promise<{ status: 'healthy' | 'r
 
     // 1. Audit Expenses
     for (const exp of expenses) {
-      let patched = false;
-      if (typeof exp.amount !== 'number' || isNaN(exp.amount) || exp.amount < 0) {
-        exp.amount = Math.max(0, Number(exp.amount) || 0);
-        patched = true;
-      }
+      const amountRes = sanitizeNonNegative(exp.amount);
+      let patched = amountRes.patched;
+      if (patched) exp.amount = amountRes.value;
+
       if (!exp.category) {
         exp.category = 'other';
         patched = true;
@@ -690,11 +709,10 @@ export async function auditAndRepairDatabase(): Promise<{ status: 'healthy' | 'r
 
     // 2. Audit Incomes
     for (const inc of incomes) {
-      let patched = false;
-      if (typeof inc.amount !== 'number' || isNaN(inc.amount) || inc.amount < 0) {
-        inc.amount = Math.max(0, Number(inc.amount) || 0);
-        patched = true;
-      }
+      const amountRes = sanitizeNonNegative(inc.amount);
+      let patched = amountRes.patched;
+      if (patched) inc.amount = amountRes.value;
+
       if (!inc.frequency) {
         inc.frequency = 'monthly';
         patched = true;
@@ -707,16 +725,12 @@ export async function auditAndRepairDatabase(): Promise<{ status: 'healthy' | 'r
 
     // 3. Audit Bills
     for (const bill of bills) {
-      let patched = false;
-      if (typeof bill.amount !== 'number' || isNaN(bill.amount) || bill.amount < 0) {
-        bill.amount = Math.max(0, Number(bill.amount) || 0);
-        patched = true;
-      }
-      if (typeof bill.dueDay !== 'number' || isNaN(bill.dueDay) || bill.dueDay < 1 || bill.dueDay > 31) {
-        bill.dueDay = Math.min(31, Math.max(1, Number(bill.dueDay) || 1));
-        patched = true;
-      }
+      const amountRes = sanitizeNonNegative(bill.amount);
+      const dueDayRes = sanitizeBoundedDay(bill.dueDay);
+      const patched = amountRes.patched || dueDayRes.patched;
       if (patched) {
+        bill.amount = amountRes.value;
+        bill.dueDay = dueDayRes.value;
         await db.put('bills', bill);
         repairedCount++;
       }
@@ -724,16 +738,12 @@ export async function auditAndRepairDatabase(): Promise<{ status: 'healthy' | 'r
 
     // 4. Audit Savings Goals
     for (const goal of savingsGoals) {
-      let patched = false;
-      if (typeof goal.targetAmount !== 'number' || isNaN(goal.targetAmount) || goal.targetAmount <= 0) {
-        goal.targetAmount = Math.max(1000, Number(goal.targetAmount) || 1000);
-        patched = true;
-      }
-      if (typeof goal.currentAmount !== 'number' || isNaN(goal.currentAmount) || goal.currentAmount < 0) {
-        goal.currentAmount = Math.max(0, Number(goal.currentAmount) || 0);
-        patched = true;
-      }
+      const targetRes = sanitizePositive(goal.targetAmount, 1000);
+      const currentRes = sanitizeNonNegative(goal.currentAmount);
+      const patched = targetRes.patched || currentRes.patched;
       if (patched) {
+        goal.targetAmount = targetRes.value;
+        goal.currentAmount = currentRes.value;
         await db.put('savingsGoals', goal);
         repairedCount++;
       }
@@ -741,16 +751,12 @@ export async function auditAndRepairDatabase(): Promise<{ status: 'healthy' | 'r
 
     // 5. Audit Debts
     for (const debt of debts) {
-      let patched = false;
-      if (typeof debt.balance !== 'number' || isNaN(debt.balance) || debt.balance < 0) {
-        debt.balance = Math.max(0, Number(debt.balance) || 0);
-        patched = true;
-      }
-      if (typeof debt.minimumPayment !== 'number' || isNaN(debt.minimumPayment) || debt.minimumPayment < 0) {
-        debt.minimumPayment = Math.max(0, Number(debt.minimumPayment) || 0);
-        patched = true;
-      }
+      const balanceRes = sanitizeNonNegative(debt.balance);
+      const minPaymentRes = sanitizeNonNegative(debt.minimumPayment);
+      const patched = balanceRes.patched || minPaymentRes.patched;
       if (patched) {
+        debt.balance = balanceRes.value;
+        debt.minimumPayment = minPaymentRes.value;
         await db.put('debts', debt);
         repairedCount++;
       }

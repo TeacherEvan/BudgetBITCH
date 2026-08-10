@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ProTip, getRandomProTip } from '@/lib/data/pro-tips';
+import { getRandomProTip } from '@/lib/data/pro-tips';
 import { ProTipsModal } from './pro-tips-modal';
 import { Sparkles, ArrowRight, Lightbulb } from 'lucide-react';
 
@@ -11,7 +11,7 @@ interface ProTipsCardProps {
 }
 
 export function ProTipsCard({ locale }: ProTipsCardProps) {
-  const [currentTip] = useState<ProTip>(() => getRandomProTip());
+  const [currentTip] = useState<ProTip>(() => getRandomProTip(locale));
   const [modalOpen, setModalOpen] = useState(false);
 
   return (

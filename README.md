@@ -50,8 +50,17 @@ See [docs/CI_CD.md](docs/CI_CD.md) for gate specifications, build guard mechanic
   engine (`convex/lib/receipt/**`), receipt templates, and merchant aliases
 - **SMS import** — bank-SMS parsing (`src/lib/sms-parser/**`, EU/SG/US/generic
   patterns) with a PWA Web Share Target (`/share-target` → `/sms-confirm`)
-- **Quick Add widget** — standalone `/quick-add` route with a +/- sign toggle,
-  installable as a PWA app shortcut (`public/manifest.json`)
+- **Quick Add widget** — standalone `/quick-add` route with exactly three
+  features: **Camera** (photo → HF bot `EvilEvan/TeacherBOY` → Gemini vision →
+  Convex → editable review fields for amount, merchant, category, purchase
+  date, tax/VAT, and line items — nothing auto-commits; no LINE ID involved,
+  the bot identifies the user as `app:<convexUserId>`), **Inbox** (pasted
+  SMS/email scraped by Gemini or the regex parser into a verify card), and
+  **Income** (+/- toggle). Manual amount entry is deliberately NOT a feature.
+  The Camera review card also offers a one-tap **Repeat Purchase** "+" when
+  the scanned merchant matches a prior expense (also available per-row in the
+  Expense Tracker). Expenses stamp `entryDate` (date of entry) separately
+  from `date` (purchase date on the receipt).
 - **Market Watch** — localized finance news/RSS with location-gated vicinity feeds
 - **Web Push notifications** — VAPID push via `convex/push.ts` / `convex/pushSend.ts`
 - **Bug reporting** — in-app modal capturing the last 20 user actions
@@ -68,21 +77,21 @@ See [docs/CI_CD.md](docs/CI_CD.md) for gate specifications, build guard mechanic
 
 ## Tech stack
 
-- Next.js 14 (App Router)
+- Next.js 16.3.0 (App Router)
 - React 18
 - TypeScript (strict)
-- Convex 1.34 (auth, database, realtime, HTTP endpoints)
+- Convex 1.34.1 (auth, database, realtime, HTTP endpoints)
 - IndexedDB (via `idb`) for local-first offline data
 - Service Worker (`public/sw.js`) for PWA sync & background updates
-- next-intl v4 for i18n (cookie `bb-locale`)
-- Tailwind CSS v4
-- framer-motion, lottie-react, @rive-app/canvas for motion
-- recharts for data visualization
-- tesseract.js for client-side receipt OCR
+- next-intl 4.13.5 for i18n (cookie `bb-locale`)
+- Tailwind CSS 4.3.3
+- framer-motion 12.43.0, lottie-react, @rive-app/canvas for motion
+- recharts 3.10.1 for data visualization
+- tesseract.js 6.0.1 for client-side receipt OCR
 - web-push (VAPID) for notifications
-- zod for validation
-- Vitest + React Testing Library for unit/component tests
-- Playwright for E2E tests
+- zod 4.4.3 for validation
+- Vitest 4.1.10 + React Testing Library for unit/component tests
+- Playwright 1.62.1 for E2E tests
 - Vercel for deployment
 
 ## Codebase shape

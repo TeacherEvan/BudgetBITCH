@@ -34,7 +34,7 @@ export function scrape(payload: OcrPayload, options: EngineOptions = {}): Scrape
   }
 
   const fullText = norm.lines.map((l) => l.text).join(' ');
-  const rawDate = extractDate(fullText, { countryHint: norm.countryHint, now: nowMs });
+  const rawDate = extractDate(fullText, { countryHint: norm.countryHint ?? undefined, now: nowMs });
 
   const dateCand: FieldCandidate | null = rawDate
     ? {
@@ -63,7 +63,7 @@ export function scrape(payload: OcrPayload, options: EngineOptions = {}): Scrape
     totalRaw: totalCand?.evidenceLine?.text,
     tax: taxCand ? Number(taxCand.value) : null,
     itemsSum,
-    country: norm.countryHint,
+    country: norm.countryHint ?? undefined,
     totalConf: totalCand?.conf ?? 0,
   });
 

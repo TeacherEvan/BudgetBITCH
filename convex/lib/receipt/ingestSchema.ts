@@ -13,6 +13,7 @@ import { z } from "zod";
 export const ingestRequestBodySchema = z.object({
   lineUserId: z.string().min(1, "lineUserId is required"),
   idempotencyKey: z.string().min(1, "idempotencyKey is required"),
+  source: z.string().optional(),        // "line" (default) | "app-camera"
   payload: z.object({
     lines: z
       .array(
@@ -29,8 +30,10 @@ export const ingestRequestBodySchema = z.object({
     lang: z.string().optional(),
     engine: z.string().optional(),
     capturedAt: z.number().optional(),
-    countryHint: z.string().optional(),
-    currencyHint: z.string().optional(),
+    // nullish (not optional) because the TeacherBOY bridge serializes
+    // absent hints as JSON null (Python None) rather than omitting the key.
+    countryHint: z.string().nullish(),
+    currencyHint: z.string().nullish(),
   }),
 });
 

@@ -350,12 +350,59 @@ export function ReceiptDraftsList() {
                   disabled={saving === d._id}
                   className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-semibold text-white/60 transition-colors hover:border-red-400/40 hover:text-red-300 disabled:opacity-50"
                 >
-                  Discard
-                </button>
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            {Array.isArray(d.lineItems) && d.lineItems.length > 0 && (
+              <div className="mt-3 rounded-lg border border-white/10 bg-zinc-950/60 p-2">
+                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/40">
+                  Items ({d.lineItems.length})
+                </p>
+                <ul className="space-y-1">
+                  {d.lineItems.map((li, i) => {
+                    const desc = String((li as { description?: string }).description ?? '');
+                    const amt = Number((li as { amount?: number }).amount ?? 0);
+                    const cat = normalizeCategory(String((li as { category?: string }).category ?? 'other'));
+                    return (
+                      <li key={i} className="flex items-center justify-between gap-2 text-[11px] text-white/70">
+                        <span className="truncate">{desc || 'Item'}</span>
+                        <span className="flex shrink-0 items-center gap-2">
+                          <span className="rounded bg-white/5 px-1.5 py-0.5 text-[9px] uppercase text-amber-300/80">{cat}</span>
+                          <span className="tabular-nums">{amt.toFixed(2)}</span>
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
-            </li>
-          );
-        })}
+            )}
+
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                onClick={() => handleSave(d)}
+                disabled={saving === d._id}
+                className="flex-1 rounded-lg bg-amber-400 px-3 py-1.5 text-xs font-bold text-zinc-950 transition-colors hover:bg-amber-300 disabled:opacity-50"
+              >
+                {saving === d._id ? 'Saving…' : 'Save expense'}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDiscard(d)}
+                disabled={saving === d._id}
+                className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-semibold text-white/60 transition-colors hover:border-red-400/40 hover:text-red-300 disabled:opacity-50"
+              >
+                Discard
+              </button>
+            </div>
+          </li>
+        ))}
       </ul>
     </section>
   );

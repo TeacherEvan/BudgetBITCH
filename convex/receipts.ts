@@ -1,6 +1,6 @@
 import { action, mutation, query, internalMutation, internalQuery, httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { v, ConvexError } from "convex/values";
 import { z } from "zod";
 import { getAuthUserId } from "@convex-dev/auth/server";
@@ -12,8 +12,9 @@ import type { OcrPayload } from "./lib/receipt/types";
 import { clog, clogError, clogMetric, genTraceId } from "./lib/log";
 
 const VALID_CATEGORIES = [
-  "food", "transport", "shopping", "utilities", "entertainment",
-  "medical", "housing", "personal", "education", "income", "other"
+  "food", "transport", "utilities", "entertainment",
+  "housing", "phone_internet", "subscriptions", "healthcare",
+  "insurance", "debt", "savings", "other"
 ] as const;
 
 export function normalizeCategory(category: string): string {
@@ -54,21 +55,110 @@ export function validateMerchant(merchant: unknown): string {
   return str.length > 0 ? str.slice(0, 200) : "Unknown Merchant";
 }
 
+/**
+ * Proxy a receipt image to the TeacherBOY HuggingFace bot for Gemini scraping.
+ *
+ * The app camera flow calls this instead of hitting the bot directly, so
+ * CONVEX_SYNC_SECRET never ships in the client bundle. The user is derived
+ * server-side from the Convex Auth session — never from a client argument.
+ *
+ * The bot runs Gemini vision, converts the text to an OcrPayload, and POSTs
+ * it back to this deployment's /receipts/ingest with lineUserId="app:<userId>"
+ * and source="app-camera". The draft is then visible to the app.
+ */
+export const proxyReceiptScan = action({
+  args: {
+    base64Image: v.string(),
+    countryHint: v.optional(v.string()),
+    idempotencyKey: v.string(),
+  },
+  handler: async (ctx, args): Promise<{
+    success: boolean;
+    draftId: string;
+    fields?: Record<string, { value?: unknown } | null>;
+    confidence?: Record<string, number>;
+    evidence?: Record<string, unknown>;
+    questions?: unknown[];
+    lineItems?: Array<{ description?: string; amount?: number; qty?: number; unit_price?: number }>;
+    source?: string;
+  }> => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new ConvexError("Authentication required to scan receipts");
+    }
+
+    const botUrl = process.env.BUDGETBOSS_BOT_URL;
+    const syncSecret = process.env.CONVEX_SYNC_SECRET;
+    if (!botUrl || !syncSecret) {
+      throw new ConvexError("Receipt bot is not configured");
+    }
+
+    // Upload the image to Convex storage for audit trail
+    let imageStorageId: Id<"_storage"> | undefined;
+    try {
+      const match = args.base64Image.match(/^data:([^;]+);base64,(.+)$/);
+      let mimeType = "image/jpeg";
+      let data = args.base64Image;
+      if (match) {
+        mimeType = match[1];
+        data = match[2];
+      }
+      const buffer = Buffer.from(data, "base64");
+      imageStorageId = await ctx.storage.store(new Blob([buffer], { type: mimeType }));
+    } catch (storageError) {
+      console.warn("Failed to store receipt image in Convex storage:", storageError);
+      // Continue without storage ID - receipt still created
+    }
+
+    const res = await fetch(`${botUrl.replace(/\/$/, "")}/receipt/scan`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${syncSecret}`,
+      },
+      body: JSON.stringify({
+        base64Image: args.base64Image,
+        userId,
+        idempotencyKey: args.idempotencyKey,
+        countryHint: args.countryHint,
+      }),
+    });
+
+    if (!res.ok) {
+      const status = res.status;
+      throw new ConvexError(`Receipt bot scan failed (${status})`);
+    }
+
+    const data = (await res.json()) as { 
+      success?: boolean; 
+      draftId?: string;
+      fields?: Record<string, { value?: unknown } | null>;
+      confidence?: Record<string, number>;
+      evidence?: Record<string, unknown>;
+      questions?: unknown[];
+      lineItems?: Array<{ description?: string; amount?: number; qty?: number; unit_price?: number }>;
+      source?: string;
+    };
+    return {
+      success: data.success ?? true,
+      draftId: data.draftId ?? "",
+      fields: data.fields,
+      confidence: data.confidence,
+      evidence: data.evidence,
+      questions: data.questions,
+      lineItems: data.lineItems,
+      source: data.source,
+    };
+  },
+});
+
 export const parseReceipt = action({
   args: {
     base64Image: v.string(), // Base64 encoded receipt image
     accountId: v.optional(v.string()), // Optional: which account/board this belongs to
   },
-  handler: async (ctx, args): Promise<{ receiptId: string; amount: number; merchant: string; category: string; date: string | null }> => {
-    const userId = await (async () => {
-      try {
-        return await getAuthUserId(ctx);
-      } catch (e) {
-        throw new ConvexError(
-          `Authentication failed: ${e instanceof Error ? e.message : String(e)}`
-        );
-      }
-    })();
+  handler: async (ctx, args): Promise<{ receiptId: string; amount: number; merchant: string; category: string; date: string | null; lineItems?: Array<{ description: string; amount: number }> }> => {
+    const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new ConvexError("Authentication required to parse receipts");
     }
@@ -92,18 +182,30 @@ export const parseReceipt = action({
     // Calculate image size in bytes (approximate from base64)
     const imageSizeBytes = Math.floor(data.length * 0.75);
 
+    // Upload the image to Convex storage for audit trail
+    let imageStorageId: Id<"_storage"> | undefined;
+    try {
+      const buffer = Buffer.from(data, "base64");
+      imageStorageId = await ctx.storage.store(new Blob([buffer], { type: mimeType }));
+    } catch (storageError) {
+      console.warn("Failed to store receipt image in Convex storage:", storageError);
+      // Continue without storage ID - receipt still created
+    }
+
     const prompt = `Analyze the receipt in the image. You must extract:
 1. Total amount spent (as a number, do not include currency symbols).
 2. Merchant/Store name.
-3. A suggested category (e.g. food, transport, shopping, utilities, entertainment, medical, housing, personal, education, income, other).
+3. A suggested category (one of: food, transport, utilities, entertainment, housing, phone_internet, subscriptions, healthcare, insurance, debt, savings, other).
 4. Date (formatted as YYYY-MM-DD or null if not clear).
+5. An array of line items. Each line item has a "description" (the item name as printed on the receipt) and an "amount" (the line total as a number). If the receipt is too blurry to read individual items, return an empty array.
 
 Return a JSON object matching this schema exactly:
 {
   "amount": number,
   "merchant": string,
   "category": string,
-  "date": string | null
+  "date": string | null,
+  "lineItems": Array<{ "description": string, "amount": number }>
 }
 Do not include any formatting, markdown wrappers, or extra text. Output ONLY the raw JSON string.`;
 
@@ -161,6 +263,15 @@ Do not include any formatting, markdown wrappers, or extra text. Output ONLY the
       const date = validateDate(parsed.date);
       const parsedAt = Date.now();
 
+      // Extract and validate line items (Gemini may return them)
+      const rawLineItems = Array.isArray(parsed.lineItems) ? parsed.lineItems : [];
+      const lineItems = rawLineItems
+        .map((li: { description?: unknown; amount?: unknown }) => ({
+          description: String(li.description ?? '').trim(),
+          amount: validateAmount(li.amount),
+        }))
+        .filter((li: { description: string; amount: number }) => li.description.length > 0 && li.amount > 0);
+
       // Persist to Convex using internal mutation
       const receiptId = await ctx.runMutation(internal.receipts.saveReceipt, {
         userId,
@@ -172,8 +283,10 @@ Do not include any formatting, markdown wrappers, or extra text. Output ONLY the
         rawGeminiResponse: cleanText,
         imageMimeType: mimeType,
         imageSizeBytes,
+        imageStorageId,
         parsedAt,
         geminiModel: GEMINI_MODEL,
+        lineItems: lineItems.length > 0 ? lineItems : undefined,
       });
 
       return {
@@ -182,6 +295,7 @@ Do not include any formatting, markdown wrappers, or extra text. Output ONLY the
         merchant,
         category,
         date: date ?? null,
+        lineItems: lineItems.length > 0 ? lineItems : undefined,
       };
     } catch (error) {
       console.error("Error in parseReceipt action:", error);
@@ -218,7 +332,7 @@ export const parseMessage = action({
 Extract:
 1. Total amount spent or received (as a positive number, do not include currency symbols).
 2. Merchant/Store/Payee name (e.g. Amazon, Uber, Walmart, Salary, Chase, Starbucks).
-3. A suggested category (food, transport, shopping, utilities, entertainment, medical, housing, personal, education, income, salary, freelance, business, other).
+3. A suggested category (food, transport, utilities, entertainment, housing, phone_internet, subscriptions, healthcare, insurance, debt, savings, other).
 4. Date (formatted as YYYY-MM-DD or null if not clear).
 5. Transaction type ("expense" or "income").
 
@@ -304,6 +418,7 @@ export const saveReceipt = internalMutation({
     rawGeminiResponse: v.optional(v.string()),
     imageMimeType: v.string(),
     imageSizeBytes: v.number(),
+    imageStorageId: v.optional(v.id("_storage")), // Convex storage ID for the original receipt photo
     parsedAt: v.number(),
     geminiModel: v.string(),
     source: v.optional(v.string()), // "app" (default) | "line"
@@ -325,6 +440,32 @@ export const saveReceipt = internalMutation({
   },
 });
 
+// Internal mutation to update receipt fields (called from ingestReceipt to preserve imageStorageId)
+export const updateReceiptFields = internalMutation({
+  args: {
+    draftId: v.id("receipts"),
+    amount: v.number(),
+    merchant: v.string(),
+    category: v.string(),
+    date: v.optional(v.string()),
+    geminiModel: v.string(),
+    confidence: v.optional(v.any()),
+    evidence: v.optional(v.any()),
+    ocrText: v.optional(v.string()),
+    tax: v.optional(v.number()),
+    currency: v.optional(v.string()),
+    questionsAsked: v.optional(v.any()),
+    status: v.optional(v.string()),
+    source: v.optional(v.string()),
+    lineItems: v.optional(v.any()),
+  },
+  handler: async (ctx, args) => {
+    const { draftId, ...fields } = args;
+    await ctx.db.patch(draftId, fields);
+    return { success: true };
+  },
+});
+
 // Internal query: get receipt by clientDraftId (for idempotency)
 export const getReceiptByClientDraftId = internalQuery({
   args: { clientDraftId: v.string() },
@@ -333,6 +474,17 @@ export const getReceiptByClientDraftId = internalQuery({
       .query("receipts")
       .withIndex("by_clientDraftId", (q) => q.eq("clientDraftId", args.clientDraftId))
       .first();
+  },
+});
+
+// Internal query: verify a Convex user exists (app camera ingest path).
+// The app flow sends "app:<userId>" instead of a LINE user ID, so there is
+// no lineUsers mapping to resolve — we validate the user directly.
+export const getUserForIngest = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    return user ? { _id: user._id } : null;
   },
 });
 
@@ -740,42 +892,38 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
       { status: 400, headers: { "Content-Type": "application/json" } },
     );
   }
-  const { lineUserId, payload, idempotencyKey } = parsed.data;
+  const { lineUserId, payload, idempotencyKey, source: requestSource } = parsed.data;
 
-  // Resolve Convex user from LINE user ID
-  const mapping = await ctx.runQuery(internal.line.getLineMapping, { lineUserId });
-  if (!mapping) {
-    clog("warn", "ingest_rejected", { traceId, lineUserId, reason: "no_mapping" });
-    clogMetric("ingest_requests", 0, "count", { status_class: "not_found" });
-    return new Response(JSON.stringify({ success: false, error: "User not linked to Budget Boss" }), {
-      status: 404,
-      headers: { "Content-Type": "application/json" },
-    });
+  // Resolve user: "app:<userId>" bypasses LINE mapping (app camera flow);
+  // everything else uses the existing LINE path.
+  let userId: Id<"users">;
+  let accountId: string | undefined;
+
+  if (lineUserId.startsWith("app:")) {
+    const rawUserId = lineUserId.slice(4) as Id<"users">;
+    const user = await ctx.runQuery(internal.receipts.getUserForIngest, { userId: rawUserId });
+    if (!user) {
+      return new Response(JSON.stringify({ success: false, error: "User not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    userId = rawUserId;
+    accountId = undefined;
+  } else {
+    // Existing LINE flow.
+    const mapping = await ctx.runQuery(internal.line.getLineMapping, { lineUserId });
+    if (!mapping) {
+      return new Response(JSON.stringify({ success: false, error: "User not linked to Budget Boss" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    userId = mapping.userId;
+    accountId = mapping.accountId ?? undefined;
   }
-  const userId = mapping.userId;
-  const accountId = mapping.accountId ?? undefined;
 
-  // Check idempotency - look for existing draft with this clientDraftId
-  const existing = await ctx.runQuery(internal.receipts.getReceiptByClientDraftId, { clientDraftId: idempotencyKey });
-
-  if (existing) {
-    clog("info", "ingest_idempotent_hit", { traceId, idempotencyKey, alreadySynced: true });
-    clogMetric("ingest_requests", 1, "count", { status_class: "2xx", result: "dedupe" });
-    // Return existing draft
-    const result = existing as any;
-    return new Response(JSON.stringify({
-      success: true,
-      draftId: existing._id,
-      alreadySynced: true,
-      fields: result.fields,
-      confidence: result.confidence,
-      questions: result.questionsAsked,
-      source: "line",
-    }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
+  const resolvedSource = requestSource ?? "line";
 
   // Run the scraper engine (validated payload is structurally an OcrPayload)
   const scraped = scrapeEngine(payload as OcrPayload);
@@ -787,6 +935,45 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
   const date = typeof scraped.fields.date?.value === "string" ? scraped.fields.date.value : undefined;
   const currency = typeof scraped.fields.currency?.value === "string" ? scraped.fields.currency.value : undefined;
   const tax = typeof scraped.fields.tax?.value === "number" ? scraped.fields.tax.value : undefined;
+  const lineItems = scraped.lineItems;
+
+  // Check idempotency - look for existing draft with this clientDraftId
+  const existing = await ctx.runQuery(internal.receipts.getReceiptByClientDraftId, { clientDraftId: idempotencyKey });
+
+  if (existing) {
+    // Update existing draft with scraped data (preserve imageStorageId from proxyReceiptScan)
+    await ctx.runMutation(internal.receipts.updateReceiptFields, {
+      draftId: existing._id,
+      amount,
+      merchant,
+      category,
+      date,
+      geminiModel: GEMINI_MODEL,
+      confidence: scraped.confidence,
+      evidence: scraped.evidence,
+      ocrText: payload.lines?.map((l: any) => l.text).join("\n"),
+      tax,
+      currency,
+      questionsAsked: scraped.questions,
+      status: "draft",
+      source: resolvedSource,
+      lineItems,
+    });
+    return new Response(JSON.stringify({
+      success: true,
+      draftId: existing._id,
+      alreadySynced: true,
+      fields: scraped.fields,
+      confidence: scraped.confidence,
+      evidence: scraped.evidence,
+      questions: scraped.questions,
+      lineItems,
+      source: resolvedSource,
+    }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 
   // Insert draft receipt via internal mutation
   const draftId = await ctx.runMutation(internal.receipts.saveReceipt, {
@@ -797,7 +984,7 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
     category,
     date,
     parsedAt: Date.now(),
-    geminiModel: "gemini-2.5-flash",
+    geminiModel: GEMINI_MODEL,
     imageMimeType: "application/json",
     imageSizeBytes: 0,
     clientDraftId: idempotencyKey,
@@ -809,18 +996,8 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
     currency,
     questionsAsked: scraped.questions,
     status: "draft",
-    source: "line",
-    items: scraped.items,
-  });
-
-  clog("info", "ingest_receipt_created", {
-    traceId,
-    idempotencyKey,
-    draftId,
-    category,
-    amount,
-    hasDate: date ? "true" : "false",
-    durationMs: Date.now() - started,
+    source: resolvedSource,
+    lineItems,
   });
   clogMetric("ingest_requests", 1, "count", { status_class: "2xx", result: "created" });
   clogMetric("ingest_duration_ms", Date.now() - started, "ms");
@@ -833,8 +1010,8 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
     confidence: scraped.confidence,
     evidence: scraped.evidence,
     questions: scraped.questions,
-    items: scraped.items,
-    source: "line",
+    lineItems,
+    source: resolvedSource,
   }), {
     status: 200,
     headers: { "Content-Type": "application/json" },
