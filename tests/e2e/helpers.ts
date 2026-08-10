@@ -83,21 +83,41 @@ export async function signInReal(page: Page) {
 }
 
 // ---------------------------------------------------------------------------
-// Seed localStorage so the locale picker and manifesto gate resolve
-// deterministically (manifesto marked seen to avoid blocking the dashboard).
+// Seed localStorage so the manifesto gate, privacy disclaimer,
+// and push-permission gate resolve deterministically.
+// Does NOT seed locale (tests that need "first launch" behavior
+// must NOT have a locale pre-set).
 // ---------------------------------------------------------------------------
-export async function seedLocalStorage(page: Page, locale: "en" | "th" = "en") {
-  await page.addInitScript(
-    ({ locale }) => {
-      localStorage.setItem("budgetbitch:locale", locale);
-      localStorage.setItem("bb:manifesto-v1", "1");
-      // Suppress the push-notification permission gate (asked-once flag).
-      localStorage.setItem("budgetbitch:pushAsked", "1");
-      // Suppress the PWA install prompt for this session.
-      sessionStorage.setItem("budgetbitch:pwaDismissed", "true");
-    },
-    { locale },
-  );
+export async function seedLocalStorage(page: Page) {
+  await page.addInitScript(() => {
+    localStorage.setItem("bb:manifesto-v1", "1");
+    // Suppress the push-notification permission gate (asked-once flag).
+    localStorage.setItem("budgetbitch:pushAsked", "1");
+    // Suppress the PWA install prompt for this session.
+    sessionStorage.setItem("budgetbitch:pwaDismissed", "true");
+    // Suppress the weekly privacy disclaimer by pre-seeding the current ISO week.
+    try {
+      const d = new Date();
+      const date = new Date(
+        Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()),
+      );
+      const dayNum = (date.getUTCDay() + 6) % 7;
+      date.setUTCDate(date.getUTCDate() - dayNum + 3);
+      const firstThursday = new Date(Date.UTC(date.getUTCFullYear(), 0, 4));
+      const week =
+        1 +
+        Math.round(
+          ((date.getTime() - firstThursday.getTime()) / 86400000 -
+            3 +
+            ((firstThursday.getUTCDay() + 6) % 7)) /
+            7,
+        );
+      const isoWeek = `${date.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+      localStorage.setItem("budgetbitch:privacyDisclaimerWeek", isoWeek);
+    } catch {
+      /* ignore */
+    }
+  });
 }
 
 // ---------------------------------------------------------------------------
