@@ -66,13 +66,19 @@ export type Answer = {
   value: string;
 };
 
+export type ReceiptItem = {
+  title: string; // product / line name (editable)
+  type: string; // category (editable)
+  amount: number; // line amount (editable)
+};
+
 export type ScrapeResult = {
   draftId?: string;
   fields: Record<FieldName, FieldCandidate | null>;
   confidence: Record<FieldName, number>;
   evidence: Record<FieldName, OcrLine | null>;
   questions: Question[];
-  lineItems?: LineItem[]; // optional parsed line items from receipt
+  items: ReceiptItem[]; // parsed line items (title/type/amount) from the receipt
 };
 
 export function makeLine(words: OcrWord[]): OcrLine {

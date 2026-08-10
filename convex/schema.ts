@@ -227,6 +227,15 @@ export default defineSchema({
     lineItems: v.optional(v.any()),
     tax: v.optional(v.number()),
     currency: v.optional(v.string()),
+    // Itemized receipt lines the bot/scraper extracted and the user reviews.
+    // Each item carries the editable title (product name), type (category) and
+    // amount so a saved receipt can fan out into one Expense per line and show
+    // up itemized in the CSV/Excel export.
+    items: v.optional(v.array(v.object({
+      title: v.string(),
+      type: v.string(),
+      amount: v.number(),
+    }))),
     questionsAsked: v.optional(v.any()),
     corrections: v.optional(v.any()),
     status: v.optional(v.string()), // 'draft' | 'confirmed'
