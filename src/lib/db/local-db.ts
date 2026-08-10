@@ -557,7 +557,11 @@ export async function createLocalCheckpoint(label: string): Promise<void> {
   try {
     const db = await getDB();
     const backup: Record<string, unknown> = {};
-    for (const store of USER_DATA_STORES) {
+    // `settings` has no keyPath and is persisted under a fixed 'current' key
+    // (see saveSettings); include it alongside the keyed stores so a checkpoint
+    // can fully restore app preferences.
+    const backupStores = [...USER_DATA_STORES, 'settings'] as const;
+    for (const store of backupStores) {
       backup[store] = await db.getAll(store);
     }
     const checkpointData = {
@@ -608,21 +612,23 @@ export async function restoreCheckpoint(timestamp: number): Promise<boolean> {
     const checkpoint = checkpointsList.find((c) => c.timestamp === timestamp);
     if (!checkpoint) return false;
 
-    // Clear existing stores
-    const tx = db.transaction(USER_DATA_STORES, 'readwrite');
-    for (const store of USER_DATA_STORES) {
+    // Clear existing stores. Include `settings` (no keyPath, persisted under
+    // a fixed 'current' key) so a restore fully replaces prior preferences.
+    const restoreStores = [...USER_DATA_STORES, 'settings'] as const;
+    const tx = db.transaction(restoreStores, 'readwrite');
+    for (const store of restoreStores) {
       await tx.objectStore(store).clear();
     }
     await tx.done;
 
     // Restore data from checkpoint
     for (const [storeName, items] of Object.entries(checkpoint.backup)) {
-      if (!USER_DATA_STORES.includes(storeName as typeof USER_DATA_STORES[number])) continue;
-      const store = storeName as typeof USER_DATA_STORES[number];
+      if (!restoreStores.includes(storeName as (typeof restoreStores)[number])) continue;
+      const store = storeName as (typeof restoreStores)[number];
       if (Array.isArray(items)) {
         for (const item of items) {
-          if (store === 'wizardProfile' && item && typeof item === 'object') {
-            await db.put('wizardProfile', item as WizardProfile, 'current');
+          if ((store === 'wizardProfile' || store === 'settings') && item && typeof item === 'object') {
+            await db.put(store, item as never, 'current');
           } else {
             // Store specific items with key paths defined on store schemas
             await (db.put as (s: string, val: unknown) => Promise<unknown>)(store, item);
