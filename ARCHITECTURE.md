@@ -11,23 +11,23 @@ prototype subtree was removed on 2026-07-20.)
 
 ### Stack
 
-- Next.js App Router (v16.2.12)
+- Next.js App Router (v16.3.0)
 - React 18 + TypeScript (strict)
-- **Convex** 1.34 for backend (auth, database, realtime, HTTP endpoints)
+- **Convex** 1.34.1 for backend (auth, database, realtime, HTTP endpoints)
 - **IndexedDB** (via `idb`) for local-first offline data
 - **Service Worker** (`public/sw.js`) for PWA sync & background updates
-- **next-intl** (v4) for i18n — en, es, fr, de, pt, zh; cookie `bb-locale`
-- **Tailwind CSS** (v4) for styling
-- **framer-motion** for animations
-- **recharts** for data visualization
-- **zod** for validation
-- **tesseract.js** for client-side receipt OCR
+- **next-intl** (v4.13.5) for i18n — en, es, fr, de, pt, zh; cookie `bb-locale`
+- **Tailwind CSS** (v4.3.3) for styling
+- **framer-motion** 12.43.0 for animations
+- **recharts** 3.10.1 for data visualization
+- **zod** 4.4.3 for validation
+- **tesseract.js** 6.0.1 for client-side receipt OCR
 - **lottie-react** + **@rive-app/canvas** for lightweight brand motion
 - **qrcode.react** for shared-board / account invite QR codes
 - **web-push** (+ VAPID) for Web Push notifications (Convex action)
 - **rss-parser** for Market Watch feeds
-- **Vitest** + **React Testing Library** for unit tests
-- **Playwright** for E2E tests
+- **Vitest** 4.1.10 + **React Testing Library** for unit tests
+- **Playwright** 1.62.1 for E2E tests
 - **Vercel** for deployment
 
 Not present: Prisma, Postgres, Inngest, Clerk, Sentry. `next-auth` is installed
