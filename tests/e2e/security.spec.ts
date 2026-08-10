@@ -13,7 +13,6 @@ test.describe("Security page", () => {
     await expect(page.getByTestId("security-stack")).toBeVisible({ timeout: 8000 });
     await expect(page.getByTestId("security-encryption")).toBeVisible({ timeout: 8000 });
     await expect(page.getByTestId("security-five-year-old")).toBeVisible({ timeout: 8000 });
-    await page.waitForLoadState("networkidle").catch(() => {});
     errors.assertClean();
   });
 });

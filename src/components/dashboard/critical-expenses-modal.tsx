@@ -244,7 +244,7 @@ export function CriticalExpensesModal({ isOpen, onClose, locale }: CriticalExpen
                     placeholder={'e.g. 3000'}
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50">
-                    {'$'}
+                    {formatCurrency(0, locale).replace(/[\d.,\s]/g, '') || '$'}
                   </span>
                 </div>
 

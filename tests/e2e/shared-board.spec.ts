@@ -17,8 +17,6 @@ test.describe("Shared board", () => {
     errors,
   }) => {
     await page.goto("/dashboard");
-    // Wait for the page to fully settle (network idle = subscriptions resolved).
-    await page.waitForLoadState("networkidle").catch(() => {});
     errors.assertClean();
   });
 

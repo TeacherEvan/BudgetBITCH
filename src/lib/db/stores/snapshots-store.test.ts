@@ -9,6 +9,8 @@ import {
   addExpense,
   getExpenses,
   getWizardProfile,
+  saveSettings,
+  getSettings,
   restoreCheckpoint,
 } from '@/lib/db/local-db';
 import {
@@ -106,6 +108,23 @@ describe('restoreCheckpoint (Fix B)', () => {
     const restored = await getWizardProfile();
     expect(restored).toBeTruthy();
     expect((restored as { locale: string }).locale).toBe('th');
+  });
+
+  it('restores settings under the fixed "current" key (regression: not dropped from backup)', async () => {
+    // Settings must survive a checkpoint round-trip.
+    await saveSettings({ preferredLocale: 'en', voiceSettings: { enabled: false, rate: 1, pitch: 1 }, privacyDisclaimerAccepted: false } as never);
+    await getDB().then((d) => d.delete('settings', 'current'));
+
+    const db = await getDB();
+    const settingsItem = { preferredLocale: 'th', voiceSettings: { enabled: false, rate: 1, pitch: 1 }, privacyDisclaimerAccepted: false } as never;
+    await db.put('bbMeta', JSON.stringify([{ label: 'cp', timestamp: 2, backup: { wizardProfile: [], settings: [settingsItem] } }]), 'checkpoints');
+
+    const ok = await restoreCheckpoint(2);
+    expect(ok).toBe(true);
+
+    const restored = await getSettings();
+    expect(restored).toBeTruthy();
+    expect((restored as { preferredLocale: string }).preferredLocale).toBe('th');
   });
 });
 

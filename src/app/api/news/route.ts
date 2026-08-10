@@ -3,7 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import Parser from 'rss-parser';
 import type { NewsItem } from '@/lib/types/budget';
 
-const parser = new Parser();
+const parser = new Parser({
+  timeout: 5000,
+});
 
 const RSS_FEEDS = [
   // English sources - use feeds that work
@@ -36,12 +38,10 @@ let lastFetch = 0;
 const CACHE_TTL = 6 * 60 * 60 * 1000;
 
 async function fetchAllNews(): Promise<NewsItem[]> {
-  const allItems: NewsItem[] = [];
-
-  for (const feed of RSS_FEEDS) {
-    try {
+  const results = await Promise.allSettled(
+    RSS_FEEDS.map(async (feed) => {
       const parsed = await parser.parseURL(feed.url);
-      const items = parsed.items.map(parsedItem => {
+      return parsed.items.map((parsedItem) => {
         const actionable = getActionableText({ title: parsedItem.title || '', category: feed.category });
         return {
           title: parsedItem.title || 'Untitled',
@@ -53,10 +53,16 @@ async function fetchAllNews(): Promise<NewsItem[]> {
           actionable,
         };
       });
-      allItems.push(...items);
-    } catch (err) {
-      console.error(`Failed to fetch ${feed.source}:`, err);
-      // Continue with other feeds even if one fails
+    })
+  );
+
+  const allItems: NewsItem[] = [];
+  for (let i = 0; i < results.length; i++) {
+    const res = results[i];
+    if (res.status === 'fulfilled') {
+      allItems.push(...res.value);
+    } else {
+      console.error(`Failed to fetch ${RSS_FEEDS[i].source}:`, res.reason);
     }
   }
 

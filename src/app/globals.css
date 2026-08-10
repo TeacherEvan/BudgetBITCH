@@ -54,6 +54,7 @@
 
   --shadow-soft: 0 24px 80px rgba(8, 6, 0, 0.5);
   --shadow-card: 0 18px 48px rgba(0, 0, 0, 0.5);
+  --shadow-header: 0 1px 0 rgba(201, 150, 12, 0.08);
   --radius-panel: 1.5rem;
   --radius-card: 1.2rem;
   --radius-badge: 0.9rem;
@@ -146,7 +147,9 @@
     font-family: var(--font-display);
     font-weight: 700;
     letter-spacing: 0;
-    text-wrap: balance;
+    @supports (text-wrap: balance) {
+      text-wrap: balance;
+    }
   }
 
   h1 {
@@ -164,12 +167,36 @@
 
   p {
     color: var(--text-2);
-    text-wrap: pretty;
+    @supports (text-wrap: pretty) {
+      text-wrap: pretty;
+    }
   }
   ::selection {
     background: color-mix(in srgb, var(--accent-strong) 40%, transparent 60%);
     color: var(--text-1);
   }
+}
+
+/* ===== IMMERSIVE APP SHELL: block long-press highlight + text selection ===== */
+/* Kiosk-like mobile app: no text selection, no iOS callout, no tap flash.
+   Re-enabled on editable fields so users can still review/type (e.g. OCR
+   receipt review inputs). */
+html,
+body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input,
+textarea,
+select,
+[contenteditable='true'],
+[contenteditable=''] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
 }
 
 /* ===== VIEWPORT CONTRACT + UTILITY SYSTEM (T1) ===== */
@@ -214,7 +241,7 @@
 .bb-mono {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum";
+  font-feature-settings: 'tnum';
 }
 
 .bb-status-strip {

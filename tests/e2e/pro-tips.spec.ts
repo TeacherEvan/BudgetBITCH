@@ -2,9 +2,13 @@
 // (src/components/auth/clean-auth-card.tsx embeds ProTipsCard) and opens its
 // modal on click. Targets /sign-in because that route renders CleanAuthCard
 // directly, without the "/" first-launch splash + language-modal gates.
-import { test, expect } from "./helpers";
+import { test, expect, seedLocalStorage } from "./helpers";
 
 test.describe("Pro-Tips", () => {
+  test.beforeEach(async ({ page }) => {
+    await seedLocalStorage(page);
+  });
+
   test("pro-tip card visible and modal opens on click", async ({ page, errors }) => {
     await page.goto("/sign-in");
     const card = page.getByText(/boss pro-tip/i);

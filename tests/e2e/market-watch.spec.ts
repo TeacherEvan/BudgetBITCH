@@ -18,7 +18,7 @@ import { test, expect, signInReal, seedLocalStorage, HAS_CREDS } from "./helpers
 // ─── Shared setup ───────────────────────────────────────────────────────────
 async function signedInTh(page: import("@playwright/test").Page) {
   if (!HAS_CREDS) test.skip(true, "E2E credentials not set");
-  await seedLocalStorage(page, "th");
+  await seedLocalStorage(page);
   await signInReal(page);
 }
 
@@ -115,8 +115,6 @@ test.describe("Market Watch — vicinity feeds", () => {
     await expect(
       modal.locator('[data-testid="feed-card"]').first(),
     ).toBeVisible({ timeout: 15000 });
-    // Allow one render cycle before asserting.
-    await page.waitForLoadState("networkidle").catch(() => {});
     errors.assertClean();
   });
 });

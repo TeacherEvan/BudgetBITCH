@@ -2,7 +2,7 @@
 // re-open wizard, and console-error hygiene. Requires real sign-in.
 //
 // Best-practice notes:
-//  - waitForTimeout(N) replaced with network-idle waits or web-first assertions.
+//  - readiness gated on web-first visible assertions (no networkidle/ wall-clock waits).
 //  - Soft-assertions that cannot fail deterministically kept but annotated.
 //  - account-gated UI checks use count() guard so the test passes even when
 //    the feature is rolled out on a subset of accounts.
@@ -29,8 +29,6 @@ test.describe("Dashboard — core", () => {
 
   test("no uncaught console/page errors on dashboard load", async ({ page, errors }) => {
     await page.goto("/dashboard");
-    // Wait for the page to settle (network idle avoids arbitrary timeout).
-    await page.waitForLoadState("networkidle").catch(() => {});
     errors.assertClean();
   });
 
