@@ -1,11 +1,23 @@
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, expect, test, vi, beforeEach } from 'vitest';
 import { useReceiptScan } from './use-receipt-scan';
 
 // Mock the local expense store + id generator so the confirm path can be asserted.
 const mockAddExpense = vi.fn().mockResolvedValue(undefined);
+const mockSaveOfflineDraft = vi.fn().mockResolvedValue(undefined);
+const mockGetOfflineDraft = vi.fn().mockResolvedValue(undefined);
+const mockGetAllOfflineDrafts = vi.fn().mockResolvedValue([]);
+const mockUpdateOfflineDraft = vi.fn().mockResolvedValue(undefined);
+const mockDeleteOfflineDraft = vi.fn().mockResolvedValue(undefined);
 vi.mock('@/lib/db/stores/expenses-store', () => ({
   addExpense: (...args: unknown[]) => mockAddExpense(...args),
+}));
+vi.mock('@/lib/db/stores/receipt-drafts-store', () => ({
+  saveOfflineDraft: (...args: unknown[]) => mockSaveOfflineDraft(...args),
+  getOfflineDraft: (...args: unknown[]) => mockGetOfflineDraft(...args),
+  getAllOfflineDrafts: (...args: unknown[]) => mockGetAllOfflineDrafts(...args),
+  updateOfflineDraft: (...args: unknown[]) => mockUpdateOfflineDraft(...args),
+  deleteOfflineDraft: (...args: unknown[]) => mockDeleteOfflineDraft(...args),
 }));
 vi.mock('@/lib/db/local-db', () => ({
   generateId: () => 'expense-1',
@@ -14,6 +26,9 @@ vi.mock('@/lib/db/local-db', () => ({
 // Mock Convex useMutation. The scrape call passes { payload } and should return
 // a draft; answer/confirm pass ids and return {}. We branch on the arg shape.
 const mockMutation = vi.fn().mockImplementation(async (args: unknown) => {
+  if (args && typeof args === 'object' && 'clientDraftId' in (args as Record<string, unknown>)) {
+    return { receiptId: 'receipt-1', alreadySynced: false };
+  }
   if (args && typeof args === 'object' && 'payload' in (args as Record<string, unknown>)) {
     return {
       draftId: 'draft-123',
@@ -134,5 +149,56 @@ describe('useReceiptScan hook', () => {
     expect(result.current.draft).toBeNull();
     const entry = mockMutation.mock.calls[mockMutation.mock.calls.length - 1][0];
     expect(entry).toMatchObject({ overrides: { merchant: 'CHECKERS' } });
+  });
+
+  test('replays locally queued drafts after reconnecting and removes synced drafts', async () => {
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+    const { result } = renderHook(() => useReceiptScan());
+
+    await act(async () => {
+      await result.current.scanImage({} as HTMLImageElement, 'ZA');
+    });
+
+    expect(mockSaveOfflineDraft).toHaveBeenCalledWith(expect.objectContaining({
+      clientDraftId: expect.any(String),
+      payload: expect.any(Object),
+    }));
+
+    const queuedDraft = mockSaveOfflineDraft.mock.calls[0][0];
+    mockGetAllOfflineDrafts.mockResolvedValue([queuedDraft]);
+    Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+
+    await act(async () => {
+      window.dispatchEvent(new Event('online'));
+    });
+
+    await waitFor(() => {
+      expect(mockDeleteOfflineDraft).toHaveBeenCalledWith(queuedDraft.clientDraftId);
+    });
+    expect(mockMutation).toHaveBeenCalledWith(expect.objectContaining({
+      clientDraftId: queuedDraft.clientDraftId,
+      payload: queuedDraft.payload,
+    }));
+  });
+
+  test('keeps a queued draft when server synchronization fails', async () => {
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+    const { result } = renderHook(() => useReceiptScan());
+
+    await act(async () => {
+      await result.current.scanImage({} as HTMLImageElement, 'ZA');
+    });
+
+    const queuedDraft = mockSaveOfflineDraft.mock.calls[0][0];
+    mockGetAllOfflineDrafts.mockResolvedValue([queuedDraft]);
+    mockMutation.mockRejectedValueOnce(new Error('network unavailable'));
+    Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+
+    await act(async () => {
+      window.dispatchEvent(new Event('online'));
+    });
+
+    await waitFor(() => expect(mockMutation).toHaveBeenCalled());
+    expect(mockDeleteOfflineDraft).not.toHaveBeenCalledWith(queuedDraft.clientDraftId);
   });
 });
