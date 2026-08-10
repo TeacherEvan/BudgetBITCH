@@ -319,7 +319,7 @@ jobs:
             echo "::warning::CONVEX_DEPLOY_KEY secret not set — skipping Convex backend deploy. Set it in repo secrets to enable automatic backend deploys on merge to main."
             exit 0
           fi
-          npx convex deploy --cmd-url-env-variable-name NEXT_PUBLIC_CONVEX_URL
+          npx convex deploy --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL
 
   security-audit:
     name: Security Audit
