@@ -4,9 +4,14 @@ import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
 import { ReactNode } from "react";
 
-const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL || "https://placeholder.convex.cloud";
+export const convex = new ConvexReactClient(convexUrl);
 
 const DUMMY_REFRESH_TOKEN = "dummy";
+
+function isRefreshTokenKey(key: string): boolean {
+  return key.includes("convexAuthRefreshToken") || key === "__convexAuthRefreshToken";
+}
 
 /**
  * Wrapper around localStorage that filters out Convex Auth's "dummy" refresh token.
@@ -16,8 +21,8 @@ const DUMMY_REFRESH_TOKEN = "dummy";
  * this dummy value can leak into localStorage. The client then tries to use it
  * to refresh the session, causing a Convex "Server Error" on every page load.
  * 
- * This wrapper intercepts get/set/remove for the refresh token key and sanitizes
- * the dummy value.
+ * This wrapper intercepts get/set/remove for refresh token keys (including namespaced
+ * keys like `__convexAuthRefreshToken_<namespace>`) and sanitizes the dummy value.
  */
 function createSanitizedStorage(): Storage {
   if (typeof window === "undefined") {
@@ -32,12 +37,14 @@ function createSanitizedStorage(): Storage {
     };
   }
 
-  const REFRESH_TOKEN_KEY = "__convexAuthRefreshToken";
   const storage = window.localStorage;
 
-  // Remove any stale dummy refresh token left over from a proxy-based flow.
-  if (storage.getItem(REFRESH_TOKEN_KEY) === DUMMY_REFRESH_TOKEN) {
-    storage.removeItem(REFRESH_TOKEN_KEY);
+  // Sweep storage and remove any stale dummy refresh tokens (including namespaced keys).
+  for (let i = storage.length - 1; i >= 0; i--) {
+    const k = storage.key(i);
+    if (k && isRefreshTokenKey(k) && storage.getItem(k) === DUMMY_REFRESH_TOKEN) {
+      storage.removeItem(k);
+    }
   }
 
   return {
@@ -49,7 +56,7 @@ function createSanitizedStorage(): Storage {
     },
     getItem(key: string) {
       const value = storage.getItem(key);
-      if (key === REFRESH_TOKEN_KEY && value === DUMMY_REFRESH_TOKEN) {
+      if (isRefreshTokenKey(key) && value === DUMMY_REFRESH_TOKEN) {
         // Don't return the dummy token — treat as if it doesn't exist
         return null;
       }
@@ -62,7 +69,7 @@ function createSanitizedStorage(): Storage {
       storage.removeItem(key);
     },
     setItem(key: string, value: string) {
-      if (key === REFRESH_TOKEN_KEY && value === DUMMY_REFRESH_TOKEN) {
+      if (isRefreshTokenKey(key) && value === DUMMY_REFRESH_TOKEN) {
         // Don't persist the dummy token
         return;
       }
@@ -83,3 +90,4 @@ export function ConvexClientProvider({ children }: { children: ReactNode }) {
     </ConvexAuthProvider>
   );
 }
+

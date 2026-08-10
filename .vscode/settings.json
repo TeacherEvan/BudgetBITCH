@@ -11,5 +11,9 @@
   },
   "todo-tree.tree.showBadges": false,
   "todo-tree.tree.showCountsInTree": true,
-  "todo-tree.tree.scanMode": "open files"
+  "todo-tree.tree.scanMode": "open files",
+  "go.goroot": "/home/ewaldt/Downloads/go1.26.5.linux-amd64/go",
+  "go.alternateTools": {
+    "go": "/home/ewaldt/Downloads/go1.26.5.linux-amd64/go/bin/go"
+  }
 }

@@ -4,7 +4,6 @@
 // imports. No network, no external APIs — keeps BudgetBITCH local-first.
 // Fully unit-tested in csv-import.test.ts.
 
-import { mapThaiToCategory } from '@/lib/utils/thai-category-mapper';
 import type { ExpenseCategory } from '@/lib/types/budget';
 
 export interface ParsedExpense {
@@ -298,16 +297,11 @@ function toIso(year: number, month: number, day: number): string | null {
 
 /**
  * Resolves a category from an explicit value or merchant text.
- * Explicit known categories pass through; otherwise the existing
- * Thai/English mapper infers from free text; unknown falls back to 'other'.
+ * Explicit known categories pass through; unknown falls back to 'other'.
  */
 export function mapCategory(input: string | undefined): ExpenseCategory {
   if (input && KNOWN_CATEGORIES.has(input as ExpenseCategory)) {
     return input as ExpenseCategory;
-  }
-  if (input && input.trim() !== '') {
-    const inferred = mapThaiToCategory(input.trim());
-    if (inferred && inferred !== 'other') return inferred;
   }
   return 'other';
 }

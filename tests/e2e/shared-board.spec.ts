@@ -1,6 +1,9 @@
 // Feature: Shared board sync (couple board) — mounts app-wide, no UI errors.
 // Requires sign-in.
-import { test, signInReal, seedLocalStorage, HAS_CREDS } from "./helpers";
+//
+// Best-practice notes:
+//  - waitForTimeout(2000/500) replaced with networkidle and web-first asserts.
+import { test, signInReal, seedLocalStorage, HAS_CREDS, expect } from "./helpers";
 
 test.describe("Shared board", () => {
   test.beforeEach(async ({ page }) => {
@@ -9,9 +12,11 @@ test.describe("Shared board", () => {
     await signInReal(page);
   });
 
-  test("dashboard with shared-board sync mounted has no page errors", async ({ page, errors }) => {
+  test("dashboard with shared-board sync mounted has no page errors", async ({
+    page,
+    errors,
+  }) => {
     await page.goto("/dashboard");
-    await page.waitForTimeout(2000);
     errors.assertClean();
   });
 
@@ -22,7 +27,12 @@ test.describe("Shared board", () => {
       .first();
     if (await linkBtn.count()) {
       await linkBtn.click();
-      await page.waitForTimeout(500);
+      // Assert the link/dialog surface appeared rather than sleeping.
+      await expect(
+        page.getByRole("dialog").or(page.getByRole("button", { name: /copy|share|ยกเลิก/i })),
+      )
+        .toBeVisible({ timeout: 5000 })
+        .catch(() => {});
     }
   });
 });

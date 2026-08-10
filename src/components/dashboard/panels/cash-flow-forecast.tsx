@@ -6,11 +6,10 @@ import { Info } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { useCurrency } from '@/hooks/use-currency';
 import { format } from 'date-fns';
-import { th } from 'date-fns/locale';
 import { useBills, useDebtPayoff } from '@/hooks/use-local-db';
 
 interface CashFlowForecastProps {
-  locale?: 'th' | 'en';
+  locale?: string;
 }
 
 // Next `count` due dates for a monthly bill (dueDay is day-of-month, 1-31).
@@ -82,7 +81,7 @@ export function CashFlowForecast({ locale = 'en' }: CashFlowForecastProps) {
   if (loading) {
     return (
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-white">🔮 {locale === 'th' ? 'พยากรณ์กระแสเงินสด' : 'Cash Flow Forecast'}</h3>
+        <h3 className="text-lg font-semibold text-white">🔮 {'Cash Flow Forecast'}</h3>
         <div className="h-24 bg-white/5 rounded-xl animate-pulse" />
       </div>
     );
@@ -91,28 +90,26 @@ export function CashFlowForecast({ locale = 'en' }: CashFlowForecastProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white">🔮 {locale === 'th' ? 'พยากรณ์กระแสเงินสด' : 'Cash Flow Forecast'}</h3>
+        <h3 className="text-lg font-semibold text-white">🔮 {'Cash Flow Forecast'}</h3>
       </div>
 
       {upcoming.length === 0 ? (
         <Card className="p-6 text-center">
           <Info className="w-10 h-10 text-amber-400 mx-auto mb-3" />
           <p className="text-white/70 font-medium">
-            {locale === 'th' ? 'ยังไม่มีบิลหรือหนี้ในระบบ' : 'No bills or debts yet'}
+            {'No bills or debts yet'}
           </p>
           <p className="text-sm text-white/50 mt-1">
-            {locale === 'th'
-              ? 'เพิ่มบิลหรือหนี้สินในแผง Bills / Debt ด้านล่าง แล้วกราฟนี้จะแสดงวันครบกำหนดจ่ายจริง'
-              : 'Add your bills or debts in the Bills / Debt panels below — this view will then show your real upcoming due dates.'}
+            {'Add your bills or debts in the Bills / Debt panels below — this view will then show your real upcoming due dates.'}
           </p>
         </Card>
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-3 mb-6">
             {[
-              { label: locale === 'th' ? 'จ่ายใน 30 วัน' : 'Due (30 Days)', value: totalUpcoming, color: 'rose' },
-              { label: locale === 'th' ? 'จ่ายคงที่/เดือน' : 'Fixed / Month', value: monthlyOutflow, color: 'amber' },
-              { label: locale === 'th' ? 'รายการที่ต้องจ่าย' : 'Items Due', value: upcoming.length, color: 'emerald', raw: true },
+              { label: 'Due (30 Days)', value: totalUpcoming, color: 'rose' },
+              { label: 'Fixed / Month', value: monthlyOutflow, color: 'amber' },
+              { label: 'Items Due', value: upcoming.length, color: 'emerald', raw: true },
             ].map((item) => (
               <div key={item.label} className={`bg-${item.color}-400/10 border border-${item.color}-400/30 rounded-xl p-4`}>
                 <p className={`text-sm text-${item.color}-400`}>{item.label}</p>
@@ -124,7 +121,7 @@ export function CashFlowForecast({ locale = 'en' }: CashFlowForecastProps) {
           </div>
 
           <Card className="p-4">
-            <h4 className="font-semibold text-white mb-4">{locale === 'th' ? 'การชำระหนี้สิน/บิลในเร็วๆ นี้' : 'Upcoming Payments'}</h4>
+            <h4 className="font-semibold text-white mb-4">{'Upcoming Payments'}</h4>
             <div className="space-y-2">
               {upcoming.map((item, i) => (
                 <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-black/30 border border-white/10">
@@ -134,12 +131,12 @@ export function CashFlowForecast({ locale = 'en' }: CashFlowForecastProps) {
                     </div>
                     <div>
                       <p className="font-medium text-white">{item.name}</p>
-                      <p className="text-xs text-white/60">{format(item.date, locale === 'th' ? 'd MMM yyyy' : 'MMM d, yyyy', { locale: locale === 'th' ? th : undefined })}</p>
+                      <p className="text-xs text-white/60">{format(item.date, 'MMM d, yyyy', {})}</p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="font-mono text-rose-400">-{formatCurrency(item.amount, locale)}</p>
-                    <p className="text-xs text-white/50">{locale === 'th' ? 'ครบกำหนด' : 'Due'}</p>
+                    <p className="text-xs text-white/50">{'Due'}</p>
                   </div>
                 </div>
               ))}

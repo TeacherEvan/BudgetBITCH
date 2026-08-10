@@ -7,6 +7,7 @@ export const AUTH_ROUTES = {
 
 export const PROTECTED_PAGE_PREFIXES = [
   "/dashboard",
+  "/accounts",
   "/settings",
   "/wizard",
 ] as const;

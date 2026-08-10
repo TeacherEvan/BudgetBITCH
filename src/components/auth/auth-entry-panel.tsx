@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { LocaleSwitcher } from "@/components/i18n/locale-switcher";
 import { MobilePanelFrame } from "@/components/mobile/mobile-panel-frame";
 import type { LocaleMessages } from "@/i18n/messages";
 
@@ -34,7 +33,6 @@ export function AuthEntryPanel({
           <article className="bb-panel bb-panel-strong p-7 md:p-9">
             <div className="flex items-start justify-between gap-4">
               <p className="bb-kicker">{eyebrow}</p>
-              <LocaleSwitcher />
             </div>
             <h1 className="mt-3 max-w-2xl text-4xl font-semibold md:text-5xl">{title}</h1>
             <p className="bb-copy mt-4 max-w-2xl text-sm md:text-base">{description}</p>

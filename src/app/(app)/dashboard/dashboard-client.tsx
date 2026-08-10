@@ -2,20 +2,22 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { DashboardShell } from '@/components/dashboard/dashboard-shell';
 import { WizardShell } from '@/components/wizard/wizard-shell';
 import { ManifestoInterstitial } from '@/components/launch/manifesto-interstitial';
-import { useVoice } from '@/hooks/use-voice';
 import { useWizardProfile } from '@/hooks/use-local-db';
 import { useAccountSync } from '@/hooks/use-account-sync';
 import { initializeBudgetsFromWizard } from '@/lib/utils/budget-calculator';
 import { getWizardProfile, saveWizardProfile, saveCriticalExpenseCommitment } from '@/lib/db/local-db';
-import { Loader2 } from 'lucide-react';
+import { logUserAction } from '@/lib/utils/action-logger';
 import { useQuery } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
-import type { CriticalExpenseCommitment, CriticalExpenseKey } from '@/lib/types/budget';
+import type { CriticalExpenseKey } from '@/lib/types/budget';
+import { syncDailySnapshot } from '@/lib/convex/sync-snapshots';
+
+import { MoneySyncLoading } from '@/components/ui/money-sync-loading';
 
 interface DashboardClientProps {
   wizardCompleted: boolean;
@@ -25,13 +27,25 @@ const MANIFESTO_KEY = 'bb:manifesto-v1';
 
 export function DashboardClient({ wizardCompleted: initialWizardCompleted }: DashboardClientProps) {
   const router = useRouter();
-  const locale = useLocale() as 'th' | 'en';
+  const searchParams = useSearchParams();
+  const locale = useLocale();
   
   const { profile, loading: profileLoading } = useWizardProfile();
   const [wizardCompleted, setWizardCompleted] = useState(initialWizardCompleted);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingDismissed, setLoadingDismissed] = useState(false);
   const [budgetsInitialized, setBudgetsInitialized] = useState(false);
   const [wizardForced, setWizardForced] = useState(false);
+
+  // Check if wizard redo was explicitly requested via Settings or URL parameter
+  const isRedo = searchParams?.get('redo') === 'true' || (typeof window !== 'undefined' && sessionStorage.getItem('bb:wizard-redo') === '1');
+
+  useEffect(() => {
+    if (isRedo) {
+      setWizardForced(true);
+      setWizardCompleted(false);
+    }
+  }, [isRedo]);
 
   const latestSnapshot = useQuery(api.snapshots.getLatestSnapshot);
 
@@ -42,7 +56,6 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
     let seen = false;
     try { seen = localStorage.getItem(MANIFESTO_KEY) === '1'; } catch { /* ignore */ }
     // Intentional post-mount check; keeps SSR HTML minimal and avoids hydration mismatch.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!seen) setShowManifesto(true);
   }, []);
 
@@ -51,13 +64,11 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
     setShowManifesto(false);
   };
 
-  const voice = useVoice(locale === 'th' ? 'th-TH' : 'en-US');
-  const voiceEnabled = voice.settings.enabled;
   // Keep the active account's shared board in sync with Convex.
   useAccountSync();
 
   const handleLocaleChange = useCallback(
-    (nextLocale: 'th' | 'en') => {
+    (nextLocale: string) => {
       document.cookie = `bb-locale=${nextLocale}; path=/; max-age=31536000; samesite=lax`;
       router.refresh();
     },
@@ -108,19 +119,26 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
 
   // Restore session snapshot upon login if local profile is uncompleted
   useEffect(() => {
-    if (profileLoading) return;
+    // While the wizard overlay is actually on screen, never let a snapshot
+    // restore flip wizardCompleted out from under the user (the first-launch
+    // z-order collision: manifesto + wizard both true at once).
+    const wizardShowing = !wizardCompleted || wizardForced;
+    if (wizardShowing) return;
+    if (profileLoading || wizardForced || isRedo) return;
     if (profile && profile.completed) return; // already completed locally
     if (latestSnapshot === undefined || latestSnapshot === null) return; // loading or no snapshot
 
+    // Only restore wizard profile if the snapshot itself has a completed wizard profile
+    if (!latestSnapshot.wizardProfile?.completed) return;
+
     (async () => {
       try {
-        console.log('Restoring wizard profile and settings from Convex snapshot...');
+        console.log('Restoring completed wizard profile and settings from Convex snapshot...');
+        setLoadingDismissed(false);
         setIsLoading(true);
         
         // Restore wizard profile
-        if (latestSnapshot.wizardProfile) {
-          await saveWizardProfile(latestSnapshot.wizardProfile);
-        }
+        await saveWizardProfile(latestSnapshot.wizardProfile);
         
         // Restore critical expense commitment if present
         if (latestSnapshot.criticalExpenseCommitment) {
@@ -143,20 +161,26 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
         setIsLoading(false);
       }
     })();
-  }, [profile, profileLoading, latestSnapshot, checkWizardStatus, router]);
+  }, [profile, profileLoading, latestSnapshot, checkWizardStatus, wizardCompleted, wizardForced, isRedo, router]);
 
   const handleWizardComplete = useCallback(async () => {
     setWizardCompleted(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
+    setWizardForced(false);
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('bb:wizard-redo');
+    }
+    logUserAction('Wizard completed');
+    // Push the completed profile snapshot to Convex immediately
+    await syncDailySnapshot();
+    await new Promise(resolve => setTimeout(resolve, 300));
+    router.replace('/dashboard');
     router.refresh();
   }, [router]);
 
-  if (isLoading || profileLoading) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loader2 className="h-8 w-8 text-amber-400 animate-spin" />
-      </div>
-    );
+  // Hold the loading overlay for its minimum display time even if data resolves
+  // instantly — prevents the snap/jump flicker on fast loads.
+  if ((isLoading || profileLoading) && !loadingDismissed) {
+    return <MoneySyncLoading locale={locale} onComplete={() => setLoadingDismissed(true)} />;
   }
 
   return (
@@ -169,18 +193,14 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
       <DashboardShell
         locale={locale}
         onLocaleChange={handleLocaleChange}
-        onVoiceToggle={voice.toggleVoice}
-        voiceEnabled={voiceEnabled}
         onSetup={() => setWizardForced(true)}
       />
       
       {(!wizardCompleted || wizardForced) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
           <WizardShell
             locale={locale}
             onComplete={handleWizardComplete}
-            voiceEnabled={voiceEnabled}
-            speak={voice.speak}
             isModal={true}
           />
         </div>

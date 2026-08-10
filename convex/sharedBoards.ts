@@ -1,5 +1,5 @@
 // convex/sharedBoards.ts
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { query, mutation, MutationCtx } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { Doc, Id } from "./_generated/dataModel";
@@ -51,7 +51,7 @@ async function ensureProfileDoc(
   const existing = await ctx.db
     .query("userProfiles")
     .withIndex("by_user", (q) => q.eq("userId", userId))
-    .unique();
+    .first();
   if (existing) return existing;
 
   // Create with a unique shareCode (retry on collision).
@@ -66,15 +66,20 @@ async function ensureProfileDoc(
       continue;
     }
   }
-  throw new Error("Failed to allocate a unique share code");
+  throw new ConvexError("Failed to allocate a unique share code");
 }
 
 /** Create the caller's sharing profile (with a shareCode) if it doesn't exist yet. */
 export const ensureProfile = mutation({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Authentication required");
+    let userId: Id<"users"> | null;
+    try {
+      userId = await getAuthUserId(ctx);
+    } catch {
+      return null;
+    }
+    if (!userId) return null;
     const profile = await ensureProfileDoc(ctx, userId);
     return {
       shareCode: profile.shareCode,
@@ -98,7 +103,16 @@ export const ensureProfile = mutation({
 export const getMyProfile = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
+    let userId: Id<"users"> | null;
+    try {
+      userId = await getAuthUserId(ctx);
+    } catch (e) {
+      // getUserIdentity can reject a malformed/expired/mismatched JWT. Surface
+      // the real reason instead of letting Convex redact it to "Server Error".
+      throw new ConvexError(
+        `Auth failed in getMyProfile: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
     if (!userId) return null;
     const profile = await ctx.db
       .query("userProfiles")
@@ -118,7 +132,7 @@ export const resolveShareCode = query({
   args: { code: v.string() },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Authentication required");
+    if (!userId) throw new ConvexError("Authentication required");
 
     const code = args.code.trim().toUpperCase();
     const partner = await ctx.db
@@ -137,7 +151,7 @@ export const linkByCode = mutation({
   args: { code: v.string() },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Authentication required");
+    if (!userId) throw new ConvexError("Authentication required");
 
     const code = args.code.trim().toUpperCase();
     const partner = await ctx.db
@@ -145,8 +159,8 @@ export const linkByCode = mutation({
       .withIndex("by_shareCode", (q) => q.eq("shareCode", code))
       .unique();
 
-    if (!partner) throw new Error("Share code not found");
-    if (partner.userId === userId) throw new Error("Cannot link to yourself");
+    if (!partner) throw new ConvexError("Share code not found");
+    if (partner.userId === userId) throw new ConvexError("Cannot link to yourself");
 
     const myProfile = await ensureProfileDoc(ctx, userId);
 
@@ -154,10 +168,10 @@ export const linkByCode = mutation({
     // linking into a partner who is already in another couple would corrupt the
     // previous partner's linkedBoardId (review finding F3).
     if (myProfile.linkedBoardId) {
-      throw new Error("You are already linked to a partner; unlink first");
+      throw new ConvexError("You are already linked to a partner; unlink first");
     }
     if (partner.linkedBoardId) {
-      throw new Error("That share code is already linked to someone else");
+      throw new ConvexError("That share code is already linked to someone else");
     }
 
     // Reuse an existing board if either party is already linked (1:1 couple, single board).
@@ -209,15 +223,15 @@ export const getBoard = query({
   args: { boardId: v.string() },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Authentication required");
+    if (!userId) throw new ConvexError("Authentication required");
 
     const board = await ctx.db
       .query("sharedBoards")
       .withIndex("by_boardId", (q) => q.eq("boardId", args.boardId))
       .unique();
-    if (!board) throw new Error("Board not found");
+    if (!board) throw new ConvexError("Board not found");
     if (board.memberA !== userId && board.memberB !== userId) {
-      throw new Error("Not a member of this board");
+      throw new ConvexError("Not a member of this board");
     }
     return board;
   },
@@ -232,15 +246,15 @@ export const pushBoard = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Authentication required");
+    if (!userId) throw new ConvexError("Authentication required");
 
     const board = await ctx.db
       .query("sharedBoards")
       .withIndex("by_boardId", (q) => q.eq("boardId", args.boardId))
       .unique();
-    if (!board) throw new Error("Board not found");
+    if (!board) throw new ConvexError("Board not found");
     if (board.memberA !== userId && board.memberB !== userId) {
-      throw new Error("Not a member of this board");
+      throw new ConvexError("Not a member of this board");
     }
 
     const incoming = (args.data ?? {}) as Record<string, StoredRecord>;
@@ -306,7 +320,7 @@ export const unlink = mutation({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Authentication required");
+    if (!userId) throw new ConvexError("Authentication required");
 
     const myProfile = await ctx.db
       .query("userProfiles")

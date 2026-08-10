@@ -1,7 +1,7 @@
 // components/ui/modal.tsx
 'use client';
 
-import { Fragment, ReactNode, useEffect, useCallback } from 'react';
+import { Fragment, ReactNode, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { Button } from './button';
@@ -29,20 +29,65 @@ export function Modal({
   closeOnOverlayClick = true,
   closeOnEscape = true,
 }: ModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previousActiveElement = useRef<HTMLElement | null>(null);
+
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if (event.key === 'Escape' && closeOnEscape) {
       onClose();
+      return;
+    }
+
+    if (event.key === 'Tab' && dialogRef.current) {
+      const focusables = dialogRef.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusables.length === 0) return;
+
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+
+      if (event.shiftKey) {
+        if (document.activeElement === first || document.activeElement === dialogRef.current) {
+          last.focus();
+          event.preventDefault();
+        }
+      } else {
+        if (document.activeElement === last) {
+          first.focus();
+          event.preventDefault();
+        }
+      }
     }
   }, [closeOnEscape, onClose]);
 
   useEffect(() => {
     if (isOpen) {
+      previousActiveElement.current = document.activeElement as HTMLElement | null;
       document.addEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'hidden';
+
+      // Focus modal container or first focusable child
+      requestAnimationFrame(() => {
+        if (dialogRef.current) {
+          const focusables = dialogRef.current.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          );
+          if (focusables.length > 0) {
+            focusables[0].focus();
+          } else {
+            dialogRef.current.focus();
+          }
+        }
+      });
     }
+
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'unset';
+      if (previousActiveElement.current) {
+        previousActiveElement.current.focus();
+      }
     };
   }, [isOpen, handleKeyDown]);
 
@@ -67,7 +112,9 @@ export function Modal({
       />
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
-          className={`w-full ${sizeStyles[size]} max-h-[85vh] sm:max-h-[90vh] bg-black/95 border border-white/10 rounded-2xl shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-200`}
+          ref={dialogRef}
+          tabIndex={-1}
+          className={`w-full ${sizeStyles[size]} max-h-[85vh] sm:max-h-[90vh] bg-black/95 border border-white/10 rounded-2xl shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-200 outline-none`}
           role="dialog"
           aria-modal="true"
           aria-labelledby={title ? 'modal-title' : undefined}

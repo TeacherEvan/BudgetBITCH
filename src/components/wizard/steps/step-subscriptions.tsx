@@ -3,32 +3,28 @@
 
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
+import { useCurrency } from '@/hooks/use-currency';
 
 interface StepSubscriptionsProps {
-  locale: 'th' | 'en';
+  locale: string;
   value: number;
   onChange: (key: 'subscriptions', value: number) => void;
   error?: string | null;
   disabled?: boolean;
 }
 
-export function StepSubscriptions({ locale, value, onChange, error, disabled }: StepSubscriptionsProps) {
+export function StepSubscriptions({ value, onChange, error, disabled }: StepSubscriptionsProps) {
+  const fmt = useCurrency();
   const labels = {
-    th: {
-      title: 'สมัครสมาชิก',
-      subtitle: 'Netflix, Spotify, YouTube, Disney+, TrueID, Apple, ชั้นเรียนออนไลน์',
-      placeholder: 'เช่น 500',
-      helper: 'ค่าสมัครสมาชิกรายเดือนรวมทุกอย่าง (บาท)',
-    },
     en: {
       title: 'Subscriptions',
       subtitle: 'Netflix, Spotify, YouTube, Disney+, TrueID, Apple, online courses',
       placeholder: 'e.g. 500',
-      helper: 'Total monthly subscriptions (THB)',
+      helper: 'Total monthly subscriptions',
     },
   };
 
-  const l = labels[locale];
+  const l = labels.en;
 
   return (
     <div className="space-y-6">
@@ -61,11 +57,11 @@ export function StepSubscriptions({ locale, value, onChange, error, disabled }: 
           onValueChange={(v) => onChange('subscriptions', v)}
           disabled={disabled}
           showValue
-          valueFormatter={(v) => `฿${v.toLocaleString()}`}
+          valueFormatter={(v) => fmt(v)}
         />
 
         <p className="text-xs text-white/50 text-center">
-          {locale === 'th' ? 'Netflix Spotify Disney+ TrueID YouTube Premium App Store' : 'Netflix Spotify Disney+ YouTube Apple courses apps'}
+          {'Netflix Spotify Disney+ YouTube Apple courses apps'}
         </p>
       </div>
 
@@ -87,7 +83,7 @@ export function StepSubscriptions({ locale, value, onChange, error, disabled }: 
                 : 'bg-white/5 text-white/70 hover:bg-white/10'
             }`}
           >
-            ฿{value.toLocaleString()}<br/>{label}
+            {fmt(value)}<br/>{label}
           </button>
         ))}
       </div>

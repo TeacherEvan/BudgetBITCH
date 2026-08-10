@@ -1,208 +1,159 @@
-import { test, expect } from '@playwright/test';
-import fs from 'fs';
-import path from 'path';
-
+// Feature: BudgetBITCH dogfood / exploratory QA audit flow.
+//
 // NOTE: This legacy dogfood audit flow assumes the old cookie-based E2E
 // signed-in override. On the webview-localStorage-auth branch auth is
 // client-only, so we perform a REAL sign-in. It skips cleanly when
 // E2E_TEST_EMAIL / E2E_TEST_PASSWORD are not set.
-const TEST_EMAIL = process.env.E2E_TEST_EMAIL;
-const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD;
+//
+// Best-practice notes:
+//  - Imports the shared helpers.ts signInReal() instead of duplicating the
+//    sign-in steps.
+//  - Removed console.log() calls from test body (use Playwright trace/video
+//    instead; console.log clutters CI output and is a best-practice smell).
+//  - waitForTimeout(N) replaced with web-first assertions where possible.
+//  - consoleErrors threshold changed from ≤5 to 0 — tests should assert
+//    clean, not tolerate a hard-coded noise budget. If specific known errors
+//    are acceptable, add them to the ErrorCollector.isIgnorable() allowlist.
+//  - Screenshots still written to dogfood-output/ for audit record-keeping.
+import { test, expect, signInReal, HAS_CREDS, ErrorCollector } from "./helpers";
+import fs from "fs";
+import path from "path";
 
-test.describe('BudgetBITCH Dogfood Audit E2E Flow', () => {
+test.describe("BudgetBITCH Dogfood Audit E2E Flow", () => {
   test.beforeEach(async ({ page }) => {
-    if (!TEST_EMAIL || !TEST_PASSWORD) {
-      test.skip(true, 'E2E_TEST_EMAIL / E2E_TEST_PASSWORD not set');
-    }
+    if (!HAS_CREDS) test.skip(true, "E2E_TEST_EMAIL / E2E_TEST_PASSWORD not set");
     // Real sign-in (client-only auth).
-    await page.goto('/sign-in');
-    await page.getByLabel(/email address/i).fill(TEST_EMAIL);
-    await page.getByLabel(/password/i).fill(TEST_PASSWORD);
-    await page.getByRole('button', { name: /sign in$/i }).click();
-    await expect(page).toHaveURL(/\/(dashboard|wizard)/, { timeout: 20000 });
+    await signInReal(page);
     // Seed locale + manifesto-seen so the audit sees the dashboard directly.
     await page.evaluate(() => {
-      localStorage.setItem('budgetbitch:locale', 'en');
-      localStorage.setItem('bb:manifesto-v1', '1');
+      localStorage.setItem("budgetbitch:locale", "en");
+      localStorage.setItem("bb:manifesto-v1", "1");
     });
   });
 
-  test('walks through onboarding wizard and explores the dashboard', async ({ page }) => {
-    const screenshotsDir = path.resolve(__dirname, '../../dogfood-output/screenshots');
+  test("walks through onboarding wizard and explores the dashboard", async ({ page }) => {
+    const screenshotsDir = path.resolve(__dirname, "../../dogfood-output/screenshots");
     if (!fs.existsSync(screenshotsDir)) {
       fs.mkdirSync(screenshotsDir, { recursive: true });
     }
 
-    // Monitor for console errors and logs
-    const consoleErrors: string[] = [];
-    const consoleLogs: string[] = [];
-    
-    page.on('console', (msg) => {
-      const text = `[${msg.type()}] ${msg.text()}`;
-      if (msg.type() === 'error') {
-        const isRssNetworkError = text.toLowerCase().includes('cors') || 
-                                  text.toLowerCase().includes('failed to fetch') || 
-                                  text.toLowerCase().includes('failed to load resource') ||
-                                  text.toLowerCase().includes('rss');
-        if (!isRssNetworkError) {
-          consoleErrors.push(text);
-        }
-      }
-      consoleLogs.push(text);
-      console.log(text);
-    });
+    // Attach error collector for this test.
+    const errors = new ErrorCollector();
+    errors.attach(page);
 
-    page.on('pageerror', (err) => {
-      const text = `[pageerror] ${err.message}`;
-      consoleErrors.push(text);
-      console.error(text);
-    });
-
-    // 1. Visit wizard page directly
-    console.log('Navigating to wizard page...');
-    await page.goto('/wizard');
-    
-    // Set localStorage locale
-    await page.evaluate(() => {
-      localStorage.setItem('budgetbitch:locale', 'en');
-    });
-    
-    await page.waitForTimeout(2000);
-    await page.screenshot({ path: path.join(screenshotsDir, '02_wizard_start_income.png') });
-
-    // Assert we are on the onboarding wizard
+    // ── 1. Wizard ────────────────────────────────────────────────────────────
+    await page.goto("/wizard");
+    await page.evaluate(() => localStorage.setItem("budgetbitch:locale", "en"));
     await expect(page).toHaveURL(/.*wizard/);
+    await page.screenshot({ path: path.join(screenshotsDir, "02_wizard_start_income.png") });
 
     // Q1: Income
-    console.log('Completing wizard Q1: Income...');
     const incomeInput = page.locator('input[type="number"]');
     await expect(incomeInput).toBeVisible();
-    await incomeInput.fill('75000');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
-    await page.waitForTimeout(1000);
-    await page.screenshot({ path: path.join(screenshotsDir, '03_wizard_rent.png') });
+    await incomeInput.fill("75000");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page.screenshot({ path: path.join(screenshotsDir, "03_wizard_rent.png") });
 
     // Q2: Rent
-    console.log('Completing wizard Q2: Rent...');
     const rentInput = page.locator('input[type="number"]');
-    await rentInput.fill('18000');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
-    await page.waitForTimeout(1000);
-    await page.screenshot({ path: path.join(screenshotsDir, '04_wizard_transport.png') });
+    await expect(rentInput).toBeVisible();
+    await rentInput.fill("18000");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page.screenshot({ path: path.join(screenshotsDir, "04_wizard_transport.png") });
 
     // Q3: Transport
-    console.log('Completing wizard Q3: Transport...');
     const transportInput = page.locator('input[type="number"]');
-    await transportInput.fill('4000');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
-    await page.waitForTimeout(1000);
-    await page.screenshot({ path: path.join(screenshotsDir, '05_wizard_phone.png') });
+    await expect(transportInput).toBeVisible();
+    await transportInput.fill("4000");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page.screenshot({ path: path.join(screenshotsDir, "05_wizard_phone.png") });
 
     // Q4: Phone/Internet
-    console.log('Completing wizard Q4: Phone/Internet...');
     const phoneInput = page.locator('input[type="number"]');
-    await phoneInput.fill('900');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
-    await page.waitForTimeout(1000);
-    await page.screenshot({ path: path.join(screenshotsDir, '06_wizard_subscriptions.png') });
+    await expect(phoneInput).toBeVisible();
+    await phoneInput.fill("900");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page.screenshot({ path: path.join(screenshotsDir, "06_wizard_subscriptions.png") });
 
     // Q5: Subscriptions
-    console.log('Completing wizard Q5: Subscriptions...');
     const subInput = page.locator('input[type="number"]');
-    await subInput.fill('1500');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
-    await page.waitForTimeout(1000);
-    await page.screenshot({ path: path.join(screenshotsDir, '07_wizard_entertainment.png') });
+    await expect(subInput).toBeVisible();
+    await subInput.fill("1500");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page.screenshot({ path: path.join(screenshotsDir, "07_wizard_entertainment.png") });
 
     // Q6: Entertainment
-    console.log('Completing wizard Q6: Entertainment...');
     const entInput = page.locator('input[type="number"]');
-    await entInput.fill('6000');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
-    await page.waitForTimeout(1000);
-    await page.screenshot({ path: path.join(screenshotsDir, '08_wizard_healthcare.png') });
+    await expect(entInput).toBeVisible();
+    await entInput.fill("6000");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page.screenshot({ path: path.join(screenshotsDir, "08_wizard_healthcare.png") });
 
     // Q7: Healthcare
-    console.log('Completing wizard Q7: Healthcare...');
     const healthInput = page.locator('input[type="number"]');
-    await healthInput.fill('2000');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
-    await page.waitForTimeout(1000);
-    await page.screenshot({ path: path.join(screenshotsDir, '09_wizard_savings_rate.png') });
+    await expect(healthInput).toBeVisible();
+    await healthInput.fill("2000");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page.screenshot({ path: path.join(screenshotsDir, "09_wizard_savings_rate.png") });
 
     // Q8: Savings Rate
-    console.log('Completing wizard Q8: Savings Rate...');
-    const savingsBtn = page.getByRole('button', { name: /20%/ });
+    const savingsBtn = page.getByRole("button", { name: /20%/ });
     await expect(savingsBtn).toBeVisible();
     await savingsBtn.click();
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
-    await page.waitForTimeout(1000);
-    await page.screenshot({ path: path.join(screenshotsDir, '10_wizard_risk_tolerance.png') });
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page.screenshot({ path: path.join(screenshotsDir, "10_wizard_risk_tolerance.png") });
 
     // Q9: Risk Tolerance
-    console.log('Completing wizard Q9: Risk Tolerance...');
-    const riskBtn = page.getByRole('button', { name: 'Medium' });
+    const riskBtn = page.getByRole("button", { name: "Medium" });
     await expect(riskBtn).toBeVisible();
     await riskBtn.click();
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
-    await page.waitForTimeout(1000);
-    await page.screenshot({ path: path.join(screenshotsDir, '11_wizard_location.png') });
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page.screenshot({ path: path.join(screenshotsDir, "11_wizard_location.png") });
 
-    // Q10: Location Permission (Skip for now to avoid browser prompt blocking)
-    console.log('Completing wizard Q10: Location Permission...');
-    const skipBtn = page.getByRole('button', { name: 'Skip for now' });
+    // Q10: Location Permission — skip to avoid a blocking browser prompt.
+    const skipBtn = page.getByRole("button", { name: "Skip for now" });
     await expect(skipBtn).toBeVisible();
     await skipBtn.click();
-    await page.waitForTimeout(1000);
-    await page.screenshot({ path: path.join(screenshotsDir, '12_wizard_finish.png') });
+    await page.screenshot({ path: path.join(screenshotsDir, "12_wizard_finish.png") });
 
-    // Click Finish to save and enter dashboard
-    console.log('Submitting wizard details...');
-    const finishBtn = page.getByRole('button', { name: 'Finish' });
+    // Finish & land on dashboard.
+    const finishBtn = page.getByRole("button", { name: "Finish" });
     await expect(finishBtn).toBeVisible();
     await finishBtn.click();
 
-    // 3. Landing on Dashboard
-    console.log('Waiting for dashboard load...');
-    await page.waitForTimeout(3000);
-    await expect(page).toHaveURL(/.*dashboard/);
-    await page.screenshot({ path: path.join(screenshotsDir, '13_dashboard_home.png') });
+    // ── 2. Dashboard ─────────────────────────────────────────────────────────
+    await expect(page).toHaveURL(/.*dashboard/, { timeout: 15000 });
+    await page.screenshot({ path: path.join(screenshotsDir, "13_dashboard_home.png") });
 
-    // 4. Explore dashboard panels
-    console.log('Interacting with dashboard panels...');
-    
-    // Toggle a dashboard panel (e.g. net worth or savings goals)
-    const netWorthBtn = page.getByRole('button', { name: /💰 Net Worth/ });
-    if (await netWorthBtn.isVisible()) {
-      console.log('Clicking Net Worth toggle in sidebar...');
+    // Net Worth toggle — optional, may not be in this account state.
+    const netWorthBtn = page.getByRole("button", { name: /💰 Net Worth/ });
+    if (await netWorthBtn.count()) {
       await netWorthBtn.click();
-      await page.waitForTimeout(1000);
-      await page.screenshot({ path: path.join(screenshotsDir, '14_dashboard_networth_panel.png') });
+      await expect(netWorthBtn).toBeVisible(); // re-renders without crash
+      await page.screenshot({ path: path.join(screenshotsDir, "14_dashboard_networth_panel.png") });
     }
 
-    // Toggle critical expenses modal
-    const cutExpenseBtn = page.getByRole('button', { name: /Pick 1 to cut/i });
-    if (await cutExpenseBtn.isVisible()) {
-      console.log('Opening Cut One Expense modal...');
+    // Critical expenses modal — optional.
+    const cutExpenseBtn = page.getByRole("button", { name: /Pick 1 to cut/i });
+    if (await cutExpenseBtn.count()) {
       await cutExpenseBtn.click();
-      await page.waitForTimeout(1000);
-      await page.screenshot({ path: path.join(screenshotsDir, '15_dashboard_critical_expense_modal.png') });
-      
-      // Close modal
-      const closeModalBtn = page.locator('button:has-text("Close"), button:has(svg)');
-      if (await closeModalBtn.first().isVisible()) {
+      await page.screenshot({
+        path: path.join(screenshotsDir, "15_dashboard_critical_expense_modal.png"),
+      });
+      const closeModalBtn = page.getByRole("button", { name: /close/i });
+      if (await closeModalBtn.count()) {
         await closeModalBtn.first().click();
-        await page.waitForTimeout(1000);
       }
     }
 
-    console.log('Finished E2E exploratory QA.');
-    
-    // Save console logs to reports directory if there were any errors
-    const logsDir = path.resolve(__dirname, '../../dogfood-output');
-    fs.writeFileSync(path.join(logsDir, 'console-logs.json'), JSON.stringify({ logs: consoleLogs, errors: consoleErrors }, null, 2));
+    // ── 3. Save audit log ────────────────────────────────────────────────────
+    const logsDir = path.resolve(__dirname, "../../dogfood-output");
+    fs.writeFileSync(
+      path.join(logsDir, "console-logs.json"),
+      JSON.stringify({ errors: errors.errors }, null, 2),
+    );
 
-    // Confirm that there are no critical JS console errors during navigation
-    expect(consoleErrors.length).toBeLessThanOrEqual(5); // Adjust threshold as needed
+    // Zero tolerance: all JS errors should be in ErrorCollector.isIgnorable().
+    errors.assertClean();
   });
 });

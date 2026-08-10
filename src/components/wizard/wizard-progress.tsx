@@ -4,10 +4,10 @@
 interface WizardProgressProps {
   currentStep: number;
   totalSteps: number;
-  locale: 'th' | 'en';
+  locale: string;
 }
 
-export function WizardProgress({ currentStep, totalSteps, locale }: WizardProgressProps) {
+export function WizardProgress({ currentStep, totalSteps}: WizardProgressProps) {
   const progress = ((currentStep + 1) / totalSteps) * 100;
 
   return (
@@ -15,7 +15,7 @@ export function WizardProgress({ currentStep, totalSteps, locale }: WizardProgre
       <div className="max-w-md mx-auto">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-white/70">
-            {locale === 'th' ? 'ขั้นตอน' : 'Step'} {currentStep + 1} / {totalSteps}
+            {'Step'} {currentStep + 1} / {totalSteps}
           </span>
           <span className="text-sm font-mono text-amber-400">
             {Math.round(progress)}%

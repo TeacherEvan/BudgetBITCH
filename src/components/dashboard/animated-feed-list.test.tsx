@@ -1,0 +1,112 @@
+// src/components/dashboard/animated-feed-list.test.tsx
+import { render, screen, waitFor } from '@testing-library/react';
+import { AnimatedFeedList } from '@/components/dashboard/animated-feed-list';
+import { useVicinityFeeds } from '@/hooks/use-vicinity-feeds';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+
+// Mock the hook
+vi.mock('@/hooks/use-vicinity-feeds');
+// Mock Lottie properly - default export is the Lottie component
+vi.mock('lottie-react', () => ({
+  __esModule: true,
+  default: ({ animationData, ...props }: { animationData?: unknown; [key: string]: unknown }) => {
+    void animationData;
+    return <div data-testid="lottie-animation" {...props} />;
+  },
+  Lottie: ({ animationData, ...props }: { animationData?: unknown; [key: string]: unknown }) => {
+    void animationData;
+    return <div data-testid="lottie-animation" {...props} />;
+  },
+  LottiePlayer: () => null,
+  useLottie: () => null,
+  useLottieInteractivity: () => null,
+}));
+
+describe('AnimatedFeedList', () => {
+  const mockItems = [
+    { title: 'News 1', link: 'https://a.com', pubDate: new Date().toISOString(), source: 'Test', category: 'finance', locale: 'en', actionable: 'Tip 1' },
+    { title: 'News 2', link: 'https://b.com', pubDate: new Date().toISOString(), source: 'Test', category: 'fuel', locale: 'en' },
+  ];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders feed cards with success state', async () => {
+    (useVicinityFeeds as Mock).mockReturnValue({
+      items: mockItems,
+      loading: false,
+      error: null,
+      lastUpdated: Date.now(),
+      refresh: vi.fn(),
+    });
+
+    render(<AnimatedFeedList locale="en" />);
+
+    await waitFor(() => {
+      expect(screen.getByText('News 1')).toBeInTheDocument();
+      expect(screen.getByText('News 2')).toBeInTheDocument();
+    });
+
+    // Should have category badges (English labels)
+    expect(screen.getByText('Finance')).toBeInTheDocument();
+    expect(screen.getByText('Fuel')).toBeInTheDocument();
+  });
+
+  it('shows empty state for no location', () => {
+    (useVicinityFeeds as Mock).mockReturnValue({
+      items: [],
+      loading: false,
+      error: null,
+      lastUpdated: null,
+      refresh: vi.fn(),
+    });
+
+    render(<AnimatedFeedList locale="en" />);
+
+    expect(screen.getByText('Enable Location')).toBeInTheDocument();
+  });
+
+  it('shows empty state for no items after fetch', () => {
+    (useVicinityFeeds as Mock).mockReturnValue({
+      items: [],
+      loading: false,
+      error: null,
+      lastUpdated: Date.now(),
+      refresh: vi.fn(),
+    });
+
+    render(<AnimatedFeedList locale="en" />);
+
+    expect(screen.getByText('No local updates yet')).toBeInTheDocument();
+  });
+
+  it('shows error state with retry button', () => {
+    (useVicinityFeeds as Mock).mockReturnValue({
+      items: [],
+      loading: false,
+      error: 'Failed to load news',
+      lastUpdated: Date.now(),
+      refresh: vi.fn(),
+    });
+
+    render(<AnimatedFeedList locale="en" />);
+
+    expect(screen.getByText('Failed to load news')).toBeInTheDocument();
+  });
+
+  it('shows loading state with skeletons', () => {
+    (useVicinityFeeds as Mock).mockReturnValue({
+      items: [],
+      loading: true,
+      error: null,
+      lastUpdated: null,
+      refresh: vi.fn(),
+    });
+
+    render(<AnimatedFeedList locale="en" />);
+
+    // Should show loading state (at least one status element)
+    expect(screen.getAllByRole('status').length).toBeGreaterThan(0);
+  });
+});

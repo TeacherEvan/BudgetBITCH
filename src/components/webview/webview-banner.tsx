@@ -1,7 +1,8 @@
 "use client";
 
 import { useSyncExternalStore, useState } from "react";
-import { detectWebView } from "@/lib/webview";
+import { detectWebView, openInExternalBrowser } from "@/lib/webview";
+import { isNative } from "@/lib/native";
 
 const DISMISS_KEY = "bb:webview-banner-dismissed";
 
@@ -12,6 +13,10 @@ function subscribe() {
 
 function getSnapshot(): boolean {
   if (typeof window === "undefined") return false;
+  // A first-party native shell (Capacitor) is not a hostile third-party
+  // webview; its auth uses localStorage tokens, so never nag to "open in
+  // browser" there.
+  if (isNative()) return false;
   if (!detectWebView()) return false;
   if (sessionStorage.getItem(DISMISS_KEY) === "true") return false;
   return true;
@@ -33,16 +38,17 @@ export function WebViewBanner() {
 
   const openInBrowser = () => {
     const url = window.location.href;
-    // Try to break out to the external browser. Webviews without a native
-    // "open in browser" affordance will simply reload here; the user can also
-    // use the share/sheet menu to open in Safari/Chrome.
-    window.location.href = url;
+    // Escape the host app's in-app WebView to the real external browser. On
+    // Android this uses an `intent://` deep link (the same mechanism chat apps
+    // use to "open in browser"); elsewhere it falls back to a location change,
+    // and the user can also use the share/sheet menu.
+    openInExternalBrowser(url);
   };
 
   return (
     <div className="fixed inset-x-0 top-0 z-[60] bg-amber-500 px-4 py-3 text-center text-sm font-semibold text-black">
       <p className="mb-1">
-        For the full BudgetBITCH experience (including sign-in), open this page
+        For the full Budget Boss experience (including sign-in), open this page
         in your browser.
       </p>
       <div className="flex items-center justify-center gap-3">

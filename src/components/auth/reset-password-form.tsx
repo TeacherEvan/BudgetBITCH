@@ -4,9 +4,8 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
 import { useState } from "react";
-import { useLocale } from "next-intl";
-import { shortLocale } from "@/lib/legal/versions";
 import { AUTH_ROUTES } from "@/lib/auth/routes";
+import { flushOfflineQueue } from "@/lib/convex/sync-snapshots";
 
 const COPY = {
   en: {
@@ -20,17 +19,6 @@ const COPY = {
     invalid:
       "That code is invalid or expired. Request a new reset email from the sign-in screen.",
     generic: "Could not reset your password. Please try again.",
-  },
-  th: {
-    title: "ตั้งรหัสผ่านใหม่",
-    emailLabel: "ที่อยู่อีเมล",
-    codeLabel: "รหัสรีเซ็ตจากอีเมลของคุณ",
-    passwordLabel: "รหัสผ่านใหม่",
-    submit: "ตั้งรหัสผ่านใหม่",
-    success: "อัปเดตรหัสผ่านแล้ว กำลังนำคุณไปยังหน้าเข้าสู่ระบบ…",
-    goBack: "กลับไปหน้าเข้าสู่ระบบ",
-    invalid: "รหัสไม่ถูกต้องหรือหมดอายุ ให้ขออีเมลรีเซ็ตใหม่จากหน้าเข้าสู่ระบบ",
-    generic: "ไม่สามารถรีเซ็ตรหัสผ่านได้ โปรดลองอีกครั้ง",
   },
   zh: {
     title: "设置新密码",
@@ -53,9 +41,7 @@ type ResetPasswordFormProps = {
 export function ResetPasswordForm({ email = "", code = "" }: ResetPasswordFormProps) {
   const { signIn } = useAuthActions();
   const router = useRouter();
-  const localeRaw = useLocale();
-  const locale = shortLocale(localeRaw) as keyof typeof COPY;
-  const copy = COPY[locale];
+  const copy = COPY.en;
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -71,6 +57,8 @@ export function ResetPasswordForm({ email = "", code = "" }: ResetPasswordFormPr
       formData.set("flow", "reset-verification");
       await signIn("password", formData);
       setSuccess(true);
+      // Replay any snapshots queued while unauthenticated (cross-device sync).
+      void flushOfflineQueue();
       // Convex Auth signs the user in after a successful reset; the provider
       // clears the code from the URL. Send them back to the dashboard.
       setTimeout(() => {
@@ -110,7 +98,7 @@ export function ResetPasswordForm({ email = "", code = "" }: ResetPasswordFormPr
             WebkitTextFillColor: "transparent",
           }}
         >
-          BudgetBITCH
+          Budget Boss
         </span>
 
         <h1 className="mt-6 text-2xl font-bold text-white">{copy.title}</h1>

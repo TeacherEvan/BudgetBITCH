@@ -12,12 +12,11 @@ import {
 } from '@/modules/home-base/reverse-geocode-label';
 
 interface StepLocationConsentProps {
-  locale: 'th' | 'en';
+  locale: string;
   value: boolean;
   onChange: (key: 'locationConsent', value: boolean) => void;
   error?: string | null;
   disabled?: boolean;
-  speak: (text: string) => void;
 }
 
 /**
@@ -45,7 +44,7 @@ async function persistResolvedArea(lat: number, lon: number): Promise<void> {
   }
 }
 
-export function StepLocationConsent({ locale, value, onChange, error, disabled, speak }: StepLocationConsentProps) {
+export function StepLocationConsent({ value, onChange, error, disabled }: StepLocationConsentProps) {
   const [disclaimerRead, setDisclaimerRead] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [unsupported, setUnsupported] = useState(
@@ -53,23 +52,6 @@ export function StepLocationConsent({ locale, value, onChange, error, disabled, 
   );
 
   const labels = {
-    th: {
-      title: 'ตำแหน่งที่ตั้ง',
-      subtitle: 'อนุญาตให้เข้าถึงตำแหน่งเพื่อรับข่าว และราคา/โปรโมชั่นในพื้นที่',
-      disclaimer: {
-        icon: '🛡️',
-        title: 'ข้อความเกี่ยวกับความเป็นส่วนตัว',
-        points: [
-          'เราใช้ตำแหน่งของคุณ เพื่อแสดงราคาน้ำมัน ข่าวเศรษฐกิจท้องถิ่น และโปรโมชั่นร้านค้าใกล้เคียงเท่านั้น',
-          'ไม่เก็บข้อมูลตำแหน่งเพื่อการตลาด ไม่ขายข้อมูล ไม่ติดตามการเคลื่อนไหว',
-          'ตำแหน่งของคุณไม่ออกจากเครื่องของคุณ เราดูแค่เมือง/พื้นที่ ไม่ใช่บ้านหรือถนนที่อยู่',
-          'คุณปิดได้ทุกเมื่อ แตะไอคอนโลกที่เมนูด้านบน',
-        ],
-      },
-      grantButton: 'อนุญาตตำแหน่ง',
-      skipButton: 'ข้ามขั้นตอนนี้',
-      grantedText: 'อนุญาตแล้ว ✓',
-    },
     en: {
       title: 'Location Permission',
       subtitle: 'Allow location for local fuel prices, news, and nearby deals',
@@ -89,12 +71,11 @@ export function StepLocationConsent({ locale, value, onChange, error, disabled, 
     },
   };
 
-  const l = labels[locale];
+  const l = labels['en'];
 
   const handleGrantLocation = () => {
     if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
       setUnsupported(true);
-      speak(locale === 'th' ? 'เบราว์เซอร์นี้ไม่รองรับตำแหน่ง' : 'This browser does not support location');
       return;
     }
     setRequesting(true);
@@ -105,30 +86,13 @@ export function StepLocationConsent({ locale, value, onChange, error, disabled, 
       async (position) => {
         setRequesting(false);
         onChange('locationConsent', true);
-        const msg = locale === 'th' ? 'อนุญาตตำแหน่งแล้ว' : 'Location permission granted';
-        speak(msg);
         // Resolve + persist the area so currency and Market Watch are
         // location-driven. Non-fatal: consent is still granted even if the
         // reverse geocode fails.
         void persistResolvedArea(position.coords.latitude, position.coords.longitude);
       },
-      (err) => {
+      () => {
         setRequesting(false);
-        let msg: string;
-        switch (err.code) {
-          case err.PERMISSION_DENIED:
-            msg = locale === 'th' ? 'การเข้าถึงตำแหน่งถูกปฏิเสธ' : 'Location access denied';
-            break;
-          case err.POSITION_UNAVAILABLE:
-            msg = locale === 'th' ? 'ไม่พบตำแหน่งปัจจุบัน' : 'Location unavailable';
-            break;
-          case err.TIMEOUT:
-            msg = locale === 'th' ? 'หมดเวลาการเข้าถึงตำแหน่ง' : 'Location request timed out';
-            break;
-          default:
-            msg = locale === 'th' ? 'ไม่สามารถเข้าถึงตำแหน่งได้' : 'Unable to access location';
-        }
-        speak(msg);
       },
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
     );
@@ -161,7 +125,7 @@ export function StepLocationConsent({ locale, value, onChange, error, disabled, 
         <Toggle
           checked={disclaimerRead}
           onCheckedChange={setDisclaimerRead}
-          label={locale === 'th' ? 'ฉันอ่านและเข้าใจข้อความด้านบนแล้ว' : 'I have read and understand the above'}
+          label={'I have read and understand the above'}
           disabled={disabled}
         />
       </div>
@@ -183,8 +147,6 @@ export function StepLocationConsent({ locale, value, onChange, error, disabled, 
           variant="ghost"
           onClick={() => {
             onChange('locationConsent', false);
-            const msg = locale === 'th' ? 'ข้ามการอนุญาตตำแหน่ง' : 'Skipping location permission';
-            speak(msg);
           }}
           disabled={disabled}
           className="w-full"
@@ -199,7 +161,7 @@ export function StepLocationConsent({ locale, value, onChange, error, disabled, 
         <div className="flex items-center justify-center gap-2 p-3 bg-emerald-400/10 border border-emerald-400/30 rounded-xl">
           <CheckCircle className="h-5 w-5 text-emerald-400" />
           <span className="text-sm font-medium text-emerald-400">
-            {locale === 'th' ? 'อนุญาตตำแหน่งแล้ว - จะใช้สำหรับข่าวและราคาในพื้นที่' : 'Location allowed - used for local news and prices'}
+            {'Location allowed - used for local news and prices'}
           </span>
         </div>
       )}
@@ -212,9 +174,7 @@ export function StepLocationConsent({ locale, value, onChange, error, disabled, 
 
       {unsupported && (
         <p className="text-center text-amber-400 text-sm" role="alert">
-          {locale === 'th'
-            ? 'เบราว์เซอร์นี้ไม่รองรับตำแหน่ง คุณสามารถข้ามได้'
-            : 'This browser does not support location. You can skip.'}
+          {'This browser does not support location. You can skip.'}
         </p>
       )}
     </div>

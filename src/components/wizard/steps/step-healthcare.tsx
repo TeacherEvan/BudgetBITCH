@@ -3,32 +3,28 @@
 
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
+import { useCurrency } from '@/hooks/use-currency';
 
 interface StepHealthcareProps {
-  locale: 'th' | 'en';
+  locale: string;
   value: number;
   onChange: (key: 'healthcare', value: number) => void;
   error?: string | null;
   disabled?: boolean;
 }
 
-export function StepHealthcare({ locale, value, onChange, error, disabled }: StepHealthcareProps) {
+export function StepHealthcare({ value, onChange, error, disabled }: StepHealthcareProps) {
+  const fmt = useCurrency();
   const labels = {
-    th: {
-      title: 'สุขภาพ / ค่ายา',
-      subtitle: 'ค่ายา ค่าทันตกรรม ค่ารพ. วัคซีน ประกันสุขภาพ',
-      placeholder: 'เช่น 1000',
-      helper: 'ค่าสุขภาพและค่ายาต่อเดือน (บาท)',
-    },
     en: {
       title: 'Healthcare',
       subtitle: 'Meds, dentist, hospital, vaccines, health insurance',
       placeholder: 'e.g. 1000',
-      helper: 'Monthly healthcare costs (THB)',
+      helper: 'Monthly healthcare costs',
     },
   };
 
-  const l = labels[locale];
+  const l = labels.en;
 
   return (
     <div className="space-y-6">
@@ -61,11 +57,11 @@ export function StepHealthcare({ locale, value, onChange, error, disabled }: Ste
           onValueChange={(v) => onChange('healthcare', v)}
           disabled={disabled}
           showValue
-          valueFormatter={(v) => `฿${v.toLocaleString()}`}
+          valueFormatter={(v) => fmt(v)}
         />
 
         <p className="text-xs text-white/50 text-center">
-          {locale === 'th' ? 'ค่ายา ค่าทันตกรรม ค่ารพ. ประกันสุขภาพ' : 'Meds, dentist, hospital, insurance'}
+          {'Meds, dentist, hospital, insurance'}
         </p>
       </div>
 
@@ -87,7 +83,7 @@ export function StepHealthcare({ locale, value, onChange, error, disabled }: Ste
                 : 'bg-white/5 text-white/70 hover:bg-white/10'
             }`}
           >
-            ฿{value.toLocaleString()}<br/>{label}
+            {fmt(value)}<br/>{label}
           </button>
         ))}
       </div>

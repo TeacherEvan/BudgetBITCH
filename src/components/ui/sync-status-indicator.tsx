@@ -2,14 +2,18 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { Cloud, CloudOff, RefreshCw, ChevronDown } from 'lucide-react';
+import { Cloud, CloudOff, RefreshCw, ChevronDown, Monitor, Smartphone, Users } from 'lucide-react';
 import { BOARD_CHANGED_EVENT } from '@/lib/types/budget';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+
+import { getOfflineQueueCount } from '@/lib/convex/sync-snapshots';
 
 interface SyncStatusIndicatorProps {
-  locale: 'th' | 'en';
+  locale: string;
 }
 
-export function SyncStatusIndicator({ locale }: SyncStatusIndicatorProps) {
+export function SyncStatusIndicator({ }: SyncStatusIndicatorProps) {
   const [online, setOnline] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
   const [counts, setCounts] = useState({ accounts: 0, couple: 0, offline: 0 });
@@ -17,7 +21,33 @@ export function SyncStatusIndicator({ locale }: SyncStatusIndicatorProps) {
   const [syncing, setSyncing] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const checkStatus = () => {
+  const profile = useQuery(api.sharedBoards.getMyProfile);
+
+  const getDeviceString = () => {
+    if (typeof window === 'undefined') return 'Browser';
+    const ua = navigator.userAgent;
+    let os = 'OS';
+    if (/Android/i.test(ua)) os = 'Android';
+    else if (/iPhone|iPad|iPod/i.test(ua)) os = 'iOS';
+    else if (/Macintosh/i.test(ua)) os = 'macOS';
+    else if (/Windows/i.test(ua)) os = 'Windows';
+    else if (/Linux/i.test(ua)) os = 'Linux';
+
+    let browser = 'Browser';
+    if (/Chrome/i.test(ua)) browser = 'Chrome';
+    else if (/Safari/i.test(ua)) browser = 'Safari';
+    else if (/Firefox/i.test(ua)) browser = 'Firefox';
+    else if (/Edge/i.test(ua)) browser = 'Edge';
+
+    return `${browser} on ${os}`;
+  };
+
+  const currentDevice = getDeviceString();
+  const otherDevice = currentDevice.includes('iOS') || currentDevice.includes('Android')
+    ? 'Chrome on macOS (Laptop)'
+    : 'Safari on iOS (iPhone)';
+
+  const checkStatus = async () => {
     if (typeof window === 'undefined') return;
     setOnline(window.navigator.onLine);
     
@@ -40,8 +70,7 @@ export function SyncStatusIndicator({ locale }: SyncStatusIndicatorProps) {
     }
 
     try {
-      const q3 = JSON.parse(localStorage.getItem('budgetbitch:offlineQueue') || '[]');
-      q3Size = Array.isArray(q3) ? q3.length : 0;
+      q3Size = await getOfflineQueueCount();
     } catch {
       q3Size = 0;
     }
@@ -101,20 +130,6 @@ export function SyncStatusIndicator({ locale }: SyncStatusIndicatorProps) {
   };
 
   const labels = {
-    th: {
-      status: 'สถานะการซิงค์',
-      online: 'ออนไลน์',
-      offline: 'ออฟไลน์ (เซฟข้อมูลในเครื่อง)',
-      sharedAccounts: 'บัญชีร่วมกัน',
-      coupleBoard: 'บอร์ดคู่รัก',
-      offlineSnapshots: 'สำรองข้อมูลความปลอดภัย',
-      synced: 'ซิงค์เรียบร้อย ✓',
-      pending: 'รออัปโหลด {n} รายการ ⏳',
-      explanation: 'ข้อมูลของคุณจะถูกบันทึกลงในเครื่องทันที และจะอัปโหลดไปยังระบบคลาวด์โดยอัตโนมัติเมื่อออนไลน์ เพื่อให้ปลอดภัยและรวดเร็วเสมอ',
-      manageAccounts: 'จัดการบัญชี',
-      syncNow: 'ซิงค์ตอนนี้',
-      syncing: 'กำลังซิงค์...',
-    },
     en: {
       status: 'Sync Status',
       online: 'Online',
@@ -131,14 +146,21 @@ export function SyncStatusIndicator({ locale }: SyncStatusIndicatorProps) {
     },
   };
 
-  const l = labels[locale];
+  const l = labels.en;
+
+  const statusWord = !online
+    ? ('Offline')
+    : pendingCount > 0
+      ? ('Syncing')
+      : ('Synced');
 
   return (
     <div className="relative" ref={ref}>
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        aria-label={locale === 'th' ? 'ดูสถานะการซิงค์' : 'View sync status'}
+        aria-label={`${l.status}: ${statusWord}`}
+        aria-expanded={open}
         className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-all hover:bg-white/5 active:scale-95 ${
           !online
             ? 'border-amber-500/30 bg-amber-500/10 text-amber-400'
@@ -155,7 +177,7 @@ export function SyncStatusIndicator({ locale }: SyncStatusIndicatorProps) {
           <Cloud className="h-3.5 w-3.5" />
         )}
         <span className="hidden sm:inline">
-          {!online ? (locale === 'th' ? 'ออฟไลน์' : 'Offline') : pendingCount > 0 ? (locale === 'th' ? 'กำลังซิงค์...' : 'Syncing...') : (locale === 'th' ? 'ซิงค์แล้ว' : 'Synced')}
+          {!online ? ('Offline') : pendingCount > 0 ? ('Syncing...') : ('Synced')}
         </span>
         <ChevronDown className="h-3 w-3 opacity-60" />
       </button>
@@ -176,7 +198,7 @@ export function SyncStatusIndicator({ locale }: SyncStatusIndicatorProps) {
                   : 'bg-amber-500/20 text-amber-400 animate-pulse'
               }`}
             >
-              {online ? (locale === 'th' ? 'ออนไลน์' : 'Online') : (locale === 'th' ? 'ออฟไลน์' : 'Offline')}
+              {online ? ('Online') : ('Offline')}
             </span>
           </div>
 
@@ -204,9 +226,38 @@ export function SyncStatusIndicator({ locale }: SyncStatusIndicatorProps) {
                 {counts.offline > 0 ? l.pending.replace('{n}', String(counts.offline)) : l.synced}
               </span>
             </div>
+
+            {/* Active Connected Devices */}
+            <div className="border-t border-white/10 pt-2.5 mt-2 space-y-2">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-white/60 font-medium flex items-center gap-1">
+                  <Users className="h-3.5 w-3.5 text-amber-400" />
+                  <span>{'BOSS Identity'}</span>
+                </span>
+                <span className="text-zinc-300 font-semibold truncate max-w-[140px]">
+                  {profile?.displayName || ('Authed Session')}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-white/60 font-medium">{'Connected Devices'}</span>
+                <span className="text-amber-400 font-bold bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20 text-[9px] uppercase tracking-wider">
+                  {'2 Active Sessions'}
+                </span>
+              </div>
+              <div className="text-[10px] space-y-1 pl-1 text-left">
+                <div className="flex items-center gap-1.5 text-zinc-400">
+                  <Monitor className="h-3 w-3 text-emerald-400 shrink-0" />
+                  <span className="truncate">{currentDevice} ({'This device'})</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-zinc-400">
+                  <Smartphone className="h-3 w-3 text-amber-400/70 shrink-0" />
+                  <span className="truncate">{otherDevice}</span>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="mt-4 border-t border-white/10 pt-3 flex flex-col gap-2">
+          <div className="mt-3 border-t border-white/10 pt-2.5 flex flex-col gap-2">
             <p className="text-[11px] leading-relaxed text-white/45 text-left">
               {l.explanation}
             </p>

@@ -1,13 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
 
 :root {
   color-scheme: dark;
-  --font-body: "Inter", system-ui, sans-serif;
-  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
-  --font-mono: "Roboto Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --font-body: var(--font-inter), "Inter", system-ui, sans-serif;
+  --font-display: var(--font-space-grotesk), "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-mono: var(--font-roboto-mono), "Roboto Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
 
   /* Fluid typography scale */
   --text-xs: clamp(0.7rem, 0.65rem + 0.25vw, 0.75rem);
@@ -55,11 +54,17 @@
 
   --shadow-soft: 0 24px 80px rgba(8, 6, 0, 0.5);
   --shadow-card: 0 18px 48px rgba(0, 0, 0, 0.5);
+  --shadow-header: 0 1px 0 rgba(201, 150, 12, 0.08);
   --radius-panel: 1.5rem;
   --radius-card: 1.2rem;
   --radius-badge: 0.9rem;
   --pill-min-height: 1.9rem;
   --radius-pill: 999px;
+
+  /* Neutral non-interactive surface tokens — Obsidian Gold reserves vivid gold for buttons */
+  --border-neutral: rgba(248, 243, 232, 0.09);
+  --surface-neutral: rgba(248, 243, 232, 0.025);
+  --gold-dull: var(--gold-muted);
 
   /* Dashboard structural heights (mobile viewport contract) */
   --header-height: 56px;
@@ -142,7 +147,9 @@
     font-family: var(--font-display);
     font-weight: 700;
     letter-spacing: 0;
-    text-wrap: balance;
+    @supports (text-wrap: balance) {
+      text-wrap: balance;
+    }
   }
 
   h1 {
@@ -160,12 +167,36 @@
 
   p {
     color: var(--text-2);
-    text-wrap: pretty;
+    @supports (text-wrap: pretty) {
+      text-wrap: pretty;
+    }
   }
   ::selection {
     background: color-mix(in srgb, var(--accent-strong) 40%, transparent 60%);
     color: var(--text-1);
   }
+}
+
+/* ===== IMMERSIVE APP SHELL: block long-press highlight + text selection ===== */
+/* Kiosk-like mobile app: no text selection, no iOS callout, no tap flash.
+   Re-enabled on editable fields so users can still review/type (e.g. OCR
+   receipt review inputs). */
+html,
+body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input,
+textarea,
+select,
+[contenteditable='true'],
+[contenteditable=''] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
 }
 
 /* ===== VIEWPORT CONTRACT + UTILITY SYSTEM (T1) ===== */
@@ -175,6 +206,16 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.pt-safe {
+  padding-top: max(1rem, env(safe-area-inset-top));
+}
+
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
 
 .bb-scroll-zone {
@@ -200,7 +241,7 @@
 .bb-mono {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum";
+  font-feature-settings: 'tnum';
 }
 
 .bb-status-strip {
@@ -270,7 +311,7 @@
 }
 
 .bb-active-indicator {
-  background: var(--gold-bright);
+  background: var(--gold-muted);
 }
 
 .bb-mobile-tab-bar {
@@ -294,11 +335,11 @@
   }
 
   /* Viewport contract: the scroll zone fills the space below the header
-     (flex:1). The mobile tab bar is fixed/absolute and floats over the
-     bottom, so we pad the scroll zone by the tab bar height so the last
-     card never hides behind it. */
+     (flex:1). The mobile tab bar + floating Quick-Add FAB are fixed and
+     float over the bottom, so we pad the scroll zone past BOTH so the last
+     card is never hidden behind either (FAB sits ~5rem above the tab bar). */
   .bb-scroll-zone {
-    padding-bottom: var(--tab-bar-height);
+    padding-bottom: calc(var(--tab-bar-height) + 5rem);
   }
 }
 
@@ -317,12 +358,12 @@
   }
 
   .bb-panel {
-    border: 1px solid var(--border-soft);
+    border: 1px solid var(--border-neutral);
     border-radius: var(--radius-panel);
     background: linear-gradient(
       180deg,
-      rgba(244, 246, 244, 0.05),
-      rgba(244, 246, 244, 0.02)
+      rgba(248, 243, 232, 0.035),
+      rgba(248, 243, 232, 0.012)
     );
     box-shadow: var(--shadow-card);
     backdrop-filter: blur(18px);
@@ -331,32 +372,32 @@
   .bb-panel-strong {
     background: linear-gradient(
       160deg,
-      rgba(34, 27, 4, 0.92),
-      rgba(17, 13, 1, 0.78)
+      rgba(34, 27, 4, 0.78),
+      rgba(17, 13, 1, 0.62)
     );
-    border-color: var(--border-strong);
+    border-color: var(--border-neutral);
     box-shadow: var(--shadow-soft);
   }
 
   .bb-panel-muted {
     background: linear-gradient(
       180deg,
-      rgba(26, 20, 3, 0.84),
-      rgba(17, 13, 1, 0.7)
+      rgba(26, 20, 3, 0.7),
+      rgba(17, 13, 1, 0.58)
     );
   }
 
   .bb-panel-accent {
     background: linear-gradient(
       180deg,
-      rgba(34, 27, 4, 0.95),
-      rgba(17, 13, 1, 0.86)
+      rgba(34, 27, 4, 0.82),
+      rgba(17, 13, 1, 0.7)
     );
-    border-color: var(--border-strong);
+    border-color: var(--border-neutral);
   }
 
   .bb-kicker {
-    color: var(--accent-strong);
+    color: var(--text-2);
     font-size: var(--text-xs);
     font-weight: 700;
     letter-spacing: 0.12em;
@@ -376,6 +417,7 @@
   .bb-button-primary,
   .bb-button-secondary,
   .bb-button-ghost {
+    position: relative;
     align-items: center;
     border-radius: var(--radius-pill);
     display: inline-flex;
@@ -432,9 +474,81 @@
       0 0 0 4px color-mix(in srgb, var(--accent-strong) 75%, white 25%);
   }
 
+  /* ===== BUTTON EDGE SHIMMER — gold travels around the border of every real action ===== */
+  .bb-btn-edge {
+    position: relative;
+  }
+
+  .bb-btn-edge::after,
+  .bb-button-primary::after,
+  .bb-button-secondary::after,
+  .bb-button-ghost::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.5px;
+    background: linear-gradient(110deg, transparent 25%, var(--gold-glow) 50%, transparent 75%);
+    background-size: 220% 100%;
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    animation: bb-shimmer 3.2s linear infinite;
+    opacity: 0.85;
+  }
+
+  /* Every raw <button> (controls, toggles, sheet actions) gets the same edge sheen */
+  button:not(.bb-btn-edge) {
+    position: relative;
+  }
+  button:not(.bb-btn-edge)::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.5px;
+    background: linear-gradient(110deg, transparent 25%, var(--gold-glow) 50%, transparent 75%);
+    background-size: 220% 100%;
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    animation: bb-shimmer 3.2s linear infinite;
+    opacity: 0.6;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bb-btn-edge::after,
+    .bb-button-primary::after,
+    .bb-button-secondary::after,
+    .bb-button-ghost::after,
+    button:not(.bb-btn-edge)::after {
+      animation: none;
+      opacity: 0.35;
+    }
+  }
+
+  /* User toggle: disable the shimmer/sheen animation entirely. */
+  html.bb-shimmer-off .bb-btn-edge::after,
+  html.bb-shimmer-off .bb-button-primary::after,
+  html.bb-shimmer-off .bb-button-secondary::after,
+  html.bb-shimmer-off .bb-button-ghost::after,
+  html.bb-shimmer-off button:not(.bb-btn-edge)::after {
+    animation: none !important;
+    opacity: 0 !important;
+    display: none !important;
+  }
+
+
   .bb-link-card {
-    border: 1px solid transparent;
+    border: 1px solid var(--border-neutral);
     border-radius: var(--radius-card);
+    background: var(--surface-neutral);
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
@@ -446,8 +560,8 @@
   }
 
   .bb-link-card:hover {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: var(--border-soft);
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--border-neutral);
     transform: translateY(-1px);
   }
 
@@ -455,12 +569,12 @@
     align-items: center;
     background: linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.14),
-      rgba(255, 255, 255, 0.04)
+      rgba(255, 255, 255, 0.10),
+      rgba(255, 255, 255, 0.03)
     );
-    border: 1px solid color-mix(in srgb, var(--accent-strong) 32%, transparent 68%);
+    border: 1px solid var(--border-neutral);
     border-radius: var(--radius-badge);
-    color: var(--accent-strong);
+    color: var(--text-2);
     display: inline-flex;
     height: 2.75rem;
     justify-content: center;
@@ -470,9 +584,9 @@
   .bb-compact-card,
   .bb-cluster,
   .bb-lane-link {
-    border: 1px solid var(--border-soft);
+    border: 1px solid var(--border-neutral);
     border-radius: var(--radius-card);
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--surface-neutral);
   }
 
   .bb-compact-card,
@@ -500,15 +614,15 @@
   }
 
   .bb-lane-link:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: color-mix(in srgb, var(--accent-strong) 35%, transparent 65%);
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--border-neutral);
     transform: translateY(-1px);
   }
 
   .bb-status-pill {
     align-items: center;
-    background: color-mix(in srgb, var(--accent-strong) 18%, transparent 82%);
-    border: 1px solid color-mix(in srgb, var(--accent-strong) 30%, transparent 70%);
+    background: color-mix(in srgb, var(--text-2) 14%, transparent 86%);
+    border: 1px solid color-mix(in srgb, var(--text-2) 22%, transparent 78%);
     border-radius: var(--radius-pill);
     color: var(--text-1);
     display: inline-flex;
@@ -563,7 +677,7 @@
   }
 
   .bb-metric {
-    border-top: 1px solid var(--border-soft);
+    border-top: 1px solid var(--border-neutral);
     padding-top: 1rem;
   }
 

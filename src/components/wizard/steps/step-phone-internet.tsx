@@ -3,32 +3,28 @@
 
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
+import { useCurrency } from '@/hooks/use-currency';
 
 interface StepPhoneInternetProps {
-  locale: 'th' | 'en';
+  locale: string;
   value: number;
   onChange: (key: 'phoneInternet', value: number) => void;
   error?: string | null;
   disabled?: boolean;
 }
 
-export function StepPhoneInternet({ locale, value, onChange, error, disabled }: StepPhoneInternetProps) {
+export function StepPhoneInternet({ value, onChange, error, disabled }: StepPhoneInternetProps) {
+  const fmt = useCurrency();
   const labels = {
-    th: {
-      title: 'โทรศัพท์ / อินเตอร์เน็ต',
-      subtitle: 'มือถือ เน็ตบ้าน เน็ตโทรศัพท์',
-      placeholder: 'เช่น 800',
-      helper: 'ค่าโทรศัพท์และอินเตอร์เน็ตต่อเดือน (บาท)',
-    },
     en: {
       title: 'Phone / Internet',
       subtitle: 'Mobile plan, home internet, data',
       placeholder: 'e.g. 800',
-      helper: 'Monthly phone and internet bill (THB)',
+      helper: 'Monthly phone and internet bill',
     },
   };
 
-  const l = labels[locale];
+  const l = labels.en;
 
   return (
     <div className="space-y-6">
@@ -61,11 +57,11 @@ export function StepPhoneInternet({ locale, value, onChange, error, disabled }: 
           onValueChange={(v) => onChange('phoneInternet', v)}
           disabled={disabled}
           showValue
-          valueFormatter={(v) => `฿${v.toLocaleString()}`}
+          valueFormatter={(v) => fmt(v)}
         />
 
         <p className="text-xs text-white/50 text-center">
-          {locale === 'th' ? 'รวมโทรศัพท์มือถือ + เน็ตบ้าน' : 'Mobile plan + home internet combined'}
+          {'Mobile plan + home internet combined'}
         </p>
       </div>
 
@@ -87,7 +83,7 @@ export function StepPhoneInternet({ locale, value, onChange, error, disabled }: 
                 : 'bg-white/5 text-white/70 hover:bg-white/10'
             }`}
           >
-            ฿{value.toLocaleString()}<br/>{label}
+            {fmt(value)}<br/>{label}
           </button>
         ))}
       </div>

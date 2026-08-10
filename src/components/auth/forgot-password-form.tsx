@@ -1,34 +1,23 @@
 "use client";
 
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useLocale } from "next-intl";
 import type { FormEvent } from "react";
 import { useState } from "react";
-import { shortLocale } from "@/lib/legal/versions";
 
 const COPY = {
   en: {
     title: "Reset your password",
     description:
-      "Enter the email for your BudgetBITCH account and we'll send a reset code.",
+      "Enter the email for your Budget Boss account and we'll send a reset code.",
     emailLabel: "Email address",
     submit: "Send reset code",
     sent: "If that email exists, a reset code is on its way. Check your inbox (and spam).",
     backToSignIn: "Back to sign in",
     generic: "Could not send the reset email. Please try again.",
   },
-  th: {
-    title: "รีเซ็ตรหัสผ่าน",
-    description: "ป้อนอีเมลของบัญชี BudgetBITCH ของคุณ เราจะส่งรหัสรีเซ็ตให้",
-    emailLabel: "ที่อยู่อีเมล",
-    submit: "ส่งรหัสรีเซ็ต",
-    sent: "หากอีเมลนี้มีในระบบ รหัสรีเซ็ตจะถูกส่งไปแล้ว ตรวจสอบกล่องจดหมาย (และสแปม)",
-    backToSignIn: "กลับไปหน้าเข้าสู่ระบบ",
-    generic: "ไม่สามารถส่งอีเมลรีเซ็ตได้ โปรดลองอีกครั้ง",
-  },
   zh: {
     title: "重置密码",
-    description: "输入你的 BudgetBITCH 账户邮箱，我们会发送重置验证码。",
+    description: "输入你的 Budget Boss 账户邮箱，我们会发送重置验证码。",
     emailLabel: "电子邮箱",
     submit: "发送验证码",
     sent: "如果该邮箱存在，重置验证码已发出。请查收收件箱（及垃圾邮件）。",
@@ -43,9 +32,7 @@ type ForgotPasswordFormProps = {
 
 export function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) {
   const { signIn } = useAuthActions();
-  const localeRaw = useLocale();
-  const locale = shortLocale(localeRaw) as keyof typeof COPY;
-  const copy = COPY[locale];
+  const copy = COPY.en;
 
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,7 +76,7 @@ export function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) {
             WebkitTextFillColor: "transparent",
           }}
         >
-          BudgetBITCH
+          Budget Boss
         </span>
 
         <h1 className="mt-6 text-2xl font-bold text-white">{copy.title}</h1>

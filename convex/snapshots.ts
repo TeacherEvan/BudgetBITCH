@@ -1,7 +1,8 @@
 // convex/snapshots.ts
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { Id } from "./_generated/dataModel";
 
 /**
  * Upserts a daily snapshot of the user's budget data.
@@ -9,6 +10,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
  */
 export const upsertDailySnapshot = mutation({
   args: {
+    accountId: v.optional(v.string()),
     wizardProfile: v.any(), // Full WizardProfile object
     totals: v.object({
       income: v.number(),
@@ -26,11 +28,13 @@ export const upsertDailySnapshot = mutation({
         tenYears: v.number(),
       }),
     })),
+    fullBackupData: v.optional(v.any()),
+    storeCounts: v.optional(v.record(v.string(), v.number())),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error("Authentication required");
+      throw new ConvexError("Authentication required");
     }
 
     const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
@@ -40,14 +44,17 @@ export const upsertDailySnapshot = mutation({
     const existing = await ctx.db
       .query("dailySnapshots")
       .withIndex("by_user_and_date", (q) => q.eq("userId", userId).eq("date", today))
-      .unique();
+      .first();
 
     if (existing) {
       // Update existing snapshot
       await ctx.db.patch(existing._id, {
+        accountId: args.accountId,
         wizardProfile: args.wizardProfile,
         totals: args.totals,
         criticalExpenseCommitment: args.criticalExpenseCommitment,
+        fullBackupData: args.fullBackupData,
+        storeCounts: args.storeCounts,
         createdAt,
       });
       return { success: true, updated: true, date: today };
@@ -55,10 +62,13 @@ export const upsertDailySnapshot = mutation({
       // Insert new snapshot
       await ctx.db.insert("dailySnapshots", {
         userId,
+        accountId: args.accountId,
         date: today,
         wizardProfile: args.wizardProfile,
         totals: args.totals,
         criticalExpenseCommitment: args.criticalExpenseCommitment,
+        fullBackupData: args.fullBackupData,
+        storeCounts: args.storeCounts,
         createdAt,
       });
       return { success: true, created: true, date: today };
@@ -72,12 +82,107 @@ export const upsertDailySnapshot = mutation({
 export const getLatestSnapshot = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return null;
+    try {
+      const userId = await getAuthUserId(ctx);
+      if (!userId) return null;
+      return await ctx.db
+        .query("dailySnapshots")
+        .withIndex("by_user_and_date", (q) => q.eq("userId", userId))
+        .order("desc")
+        .first();
+    } catch (error) {
+      console.error("Error fetching latest snapshot:", error);
+      return null;
+    }
+  },
+});
+
+/**
+ * Lists the last 7 snapshots for the user with metadata.
+ */
+export const listCloudSnapshots = query({
+  args: {},
+  handler: async (ctx) => {
+    let userId: Id<"users"> | null;
+    try {
+      userId = await getAuthUserId(ctx);
+    } catch (e) {
+      throw new ConvexError(
+        `Auth failed in listCloudSnapshots: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+    if (!userId) return [];
     return await ctx.db
       .query("dailySnapshots")
       .withIndex("by_user_and_date", (q) => q.eq("userId", userId))
       .order("desc")
-      .first();
+      .take(7);
+  },
+});
+
+/**
+ * Retrieves a specific snapshot by ID.
+ */
+export const getSnapshotById = query({
+  args: { snapshotId: v.id("dailySnapshots") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const snapshot = await ctx.db.get(args.snapshotId);
+    if (!snapshot || snapshot.userId !== userId) {
+      return null;
+    }
+    return snapshot;
+  },
+});
+
+/**
+ * Permanently deletes ALL daily snapshots, receipts, and merchant aliases for the user from Convex cloud storage.
+ * Called when the user executes a "Reset all data" wipe.
+ */
+export const deleteAllUserSnapshots = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      return { success: false, deletedSnapshots: 0, deletedReceipts: 0 };
+    }
+
+    // 1. Delete all daily snapshots
+    const snapshots = await ctx.db
+      .query("dailySnapshots")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    for (const snap of snapshots) {
+      await ctx.db.delete(snap._id);
+    }
+
+    // 2. Delete all receipts
+    const receipts = await ctx.db
+      .query("receipts")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    for (const rec of receipts) {
+      await ctx.db.delete(rec._id);
+    }
+
+    // 3. Delete all merchant aliases
+    const aliases = await ctx.db
+      .query("merchantAliases")
+      .withIndex("by_user_and_normalised", (q) => q.eq("userId", userId))
+      .collect();
+
+    for (const alias of aliases) {
+      await ctx.db.delete(alias._id);
+    }
+
+    return {
+      success: true,
+      deletedSnapshots: snapshots.length,
+      deletedReceipts: receipts.length,
+      deletedAliases: aliases.length,
+    };
   },
 });

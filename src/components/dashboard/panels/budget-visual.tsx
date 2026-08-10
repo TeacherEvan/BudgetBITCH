@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { useCurrency } from '@/hooks/use-currency';
 import { format } from 'date-fns';
 import { useDisplayPrefs } from '@/hooks/use-display-prefs';
+import { useState, useEffect } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
   LineChart, Line,
@@ -13,23 +14,19 @@ import {
 } from 'recharts';
 
 const CATEGORIES = [
-  { value: 'housing', label: { th: 'ที่อยู่อาศัย', en: 'Housing' } },
-  { value: 'transport', label: { th: 'การเดินทาง', en: 'Transport' } },
-  { value: 'food', label: { th: 'อาหาร', en: 'Food' } },
-  { value: 'utilities', label: { th: 'ค่าสาธารณูปโภค', en: 'Utilities' } },
-  { value: 'phone_internet', label: { th: 'โทรศัพท์/อินเตอร์เน็ต', en: 'Phone/Internet' } },
-  { value: 'subscriptions', label: { th: 'สมัครสมาชิก', en: 'Subscriptions' } },
-  { value: 'entertainment', label: { th: 'บันเทิง', en: 'Entertainment' } },
-  { value: 'healthcare', label: { th: 'สุขภาพ', en: 'Healthcare' } },
-  { value: 'insurance', label: { th: 'ประกันภัย', en: 'Insurance' } },
-  { value: 'debt', label: { th: 'หนี้สิน', en: 'Debt' } },
-  { value: 'savings', label: { th: 'เงินออม', en: 'Savings' } },
-  { value: 'other', label: { th: 'อื่นๆ', en: 'Other' } },
+  { value: 'housing', label: { en: 'Housing' } },
+  { value: 'transport', label: { en: 'Transport' } },
+  { value: 'food', label: { en: 'Food' } },
+  { value: 'utilities', label: { en: 'Utilities' } },
+  { value: 'phone_internet', label: { en: 'Phone/Internet' } },
+  { value: 'subscriptions', label: { en: 'Subscriptions' } },
+  { value: 'entertainment', label: { en: 'Entertainment' } },
+  { value: 'healthcare', label: { en: 'Healthcare' } },
+  { value: 'insurance', label: { en: 'Insurance' } },
+  { value: 'debt', label: { en: 'Debt' } },
+  { value: 'savings', label: { en: 'Savings' } },
+  { value: 'other', label: { en: 'Other' } },
 ];
-
-interface BudgetVisualProps {
-  locale?: 'th' | 'en';
-}
 
 interface Expense {
   id: string;
@@ -44,7 +41,12 @@ interface Budget {
   alertAtPct: number;
 }
 
-export function BudgetVisual({ locale = 'en' }: BudgetVisualProps) {
+export function BudgetVisual() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const formatCurrency = useCurrency();
   const { graphType } = useDisplayPrefs();
 
@@ -71,7 +73,7 @@ export function BudgetVisual({ locale = 'en' }: BudgetVisualProps) {
     const spent = monthlyExpenses[cat.value] || 0;
     const budget = budgets.find((b: Budget) => b.category === cat.value)?.monthlyLimit || 0;
     return {
-      category: cat.label[locale === 'th' ? 'th' : 'en'],
+      category: cat.label['en'],
       spent,
       budget,
       pct: budget > 0 ? Math.min(100, (spent / budget) * 100) : 0,
@@ -111,9 +113,11 @@ export function BudgetVisual({ locale = 'en' }: BudgetVisualProps) {
           </div>
         </div>
 
-        {budgetData.length > 0 && (
+        {!mounted ? (
+          <div className="h-64 bg-white/5 animate-pulse rounded-2xl" />
+        ) : budgetData.length > 0 ? (
           <div className="h-64" style={{ minWidth: 0 }}>
-            <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
+            <ResponsiveContainer width="100%" height={256}>
               {(graphType === 'pie' || graphType === 'donut') ? (
                 <PieChart>
                   <Pie
@@ -159,7 +163,7 @@ export function BudgetVisual({ locale = 'en' }: BudgetVisualProps) {
               )}
             </ResponsiveContainer>
           </div>
-        )}
+        ) : null}
 
         <div className="space-y-2 mt-4">
           {budgetData.map((item: { category: string; spent: number; budget: number; pct: number }, index: number) => (

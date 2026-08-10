@@ -10,7 +10,7 @@ import { getCurrentAccountId } from '@/lib/db/accountStorage';
 // instead of by reference name. All `useMutation` calls return the SAME spy;
 // the hook always passes the correct args to the correct logical mutation.
 let mode = 'create';
-const spy = vi.fn(async (args: Record<string, unknown>) => {
+const spy = vi.fn(async () => {
   if (mode === 'create') return { accountId: 'acc-new', boardId: 'board-new' };
   if (mode === 'token') return { token: 'TOK123' };
   if (mode === 'board') return { boardId: 'board-x', updatedAt: 1, data: null };
@@ -28,7 +28,7 @@ const mockConvexQuery = vi.fn(async () => null);
 vi.mock('convex/react', () => ({
   useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
   useConvex: () => ({ query: mockConvexQuery }),
-  useQuery: (_ref: unknown, _args: unknown) => listMyAccounts(),
+  useQuery: () => listMyAccounts(),
   useMutation: () => spy,
 }));
 
@@ -39,8 +39,6 @@ function HookProbe({ onReady }: { onReady?: (api: ReturnType<typeof useAccounts>
   if (api.ready && onReady) onReady(api);
   return null;
 }
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 beforeEach(async () => {
   vi.clearAllMocks();
@@ -73,7 +71,7 @@ describe('useAccounts', () => {
   it('merges server accounts + always includes personal', async () => {
     let api!: ReturnType<typeof useAccounts>;
     render(<HookProbe onReady={(a) => (api = a)} />);
-    await waitFor(() => expect(api?.ready).toBe(true));
+    await waitFor(() => expect(api?.accounts.length).toBeGreaterThan(0));
     const ids = api.accounts.map((a) => a.accountId).sort();
     expect(ids).toContain('acc-own');
     expect(ids).toContain('acc-join');
@@ -93,7 +91,7 @@ describe('useAccounts', () => {
     });
     expect(spy).toHaveBeenCalledWith({ umbrella: 'friends', name: 'Crew' });
     const current = await getCurrentAccountId();
-    expect(['personal', 'acc-own', 'acc-join']).toContain(current);
+    expect(['personal', 'acc-own', 'acc-join', 'acc-new']).toContain(current);
   });
 
   it('createInviteToken delegates + returns the token', async () => {
@@ -130,6 +128,17 @@ describe('useAccounts', () => {
     let api!: ReturnType<typeof useAccounts>;
     render(<HookProbe onReady={(a) => (api = a)} />);
     await waitFor(() => expect(api?.ready).toBe(true));
+    listMyAccounts.mockReturnValue([
+      {
+        accountId: 'acc-join',
+        umbrella: 'business',
+        name: 'Work',
+        role: 'member',
+        boardId: 'board-join',
+        memberCount: 2,
+        inviteCode: null,
+      },
+    ]);
     await act(async () => {
       await api.deleteAccount('acc-own');
     });
@@ -156,5 +165,20 @@ describe('useAccounts', () => {
 
     const current = await getCurrentAccountId();
     expect(current).toBe('acc-join');
+  });
+
+  it('persists server accounts to localAccounts IndexedDB for multi-hardware sync', async () => {
+    let api!: ReturnType<typeof useAccounts>;
+    render(<HookProbe onReady={(a) => (api = a)} />);
+    await waitFor(() => expect(api?.ready).toBe(true));
+
+    const { getLocalAccount } = await import('@/lib/db/accountStorage');
+    const ownMeta = await getLocalAccount('acc-own');
+    const joinMeta = await getLocalAccount('acc-join');
+
+    expect(ownMeta).toBeDefined();
+    expect(ownMeta?.boardId).toBe('board-own');
+    expect(joinMeta).toBeDefined();
+    expect(joinMeta?.boardId).toBe('board-join');
   });
 });

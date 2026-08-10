@@ -18,6 +18,29 @@ vi.mock('next/navigation', () => ({
   useRouter: () => mockRouter,
 }));
 
+vi.mock('convex/react', () => {
+  return {
+    useMutation: () => vi.fn().mockResolvedValue({ success: true }),
+    useAction: () => vi.fn().mockResolvedValue({ success: true }),
+    useQuery: (queryRef: { name?: string } | null | undefined) => {
+      // Mock cloud snapshots list for diagnostic modal
+      if (queryRef && typeof queryRef === 'object' && queryRef.name === 'listCloudSnapshots') {
+        return [];
+      }
+      return null;
+    },
+    // useAccounts (pulled in via AccountSettingsCard) calls useConvex(); the
+    // mock must expose it or the suite-level shared module registry throws
+    // "No useConvex export is defined on the convex/react mock".
+    useConvex: () => ({ query: vi.fn().mockResolvedValue(null) }),
+    useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
+    ConvexReactClient: class {
+      mutation = vi.fn().mockResolvedValue({ success: true });
+      query = vi.fn().mockResolvedValue(null);
+    },
+  };
+});
+
 // Mock the hooks used in SettingsPage
 vi.mock('@convex-dev/auth/react', () => ({
   useConvexAuth: () => ({
@@ -32,15 +55,6 @@ vi.mock('@convex-dev/auth/react', () => ({
 vi.mock('@/hooks/use-local-db', () => ({
   useWizardProfile: () => ({
     clear: vi.fn(),
-  }),
-}));
-
-vi.mock('@/hooks/use-voice', () => ({
-  useVoice: () => ({
-    settings: { enabled: false, rate: 1, pitch: 1 },
-    updateSettings: vi.fn(),
-    toggleVoice: vi.fn(),
-    isSupported: true,
   }),
 }));
 
@@ -126,9 +140,10 @@ describe('SettingsPage', () => {
     expect(screen.getByRole('radio', { name: /gold/i })).toBeInTheDocument();
   });
 
-  it('renders the app-wide LocaleSwitcher (not a custom locale Select)', () => {
+  it('renders the Language section with a read-only notice (set once on first launch)', () => {
     renderWithProviders(<SettingsPage />);
-    expect(screen.getByRole('combobox')).toBeInTheDocument();
+    expect(screen.getByText('Language')).toBeInTheDocument();
+    expect(screen.getByText(/Set once on first launch/i)).toBeInTheDocument();
   });
 
   it('opens a confirm modal for reset instead of window.confirm', () => {
@@ -195,7 +210,7 @@ describe('SettingsPage', () => {
   it('navigates to /dashboard via router (no full reload) when re-running the wizard', () => {
     renderWithProviders(<SettingsPage />);
     fireEvent.click(screen.getByRole('button', { name: /re-run setup wizard/i }));
-    expect(mockRouter.push).toHaveBeenCalledWith('/dashboard');
+    expect(mockRouter.push).toHaveBeenCalledWith('/dashboard?redo=true');
     expect(window.location.pathname).not.toBe('/dashboard');
   });
 
@@ -210,7 +225,6 @@ describe('SettingsPage', () => {
       'settings-profile',
       'settings-display',
       'settings-news',
-      'settings-preferences',
       'settings-data',
       'settings-shared',
       'settings-privacy',
@@ -228,6 +242,6 @@ describe('SettingsPage', () => {
 
     expect(screen.getByText(/change password/i)).toBeInTheDocument();
     fireEvent.click(screen.getByText(/change password/i));
-    expect(mockRouter.push).toHaveBeenCalledWith('/reset');
+    expect(screen.getByText('Current Password')).toBeInTheDocument();
   });
 });

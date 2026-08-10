@@ -160,12 +160,12 @@ describe('use-local-db hooks', () => {
     const { getAllBudgets } = await import('@/lib/db/local-db');
     const { BOARD_CHANGED_EVENT } = await import('@/lib/types/budget');
     
-    // First call returns rent budget. Second call returns rent + food budget.
+    // First call returns housing budget. Second call returns housing + food budget.
     vi.mocked(getAllBudgets)
-      .mockResolvedValueOnce([{ category: 'rent', monthlyLimit: 1000 }])
+      .mockResolvedValueOnce([{ category: 'housing', monthlyLimit: 1000, alertAtPct: 80 }])
       .mockResolvedValueOnce([
-        { category: 'rent', monthlyLimit: 1000 },
-        { category: 'food', monthlyLimit: 500 }
+        { category: 'housing', monthlyLimit: 1000, alertAtPct: 80 },
+        { category: 'food', monthlyLimit: 500, alertAtPct: 80 }
       ]);
 
     const { result } = renderHook(() => useBudgets());

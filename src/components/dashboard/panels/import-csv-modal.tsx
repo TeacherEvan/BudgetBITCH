@@ -6,13 +6,16 @@ import { Upload, AlertTriangle, CheckCircle2, FileSpreadsheet } from 'lucide-rea
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { parseImport, type ParsedExpense } from '@/modules/budgeting/csv-import';
+import { notify } from '@/lib/ui/notice';
 
 interface ImportCsvModalProps {
   isOpen: boolean;
   onClose: () => void;
   /** Called with the parsed (valid) rows once the user confirms. */
-  onImport: (rows: ParsedExpense[]) => void;
-  locale?: 'th' | 'en';
+  /** Persists the rows. May be async — handleConfirm awaits it so a failed
+   *  import no longer closes the modal as if it succeeded. */
+  onImport: (rows: ParsedExpense[]) => void | Promise<void>;
+  locale?: string;
 }
 
 const COPY = {
@@ -32,26 +35,10 @@ const COPY = {
     sample: 'Sample: date,merchant,amount,category,note',
     close: 'Close',
   },
-  th: {
-    title: 'นำเข้ารายจ่าย (CSV)',
-    desc: 'อัปโหลดรายการจากธนาคาร ตรวจหาคอลัมน์อัตโนมัติ (วันที่, รายการ, จำนวนเงิน, หมวดหมู่, หมายเหตุ)',
-    choose: 'เลือกไฟล์ CSV',
-    orPaste: 'หรือวางข้อความ CSV',
-    parse: 'ดูตัวอย่างและนำเข้า',
-    previewTitle: 'ตัวอย่าง',
-    valid: 'แถวที่ใช้ได้',
-    errors: 'แถวที่ข้าม',
-    confirm: 'นำเข้า',
-    cancel: 'ยกเลิก',
-    empty: 'ยังไม่มีไฟล์',
-    errorHeader: 'บางแถวถูกข้าม:',
-    sample: 'ตัวอย่าง: date,merchant,amount,category,note',
-    close: 'ปิด',
-  },
 };
 
-export function ImportCsvModal({ isOpen, onClose, onImport, locale = 'en' }: ImportCsvModalProps) {
-  const t = COPY[locale];
+export function ImportCsvModal({ isOpen, onClose, onImport = () => {} }: ImportCsvModalProps) {
+  const t = COPY.en;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState('');
   const [result, setResult] = useState<ReturnType<typeof parseImport> | null>(null);
@@ -69,20 +56,34 @@ export function ImportCsvModal({ isOpen, onClose, onImport, locale = 'en' }: Imp
 
   const handleFile = async (file: File | undefined) => {
     if (!file) return;
-    const content = await file.text();
-    setText(content);
-    setResult(parseImport(content));
+    try {
+      const content = await file.text();
+      setText(content);
+      setResult(parseImport(content));
+    } catch (err) {
+      console.error('Reading CSV file failed:', err);
+      notify('Could not read that file. Please try another.', 'error');
+    }
   };
 
   const handlePreview = () => {
     setResult(parseImport(text));
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!result || result.valid.length === 0) return;
-    onImport(result.valid);
-    reset();
-    onClose();
+    // onImport persists to IndexedDB and can reject. Previously it was called
+    // without await, so a failed import still closed the modal and looked
+    // like a success.
+    try {
+      await onImport(result.valid);
+      notify(`Imported ${result.valid.length} row(s).`, 'success');
+      reset();
+      onClose();
+    } catch (err) {
+      console.error('CSV import failed:', err);
+      notify('Import failed. Nothing was saved.', 'error');
+    }
   };
 
   return (
@@ -148,7 +149,7 @@ export function ImportCsvModal({ isOpen, onClose, onImport, locale = 'en' }: Imp
                 <ul className="space-y-0.5">
                   {result.errors.slice(0, 10).map((e, i) => (
                     <li key={i}>
-                      {locale === 'th' ? 'บรรทัด' : 'Line'} {e.line}: {e.reason}
+                      {'Line'} {e.line}: {e.reason}
                     </li>
                   ))}
                 </ul>
@@ -159,7 +160,7 @@ export function ImportCsvModal({ isOpen, onClose, onImport, locale = 'en' }: Imp
               <Button
                 variant="primary"
                 size="sm"
-                onClick={handleConfirm}
+                onClick={() => void handleConfirm()}
                 className="w-full"
                 data-testid="csv-confirm-btn"
               >

@@ -1,13 +1,14 @@
+// src/components/welcome/welcome-window.test.tsx
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => {
     const translations: Record<string, string> = {
-      brand: "BudgetBITCH",
-      heading: "Open your BudgetBITCH board",
+      brand: "Budget Boss",
+      heading: "Open your Budget Boss board",
       description:
-        "Sign in to unlock your root flow. After that, BudgetBITCH can send you into the one-time startup questionnaire or straight to the landing board based on your saved startup progress.",
+        "Sign in to unlock your root flow. After that, Budget Boss can send you into the one-time startup questionnaire or straight to the landing board based on your saved startup progress.",
       openSignIn: "Open sign in",
       openSignUp: "Open sign-up",
       privacyPromise: "Private by default. Setup only if needed.",
@@ -17,7 +18,7 @@ vi.mock("next-intl", () => ({
       "quickReasons.keepItShort.title": "Keep the first step short",
       "quickReasons.keepItShort.description": "The startup questionnaire only appears after sign-in and only when your first-run progress is still incomplete.",
       "quickReasons.moveWithoutSprawl.title": "Move without the sprawl",
-      "quickReasons.moveWithoutSprawl.description": "BudgetBITCH keeps the entry path dense, readable, and ready for quick scanning on smaller screens.",
+      "quickReasons.moveWithoutSprawl.description": "Budget Boss keeps the entry path dense, readable, and ready for quick scanning on smaller screens.",
       rootFlow: "Root flow",
       authFirstThenSetup: "Auth first, then setup",
       rootFlowDescription:
@@ -41,10 +42,15 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: () => undefined }),
 }));
 
+// Mock ProTipsCard component to isolate WelcomeWindow tests
+vi.mock("@/components/pro-tips/pro-tips-card", () => ({
+  ProTipsCard: () => <div data-testid="pro-tips-card" />
+}));
+
 import { WelcomeWindow } from "./welcome-window";
 
 describe("WelcomeWindow", () => {
-  it("renders the welcome heading with explicit auth links", () => {
+  it("renders the welcome heading with explicit auth links, 3D letters, and slogan", () => {
     render(
       <WelcomeWindow
         signInHref="/sign-in?redirectTo=%2F"
@@ -52,9 +58,22 @@ describe("WelcomeWindow", () => {
       />,
     );
 
-    expect(
-      screen.getByRole("heading", { name: /open your budgetbitch board/i }),
-    ).toBeInTheDocument();
+    // Verify 3D letters render
+    expect(screen.getAllByText('B')).toBeDefined();
+    expect(screen.getAllByText('O')).toBeDefined();
+    expect(screen.getAllByText('S')).toBeDefined();
+
+    // Verify slogan is present
+    expect(screen.getByText(/["“]Shut up and do it!!!["”]/i)).toBeInTheDocument();
+
+    // Premium-cinematic: no floating money emoji particles
+    expect(screen.queryByText("🪙")).toBeNull();
+    expect(screen.queryByText("💵")).toBeNull();
+
+    // Premium-cinematic: single breathing glow + one-shot light sweep present
+    expect(screen.getByTestId("welcome-breathing-glow")).toBeInTheDocument();
+    expect(screen.getByTestId("welcome-light-sweep")).toBeInTheDocument();
+
     expect(screen.getByRole("link", { name: /open sign in/i })).toHaveAttribute(
       "href",
       "/sign-in?redirectTo=%2F",
@@ -64,7 +83,7 @@ describe("WelcomeWindow", () => {
       "/sign-up?redirectTo=%2F",
     );
     expect(screen.getByText(/private by default\. setup only if needed\./i)).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: /language/i })).toBeInTheDocument();
+    expect(screen.getByTestId("pro-tips-card")).toBeInTheDocument();
   });
 
   it("renders the welcome reasons as a compact list for fast scanning", () => {
@@ -79,6 +98,5 @@ describe("WelcomeWindow", () => {
 
     expect(reasonsList).toBeInTheDocument();
     expect(screen.getAllByRole("listitem")).toHaveLength(6);
-    expect(screen.queryByRole("heading", { name: /sign in first/i, level: 2 })).not.toBeInTheDocument();
   });
 });

@@ -41,8 +41,8 @@ export function calculateBudgetFromWizard(profile: WizardProfile): BudgetCalcula
   
   const totalFixedExpenses = rent + transport + phoneInternet + subscriptions + entertainment + healthcare;
   
-  // Savings target based on savings rate percentage
-  const savingsRatePct = Math.min(Math.max(answers.savingsRatePct || 20, 0), 50);
+  // Savings target based on savings rate percentage (0% default when omitted)
+  const savingsRatePct = answers.savingsRatePct !== undefined ? Math.min(Math.max(answers.savingsRatePct, 0), 50) : 0;
   const savingsTarget = Math.round(income * (savingsRatePct / 100));
   
   // Remaining after fixed expenses and savings
@@ -50,7 +50,7 @@ export function calculateBudgetFromWizard(profile: WizardProfile): BudgetCalcula
   const dailyDisposable = Math.max(0, Math.round(remainingDisposable / 30));
   
   // Budget categories with limits derived from wizard + risk tolerance
-  const riskMultiplier = getRiskMultiplier(answers.riskTolerance);
+  const riskMultiplier = getRiskMultiplier(answers.riskTolerance || 'medium');
   
   // Map wizard answers to budget categories
   const budgets: CalculatedBudget[] = [
@@ -132,6 +132,71 @@ export function calculateBudgetFromWizard(profile: WizardProfile): BudgetCalcula
       entertainment,
       healthcare,
     },
+  };
+}
+
+/**
+ * Reconcile the wizard plan against ACTUAL logged expenses for the current
+ * month. This is the statistically honest daily figure: it subtracts what the
+ * user really spent (from IndexedDB) from the planned disposable pool, so the
+ * hero reflects reality instead of a stale snapshot.
+ *
+ * Without this, a returning user who logs 4,000 of expenses sees an identical
+ * hero and concludes "the app isn't tracking me" — the #1 source of confusion.
+ */
+export interface ReconciledBudget {
+  income: number;
+  totalFixedExpenses: number;
+  savingsTarget: number;
+  /** income - fixed - savings (monthly plan) */
+  planDisposable: number;
+  /** sum of actual expenses dated in the current month */
+  spentThisMonth: number;
+  /** planDisposable - spentThisMonth (can be negative when over budget) */
+  remainingDisposable: number;
+  daysLeftInMonth: number;
+  /** max(0, remainingDisposable / daysLeftInMonth) */
+  dailyRemaining: number;
+  /** clamp(spentThisMonth / planDisposable, 0, 100); 0 when plan <= 0 */
+  spentPct: number;
+  isOverBudget: boolean;
+}
+
+export function reconcileBudgetWithExpenses(
+  profile: WizardProfile,
+  expenses: { date: string; amount: number }[],
+  now: Date = new Date()
+): ReconciledBudget {
+  const calc = calculateBudgetFromWizard(profile);
+  const planDisposable = calc.remainingDisposable;
+
+  const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const spentThisMonth = expenses
+    .filter((e) => typeof e.date === 'string' && e.date.startsWith(ym))
+    .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+
+  const remainingDisposable = planDisposable - spentThisMonth;
+
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const daysLeftInMonth = Math.max(1, daysInMonth - now.getDate());
+  const dailyRemaining = Math.max(0, remainingDisposable / daysLeftInMonth);
+
+  const spentPct =
+    planDisposable > 0
+      ? Math.max(0, Math.min(100, Math.round((spentThisMonth / planDisposable) * 100)))
+      : 0;
+
+  return {
+    income: calc.income,
+    totalFixedExpenses: calc.totalFixedExpenses,
+    savingsTarget: calc.savingsTarget,
+    planDisposable,
+    spentThisMonth,
+    remainingDisposable,
+    daysLeftInMonth,
+    dailyRemaining,
+    spentPct,
+    isOverBudget: remainingDisposable < 0,
   };
 }
 

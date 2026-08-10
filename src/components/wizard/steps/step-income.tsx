@@ -3,32 +3,28 @@
 
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
+import { useCurrency } from '@/hooks/use-currency';
 
 interface StepIncomeProps {
-  locale: 'th' | 'en';
+  locale: string;
   value: number;
   onChange: (key: 'income', value: number) => void;
   error?: string | null;
   disabled?: boolean;
 }
 
-export function StepIncome({ locale, value, onChange, error, disabled }: StepIncomeProps) {
+export function StepIncome({ value, onChange, error, disabled }: StepIncomeProps) {
+  const fmt = useCurrency();
   const labels = {
-    th: {
-      title: 'รายได้ต่อเดือน',
-      subtitle: 'เงินเดือน รายได้เสริม เงินทุน รวมทั้งหมด',
-      placeholder: 'เช่น 35000',
-      helper: 'กรอกรายได้รวมต่อเดือน (บาท)',
-    },
     en: {
       title: 'Monthly Income',
       subtitle: 'Salary, side income, investments - all combined',
       placeholder: 'e.g. 35000',
-      helper: 'Enter total monthly income (THB)',
+      helper: 'Enter total monthly income',
     },
   };
 
-  const l = labels[locale];
+  const l = labels['en'];
 
   return (
     <div className="space-y-6">
@@ -61,13 +57,11 @@ export function StepIncome({ locale, value, onChange, error, disabled }: StepInc
           onValueChange={(v) => onChange('income', v)}
           disabled={disabled}
           showValue
-          valueFormatter={(v) => `฿${v.toLocaleString()}`}
+          valueFormatter={(v) => fmt(v)}
         />
 
         <p className="text-xs text-white/50 text-center">
-          {locale === 'th' 
-            ? 'เลื่อนเพื่อปรับ หรือพิมพ์ค่าที่แน่นอน' 
-            : 'Slide to adjust or type exact amount'}
+          {'Slide to adjust or type exact amount'}
         </p>
       </div>
 
@@ -88,7 +82,7 @@ export function StepIncome({ locale, value, onChange, error, disabled }: StepInc
                 : 'bg-white/5 text-white/70 hover:bg-white/10'
             }`}
           >
-            ฿{value.toLocaleString()}<br/>{label}
+            {fmt(value)}<br/>{label}
           </button>
         ))}
       </div>

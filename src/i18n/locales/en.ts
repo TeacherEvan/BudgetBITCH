@@ -1,0 +1,639 @@
+// src/i18n/locales/en.ts — English catalog (source of truth for all locales)
+export const en = {
+  appNav: {
+    mobileNavigation: "Mobile app navigation",
+    desktopNavigation: "App navigation",
+    openDashboard: "Go to dashboard",
+    routes: {
+      dashboard: "Dashboard",
+      startSmart: "Start Smart",
+      calculator: "Calculator",
+      notes: "Notes",
+      learn: "Learn",
+      integrations: "Integrations",
+      jobs: "Jobs",
+    },
+  },
+  accounts: {
+    navLabel: "Accounts",
+    title: "Accounts",
+    subtitle: "Run up to 5 independent budgets — family, business, school and more.",
+    createTitle: "Create an account",
+    umbrellaLabel: "Type",
+    nameLabel: "Account name",
+    namePlaceholder: "e.g. Our Household",
+    create: "Create account",
+    cancel: "Cancel",
+    maxReached: "You already have 5 accounts. Delete one to make room.",
+    umbrella: {
+      family: "Family",
+      couple: "Couple",
+      business: "Business",
+      school: "School",
+      friends: "Friends",
+      charity: "Charity",
+      shopping: "Shopping",
+    },
+    defaultName: {
+      family: "Our Household",
+      couple: "Our Couple",
+      business: "Business Books",
+      school: "School Fund",
+      friends: "Friends Circle",
+      charity: "Charity Drive",
+      shopping: "Shopping List",
+    },
+    invite: "Invite",
+    inviteByCode: "Invite by share code",
+    shareCodePlaceholder: "Paste a friend's share code",
+    inviteLink: "Invite link",
+    inviteQR: "QR code",
+    copyLink: "Copy link",
+    copyCode: "Copy code",
+    rotateCode: "Rotate invite code",
+    members: "Members",
+    leave: "Leave account",
+    removeMember: "Remove",
+    delete: "Delete account",
+    acceptInvite: "Accept",
+    declineInvite: "Decline",
+    pendingInvites: "Pending invites",
+    switchTo: "Open",
+    role: {
+      owner: "Owner",
+      member: "Member",
+    },
+    joinTitle: "Join an account",
+    joinPrompt: "Scan a QR code or open the invite link to join.",
+    joined: "You joined",
+    invalidCode: "That invite code is not valid.",
+  },
+  localeSwitcher: {
+    label: "Language",
+    options: {
+      en: "English",
+      th: "ไทย",
+    },
+  },
+  welcome: {
+    brand: "Budget-BOSS",
+    heading: "Open your Budget-BOSS board",
+    description:
+      "Sign in to unlock your root flow. After that, Budget-BOSS can send you into the one-time startup questionnaire or straight to the landing board based on your saved startup progress.",
+    openSignIn: "Open sign in",
+    openSignUp: "Open sign-up",
+    privacyPromise: "Private by default. Setup only if needed.",
+    quickReasonsAria: "Welcome quick reasons",
+    quickReasons: {
+      signInFirst: {
+        title: "Sign in first",
+        description:
+          "Open your account before the app decides whether you need setup or your landing board.",
+      },
+      keepItShort: {
+        title: "Keep the first step short",
+        description:
+          "The startup questionnaire only appears after sign-in and only when your first-run progress is still incomplete.",
+      },
+      moveWithoutSprawl: {
+        title: "Move without the sprawl",
+        description:
+          "Budget-BOSS keeps the entry path dense, readable, and ready for quick scanning on smaller screens.",
+      },
+    },
+    rootFlow: "Root flow",
+    authFirstThenSetup: "Auth first, then setup",
+    rootFlowDescription:
+      "Signed-out visitors stay on this welcome window. Signed-in visitors move into the startup questionnaire only when first-run setup still needs to be completed.",
+    whatChangesNext: "What changes next",
+    nextSteps: {
+      signIn: "Sign in when you already have an account.",
+      signUp: "Sign up when you need a fresh account before setup begins.",
+      finishWizard:
+        "Finish the startup questionnaire once, then return to the landing board on future visits.",
+    },
+  },
+  launchWizard: {
+    kicker: "Startup questionnaire",
+    title: "Ballpark expenses",
+    description:
+      "Add rough recurring costs first so Budget-BOSS can open with a practical money baseline instead of a blank board.",
+    topCategoriesTitle: "Common expense titles",
+    entryLabel: "Expense title",
+    entryPlaceholder: "Search or select a common expense",
+    customTitleLabel: "Custom expense title",
+    customTitlePlaceholder: "Use this when the list does not fit",
+    amountLabel: "Rough monthly amount",
+    addExpense: "Add expense",
+    finish: "Finish startup",
+    summaryTitle: "Ballpark entries",
+    emptySummary: "No expenses added yet.",
+    helperTitle: "Why this comes first",
+    helperDescription:
+      "This first popup stays lightweight: rough categories, rough amounts, then the normal app flow.",
+    currentCountLabel: "Saved categories",
+    errors: {
+      titleRequired: "Choose a common expense title or enter a custom one.",
+      amountRequired: "Enter a rough monthly amount greater than zero.",
+      atLeastOne: "Add at least one ballpark expense before finishing startup.",
+      saveFailed: "Unable to save startup settings in this browser.",
+    },
+    categories: {
+      rentMortgage: "Rent or mortgage",
+      groceries: "Groceries",
+      utilities: "Utilities",
+      transportFuel: "Transport or fuel",
+      phoneInternet: "Phone or internet",
+      insurance: "Insurance",
+      debtPayments: "Debt payments",
+      healthcare: "Healthcare",
+      childcareFamilySupport: "Childcare or family support",
+      funEntertainment: "Fun or entertainment",
+    },
+  },
+  authPanel: {
+    secureAccess: "Secure access",
+    useGoogleToStart: "Create your account",
+    useGoogleToContinue: "Use your account",
+    googleOnly: "Convex Auth creates and protects Budget Boss accounts.",
+    secureSignIn: "Use your email and password to open the same account on any device.",
+    gmailPrivacy: "No Google OAuth client or user-managed env file is required for login.",
+    minimalData:
+      "Budget Boss keeps only the minimal account, workspace, preference, and integration data it needs to run.",
+    whyThisStepExists: "Why this step exists",
+    localProfileFirst: "Local profile first",
+    localProfileDescription:
+      "Budget Boss verifies the Convex Auth account, then creates your local profile, personal workspace, and default workspace preference once so the app can load the right data shape on the server.",
+  },
+  signIn: {
+    eyebrow: "Sign in",
+    title: "Open your budget board",
+    description:
+      "Use your Budget Boss account, then let the app finish local setup for your workspace before the dashboard opens.",
+    needAccount: "Need an account?",
+    openSignUp: "Open sign-up",
+    continueWithGoogle: "Sign in",
+    submit: "Sign in",
+    emailLabel: "Email",
+    passwordLabel: "Password",
+    privacy:
+      "Users do not add env files. The app owner configures Convex once, and users sign in here.",
+    setupRequiredTitle: "Convex Auth is not configured",
+    setupRequiredDescription:
+      "Connect the Convex deployment before using this sign-in method.",
+  },
+  signUp: {
+    eyebrow: "Create account",
+    title: "Create your budget account",
+    description:
+      "Choose an email and password. Budget Boss will create your account in Convex and finish local workspace setup next.",
+    haveAccount: "Already have an account?",
+    openSignIn: "Open sign in",
+    submit: "Create account",
+    emailLabel: "Email",
+    passwordLabel: "Password",
+    privacy:
+      "Use at least 8 characters. Forgot your password? Use the link on the sign-in screen to reset it by email.",
+  },
+  authContinue: {
+    eyebrow: "Continue",
+    missingEmailTitle: "Add an email to finish setup",
+    missingEmailDescription:
+      "Budget Boss requires an email-backed Convex account before local setup can finish.",
+    missingEmailHelp:
+      "Create or sign in with an email and password account, then return here to finish setup.",
+    title: "Finish your local setup",
+    description:
+      "Budget Boss needs one local profile and one personal workspace before the dashboard can load server-side data for this account.",
+    whatHappensNext: "What happens next",
+    oneSafeBootstrap: "One safe bootstrap",
+    oneSafeBootstrapDescription:
+      "The continue action creates any missing records once, reuses them on later sign-ins, and then opens your dashboard with the resulting workspace selected.",
+    relinkConflict:
+      "This email is already linked to a different account. Sign out here, switch to the original sign-in method, or contact support before continuing.",
+    bootstrapIssueTitle: "Setup needs attention",
+    bootstrapIssueDescription:
+      "Budget Boss could not finish the secure Convex setup step for this session.",
+    bootstrapIssueHelp:
+      "Try again after the app owner checks Convex Auth and CONVEX_SYNC_SECRET settings.",
+    continueToDashboard: "Continue to dashboard",
+    rerunSafe: "This is safe to run again if your session already created the local records.",
+  },
+  securitySettings: {
+    eyebrow: "Security settings",
+    title: "Open your account security controls.",
+    description:
+      "Budget Boss uses Convex Auth email and password accounts. Use the \"Forgot password?\" link on sign-in to reset it by email. Email verification is a planned follow-up.",
+    googleAccountEyebrow: "Account credentials",
+    googleAccountTitle: "Use your Budget Boss account.",
+    googleAccountDescription:
+      "Your account is created in Convex Auth with the email and password you choose on sign-up.",
+    openGoogleSecurity: "Use a strong unique password with at least 8 characters.",
+    openGooglePermissions: "Forgot your password? Use the link on the sign-in screen to reset it by email. Email verification is a planned follow-up.",
+    sessionAccessEyebrow: "Session access",
+    sessionAccessTitle: "Switch accounts safely.",
+    sessionAccessDescription:
+      "Sign out here if you need to return to the sign-in screen and use a different account.",
+    privacyEyebrow: "Privacy",
+    privacyItems: {
+      signInOnly: "Convex Auth verifies sign-in and returns your account identity.",
+      minimalData:
+        "Budget Boss keeps only the local account, workspace, preference, and integration data it needs to run.",
+      noMarketingData: "No marketing data is recorded or sold.",
+      personalizationUserOnly:
+        "Personalization stays user-only and is not shared with brokers or third-party advertisers.",
+      gmailPrivacy: "No Google OAuth client or user-managed environment file is required for login.",
+    },
+  },
+  notesPage: {
+    eyebrow: "Tools",
+    title: "Notes",
+    description: "A quick place for reminders and rough budget thoughts.",
+  },
+  notesBoard: {
+    regionLabel: "Notes board",
+    inputLabel: "New note",
+    inputPlaceholder: "Type a note and press Enter or Add note…",
+    addNote: "Add note",
+    emptyState: "No notes yet. Add one above.",
+    deleteNote: "Delete {text}",
+  },
+  calculatorPage: {
+    eyebrow: "Tools",
+    title: "Calculator",
+    description: "Quick arithmetic for budget checks.",
+  },
+  calculator: {
+    regionLabel: "Calculator",
+    clearButton: "Clear",
+  },
+  learnPage: {
+    eyebrow: "Learn!",
+    title: "Comic-strip lessons for the money move that matters next.",
+    description: "Short lessons for the money move that matters next.",
+    storyCuesEyebrow: "Story cues",
+    storyCuesTitle: "Quick cues for the next move",
+    storyCuesDescription: "One clear cue and one action per lesson.",
+    blueprintPicksEyebrow: "Blueprint picks",
+    blueprintPicksTitle: "Start here",
+    blueprintPicksDescription:
+      "Highest-signal lessons matched to your current blueprint pressure.",
+    streakEyebrow: "Keep the streak",
+    streakTitle: "Next up",
+    streakDescription:
+      "Evergreen refreshers when you want one more useful concept without a long scroll.",
+  },
+  dashboardPage: {
+    eyebrow: "Dashboard",
+    title: "Interactive billboard",
+    description: "Keep your workspace, tools, and live signals in one board.",
+    workspaceLabel: "Workspace",
+    cityLabel: "City",
+    motionLabel: "Motion",
+    currentModeEyebrow: "Current mode",
+    checkInSubmitted: "Checked in",
+    checkInNeeded: "Check-in due",
+    demoWorkspace: "Demo",
+    liveMembership: "Live member",
+    windowProfileEyebrow: "Window profile",
+    layoutLabel: "Layout",
+    motionValueLabel: "Motion",
+    noWorkspaceSelected: "No workspace selected",
+    noWorkspaceRole: "none",
+    roles: {
+      owner: "Owner",
+      editor: "Editor",
+      approver: "Approver",
+      read_only: "Read only",
+    },
+    homeBaseKicker: "Board anchor",
+    homeBaseTitle: "Shared home base",
+    homeBaseDescription: "Keep one shared region ready for setup and jobs.",
+    homeBaseEmptyState: "No shared region saved yet.",
+    homeBaseActionLabel: "Open setup wizard",
+    themePresets: {
+      midnight: "Midnight",
+    },
+    layoutPresets: {
+      launcher_grid: "Launcher grid",
+    },
+    motionPresets: {
+      cinematic: "Cinematic",
+    },
+  },
+  broadcastBar: {
+    kicker: "Local area",
+    title: "Local area",
+    fallbackTicker: "Budget updates",
+  },
+  launcherGrid: {
+    kicker: "Tools",
+    title: "Popular budgeting tools",
+    description: "Open the next tool without the extra scroll.",
+  },
+  liveBriefing: {
+    kicker: "Briefing",
+    title: "Live briefing",
+    description: "Trusted topics, trimmed for quick scanning.",
+    sourceStatus: {
+      live: "Live",
+      fallback: "Fallback",
+    },
+    fieldCount: "{count} fields",
+    emptyState: "No briefing topics yet. Check back after the next refresh.",
+  },
+  dailyCheckIn: {
+    kicker: "Check-in lane",
+    title: "Log today's number",
+    description: "One number keeps {workspaceName} aligned.",
+    liveSubmissionUnavailable: "Live entry locked",
+    submitting: "Sending",
+    submittedToday: "Sent today",
+    readyToSubmit: "Ready now",
+    plannedSpendLabel: "Planned spend for today",
+    lockedDate: "Locked to {dateLabel} for {workspaceName}.",
+    disabledHint: "Sign in to send live check-ins.",
+    validationError: "Enter a non-negative planned spend before sending today's check-in.",
+    submitError: "Unable to send today's check-in right now.",
+    submitButton: "Send today's check-in",
+    submittingButton: "Sending check-in",
+    workspaceFallback: "this workspace",
+    cashStatus: {
+      positive: "Positive",
+      negative: "Negative",
+    },
+    severity: {
+      warning: "Warning",
+      critical: "Critical",
+    },
+    emptyHeadline: "No check-in yet for this workspace.",
+    noCheckInYet: "No check-in yet.",
+    submittedAt: "Sent {submittedAt}.",
+    plannedSpendMetric: "Planned spend",
+    openAlertsMetric: "Open alerts",
+    netCashAfterPlanMetric: "Net cash after plan",
+    emptyAlertsTitle: "No alerts yet.",
+    emptyAlertsDescription: "Send again when you need a refresh.",
+  },
+  liveAlerts: {
+    kicker: "Alert lane",
+    title: "Watch the pressure points",
+    description: "Projected alerts land here first.",
+    selectWorkspace: "Select a workspace to see alerts.",
+    standbyNoUrl: "Standby. Add the Convex URL to enable alerts.",
+    standbyNoBridge: "Standby. Realtime auth is not ready yet.",
+    loading: "Loading alerts...",
+    viewerSync: "Viewer sync in progress. Alerts appear after it finishes.",
+    workspaceSync: "Waiting on workspace access sync.",
+    empty: "No live alerts yet. They appear after the first projected check-in.",
+    checkInDate: "Check-in {date}",
+    severity: {
+      info: "Info",
+      warning: "Warning",
+      critical: "Critical",
+    },
+  },
+  integrationActions: {
+    openSetupWizard: "Open setup wizard",
+    openOfficialLogin: "Open official login",
+    openOfficialDocs: "Open official docs",
+  },
+  integrationsHub: {
+    eyebrow: "Connection Hub",
+    title: "Connect only the providers you can scan and trust fast.",
+    description:
+      "Each section keeps the official route, risk, and next action easy to scan.",
+    guardrails: {
+      officialRoutesFirst: {
+        label: "Official routes",
+        title: "Use the provider's official login, docs, or setup route first.",
+      },
+      noSilentSharing: {
+        label: "No silent sharing",
+        title: "Only providers you explicitly connect receive the minimum required data.",
+      },
+      revokePathStaysObvious: {
+        label: "Easy revoke path",
+        title: "You should always be able to find the disconnect or revoke path quickly.",
+      },
+    },
+    groupedScan: "Grouped scan",
+    providerCount: "{count} providers",
+    categories: {
+      ai: {
+        label: "AI copilots",
+        summary: "Model helpers and prompt-heavy workflow tools.",
+      },
+      banking: {
+        label: "Banking rails",
+        summary: "Account verification and official banking connections.",
+      },
+      investing: {
+        label: "Investing",
+        summary: "Brokerage and portfolio access with clear permissions.",
+      },
+      payroll: {
+        label: "Payroll",
+        summary: "Income and worker setup with clear checks.",
+      },
+      tax: {
+        label: "Tax and accounting",
+        summary: "Documents and ledger access with visible trust cues.",
+      },
+      finance_ops: {
+        label: "Finance operations",
+        summary: "Expense, card, and ops tooling kept simple on purpose.",
+      },
+    },
+  },
+  providerCard: {
+    categoryLabel: {
+      ai: "AI",
+      banking: "Banking",
+      investing: "Investing",
+      payroll: "Payroll",
+      tax: "Tax",
+      finance_ops: "Finance ops",
+    },
+    categorySummary: {
+      ai: "Assistant tools and prompt access.",
+      banking: "Official bank and account links.",
+      investing: "Portfolio and brokerage access.",
+      payroll: "Income and worker setup.",
+      tax: "Tax and ledger workflows.",
+      finance_ops: "Expense and money ops tools.",
+    },
+    risk: {
+      low: "Low risk",
+      medium: "Medium risk",
+      high: "High risk",
+    },
+    setupState: {
+      setupWizard: "Setup wizard",
+      guidanceOnly: "Guidance only",
+    },
+    quickActions: "Quick actions",
+  },
+  integrationProviderPages: {
+    claude: {
+      eyebrow: "Claude Setup",
+      title: "Connect Claude",
+      description: "Use the official Anthropic route first. Safety details stay below.",
+    },
+    openai: {
+      eyebrow: "OpenAI Setup",
+      title: "Connect OpenAI",
+      description: "Use the official OpenAI route first. Safety details stay below.",
+    },
+    copilot: {
+      eyebrow: "GitHub Copilot Setup",
+      title: "Connect GitHub Copilot",
+      description: "Review repository and prompt access first. Safety details stay below.",
+      systemAccessMessage:
+        "System reach: Review extension, repository, and prompt access before enabling GitHub Copilot.",
+      riskChecklistTitle: "Risk checklist",
+      riskChecklistItems: {
+        repositoryAccess: "Repository reach: Confirm which repositories and files the tool can inspect.",
+        officialFlow: "Official flow: Use only the official GitHub Copilot authentication flow.",
+        revokeAccess: "Revoke path: Revoke access immediately if the workspace no longer requires it.",
+      },
+    },
+    openclaw: {
+      eyebrow: "OpenClaw Setup",
+      title: "Connect OpenClaw",
+      description: "Review system reach and prompt-injection exposure first. Safety details stay below.",
+      systemAccessMessage:
+        "System reach: Verify local system access, data paths, model routing, and prompt-injection boundaries before enabling OpenClaw.",
+      riskChecklistTitle: "High-risk connection",
+      riskChecklistItems: {
+        localReach: "Local reach: Check which local files, tools, or shells OpenClaw can reach.",
+        promptRouting:
+          "Prompt safety: Confirm prompt routing, storage paths, and injection boundaries before enabling the integration.",
+        oneClickRevoke: "One-click revoke: Use one-click revoke if your trust model changes.",
+      },
+    },
+
+    perplexity: {
+      eyebrow: "Perplexity Setup",
+      title: "Connect Perplexity",
+      description: "Use the official Perplexity route first. Safety details stay below.",
+    },
+    mistral: {
+      eyebrow: "Mistral Setup",
+      title: "Connect Mistral",
+      description: "Use the official Mistral route first. Safety details stay below.",
+    },
+    wise: {
+      eyebrow: "Wise Setup",
+      title: "Connect Wise",
+      description: "Use the official Wise route first. Safety details stay below.",
+    },
+    revolut: {
+      eyebrow: "Revolut Setup",
+      title: "Connect Revolut",
+      description: "Use the official Revolut route first. Safety details stay below.",
+    },
+    paypal: {
+      eyebrow: "PayPal Setup",
+      title: "Connect PayPal",
+      description: "Use the official PayPal route first. Safety details stay below.",
+    },
+    deel: {
+      eyebrow: "Deel Setup",
+      title: "Connect Deel",
+      description: "Use the official Deel route first. Safety details stay below.",
+    },
+    xero: {
+      eyebrow: "Xero Setup",
+      title: "Connect Xero",
+      description: "Use the official Xero route first. Safety details stay below.",
+    },
+  },
+  integrationsShared: {
+    backToConnectionHub: "Back to connection hub",
+    tools: "Tools",
+    privacyShieldTitle: "Privacy Shield",
+    privacyShieldDescription: "Check what {providerLabel} can receive before you connect it.",
+    disclosureHeadings: {
+      minimumData: "Minimum data",
+      noSilentSharing: "No silent sharing",
+      revokeAnyTime: "Revoke any time",
+    },
+    disclosures: {
+      minimumData: "Only explicitly connected providers receive the minimum required data.",
+      noSilentSharing: "No silent sharing or automatic cross-provider routing.",
+      revokeAnyTime: "You can revoke and disconnect this provider at any time.",
+    },
+    officialLinksTitle: "Official links",
+    officialLogin: "Official login",
+    officialDocs: "Official docs",
+    privacyBadge: "No silent sharing",
+    systemAccessWarning: "System access warning",
+  },
+  wizard: {
+    title: "Setup Your Budget",
+    description: "Answer 10 quick questions to build your budget baseline",
+    income: {
+      title: "Monthly Income",
+      subtitle: "Salary, side income, investments - all combined",
+      placeholder: "e.g. 35000",
+      helper: "Enter total monthly income (THB)",
+    },
+    rent: {
+      title: "Rent / Housing Cost",
+      subtitle: "Condo, apartment, house rent or mortgage",
+      placeholder: "e.g. 12000",
+      helper: "Monthly rent or mortgage payment (THB)",
+    },
+    transport: {
+      title: "Transport Cost",
+      subtitle: "BTS/MRT, bus, motorbike, fuel, Grab/Bolt",
+      placeholder: "e.g. 3000",
+      helper: "Monthly transport total (THB)",
+    },
+    phoneInternet: {
+      title: "Phone / Internet",
+      subtitle: "Mobile plan, home internet, streaming bundles",
+      placeholder: "e.g. 800",
+      helper: "Monthly phone & internet cost (THB)",
+    },
+    subscriptions: {
+      title: "Subscriptions",
+      subtitle: "Netflix, Spotify, gym, app subscriptions",
+      placeholder: "e.g. 500",
+      helper: "Monthly subscription total (THB)",
+    },
+    entertainment: {
+      title: "Entertainment",
+      subtitle: "Movies, coffee, games, hobbies, dining out",
+      placeholder: "e.g. 3000",
+      helper: "Monthly entertainment budget (THB)",
+    },
+    healthcare: {
+      title: "Healthcare",
+      subtitle: "Meds, dentist, hospital, insurance copay",
+      placeholder: "e.g. 1000",
+      helper: "Monthly healthcare cost (THB)",
+    },
+    savingsRate: {
+      title: "Savings Rate",
+      subtitle: "What % of income do you want to save?",
+      placeholder: "e.g. 20",
+      helper: "Target savings percentage (0-50%)",
+    },
+    riskTolerance: {
+      title: "Risk Tolerance",
+      subtitle: "How much market fluctuation can you handle?",
+      low: "Low - protect principal",
+      medium: "Medium - balanced",
+      high: "High - growth focused",
+    },
+    locationConsent: {
+      title: "Location Access",
+      subtitle: "Allow location for local news and fuel prices",
+      prompt: "Enable location to get nearby fuel prices and local financial news",
+    },
+  },
+};
+
+export type LocaleMessages = typeof en;

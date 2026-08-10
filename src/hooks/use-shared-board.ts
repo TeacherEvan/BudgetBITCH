@@ -100,13 +100,7 @@ export function useSharedBoard(): UseSharedBoard {
   }, [boardId]);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      await checkActiveStatus();
-    })();
-    return () => {
-      cancelled = true;
-    };
+    checkActiveStatus();
   }, [checkActiveStatus]);
 
   // Listen for account changes/switches to update active status.
@@ -128,8 +122,10 @@ export function useSharedBoard(): UseSharedBoard {
 
   // Ensure a profile (shareCode) exists once authenticated.
   useEffect(() => {
-    if (isAuthenticated && (myProfile === null || (myProfile && !myProfile.shareCode))) {
-      ensureProfile().catch(() => {});
+    if (isAuthenticated && myProfile !== undefined && (myProfile === null || !myProfile.shareCode)) {
+      ensureProfile().catch((err) => {
+        console.warn('Profile initialization skipped:', err instanceof Error ? err.message : String(err));
+      });
     }
   }, [isAuthenticated, myProfile, ensureProfile]);
 

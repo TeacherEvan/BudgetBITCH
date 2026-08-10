@@ -107,31 +107,33 @@ export interface LocalAccountMeta {
   role: "owner" | "member";
   /** True when this account's data is stashed locally (has been opened). */
   hasLocalData?: boolean;
+  /** User's chosen display name, visible to other board members. */
+  displayName?: string;
 }
 
 // Literal TH/EN labels for inline UI use (the app renders labels per-locale
 // via local lookup objects rather than next-intl keys in most client pages).
-export const UMBRELLA_LABELS: Record<UmbrellaKey, { th: string; en: string }> = {
-  family: { th: "ครอบครัว", en: "Family" },
-  couple: { th: "คู่รัก", en: "Couple" },
-  business: { th: "ธุรกิจ", en: "Business" },
-  school: { th: "โรงเรียน", en: "School" },
-  friends: { th: "เพื่อน", en: "Friends" },
-  charity: { th: "การกุศล", en: "Charity" },
-  shopping: { th: "ช้อปปิ้ง", en: "Shopping" },
+export const UMBRELLA_LABELS: Record<UmbrellaKey, { en: string }> = {
+  family: { en: "Family" },
+  couple: { en: "Couple" },
+  business: { en: "Business" },
+  school: { en: "School" },
+  friends: { en: "Friends" },
+  charity: { en: "Charity" },
+  shopping: { en: "Shopping" },
 };
 
-export const UMBRELLA_TAGLINES: Record<UmbrellaKey, { th: string; en: string }> = {
-  family: { th: "ค่าใช้จ่ายบ้าน + เป้าหมายครอบครัว", en: "Household bills + family goals" },
-  couple: { th: "ค่าใช้จ่ายคู่ + เป้าหมายร่วม", en: "Joint spending + shared goals" },
-  business: { th: "รายรับ-รายจ่าย + ภาษี", en: "Revenue, expenses + tax" },
-  school: { th: "ค่าเทอม + อุปกรณ์", en: "Tuition + supplies" },
-  friends: { th: "กองเที่ยว + หารบิล", en: "Trip fund + split bills" },
-  charity: { th: "บริจาค + รายงานโปร่งใส", en: "Donations + transparency" },
-  shopping: { th: "ร้านค้า + งด impulsive", en: "Wishlist + no-impulse cap" },
+export const UMBRELLA_TAGLINES: Record<UmbrellaKey, { en: string }> = {
+  family: { en: "Household bills + family goals" },
+  couple: { en: "Joint spending + shared goals" },
+  business: { en: "Revenue, expenses + tax" },
+  school: { en: "Tuition + supplies" },
+  friends: { en: "Trip fund + split bills" },
+  charity: { en: "Donations + transparency" },
+  shopping: { en: "Wishlist + no-impulse cap" },
 };
 
-export function umbrellaLabel(key: UmbrellaKey | "personal", locale: "th" | "en"): string {
-  if (key === "personal") return locale === "th" ? "ส่วนตัว" : "Personal";
-  return UMBRELLA_LABELS[key][locale];
+export function umbrellaLabel(key: UmbrellaKey | "personal"): string {
+  if (key === "personal") return "Personal";
+  return UMBRELLA_LABELS[key].en;
 }

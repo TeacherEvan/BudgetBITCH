@@ -3,32 +3,28 @@
 
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
+import { useCurrency } from '@/hooks/use-currency';
 
 interface StepRentProps {
-  locale: 'th' | 'en';
+  locale: string;
   value: number;
   onChange: (key: 'rent', value: number) => void;
   error?: string | null;
   disabled?: boolean;
 }
 
-export function StepRent({ locale, value, onChange, error, disabled }: StepRentProps) {
+export function StepRent({ value, onChange, error, disabled }: StepRentProps) {
+  const fmt = useCurrency();
   const labels = {
-    th: {
-      title: 'ค่าเช่า / ค่าที่อยู่อาศัย',
-      subtitle: 'คอนโด แป้ท์เมนท์ บ้าน หรือผ่อนบ้าน',
-      placeholder: 'เช่น 12000',
-      helper: 'ค่าเช่าหรือผ่อนบ้านต่อเดือน (บาท)',
-    },
     en: {
       title: 'Rent / Housing Cost',
       subtitle: 'Condo, apartment, house rent or mortgage',
       placeholder: 'e.g. 12000',
-      helper: 'Monthly rent or mortgage payment (THB)',
+      helper: 'Monthly rent or mortgage payment',
     },
   };
 
-  const l = labels[locale];
+  const l = labels.en;
 
   return (
     <div className="space-y-6">
@@ -61,11 +57,11 @@ export function StepRent({ locale, value, onChange, error, disabled }: StepRentP
           onValueChange={(v) => onChange('rent', v)}
           disabled={disabled}
           showValue
-          valueFormatter={(v) => `฿${v.toLocaleString()}`}
+          valueFormatter={(v) => fmt(v)}
         />
 
         <p className="text-xs text-white/50 text-center">
-          {locale === 'th' ? 'รวมค่าไฟฟ้า/น้ำได้หรือแยกต่างหากก็ได้' : 'Include utilities or keep separate'}
+          {'Include utilities or keep separate'}
         </p>
       </div>
 
@@ -87,7 +83,7 @@ export function StepRent({ locale, value, onChange, error, disabled }: StepRentP
                 : 'bg-white/5 text-white/70 hover:bg-white/10'
             }`}
           >
-            {value === 0 ? '🏠' : `฿${value.toLocaleString()}`}<br/>{label}
+            {value === 0 ? '🏠' : fmt(value)}<br/>{label}
           </button>
         ))}
       </div>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ConvexPasswordAuthForm } from "./convex-password-auth-form";
 import { ForgotPasswordForm } from "./forgot-password-form";
-import { LocaleSwitcher } from "@/components/i18n/locale-switcher";
+import { ProTipsCard } from "@/components/pro-tips/pro-tips-card";
 
 type CleanAuthCardProps = {
   initialFlow: "signIn" | "signUp";
@@ -41,14 +41,9 @@ export function CleanAuthCard({ initialFlow, redirectTo = "/dashboard" }: CleanA
       >
         {/* Header section */}
         <div className="flex items-center justify-between mb-6">
-          <span className="text-xl font-bold uppercase tracking-[0.2em]" style={{
-            background: "linear-gradient(90deg, #FFD700, #FFF9C4)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-          }}>
-            BudgetBITCH
+          <span className="text-xl font-bold uppercase tracking-[0.2em] bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-100 bg-clip-text text-transparent">
+            Budget Boss
           </span>
-          <LocaleSwitcher />
         </div>
 
         <h1 className="text-2xl font-bold text-white mb-2">
@@ -65,7 +60,7 @@ export function CleanAuthCard({ initialFlow, redirectTo = "/dashboard" }: CleanA
           flow={flow}
           redirectTo={redirectTo}
           submitLabel={flow === "signIn" ? "Sign In" : "Sign Up"}
-          emailLabel="Email address"
+          emailLabel="Email / Username"
           passwordLabel="Password"
           helperText=""
         />
@@ -106,6 +101,11 @@ export function CleanAuthCard({ initialFlow, redirectTo = "/dashboard" }: CleanA
               </button>
             </p>
           )}
+        </div>
+
+        {/* Boss Pro-Tip: rotating financial tip on the signed-out surface */}
+        <div className="mt-6">
+          <ProTipsCard locale="en" />
         </div>
       </div>
     </div>

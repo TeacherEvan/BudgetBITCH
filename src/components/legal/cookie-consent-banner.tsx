@@ -2,8 +2,7 @@
 
 import { useSyncExternalStore, useState } from "react";
 import { useAuthToken } from "@convex-dev/auth/react";
-import { useLocale } from "next-intl";
-import { shortLocale, COOKIE_POLICY_VERSION } from "@/lib/legal/versions";
+import { COOKIE_POLICY_VERSION } from "@/lib/legal/versions";
 
 const STORAGE_KEY = "budgetbitch:cookieConsent";
 
@@ -20,13 +19,6 @@ const COPY = {
     acceptAll: "Accept all",
     essentialOnly: "Essential only",
     cookiePolicy: "Cookie Policy",
-  },
-  th: {
-    title: "คุกกี้",
-    body: "เราใช้คุกกี้ที่จำเป็นเพื่อคงสถานะการเข้าสู่ระบบและจดจำการตั้งค่าของคุณ คุกกี้แบบเลือกได้ช่วยให้เราปรับปรุงแอป ดู",
-    acceptAll: "ยอมรับทั้งหมด",
-    essentialOnly: "เฉพาะที่จำเป็น",
-    cookiePolicy: "นโยบายคุกกี้",
   },
 };
 
@@ -52,9 +44,7 @@ function isBannerVisible(): boolean {
 const noopSubscribe = () => () => {};
 
 export function CookieConsentBanner() {
-  const localeRaw = useLocale();
-  const locale = shortLocale(localeRaw);
-  const copy = COPY[locale];
+  const copy = COPY.en;
   // Optional: forwarded to the relay only when a user is signed in. Anonymous
   // visitors stay anonymous (the relay leaves userId undefined).
   const authToken = useAuthToken();
@@ -110,7 +100,7 @@ export function CookieConsentBanner() {
     <div
       role="dialog"
       aria-label={copy.title}
-      className="fixed inset-x-0 bottom-0 z-50 border-t-2 border-amber-400/60 bg-zinc-950/95 px-4 py-4 backdrop-blur-xl sm:px-6"
+      className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom,0px))] lg:bottom-0 z-[55] border-t-2 border-amber-400/60 bg-zinc-950/95 px-4 py-4 backdrop-blur-xl pointer-events-auto sm:px-6"
     >
       <div className="mx-auto flex max-w-4xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-white/80">
@@ -128,14 +118,14 @@ export function CookieConsentBanner() {
           <button
             type="button"
             onClick={() => persist(true, false)}
-            className="bb-button-secondary px-4 py-2 text-sm font-semibold"
+            className="bb-button-secondary pointer-events-auto px-4 py-2 text-sm font-semibold"
           >
             {copy.essentialOnly}
           </button>
           <button
             type="button"
             onClick={() => persist(true, true)}
-            className="bb-button-primary px-4 py-2 text-sm font-semibold"
+            className="bb-button-primary pointer-events-auto px-4 py-2 text-sm font-semibold"
           >
             {copy.acceptAll}
           </button>

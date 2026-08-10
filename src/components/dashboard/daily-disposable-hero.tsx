@@ -2,13 +2,14 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { useWizardProfile } from '@/hooks/use-local-db';
+import { useWizardProfile, useExpenses } from '@/hooks/use-local-db';
 import { useCurrency } from '@/hooks/use-currency';
-import { calculateBudgetFromWizard } from '@/lib/utils/budget-calculator';
+import { reconcileBudgetWithExpenses } from '@/lib/utils/budget-calculator';
 import { motion } from 'framer-motion';
+import { AddIncomeModal } from './add-income-modal';
 
 interface DailyDisposableHeroProps {
-  locale: 'th' | 'en';
+  locale: string;
   onSetup?: () => void;
 }
 
@@ -39,7 +40,7 @@ function CountUp({ value, duration = 800, formatter }: { value: number; duration
   return <span>{formatter(displayValue)}</span>;
 }
 
-function LiveClock({ locale }: { locale: 'th' | 'en' }) {
+function LiveClock() {
   const [time, setTime] = useState("");
 
   useEffect(() => {
@@ -53,14 +54,14 @@ function LiveClock({ locale }: { locale: 'th' | 'en' }) {
         minute: '2-digit',
         hour12: false
       };
-      const formatted = now.toLocaleDateString(locale === 'th' ? 'th-TH' : 'en-US', options);
+      const formatted = now.toLocaleDateString('en-US', options);
       setTime(formatted.toUpperCase());
     };
 
     updateTime();
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
-  }, [locale]);
+  }, []);
 
   return <span className="text-[10px] md:text-[11px] font-bold text-[var(--text-muted)] tracking-wider">{time} LOCAL</span>;
 }
@@ -68,22 +69,25 @@ function LiveClock({ locale }: { locale: 'th' | 'en' }) {
 export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProps) {
   const formatCurrency = useCurrency();
   const { profile } = useWizardProfile();
+  const { expenses } = useExpenses();
+  const [isAddIncomeOpen, setIsAddIncomeOpen] = useState(false);
 
   const calculation = useMemo(() => {
     if (!profile || !profile.completed) return null;
-    return calculateBudgetFromWizard(profile);
-  }, [profile]);
+    return reconcileBudgetWithExpenses(profile, expenses);
+  }, [profile, expenses]);
 
-  const daysLeft = useMemo(() => {
-    const today = new Date();
-    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-    return daysInMonth - today.getDate();
-  }, []);
+  // Date text is rendered only AFTER mount. Computing it from `new Date()`
+  // during SSR yields a server timestamp that differs from the client's
+  // (timezone / second skew), which throws a React #418 hydration mismatch.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
-  const monthName = useMemo(() => {
-    const today = new Date();
-    return today.toLocaleDateString(locale === 'th' ? 'th-TH' : 'en-US', { month: 'long' });
-  }, [locale]);
+  const today = mounted ? new Date() : null;
+  const daysLeft = today
+    ? new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() - today.getDate()
+    : 0;
+  const monthName = today ? today.toLocaleDateString('en-US', { month: 'long' }) : '';
 
   if (!calculation) {
     return (
@@ -92,9 +96,9 @@ export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProp
         <div className="relative z-10 flex flex-col items-center">
           <div className="flex items-center justify-between w-full mb-6">
             <span className="text-[10px] md:text-[11px] font-bold text-[var(--warning)] uppercase tracking-widest">
-              ⚠ {locale === 'th' ? 'ต้องทำการตั้งค่า' : 'Setup Required'}
+              ⚠ {'Setup Required'}
             </span>
-            <LiveClock locale={locale} />
+            <LiveClock />
           </div>
 
           <div className="text-4xl md:text-5xl font-bold font-mono text-[var(--warning)] mb-4 bb-shake">
@@ -102,9 +106,7 @@ export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProp
           </div>
 
           <p className="max-w-md text-sm text-[var(--text-2)] mb-6">
-            {locale === 'th'
-              ? 'โปรดทำแบบสอบถามตั้งค่าให้เสร็จสิ้นเพื่อคำนวณงบประมาณรายวันของคุณ'
-              : 'Complete the setup wizard to calculate your customized daily disposable budget.'}
+            {'Complete the setup wizard to calculate your customized daily disposable budget.'}
           </p>
 
           <button
@@ -112,17 +114,18 @@ export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProp
             className="px-6 py-2.5 bg-[var(--gold-base)] hover:bg-[var(--gold-bright)] active:scale-[0.97] transition-all text-[var(--accent-ink)] font-bold text-xs uppercase tracking-widest cursor-pointer"
             style={{ fontFamily: 'var(--font-display)' }}
           >
-            {locale === 'th' ? 'เริ่มตั้งค่าเลย →' : 'Complete Setup →'}
+            {'Complete Setup →'}
           </button>
         </div>
       </div>
     );
   }
 
-  const { dailyDisposable, income, totalFixedExpenses, savingsTarget, remainingDisposable } = calculation;
+  const { income, totalFixedExpenses, savingsTarget, spentThisMonth, remainingDisposable, dailyRemaining, spentPct, isOverBudget } = calculation;
 
-  const usagePercentage = income > 0 ? Math.max(0, Math.min(100, Math.round(((income - remainingDisposable) / income) * 100))) : 0;
-  
+  // spentPct already clamped 0..100 in the reconciler; drive bar + color from it.
+  const usagePercentage = spentPct;
+
   // Decide usage bar color class based on percent
   let barColorClass = "bg-[var(--gold-bright)]";
   if (usagePercentage >= 95) {
@@ -149,23 +152,34 @@ export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProp
         {/* Header strip */}
         <div className="flex items-center justify-between w-full mb-4">
           <span className="text-[10px] md:text-[11px] font-bold text-[var(--gold-muted)] uppercase tracking-wider">
-            {locale === 'th' ? 'เงินใช้จ่ายประจำวันคงเหลือ' : 'Daily Budget Remaining'}
+            {'Daily Budget'}
           </span>
-          <LiveClock locale={locale} />
+          <LiveClock />
         </div>
         
-        {/* Main large figure with CountUp */}
-        <div 
-          className={`text-5xl md:text-7xl font-bold font-mono tracking-tight leading-none mb-6 bb-mono ${
-            dailyDisposable === 0 ? "text-[var(--danger)] bb-shake" : "text-[var(--gold-bright)]"
-          }`}
-        >
-          <CountUp value={dailyDisposable} formatter={(val) => formatCurrency(Math.round(val), locale)} />
+        {/* Main large figure with CountUp — the LIVE daily figure after real spending */}
+        <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 sm:gap-4 mb-5 sm:mb-6">
+          <div
+            className={`text-[2.5rem] leading-[1.05] sm:text-5xl md:text-7xl font-bold font-mono tracking-tight break-words max-w-full bb-mono ${
+              dailyRemaining === 0 || isOverBudget ? "text-[var(--danger)] bb-shake" : "text-[var(--gold-bright)]"
+            }`}
+          >
+            <CountUp value={dailyRemaining} formatter={(val) => formatCurrency(Math.round(val), locale)} />
+          </div>
+
+          <div className="flex flex-row sm:flex-col sm:items-end items-center justify-between gap-2 rounded-xl border border-[var(--gold-border-soft)] bg-black/30 px-3 py-2 shrink-0">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--gold-muted)]">
+              {'Spent This Month'}
+            </span>
+            <span className="text-base sm:text-lg md:text-xl font-bold font-mono text-rose-400">
+              {formatCurrency(spentThisMonth, locale)}
+            </span>
+          </div>
         </div>
 
-        {/* Usage bar */}
+        {/* Usage bar — % of planned disposable already used */}
         <div className="w-full flex items-center justify-between text-xs text-[var(--text-muted)] mb-2 font-mono">
-          <span>{locale === 'th' ? 'การจัดสรรงบประมาณ' : 'Budget Allocation'}</span>
+          <span>{'Budget Used'}</span>
           <span className={`${usagePercentage >= 95 ? "text-[var(--danger)]" : usagePercentage >= 80 ? "text-[var(--warning)]" : "text-[var(--gold-bright)]"}`}>
             ({usagePercentage}%)
           </span>
@@ -187,18 +201,35 @@ export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProp
         </div>
 
         {/* Supporting metrics */}
-        <div className="grid grid-cols-3 gap-2 border-t border-[var(--gold-border-soft)] pt-4 text-xs font-medium">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 border-t border-[var(--gold-border-soft)] pt-4 text-xs font-medium">
           <div>
             <span className="block text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-0.5">
-              {locale === 'th' ? 'รายได้' : 'Income'}
+              {'Left Today'}
             </span>
+            <span className="text-emerald-400 font-semibold font-mono">
+              {formatCurrency(dailyRemaining, locale)}
+            </span>
+          </div>
+          <div>
+            <div className="flex items-center gap-1 mb-0.5">
+              <span className="block text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+                {'Income'}
+              </span>
+              <button 
+                onClick={() => setIsAddIncomeOpen(true)}
+                className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors px-1"
+                title={'Add Income'}
+              >
+                +
+              </button>
+            </div>
             <span className="text-[var(--text-1)] font-semibold font-mono">
               {formatCurrency(income, locale)}/mo
             </span>
           </div>
           <div>
             <span className="block text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-0.5">
-              {locale === 'th' ? 'คงที่' : 'Fixed'}
+              {'Fixed'}
             </span>
             <span className="text-[var(--text-1)] font-semibold font-mono">
               {formatCurrency(totalFixedExpenses, locale)}/mo
@@ -206,7 +237,7 @@ export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProp
           </div>
           <div>
             <span className="block text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-0.5">
-              {locale === 'th' ? 'การออม' : 'Savings'}
+              {'Savings'}
             </span>
             <span className="text-[var(--text-1)] font-semibold font-mono">
               {formatCurrency(savingsTarget, locale)}/mo
@@ -216,14 +247,21 @@ export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProp
 
         {/* Footer date anchor */}
         <div className="flex items-center gap-1.5 mt-4 text-[11px] text-[var(--text-muted)] font-medium">
-          <span className={`w-1.5 h-1.5 rounded-full ${dailyDisposable === 0 ? "bg-[var(--danger)] animate-pulse" : "bg-[var(--success)]"}`} />
+          <span className={`w-1.5 h-1.5 rounded-full ${isOverBudget ? "bg-[var(--danger)] animate-pulse" : "bg-[var(--success)]"}`} />
           <span>
-            {locale === 'th'
-              ? `เหลืออีก ${daysLeft} วันในเดือน${monthName}`
-              : `${daysLeft} days left in ${monthName}`}
+            {isOverBudget
+              ? (`Over budget by ${formatCurrency(Math.abs(remainingDisposable), locale)}`)
+              : mounted
+                ? (`${daysLeft} days left in ${monthName}`)
+                : null}
           </span>
         </div>
       </div>
+      <AddIncomeModal
+        isOpen={isAddIncomeOpen}
+        onClose={() => setIsAddIncomeOpen(false)}
+        locale={locale}
+      />
     </div>
   );
 }

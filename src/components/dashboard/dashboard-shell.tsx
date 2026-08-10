@@ -1,81 +1,70 @@
 // components/dashboard/dashboard-shell.tsx
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
+import type { CurrencyCode } from '@/lib/utils/currency';
 import Link from 'next/link';
 import { X, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { HeaderBar } from '@/components/layout/header-bar';
 import { AccountSwitcher } from '@/components/accounts/account-switcher';
-import { DailyDisposableHero } from '@/components/dashboard/daily-disposable-hero';
 import { CriticalExpensesModal } from '@/components/dashboard/critical-expenses-modal';
 import { AlertsSidebar } from '@/components/dashboard/alerts-sidebar';
 import { PriorityGuide } from '@/components/dashboard/priority-guide';
-import { ExpenseTracker } from '@/components/dashboard/panels/expense-tracker';
-import { BudgetVisual } from '@/components/dashboard/panels/budget-visual';
-import { BudgetAlerts } from '@/components/dashboard/panels/budget-alerts';
-import { Bills } from '@/components/dashboard/panels/bills';
-import { SavingsGoals } from '@/components/dashboard/panels/savings-goals';
-import { NetWorth } from '@/components/dashboard/panels/net-worth';
-import { Subscriptions } from '@/components/dashboard/panels/subscriptions';
-import { EmergencyFund } from '@/components/dashboard/panels/emergency-fund';
-import { DebtPayoff } from '@/components/dashboard/panels/debt-payoff';
-import { CashFlowForecast } from '@/components/dashboard/panels/cash-flow-forecast';
 import { Modal } from '@/components/ui/modal';
 import { useCriticalExpense } from '@/hooks/use-critical-expense';
-import { useWizardProfile, useBudgets, useBills } from '@/hooks/use-local-db';
-import { BentoGrid, PanelConfig } from '@/components/dashboard/bento-grid';
+import { useWizardProfile, useBudgets, useBills, useExpenses } from '@/hooks/use-local-db';
+import { useResolvedLocation } from '@/hooks/use-resolved-location';
+import { useResolvedCurrency } from '@/hooks/use-currency';
+import { useShimmerPref } from '@/hooks/use-shimmer-pref';
+import { CurrencyConverterCard } from '@/components/dashboard/currency-converter-card';
+import { BentoGrid, type PanelConfig } from '@/components/dashboard/bento-grid';
 import { MobilePanelTabs } from '@/components/dashboard/mobile-panel-tabs';
-
-export type PanelKey = 'expenses' | 'budget' | 'budgetAlerts' | 'bills' | 'goals' | 'netWorth' | 'subscriptions' | 'emergency' | 'debt' | 'forecast';
-
-export const PANEL_CONFIG: Record<PanelKey, { label: { th: string; en: string }; icon: string }> = {
-  expenses: { label: { th: 'ค่าใช้จ่าย', en: 'Expenses' }, icon: '💸' },
-  budget: { label: { th: 'งบประมาณ', en: 'Budget' }, icon: '📊' },
-  budgetAlerts: { label: { th: 'การแจ้งเตือน', en: 'Budget Alerts' }, icon: '🔔' },
-  bills: { label: { th: 'บิล/บิลล์', en: 'Bills' }, icon: '📋' },
-  goals: { label: { th: 'เป้าหมาย', en: 'Goals' }, icon: '🎯' },
-  netWorth: { label: { th: 'มูลค่าสุทธิ', en: 'Net Worth' }, icon: '💰' },
-  subscriptions: { label: { th: 'สมัครสมาชิก', en: 'Subscriptions' }, icon: '📺' },
-  emergency: { label: { th: 'เงินสำรอง', en: 'Emergency' }, icon: '🛡️' },
-  debt: { label: { th: 'หนี้สิน', en: 'Debt' }, icon: '📉' },
-  forecast: { label: { th: 'พยากรณ์', en: 'Forecast' }, icon: '🔮' },
-};
-
-const PANEL_ORDER: PanelKey[] = ['expenses', 'budget', 'budgetAlerts', 'bills', 'goals', 'netWorth', 'subscriptions', 'emergency', 'debt', 'forecast'];
-
-const PANELS: PanelConfig[] = [
-  { id: 'expenses', title: 'Expenses', children: <ExpenseTracker /> },
-  { id: 'budget', title: 'Budget', children: <BudgetVisual /> },
-  { id: 'budgetAlerts', title: 'Budget Alerts', children: <BudgetAlerts /> },
-  { id: 'bills', title: 'Bills', children: <Bills /> },
-  { id: 'goals', title: 'Goals', children: <SavingsGoals /> },
-  { id: 'netWorth', title: 'Net Worth', children: <NetWorth /> },
-  { id: 'subscriptions', title: 'Subscriptions', children: <Subscriptions /> },
-  { id: 'emergency', title: 'Emergency', children: <EmergencyFund /> },
-  { id: 'debt', title: 'Debt', children: <DebtPayoff /> },
-  { id: 'forecast', title: 'Forecast', children: <CashFlowForecast /> },
-];
-
+import { ScenarioSandboxModal } from '@/components/dashboard/scenario-sandbox-modal';
+import { CashFlowProjectionCard } from '@/components/dashboard/cash-flow-projection-card';
+import { CategoryPivotCard } from '@/components/dashboard/category-pivot-card';
+import { BudgetVarianceGrid } from '@/components/dashboard/budget-variance-grid';
+import { buildPanels } from '@/components/dashboard/panels';
+import { PANEL_CONFIG, PANEL_ORDER, type PanelKey } from '@/components/dashboard/panelConfig';
+import { DailyDisposableHero } from '@/components/dashboard/daily-disposable-hero';
+import { ReceiptDraftsList } from '@/components/receipt/receipt-drafts-list';
 
 interface DashboardShellProps {
-  locale: 'th' | 'en';
-  onLocaleChange?: (locale: 'th' | 'en') => void;
-  voiceEnabled?: boolean;
-  onVoiceToggle?: () => void;
+  locale: string;
+  onLocaleChange?: (locale: string) => void;
   onSetup?: () => void;
 }
 
-export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, onVoiceToggle, onSetup }: DashboardShellProps) {
+export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShellProps) {
   const { loading: commitmentLoading } = useCriticalExpense();
   const { profile } = useWizardProfile();
   const { budgets, loading: budgetsLoading } = useBudgets();
   const { bills } = useBills();
+  const { expenses } = useExpenses();
   const [criticalExpenseOpen, setCriticalExpenseOpen] = useState(false);
-  const [openPanels, setOpenPanels] = useState<PanelKey[]>(['expenses', 'budget']);
+  const [openPanels, setOpenPanels] = useState<PanelKey[]>(['spending']);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [marketWatchOpen, setMarketWatchOpen] = useState(false);
-  const [mobileActivePanel, setMobileActivePanel] = useState<PanelKey>('expenses');
+  const [mobileActivePanel, setMobileActivePanel] = useState<PanelKey>('spending');
+  const [scenarioModalOpen, setScenarioModalOpen] = useState(false);
+  const [excelTab, setExcelTab] = useState<'standard' | 'variance' | 'cashflow' | 'pivot'>('standard');
+
+  // Location determines Market Watch availability (location-specific feeds only)
+  const { location, requestLocation } = useResolvedLocation();
+  const currency = useResolvedCurrency();
+  const resolvedCurrency = (currency ?? 'USD') as CurrencyCode;
+  const { enabled: shimmerOn, setEnabled: setShimmerOn } = useShimmerPref();
+  const hasLocation = location !== null;
+  const [requestingLoc, setRequestingLoc] = useState(false);
+
+  const handleRequestLocation = async () => {
+    setRequestingLoc(true);
+    try {
+      await requestLocation();
+    } finally {
+      setRequestingLoc(false);
+    }
+  };
 
 
   // T5: direction-aware panel transitions. Direction is decided in the
@@ -113,11 +102,13 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
 
   const isPanelOpen = (panel: PanelKey) => openPanels.includes(panel);
 
+  const panels: PanelConfig[] = useMemo(() => buildPanels(locale, onSetup), [locale, onSetup]);
+
   // Only render the panels the user has toggled on in the sidebar (desktop).
-  const visiblePanels = PANELS.filter((panel) => openPanels.includes(panel.id as PanelKey));
+  const visiblePanels = panels.filter((panel) => openPanels.includes(panel.id as PanelKey));
 
   // Mobile: exactly one active panel rendered at a time.
-  const mobilePanel = PANELS.find((panel) => panel.id === mobileActivePanel) ?? PANELS[0];
+  const mobilePanel = panels.find((panel) => panel.id === mobileActivePanel) ?? panels[0];
 
   return (
     <div className="bb-viewport-fill bg-[var(--bg-base)]">
@@ -126,8 +117,6 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
         <HeaderBar
           locale={locale}
           onLocaleChange={(next) => onLocaleChange?.(next)}
-          voiceEnabled={voiceEnabled}
-          onVoiceToggle={() => onVoiceToggle?.()}
         />
       </header>
 
@@ -148,51 +137,80 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
             <span className="text-2xl">🏦</span>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-white">
-                {locale === 'th' ? 'จัดการบัญชีร่วมกัน' : 'Manage Accounts'}
+                {'Manage Accounts'}
               </p>
               <p className="text-[10px] text-white/50 leading-tight">
-                {locale === 'th' ? 'แชร์บอร์ดกับครอบครัว เพื่อน หรือที่ทำงาน' : 'Share budget with family, friends, or work'}
+                {'Share budget with family, friends, or work'}
               </p>
             </div>
           </Link>
-          <div className="mb-6 mt-4 space-y-3">
-            <h3 className="bb-kicker">
-              {locale === 'th' ? 'ค่าใช้จ่ายที่ต้องลด' : 'Cut One Expense'}
-            </h3>
+          <div className="mb-6 mt-4 space-y-3" role="region" aria-label={'Special features'}>
+            <div className="bb-kicker" role="heading" aria-level={2}>
+              {'Cut One Expense'}
+            </div>
             <button
               onClick={() => setCriticalExpenseOpen(true)}
               className="flex w-full items-center gap-3 rounded-xl border border-[var(--gold-border-strong)] bg-[var(--gold-base)]/10 p-3 text-left transition-colors hover:bg-[var(--gold-base)]/20 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={commitmentLoading}
+              aria-label={'Pick one expense to cut this month, see savings potential'}
             >
-              <span className="text-2xl">🎯</span>
+              <span className="text-2xl" aria-hidden="true">🎯</span>
               <div className="flex-1 text-left min-w-0">
                 <p className="text-sm font-medium text-[var(--text-1)] truncate">
-                  {locale === 'th' ? 'เลือก 1 อย่างลดในเดือนนี้' : 'Pick 1 to cut this month'}
+                  {'Pick 1 to cut this month'}
                 </p>
                 <p className="text-xs text-[var(--text-2)]">
-                  {locale === 'th' ? 'ดูเงินที่จะประหยัดได้' : 'See your savings potential'}
+                  {'See your savings potential'}
                 </p>
               </div>
-              <ChevronDown className="text-[var(--gold-bright)]" />
+              <ChevronDown className="text-[var(--gold-bright)]" aria-hidden="true" />
             </button>
-            {commitmentLoading && <p className="text-center text-xs text-[var(--text-2)]">{locale === 'th' ? 'กำลังโหลด...' : 'Loading...'}</p>}
+            {commitmentLoading && <p className="text-center text-xs text-[var(--text-2)]">{'Loading...'}</p>}
 
             {/* Market Watch - desktop sidebar, only below xl */}
-            <button
-              onClick={() => setMarketWatchOpen(true)}
-              className="xl:hidden flex w-full items-center gap-3 rounded-xl border border-sky-400/30 bg-sky-400/10 p-3 text-left transition-colors hover:bg-sky-400/20"
-            >
-              <span className="text-2xl">📰</span>
-              <div className="flex-1 text-left min-w-0">
-                <p className="text-sm font-medium text-[var(--text-1)] truncate">
-                  {locale === 'th' ? 'ข่าวและข้อมูลล่าสุด' : 'Market Watch'}
-                </p>
-                <p className="text-xs text-[var(--text-2)]">
-                  {locale === 'th' ? 'ดูราคาน้ำมัน โปรโมชั่น ข่าว' : 'Fuel, deals & news'}
-                </p>
-              </div>
-              <ChevronDown className="text-sky-400" />
-            </button>
+            <div className="bb-kicker" role="heading" aria-level={2}>
+              {'Market Watch'}
+            </div>
+            {hasLocation ? (
+              <button
+                data-testid="market-watch-trigger"
+                onClick={() => setMarketWatchOpen(true)}
+                className="xl:hidden flex w-full items-center gap-3 rounded-xl border border-sky-400/30 bg-sky-400/10 p-3 text-left transition-colors hover:bg-sky-400/20"
+                aria-label={'Open Market Watch for fuel prices, deals, and news'}
+              >
+                <span className="text-2xl" aria-hidden="true">📰</span>
+                <div className="flex-1 text-left min-w-0">
+                  <p className="text-sm font-medium text-[var(--text-1)] truncate">
+                    {'Market Watch'}
+                  </p>
+                  <p className="text-xs text-[var(--text-2)]">
+                    {'Fuel, deals & news'}
+                  </p>
+                </div>
+                <ChevronDown className="text-sky-400" aria-hidden="true" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                data-testid="market-watch-location-locked"
+                disabled={requestingLoc}
+                onClick={handleRequestLocation}
+                className="xl:hidden flex w-full items-center gap-3 rounded-xl border border-sky-400/30 bg-sky-400/10 p-3 text-left transition-colors hover:bg-sky-400/20 cursor-pointer disabled:opacity-50"
+                aria-label={'Enable location to use Market Watch'}
+              >
+                <span className="text-2xl" aria-hidden="true">📍</span>
+                <div className="flex-1 text-left min-w-0">
+                  <p className="text-sm font-medium text-[var(--text-1)] truncate">
+                    {requestingLoc
+                      ? ('Requesting location...')
+                      : ('Enable Location')}
+                  </p>
+                  <p className="text-xs text-[var(--text-2)]">
+                    {'Required for local news & fuel'}
+                  </p>
+                </div>
+              </button>
+            )}
           </div>
 
           <div className="relative space-y-2">
@@ -219,7 +237,7 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
                   )}
                   <span className="text-xl">{config.icon}</span>
                   <span className={`flex-1 text-left text-sm font-medium truncate ${isOpen ? 'text-[var(--gold-bright)]' : 'text-[var(--text-2)]'}`}>
-                    {config.label[locale]}
+                    {config.label.en}
                   </span>
                   {isOpen ? <ChevronUp className="text-[var(--text-muted)]" /> : <ChevronDown className="text-[var(--text-muted)]" />}
                 </button>
@@ -229,30 +247,137 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
         </aside>
 
         {/* THE ONLY SCROLL ZONE */}
-        <div className="bb-scroll-zone flex flex-col px-4 py-4 lg:px-6">
+        <div className="bb-scroll-zone flex flex-col px-4 py-4 sm:px-5 lg:px-6">
           {/* Daily Disposable Hero */}
           <DailyDisposableHero locale={locale} onSetup={onSetup} />
 
-          {/* Panels */}
-          <div className="mt-6">
-            {/* Mobile: one active panel at a time (direction-aware slide-in).
-                Keyed motion.div animates the enter transition on each swap;
-                no AnimatePresence so the panel swaps immediately (no lingering
-                exiting node) — important for instant state and tests. */}
-            <div className="lg:hidden" data-testid="mobile-panels">
-              <motion.div
-                key={mobileActivePanel}
-                initial={{ opacity: 0, x: direction * 32 }}
-                animate={{ opacity: 1, x: 0, transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] } }}
+          {/* Bot-ingested receipt drafts: review & save as expenses */}
+          <ReceiptDraftsList />
+
+          {/* Excel Power Budgeting Control Bar */}
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 p-3 bg-neutral-900/80 backdrop-blur-xl rounded-2xl border border-white/10">
+            <div className="flex w-full items-center gap-1.5 overflow-x-auto scrollbar-none">
+              <button
+                type="button"
+                onClick={() => setExcelTab('standard')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+                  excelTab === 'standard'
+                    ? 'bg-amber-400 text-black shadow-lg shadow-amber-400/20'
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                }`}
               >
-                <BentoGrid panels={[mobilePanel]} />
-              </motion.div>
+                📊 Standard Dashboard
+              </button>
+              <button
+                type="button"
+                onClick={() => setExcelTab('variance')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+                  excelTab === 'variance'
+                    ? 'bg-emerald-400 text-black shadow-lg shadow-emerald-400/20'
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                ✨ Excel Variance Grid
+              </button>
+              <button
+                type="button"
+                onClick={() => setExcelTab('cashflow')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+                  excelTab === 'cashflow'
+                    ? 'bg-amber-400 text-black shadow-lg shadow-amber-400/20'
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                📅 30D Cash Flow
+              </button>
+              <button
+                type="button"
+                onClick={() => setExcelTab('pivot')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+                  excelTab === 'pivot'
+                    ? 'bg-cyan-400 text-black shadow-lg shadow-cyan-400/20'
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                🧩 50/30/20 Matrix
+              </button>
             </div>
-            {/* Desktop: toggled grid */}
-            <div className="hidden lg:block" data-testid="desktop-panels">
-              <BentoGrid panels={visiblePanels} />
+
+            <button
+              type="button"
+              onClick={() => setScenarioModalOpen(true)}
+              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-500 to-amber-500 text-white font-bold text-xs shadow-lg hover:brightness-110 transition-all flex items-center gap-1.5 shrink-0 w-full sm:w-auto justify-center"
+            >
+              <span>⚙️</span>
+              <span>{'What-If Sandbox (Goal Seek)'}</span>
+            </button>
+          </div>
+
+          {/* Panels or Excel Views */}
+          <div className="mt-4">
+            {excelTab === 'variance' && (
+              <BudgetVarianceGrid locale={locale} currency={resolvedCurrency} expenses={expenses} />
+            )}
+            {excelTab === 'cashflow' && (
+              <CashFlowProjectionCard
+                locale={locale}
+                currency={resolvedCurrency}
+                currentCashBalance={35000}
+                monthlyIncome={profile?.answers?.income ?? 45000}
+              />
+            )}
+            {excelTab === 'pivot' && (
+              <CategoryPivotCard locale={locale} currency={resolvedCurrency} profile={profile} />
+            )}
+            {excelTab === 'standard' && (
+              <>
+                {/* Mobile: one active panel at a time (direction-aware slide-in). */}
+                <div className="lg:hidden" data-testid="mobile-panels">
+                  <motion.div
+                    key={mobileActivePanel}
+                    initial={{ opacity: 0, x: direction * 32 }}
+                    animate={{ opacity: 1, x: 0, transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] } }}
+                  >
+                    <BentoGrid panels={[mobilePanel]} />
+                  </motion.div>
+                </div>
+                {/* Desktop: toggled grid */}
+                <div className="hidden lg:block" data-testid="desktop-panels">
+                  <BentoGrid panels={visiblePanels} />
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <CurrencyConverterCard baseCurrency={resolvedCurrency} amount={100} />
+            <div className="rounded-2xl border border-[var(--gold-border-soft)] bg-[var(--bg-surface-1)] p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-white">{'Shimmer Animation'}</h3>
+                  <p className="mt-0.5 text-xs text-white/50">{'Gold edge glow on buttons & cards'}</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={shimmerOn}
+                  onClick={() => setShimmerOn(!shimmerOn)}
+                  aria-label="Toggle shimmer animation"
+                  className={`relative h-6 w-11 rounded-full transition-colors ${shimmerOn ? 'bg-[var(--gold-bright)]' : 'bg-white/15'}`}
+                >
+                  <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${shimmerOn ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                </button>
+              </div>
             </div>
           </div>
+
+          <ScenarioSandboxModal
+            isOpen={scenarioModalOpen}
+            onClose={() => setScenarioModalOpen(false)}
+            profile={profile}
+            currency={resolvedCurrency}
+            locale={locale}
+          />
         </div>
 
         {/* Alerts Sidebar - Desktop (xl+) */}
@@ -272,25 +397,54 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
 
       {/* Mobile Bottom Sheet Sidebar */}
       <div data-testid="mobile-sheet" className={`lg:hidden fixed bottom-0 left-0 right-0 z-40 transform rounded-t-2xl border-t bg-[var(--bg-base)]/95 p-4 backdrop-blur-xl transition-transform duration-300 ${mobileMenuOpen ? 'translate-y-0' : 'translate-y-full'}`} style={{ maxHeight: '82vh', overflowY: 'auto' }}>
-        <button onClick={() => setMobileMenuOpen(false)} className="absolute -top-3 right-4 flex h-10 w-10 items-center justify-center rounded-full border border-[var(--gold-border-soft)] bg-[var(--bg-base)]/80">
+        <button
+          onClick={() => setMobileMenuOpen(false)}
+          aria-label={'Close menu'}
+          className="absolute -top-3 right-4 flex h-10 w-10 items-center justify-center rounded-full border border-[var(--gold-border-soft)] bg-[var(--bg-base)]/80"
+        >
           <X className="h-5 w-5 text-[var(--text-muted)]" />
         </button>
         <div className="space-y-4 pt-2">
           <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-[var(--text-1)]">{locale === 'th' ? 'เมนู' : 'Menu'}</h3>
+            <h2 className="font-semibold text-[var(--text-1)]">{'Menu'}</h2>
           </div>
-          <button className="flex w-full items-center gap-3 rounded-xl border border-[var(--gold-border-strong)] bg-[var(--gold-base)]/10 p-3 text-left disabled:cursor-not-allowed disabled:opacity-50" onClick={() => { setCriticalExpenseOpen(true); setMobileMenuOpen(false); }} disabled={commitmentLoading}>
-            <span className="text-2xl">🎯</span>
+          <button className="flex w-full items-center gap-3 rounded-xl border border-[var(--gold-border-strong)] bg-[var(--gold-base)]/10 p-3 text-left disabled:cursor-not-allowed disabled:opacity-50" onClick={() => { setCriticalExpenseOpen(true); setMobileMenuOpen(false); }} disabled={commitmentLoading} aria-label={'Pick one expense to cut this month'}>
+            <span className="text-2xl" aria-hidden="true">🎯</span>
             <div className="min-w-0">
-              <p className="font-medium text-[var(--text-1)] truncate">{locale === 'th' ? 'เลือก 1 อย่างลดในเดือนนี้' : 'Pick 1 to cut this month'}</p>
+              <p className="font-medium text-[var(--text-1)] truncate">{'Pick 1 to cut this month'}</p>
             </div>
           </button>
-          <button className="flex w-full items-center gap-3 rounded-xl border border-sky-400/30 bg-sky-400/10 p-3 text-left" onClick={() => { setMarketWatchOpen(true); setMobileMenuOpen(false); }}>
-            <span className="text-2xl">📰</span>
-            <div className="min-w-0">
-              <p className="font-medium text-[var(--text-1)] truncate">{locale === 'th' ? 'ข่าวและข้อมูลล่าสุด' : 'Market Watch'}</p>
-            </div>
-          </button>
+          {hasLocation ? (
+            <button
+              data-testid="market-watch-trigger"
+              className="flex w-full items-center gap-3 rounded-xl border border-sky-400/30 bg-sky-400/10 p-3 text-left"
+              onClick={() => { setMarketWatchOpen(true); setMobileMenuOpen(false); }}
+              aria-label={'Open Market Watch'}
+            >
+              <span className="text-2xl" aria-hidden="true">📰</span>
+              <div className="min-w-0">
+                <p className="font-medium text-[var(--text-1)] truncate">{'Market Watch'}</p>
+              </div>
+            </button>
+          ) : (
+            <button
+              type="button"
+              data-testid="market-watch-location-locked"
+              disabled={requestingLoc}
+              onClick={handleRequestLocation}
+              className="flex w-full items-center gap-3 rounded-xl border border-sky-400/30 bg-sky-400/10 p-3 text-left transition-colors hover:bg-sky-400/20 cursor-pointer disabled:opacity-50"
+              aria-label={'Enable location to use Market Watch'}
+            >
+              <span className="text-2xl" aria-hidden="true">📍</span>
+              <div className="min-w-0">
+                <p className="font-medium text-[var(--text-1)] truncate">
+                  {requestingLoc
+                    ? ('Requesting location...')
+                    : ('Enable Location')}
+                </p>
+              </div>
+            </button>
+          )}
           <div className="pt-1">
             <AccountSwitcher locale={locale} />
           </div>
@@ -302,10 +456,10 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
             <span className="text-2xl">🏦</span>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-white">
-                {locale === 'th' ? 'จัดการบัญชีร่วมกัน' : 'Manage Accounts'}
+                {'Manage Accounts'}
               </p>
               <p className="text-[10px] text-white/50 leading-tight">
-                {locale === 'th' ? 'แชร์บอร์ดกับครอบครัว เพื่อน หรือที่ทำงาน' : 'Share budget with family, friends, or work'}
+                {'Share budget with family, friends, or work'}
               </p>
             </div>
           </Link>
@@ -321,7 +475,7 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
                 }`}
               >
                 <span className="text-xl">{config.icon}</span>
-                <span className={`flex-1 text-left text-sm font-medium truncate ${isActive ? 'text-[var(--gold-bright)]' : 'text-[var(--text-2)]'}`}>{config.label[locale]}</span>
+                <span className={`flex-1 text-left text-sm font-medium truncate ${isActive ? 'text-[var(--gold-bright)]' : 'text-[var(--text-2)]'}`}>{config.label.en}</span>
               </button>
             );
           })}
@@ -341,10 +495,21 @@ export function DashboardShell({ locale, onLocaleChange, voiceEnabled = false, o
         onClose={() => setMarketWatchOpen(false)}
         showCloseButton={true}
         size="2xl"
-        title={locale === 'th' ? 'ข่าวและข้อมูลล่าสุด' : 'Market Watch'}
+        title={'Market Watch'}
       >
         <AlertsSidebar locale={locale} isModal={true} />
       </Modal>
+
+      {/* Mobile Floating Action Button (FAB) for Quick Add Widget */}
+      <div className="fixed bottom-20 right-4 z-30 lg:hidden">
+        <Link
+          href="/quick-add"
+          aria-label={'Quick Add Widget'}
+          className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black shadow-[0_0_24px_rgba(245,215,66,0.5)] transition-all hover:scale-105 active:scale-95"
+        >
+          <span className="text-2xl font-black">+</span>
+        </Link>
+      </div>
     </div>
   );
 }

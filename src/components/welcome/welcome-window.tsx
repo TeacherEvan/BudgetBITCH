@@ -1,119 +1,341 @@
-"use client";
+// src/components/welcome/welcome-window.tsx
+'use client';
 
-import { ArrowRight, ShieldCheck, Sparkles, Waypoints } from "lucide-react";
-import Link from "next/link";
-import { useTranslations } from "next-intl";
-import { LocaleSwitcher } from "@/components/i18n/locale-switcher";
-import { MobilePanelFrame } from "@/components/mobile/mobile-panel-frame";
+import React from 'react';
+import { ArrowRight, ShieldCheck, Sparkles, Waypoints, Coins } from 'lucide-react';
+import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import { motion, useReducedMotion, type Variants } from 'framer-motion';
+import { MobilePanelFrame } from '@/components/mobile/mobile-panel-frame';
+import { ProTipsCard } from '@/components/pro-tips/pro-tips-card';
 
 type WelcomeWindowProps = {
   signInHref: string;
   signUpHref: string;
 };
 
+const sloganMap = {
+  en: 'Shut up and do it!!!',
+  zh: '别废话，开干！！！'
+};
+
+// Expo-out curve + a softer cinematic ease for a calm, premium reveal.
+const EXPO_OUT = [0.22, 1, 0.36, 1] as const;
+const CINE_IN = [0.16, 1, 0.3, 1] as const;
+
 export function WelcomeWindow({ signInHref, signUpHref }: WelcomeWindowProps) {
-  const t = useTranslations("welcome");
+  const t = useTranslations('welcome');
+  const prefersReduced = useReducedMotion();
+
+  // Safe locale extraction from next-intl (defaulting to 'en')
+  let currentLocale: 'en' | 'zh' = 'en';
+  try {
+    const rawLocale = t('brand'); // trigger locale lookup or check translation keys
+    if (rawLocale.includes('控制板')) {
+      currentLocale = 'zh';
+    }
+  } catch {
+    currentLocale = 'en';
+  }
+
+  const slogan = sloganMap[currentLocale] || sloganMap.en;
+
   const quickReasons = [
     {
-      title: t("quickReasons.signInFirst.title"),
-      description: t("quickReasons.signInFirst.description"),
+      title: t('quickReasons.signInFirst.title'),
+      description: t('quickReasons.signInFirst.description'),
       icon: ShieldCheck,
     },
     {
-      title: t("quickReasons.keepItShort.title"),
-      description: t("quickReasons.keepItShort.description"),
+      title: t('quickReasons.keepItShort.title'),
+      description: t('quickReasons.keepItShort.description'),
       icon: Sparkles,
     },
     {
-      title: t("quickReasons.moveWithoutSprawl.title"),
-      description: t("quickReasons.moveWithoutSprawl.description"),
+      title: t('quickReasons.moveWithoutSprawl.title'),
+      description: t('quickReasons.moveWithoutSprawl.description'),
       icon: Waypoints,
     },
   ] as const;
 
+  // Scene choreography: ignite -> camera settle -> eyebrow -> wordmark forged -> sweep -> cascade.
+  const scene: Variants = {
+    hidden: prefersReduced
+      ? { opacity: 1 }
+      : { opacity: 0, rotateX: 14, scale: 0.94, y: 36 },
+    visible: {
+      opacity: 1,
+      rotateX: 0,
+      scale: 1,
+      y: 0,
+      transition: { duration: 1.1, ease: CINE_IN },
+    },
+  };
+
+  const eyebrow: Variants = {
+    hidden: prefersReduced ? { opacity: 1 } : { opacity: 0, letterSpacing: '0.6em', filter: 'blur(4px)' },
+    visible: {
+      opacity: 1,
+      letterSpacing: '0.2em',
+      filter: 'blur(0px)',
+      transition: { duration: 0.9, ease: 'easeOut', delay: prefersReduced ? 0 : 0.35 },
+    },
+  };
+
+  const wordmark: Variants = {
+    hidden: {},
+    visible: {
+      transition: {
+        staggerChildren: prefersReduced ? 0 : 0.09,
+        delayChildren: prefersReduced ? 0 : 0.6,
+      },
+    },
+  };
+
+  // Forged letters: rise from the clip mask, de-blur, with a brief gold flare + settle.
+  const letter: Variants = {
+    hidden: prefersReduced
+      ? { opacity: 1, y: '0%', filter: 'blur(0px)' }
+      : { opacity: 0, y: '115%', filter: 'blur(10px)' },
+    visible: {
+      opacity: 1,
+      y: '0%',
+      filter: 'blur(0px)',
+      transition: { duration: 0.75, ease: EXPO_OUT },
+    },
+  };
+
+  const fadeUp: Variants = {
+    hidden: prefersReduced ? { opacity: 1, y: 0, filter: 'blur(0px)' } : { opacity: 0, y: 16, filter: 'blur(6px)' },
+    visible: {
+      opacity: 1,
+      y: 0,
+      filter: 'blur(0px)',
+      transition: { duration: 0.7, ease: 'easeOut' },
+    },
+  };
+
   return (
-    <main className="bb-page-shell px-4 py-8 text-white md:px-5 md:py-10">
+    <main className="bb-page-shell relative px-4 py-8 text-white md:px-5 md:py-10 overflow-hidden min-h-screen flex items-center justify-center">
+      {/* Centered dark radial backdrop */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(245,215,66,0.07),transparent_60%)] pointer-events-none z-0" />
+
+      {/* Ignite bloom: the scene powers on from a single gold point (one-shot) */}
+      {!prefersReduced && (
+        <motion.div
+          data-testid="welcome-ignite-bloom"
+          initial={{ scale: 0, opacity: 0.9 }}
+          animate={{ scale: 1.6, opacity: 0 }}
+          transition={{ duration: 1.3, ease: 'easeOut' }}
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] rounded-full pointer-events-none z-0"
+          style={{
+            background:
+              'radial-gradient(circle, rgba(255,233,168,0.55) 0%, rgba(245,215,66,0.25) 35%, transparent 70%)',
+            mixBlendMode: 'screen',
+          }}
+        />
+      )}
+
+      {/* Breathing gold glow behind the wordmark — more alive (scale + opacity) */}
+      <motion.div
+        data-testid="welcome-breathing-glow"
+        initial={{ opacity: prefersReduced ? 0.5 : 0.3, scale: 1 }}
+        animate={prefersReduced ? { opacity: 0.5, scale: 1 } : { opacity: [0.3, 0.6, 0.3], scale: [1, 1.18, 1] }}
+        transition={prefersReduced ? { duration: 0 } : { duration: 6.5, ease: 'easeInOut', repeat: Infinity }}
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[640px] h-[640px] bg-amber-500/10 rounded-full blur-[150px] pointer-events-none z-0"
+      />
+
       <MobilePanelFrame>
-        <section className="mx-auto grid max-w-6xl gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(22rem,0.9fr)]">
-          <article className="bb-panel bb-panel-strong p-7 md:p-9">
+        <motion.section
+          variants={scene}
+          initial="hidden"
+          animate="visible"
+          style={{ transformPerspective: 1200, transformOrigin: 'center top' }}
+          className="relative mx-auto grid max-w-6xl gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(22rem,0.8fr)] z-10"
+        >
+          {/* Main Welcome panel */}
+          <article className="bb-panel bg-black/85 backdrop-blur-md border border-amber-400/20 shadow-[0_0_50px_rgba(245,215,66,0.05)] p-7 md:p-9 relative overflow-hidden">
+            {/* Top gold line accent */}
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-amber-400 to-transparent" />
+
             <div className="flex items-start justify-between gap-4">
-              <p className="bb-kicker">{t("brand")}</p>
-              <LocaleSwitcher />
-            </div>
-            <h1 className="mt-3 max-w-2xl text-4xl font-semibold md:text-5xl">
-              {t("heading")}
-            </h1>
-            <p className="bb-copy mt-4 max-w-2xl text-sm md:text-base">
-              {t("description")}
-            </p>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link href={signInHref} className="bb-button-primary">
-                {t("openSignIn")}
-              </Link>
-              <Link href={signUpHref} className="bb-button-secondary">
-                {t("openSignUp")}
-              </Link>
+              <motion.span
+                variants={eyebrow}
+                initial="hidden"
+                animate="visible"
+                className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/10 border border-amber-400/20 px-3 py-1 text-xs font-semibold uppercase text-amber-400"
+              >
+                <Coins className="h-3.5 w-3.5" />
+                <span>BOSS MODE</span>
+              </motion.span>
             </div>
 
-            <p className="bb-mini-copy mt-3 text-sm text-(--text-muted)">
-              {t("privacyPromise")}
-            </p>
+            {/* Cinematic forged wordmark reveal */}
+            <div
+              className="mt-6 flex flex-col items-start gap-1 select-none relative"
+              style={{ perspective: '1000px' }}
+            >
+              {/* One-shot light sweep across the gold wordmark */}
+              {!prefersReduced && (
+                <motion.div
+                  data-testid="welcome-light-sweep"
+                  initial={{ x: '-160%', opacity: 0 }}
+                  animate={{ x: '260%', opacity: [0, 1, 0] }}
+                  transition={{ delay: 1.65, duration: 1.2, ease: 'easeInOut' }}
+                  className="absolute inset-0 z-20 pointer-events-none"
+                  style={{
+                    background:
+                      'linear-gradient(120deg, transparent 35%, rgba(255,255,255,0.65) 50%, transparent 65%)',
+                    transform: 'skewX(-18deg)',
+                    mixBlendMode: 'screen',
+                  }}
+                />
+              )}
 
-            <ul
-              className="mt-7 grid gap-3"
-              aria-label={t("quickReasonsAria")}
+              <motion.div
+                variants={wordmark}
+                initial="hidden"
+                animate="visible"
+                className="flex flex-wrap text-5xl md:text-7xl font-black uppercase tracking-tight font-space-grotesk text-white"
+                aria-label="BUDGET"
+              >
+                {Array.from('BUDGET').map((char, index) => (
+                  <span key={index} className="inline-block overflow-hidden pb-[0.08em]">
+                    <motion.span
+                      variants={letter}
+                      className="inline-block transform-gpu drop-shadow-[0_0_18px_rgba(245,215,66,0.35)]"
+                    >
+                      {char}
+                    </motion.span>
+                  </span>
+                ))}
+              </motion.div>
+
+              <motion.div
+                variants={wordmark}
+                initial="hidden"
+                animate="visible"
+                className="flex flex-wrap text-6xl md:text-8xl font-black uppercase tracking-widest font-space-grotesk bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-600 bg-clip-text text-transparent"
+                aria-label="BOSS"
+              >
+                {Array.from('BOSS').map((char, index) => (
+                  <span key={index} className="inline-block overflow-hidden pb-[0.08em]">
+                    <motion.span variants={letter} className="inline-block transform-gpu">
+                      {char}
+                    </motion.span>
+                  </span>
+                ))}
+              </motion.div>
+            </div>
+
+            {/* Quiet refined slogan line (no pulse, no rotate, no blast shadow) */}
+            <motion.div variants={fadeUp} initial="hidden" animate="visible" className="mt-5">
+              <span className="text-sm font-semibold uppercase tracking-widest bg-gradient-to-r from-amber-300 to-yellow-500 bg-clip-text text-transparent">
+                &ldquo;{slogan}&rdquo;
+              </span>
+            </motion.div>
+
+            <motion.p
+              variants={fadeUp}
+              initial="hidden"
+              animate="visible"
+              className="bb-copy mt-6 max-w-2xl text-sm md:text-base text-zinc-300"
+            >
+              {t('description')}
+            </motion.p>
+
+            <motion.div
+              variants={fadeUp}
+              initial="hidden"
+              animate="visible"
+              className="mt-6 flex flex-wrap gap-4"
+            >
+              <Link href={signInHref} className="bb-button-primary border border-amber-400/40 bg-amber-400 text-black hover:bg-amber-300 hover:shadow-[0_0_28px_rgba(245,215,66,0.45)] transition-all">
+                {t('openSignIn')}
+              </Link>
+              <Link href={signUpHref} className="bb-button-secondary border border-zinc-800 text-white hover:bg-white/5 transition-all">
+                {t('openSignUp')}
+              </Link>
+            </motion.div>
+
+            <motion.p
+              variants={fadeUp}
+              initial="hidden"
+              animate="visible"
+              className="bb-mini-copy mt-4 text-xs text-zinc-500"
+            >
+              {t('privacyPromise')}
+            </motion.p>
+
+            {/* Random Pro-Tips Widget Integration */}
+            <div className="mt-8">
+              <ProTipsCard locale={'en'} />
+            </div>
+
+            {/* Features list */}
+            <motion.ul
+              variants={fadeUp}
+              initial="hidden"
+              animate="visible"
+              className="mt-6 grid gap-3"
+              aria-label={t('quickReasonsAria')}
             >
               {quickReasons.map(({ title, description, icon: Icon }) => (
                 <li
                   key={title}
-                  className="rounded-[1.15rem] border border-(--border-soft) bg-white/6 px-4 py-3"
+                  className="rounded-[1.15rem] border border-zinc-800 bg-white/5 px-4 py-3 hover:border-zinc-700 transition-colors"
                 >
                   <div className="flex items-start gap-3">
-                    <span className="bb-icon-badge mt-0.5 shrink-0" aria-hidden="true">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-400/10 border border-amber-400/20 text-amber-400" aria-hidden="true">
                       <Icon className="h-4 w-4" />
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
-                        <p className="text-sm font-semibold text-(--text-1)">{title}</p>
+                        <p className="text-sm font-semibold text-white">{title}</p>
                         <ArrowRight
-                          className="mt-0.5 h-4 w-4 shrink-0 text-(--accent-strong)"
+                          className="mt-0.5 h-4 w-4 shrink-0 text-amber-400"
                           aria-hidden="true"
                         />
                       </div>
-                      <p className="bb-mini-copy mt-1 text-sm">{description}</p>
+                      <p className="bb-mini-copy mt-1 text-xs text-zinc-400">{description}</p>
                     </div>
                   </div>
                 </li>
               ))}
-            </ul>
+            </motion.ul>
           </article>
 
-          <aside className="grid gap-4 self-start">
-            <article className="bb-panel bb-panel-accent p-5">
-              <p className="bb-kicker">{t("rootFlow")}</p>
-              <h2 className="mt-2 text-2xl font-semibold">{t("authFirstThenSetup")}</h2>
-              <p className="bb-mini-copy mt-3 text-sm">
-                {t("rootFlowDescription")}
+          {/* Right sidebar */}
+          <motion.aside
+            variants={fadeUp}
+            initial="hidden"
+            animate="visible"
+            className="grid gap-4 self-start"
+          >
+            <article className="bb-panel border border-amber-400/10 bg-black/85 backdrop-blur-md p-5">
+              <p className="bb-kicker text-amber-400">{t('rootFlow')}</p>
+              <h2 className="mt-2 text-xl font-bold text-white">{t('authFirstThenSetup')}</h2>
+              <p className="bb-mini-copy mt-2 text-xs text-zinc-400">
+                {t('rootFlowDescription')}
               </p>
             </article>
 
-            <article className="bb-panel bb-panel-accent p-5">
-              <p className="bb-kicker">{t("whatChangesNext")}</p>
-              <ul className="mt-3 grid gap-3 text-sm text-white/85">
-                <li className="rounded-3xl border border-white/10 bg-black/15 px-4 py-3">
-                  {t("nextSteps.signIn")}
+            <article className="bb-panel border border-amber-400/10 bg-black/85 backdrop-blur-md p-5">
+              <p className="bb-kicker text-amber-400">{t('whatChangesNext')}</p>
+              <ul className="mt-3 grid gap-2.5 text-xs text-zinc-300">
+                <li className="rounded-2xl border border-zinc-800 bg-black/40 px-4 py-2.5">
+                  {t('nextSteps.signIn')}
                 </li>
-                <li className="rounded-3xl border border-white/10 bg-black/15 px-4 py-3">
-                  {t("nextSteps.signUp")}
+                <li className="rounded-2xl border border-zinc-800 bg-black/40 px-4 py-2.5">
+                  {t('nextSteps.signUp')}
                 </li>
-                <li className="rounded-3xl border border-white/10 bg-black/15 px-4 py-3">
-                  {t("nextSteps.finishWizard")}
+                <li className="rounded-2xl border border-zinc-800 bg-black/40 px-4 py-2.5">
+                  {t('nextSteps.finishWizard')}
                 </li>
               </ul>
             </article>
-          </aside>
-        </section>
+          </motion.aside>
+        </motion.section>
       </MobilePanelFrame>
     </main>
   );

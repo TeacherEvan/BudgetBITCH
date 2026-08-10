@@ -1,6 +1,6 @@
 // app/page.test.tsx
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useEffect } from 'react';
+
 import { render, screen, act } from '@testing-library/react';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import Home from './page';
@@ -11,6 +11,10 @@ vi.mock('@convex-dev/auth/react', () => ({
     isLoading: false,
     isAuthenticated: false,
   }),
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
 }));
 
 // Mock localStorage
@@ -52,11 +56,12 @@ vi.mock('@/components/launch/golden-splash', () => {
 });
 
 vi.mock('@/components/onboarding/language-select-modal', () => ({
-  LanguageSelectModal: ({ isOpen, onComplete }: { isOpen: boolean; onComplete: (locale: string) => void }) =>
+  LanguageSelectModal: ({ isOpen, onComplete }: { isOpen: boolean; onComplete: (selection: { locale: string; currency: string }) => void }) =>
     isOpen ? (
       <div data-testid="language-modal" role="dialog">
-        <button onClick={() => onComplete('th')}>ไทย</button>
-        <button onClick={() => onComplete('en')}>English</button>
+        <button onClick={() => onComplete({ locale: 'en', currency: 'USD' })}>United States</button>
+        <button onClick={() => onComplete({ locale: 'fr', currency: 'EUR' })}>France</button>
+        <button onClick={() => onComplete({ locale: 'zh', currency: 'CNY' })}>China</button>
       </div>
     ) : null,
 }));
@@ -67,10 +72,6 @@ vi.mock('@/components/auth/clean-auth-card', () => ({
       <span>{initialFlow === 'signIn' ? 'Sign In' : 'Sign Up'}</span>
     </div>
   ),
-}));
-
-vi.mock('@/components/pwa/install-prompt', () => ({
-  PWAInstallPrompt: () => <div data-testid="pwa-prompt" />,
 }));
 
 vi.mock('@/lib/url', () => ({
@@ -87,84 +88,64 @@ describe('Landing Page Splash-First Flow', () => {
     mockSessionStorage.getItem.mockReturnValue(null);
   });
 
-  it('shows the golden splash before the login card on first visit', () => {
+  it('shows the golden splash before the language modal or login card on first visit', async () => {
     mockSessionStorage.getItem.mockReturnValue(null);
     renderWithProviders(<Home />);
-    expect(screen.getByTestId('golden-splash')).toBeInTheDocument();
+    expect(await screen.findByTestId('golden-splash')).toBeInTheDocument();
   });
 
-  it('does not show the language modal beneath the splash on first visit', () => {
+  it('does not show the language modal beneath the splash on first visit', async () => {
     mockSessionStorage.getItem.mockReturnValue(null);
     renderWithProviders(<Home />);
+    await screen.findByTestId('golden-splash');
     expect(screen.queryByTestId('language-modal')).not.toBeInTheDocument();
   });
 
-  it('reveals the auth card after the splash is dismissed', async () => {
+  it('reveals the country flag language modal after the splash is dismissed on first run', async () => {
     mockSessionStorage.getItem.mockReturnValue(null);
+    mockLocalStorage.getItem.mockReturnValue(null);
     renderWithProviders(<Home />);
 
-    // The proceed button only appears after the splash progress animation
-    // completes (~2.8s); wait for it, then click to dismiss.
     const proceed = await screen.findByText('[ Click to Proceed ]', {}, { timeout: 5000 });
     act(() => {
       proceed.click();
     });
 
-    expect(screen.getByTestId('clean-auth-card')).toBeInTheDocument();
-    expect(screen.getByText('Sign In')).toBeInTheDocument();
+    expect(screen.getByTestId('language-modal')).toBeInTheDocument();
   });
 
-  it('skips the splash on subsequent visits (splash already seen)', () => {
+  it('skips the splash on subsequent visits and shows auth card if locale set', () => {
     mockSessionStorage.getItem.mockImplementation((key: string) =>
       key === 'bb:splash-seen' ? 'true' : null,
+    );
+    mockLocalStorage.getItem.mockImplementation((key: string) =>
+      key === 'budgetbitch:locale' ? 'en' : null,
     );
     renderWithProviders(<Home />);
     expect(screen.queryByTestId('golden-splash')).not.toBeInTheDocument();
     expect(screen.getByTestId('clean-auth-card')).toBeInTheDocument();
   });
 
-  it('shows the language modal over the login card when no locale stored', () => {
+  it('shows the country flag language modal after splash when no locale stored', () => {
     mockSessionStorage.getItem.mockImplementation((key: string) =>
       key === 'bb:splash-seen' ? 'true' : null,
     );
     mockLocalStorage.getItem.mockReturnValue(null);
     renderWithProviders(<Home />);
-    expect(screen.getByTestId('clean-auth-card')).toBeInTheDocument();
     expect(screen.getByTestId('language-modal')).toBeInTheDocument();
   });
 
-  it('saves locale to localStorage when Thai selected and hides language modal', () => {
+  it('saves locale to localStorage when United States selected and reveals auth card', () => {
     mockSessionStorage.getItem.mockImplementation((key: string) =>
       key === 'bb:splash-seen' ? 'true' : null,
     );
     mockLocalStorage.getItem.mockReturnValue(null);
     renderWithProviders(<Home />);
 
-    const modal = screen.getByTestId('language-modal');
-    const thaiButton = modal.querySelector('button');
-    if (thaiButton) {
-      act(() => {
-        thaiButton.click();
-      });
-    }
-
-    expect(mockLocalStorage.setItem).toHaveBeenCalledWith('budgetbitch:locale', 'th');
-  });
-
-  it('saves locale to localStorage when English selected', () => {
-    mockSessionStorage.getItem.mockImplementation((key: string) =>
-      key === 'bb:splash-seen' ? 'true' : null,
-    );
-    mockLocalStorage.getItem.mockReturnValue(null);
-    renderWithProviders(<Home />);
-
-    const modal = screen.getByTestId('language-modal');
-    const buttons = modal.querySelectorAll('button');
-    if (buttons[1]) {
-      act(() => {
-        buttons[1].click();
-      });
-    }
+    const usButton = screen.getByRole('button', { name: 'United States' });
+    act(() => {
+      usButton.click();
+    });
 
     expect(mockLocalStorage.setItem).toHaveBeenCalledWith('budgetbitch:locale', 'en');
   });

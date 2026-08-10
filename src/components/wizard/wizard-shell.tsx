@@ -1,96 +1,59 @@
 // components/wizard/wizard-shell.tsx
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { WizardProfile } from '@/lib/types/budget';
 import { saveWizardProfile } from '@/lib/db/local-db';
+import type { CurrencyCode } from '@/lib/utils/currency';
+import { useCurrencyOverride } from '@/hooks/use-currency-override';
 import { WizardProgress } from './wizard-progress';
-import { VoiceToggle } from './voice-toggle';
 import { StepIncome } from './steps/step-income';
 import { StepRent } from './steps/step-rent';
-import { StepTransport } from './steps/step-transport';
 import { StepPhoneInternet } from './steps/step-phone-internet';
-import { StepSubscriptions } from './steps/step-subscriptions';
-import { StepEntertainment } from './steps/step-entertainment';
 import { StepHealthcare } from './steps/step-healthcare';
+import { StepTransport } from './steps/step-transport';
+import { StepEntertainment } from './steps/step-entertainment';
+import { StepSubscriptions } from './steps/step-subscriptions';
 import { StepSavingsRate } from './steps/step-savings-rate';
 import { StepRiskTolerance } from './steps/step-risk-tolerance';
 import { StepLocationConsent } from './steps/step-location-consent';
 import { Button } from '@/components/ui/button';
 
-export type WizardStepId = 
-  | 'income' 
-  | 'rent' 
-  | 'transport' 
-  | 'phoneInternet' 
-  | 'subscriptions' 
-  | 'entertainment' 
-  | 'healthcare' 
-  | 'savingsRatePct' 
-  | 'riskTolerance' 
+export type WizardStepId =
+  | 'income'
+  | 'rent'
+  | 'phoneInternet'
+  | 'healthcare'
+  | 'transport'
+  | 'entertainment'
+  | 'subscriptions'
+  | 'savingsRate'
+  | 'riskTolerance'
   | 'locationConsent';
 
 const STEPS: WizardStepId[] = [
-  'income', 'rent', 'transport', 'phoneInternet', 'subscriptions',
-  'entertainment', 'healthcare', 'savingsRatePct', 'riskTolerance', 'locationConsent'
+  'income',
+  'rent',
+  'phoneInternet',
+  'healthcare',
+  'transport',
+  'entertainment',
+  'subscriptions',
+  'savingsRate',
+  'riskTolerance',
+  'locationConsent',
 ];
 
-// Voices for each step
-const STEP_VOICE_PROMPTS: Record<WizardStepId, { th: string; en: string }> = {
-  income: { 
-    th: 'คุณได้รับรายได้เท่าไหร่ต่อเดือน', 
-    en: 'How much do you make per month' 
-  },
-  rent: { 
-    th: 'ค่าเช่าหรือค่าที่อยู่อาศัยเท่าไหร่', 
-    en: 'How much is your rent or mortgage' 
-  },
-  transport: { 
-    th: 'ค่าเดินทาง BTS รถเมล์ หรือน้ำมันเท่าไหร่', 
-    en: 'How much for transport - BTS, bus, or fuel' 
-  },
-  phoneInternet: { 
-    th: 'ค่าโทรศัพท์และอินเตอร์เน็ตเท่าไหร่', 
-    en: 'How much for phone and internet' 
-  },
-  subscriptions: { 
-    th: 'ค่าสมัครสมาชิก Netflix Spotify ฟิตเนส เท่าไหร่', 
-    en: 'Subscriptions like Netflix, Spotify, gym' 
-  },
-  entertainment: { 
-    th: 'เงินความบันเทิง หนัง กาแฟ เล่นเกม เท่าไหร่', 
-    en: 'Entertainment - movies, coffee, games' 
-  },
-  healthcare: { 
-    th: 'ค่ายา ค่าทันตกรรม ค่ารพตาล เท่าไหร่', 
-    en: 'Healthcare - meds, dentist, hospital' 
-  },
-  savingsRatePct: { 
-    th: 'อยากออมกี่เปอร์เซ็นต์ของรายได้', 
-    en: 'What percentage of income to save' 
-  },
-  riskTolerance: { 
-    th: 'รับความเสี่ยงได้น้อย กลาง หรือมาก', 
-    en: 'Low, medium, or high risk tolerance' 
-  },
-  locationConsent: { 
-    th: 'อนุญาตให้เข้าถึงตำแหน่งเพื่อรับข่าว และราคาน้ำมันในพื้นที่', 
-    en: 'Allow location for local news and fuel prices' 
-  },
-};
-
 interface WizardShellProps {
-  locale: 'th' | 'en';
+  locale: string;
   onComplete: () => void;
-  voiceEnabled: boolean;
-  speak: (text: string) => void;
   isModal?: boolean;
 }
 
-export function WizardShell({ locale, onComplete, voiceEnabled, speak, isModal = false }: WizardShellProps) {
-  const t = useTranslations('wizard');
+export function WizardShell({ locale, onComplete, isModal = false }: WizardShellProps) {
+  const normLocale: string = 'en';
+  const { override: currencyOverride } = useCurrencyOverride();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [stepValues, setStepValues] = useState<Partial<WizardProfile['answers']>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -101,21 +64,19 @@ export function WizardShell({ locale, onComplete, voiceEnabled, speak, isModal =
   const isLastStep = currentStepIndex === STEPS.length - 1;
 
   const handleNext = useCallback(async () => {
-    const stepKey = STEPS[currentStepIndex] as keyof WizardProfile['answers'];
-    const value = stepValues[stepKey];
-    
-    // Validation
+    const stepId = STEPS[currentStepIndex];
+
+    // Validation (income step requires numeric value)
     let isEmpty = false;
-    if (value === undefined || value === null) {
-      isEmpty = true;
-    } else if (typeof value === 'string' && value.trim() === '') {
-      isEmpty = true;
-    } else if (typeof value === 'number' && isNaN(value)) {
-      isEmpty = true;
+    if (stepId === 'income') {
+      const incomeVal = stepValues.income;
+      if (incomeVal === undefined || incomeVal === null || isNaN(Number(incomeVal))) {
+        isEmpty = true;
+      }
     }
-    
+
     if (isEmpty) {
-      setErrorMessage(locale === 'th' ? 'กรุณากรอกข้อมูลก่อนดำเนินต่อ' : 'Please fill in this step');
+      setErrorMessage('Please fill in this step');
       return;
     }
 
@@ -128,26 +89,30 @@ export function WizardShell({ locale, onComplete, voiceEnabled, speak, isModal =
         completed: true,
         completedAt: new Date().toISOString(),
         version: 1,
-        locale,
-        answers: stepValues as WizardProfile['answers'],
+        locale: ((['th', 'en', 'en-ZA'] as string[]).includes(locale) ? locale : 'en') as WizardProfile['locale'],
+        answers: {
+          income: stepValues.income ?? 0,
+          rent: stepValues.rent ?? 0,
+          phoneInternet: stepValues.phoneInternet ?? 0,
+          healthcare: stepValues.healthcare ?? 0,
+          transport: stepValues.transport ?? 0,
+          entertainment: stepValues.entertainment ?? 0,
+          subscriptions: stepValues.subscriptions ?? 0,
+          savingsRatePct: stepValues.savingsRatePct ?? 10,
+          riskTolerance: stepValues.riskTolerance ?? 'medium',
+          locationConsent: stepValues.locationConsent ?? false,
+          receiptScanned: stepValues.receiptScanned ?? false,
+          currency: (stepValues.currency ?? currencyOverride ?? (locale === 'en-ZA' ? 'ZAR' : 'USD')) as CurrencyCode,
+          ...stepValues,
+        },
       };
       await saveWizardProfile(profile);
       setIsSubmitting(false);
       onComplete();
     } else {
       setCurrentStepIndex(prev => prev + 1);
-      // Speak next step prompt
-      if (voiceEnabled) {
-        if (isLastStep) {
-          // skip
-        } else {
-          const nextStep = STEPS[currentStepIndex + 1];
-          const prompt = STEP_VOICE_PROMPTS[nextStep][locale];
-          setTimeout(() => speak(prompt), 300);
-        }
-      }
     }
-  }, [currentStepIndex, stepValues, isLastStep, locale, voiceEnabled, speak, onComplete]);
+  }, [currentStepIndex, stepValues, isLastStep, locale, currencyOverride, onComplete]);
 
   const handleBack = useCallback(() => {
     if (!isFirstStep) {
@@ -156,109 +121,155 @@ export function WizardShell({ locale, onComplete, voiceEnabled, speak, isModal =
     }
   }, [isFirstStep]);
 
-  const handleValueChange = useCallback((key: keyof WizardProfile['answers'], value: WizardProfile['answers'][typeof key]) => {
-    setStepValues(prev => ({ ...prev, [key]: value }));
-    setErrorMessage(null);
-  }, []);
-
-  // Speak current step prompt on mount/step change
-  useEffect(() => {
-    if (voiceEnabled) {
-      const prompt = STEP_VOICE_PROMPTS[currentStep][locale];
-      speak(prompt);
-    }
-  }, [currentStep, voiceEnabled, locale, speak]);
+  const handleValueChange = useCallback(
+    (key: keyof WizardProfile['answers'], value: WizardProfile['answers'][typeof key]) => {
+      setStepValues(prev => ({ ...prev, [key]: value }));
+      setErrorMessage(null);
+    },
+    []
+  );
 
   const renderStep = () => {
     switch (currentStep) {
       case 'income':
-        return <StepIncome locale={locale} value={stepValues.income as number} onChange={handleValueChange} error={errorMessage} disabled={isSubmitting} />;
+        return (
+          <StepIncome
+            locale={normLocale}
+            value={stepValues.income as number}
+            onChange={handleValueChange}
+            error={errorMessage}
+            disabled={isSubmitting}
+          />
+        );
       case 'rent':
-        return <StepRent locale={locale} value={stepValues.rent as number} onChange={handleValueChange} error={errorMessage} disabled={isSubmitting} />;
-      case 'transport':
-        return <StepTransport locale={locale} value={stepValues.transport as number} onChange={handleValueChange} error={errorMessage} disabled={isSubmitting} />;
+        return (
+          <StepRent
+            locale={normLocale}
+            value={stepValues.rent as number}
+            onChange={handleValueChange}
+            error={errorMessage}
+            disabled={isSubmitting}
+          />
+        );
       case 'phoneInternet':
-        return <StepPhoneInternet locale={locale} value={stepValues.phoneInternet as number} onChange={handleValueChange} error={errorMessage} disabled={isSubmitting} />;
-      case 'subscriptions':
-        return <StepSubscriptions locale={locale} value={stepValues.subscriptions as number} onChange={handleValueChange} error={errorMessage} disabled={isSubmitting} />;
-      case 'entertainment':
-        return <StepEntertainment locale={locale} value={stepValues.entertainment as number} onChange={handleValueChange} error={errorMessage} disabled={isSubmitting} />;
+        return (
+          <StepPhoneInternet
+            locale={normLocale}
+            value={stepValues.phoneInternet as number}
+            onChange={handleValueChange}
+            error={errorMessage}
+            disabled={isSubmitting}
+          />
+        );
       case 'healthcare':
-        return <StepHealthcare locale={locale} value={stepValues.healthcare as number} onChange={handleValueChange} error={errorMessage} disabled={isSubmitting} />;
-      case 'savingsRatePct':
-        return <StepSavingsRate locale={locale} value={stepValues.savingsRatePct as number} onChange={handleValueChange} error={errorMessage} disabled={isSubmitting} />;
+        return (
+          <StepHealthcare
+            locale={normLocale}
+            value={stepValues.healthcare as number}
+            onChange={handleValueChange}
+            error={errorMessage}
+            disabled={isSubmitting}
+          />
+        );
+      case 'transport':
+        return (
+          <StepTransport
+            locale={normLocale}
+            value={stepValues.transport as number}
+            onChange={handleValueChange}
+            error={errorMessage}
+            disabled={isSubmitting}
+          />
+        );
+      case 'entertainment':
+        return (
+          <StepEntertainment
+            locale={normLocale}
+            value={stepValues.entertainment as number}
+            onChange={handleValueChange}
+            error={errorMessage}
+            disabled={isSubmitting}
+          />
+        );
+      case 'subscriptions':
+        return (
+          <StepSubscriptions
+            locale={normLocale}
+            value={stepValues.subscriptions as number}
+            onChange={handleValueChange}
+            error={errorMessage}
+            disabled={isSubmitting}
+          />
+        );
+      case 'savingsRate':
+        return (
+          <StepSavingsRate
+            locale={normLocale}
+            value={stepValues.savingsRatePct as number}
+            onChange={handleValueChange}
+            error={errorMessage}
+            disabled={isSubmitting}
+          />
+        );
       case 'riskTolerance':
-        return <StepRiskTolerance locale={locale} value={stepValues.riskTolerance as 'low' | 'medium' | 'high'} onChange={handleValueChange} error={errorMessage} disabled={isSubmitting} />;
+        return (
+          <StepRiskTolerance
+            locale={normLocale}
+            value={(stepValues.riskTolerance as 'low' | 'medium' | 'high') || 'medium'}
+            onChange={handleValueChange}
+            error={errorMessage}
+            disabled={isSubmitting}
+          />
+        );
       case 'locationConsent':
-        return <StepLocationConsent locale={locale} value={stepValues.locationConsent as boolean} onChange={handleValueChange} error={errorMessage} disabled={isSubmitting} speak={speak} />;
+        return (
+          <StepLocationConsent
+            locale={normLocale}
+            value={stepValues.locationConsent as boolean}
+            onChange={handleValueChange}
+            error={errorMessage}
+            disabled={isSubmitting}
+          />
+        );
       default:
         return null;
     }
   };
 
   return (
-    <div className={isModal ? "w-full max-w-lg mx-auto bg-neutral-900 border border-white/10 rounded-3xl p-6 shadow-2xl flex flex-col relative overflow-hidden" : "min-h-screen bg-black flex flex-col"}>
-      <WizardProgress 
-        currentStep={currentStepIndex} 
-        totalSteps={STEPS.length} 
-        locale={locale} 
+    <div className={`w-full max-w-xl mx-auto bg-black text-white rounded-3xl border border-white/10 overflow-hidden shadow-2xl ${isModal ? 'my-auto max-h-[90vh] overflow-y-auto' : 'min-h-screen flex flex-col'}`}>
+      <WizardProgress
+        currentStep={currentStepIndex}
+        totalSteps={STEPS.length}
+        locale={normLocale}
       />
-      
-      <main className="flex-1 flex flex-col p-2 md:p-4">
-        <div className="max-w-md mx-auto w-full flex-1 flex flex-col">
-          <div className="text-center mb-6 mt-2">
-            <h1 className="text-xl md:text-2xl font-semibold text-white">
-              {t('title') || 'Setup Your Budget'}
-            </h1>
-            <p className="mt-1 text-sm text-white/70">
-              {t('description') || 'Answer 10 quick questions to build your budget baseline'}
-            </p>
-          </div>
 
-          <div className="flex-1 flex flex-col min-h-[220px]">
-            {renderStep()}
-          </div>
+      <div className="flex-1 p-6 md:p-8 space-y-6">
+        {renderStep()}
+      </div>
 
-          {errorMessage && (
-            <p className="text-center text-rose-400 text-sm mt-4" role="alert">
-              {errorMessage}
-            </p>
-          )}
+      <div className="p-6 border-t border-white/10 bg-black/60 flex items-center justify-between gap-4">
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={handleBack}
+          disabled={isFirstStep || isSubmitting}
+          className="gap-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          {'Back'}
+        </Button>
 
-          <div className="flex gap-3 mt-6">
-            {!isFirstStep && (
-              <Button 
-                variant="secondary" 
-                onClick={handleBack} 
-                disabled={isSubmitting}
-                className="flex-1"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                {locale === 'th' ? 'ย้อนกลับ' : 'Back'}
-              </Button>
-            )}
-            <Button 
-              variant="primary" 
-              onClick={handleNext} 
-              disabled={isSubmitting}
-              isLoading={isSubmitting}
-              className={isFirstStep ? 'flex-1' : 'flex-1'}
-            >
-              {isLastStep 
-                ? (locale === 'th' ? 'เสร็จสิ้น' : 'Finish') 
-                : (locale === 'th' ? 'ถัดไป' : 'Next')}
-              {!isLastStep && <ArrowRight className="h-4 w-4 ml-2" />}
-            </Button>
-          </div>
-        </div>
-      </main>
-
-      <div className="mt-4 flex justify-center">
-        <VoiceToggle 
-          enabled={voiceEnabled} 
-          onToggle={() => {}} // Handled by parent
-          locale={locale}
-        />
+        <Button
+          type="button"
+          variant="primary"
+          onClick={handleNext}
+          disabled={isSubmitting}
+          className="gap-2 bg-amber-400 text-black hover:bg-amber-300 font-semibold"
+        >
+          {isLastStep ? ('Finish') : ('Next')}
+          <ArrowRight className="w-4 h-4" />
+        </Button>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 // convex/legal.ts
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
@@ -18,7 +18,7 @@ export const recordAgreement = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error("Not authenticated");
+      throw new ConvexError("Authentication required");
     }
 
     // `ipAddress` is derived on the server (never from a client-supplied arg)

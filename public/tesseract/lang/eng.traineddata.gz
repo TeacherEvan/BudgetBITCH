@@ -1,0 +1,110 @@
+{
+  "id": "za-checkers-basic",
+  "payload": {
+    "lines": [
+      {
+        "text": "CHECKERS HYPER BRACKENFELL",
+        "conf": 94,
+        "y": 20,
+        "words": [
+          { "text": "CHECKERS", "conf": 95, "bbox": [10, 20, 100, 40] },
+          { "text": "HYPER", "conf": 94, "bbox": [110, 20, 170, 40] },
+          { "text": "BRACKENFELL", "conf": 93, "bbox": [180, 20, 290, 40] }
+        ]
+      },
+      {
+        "text": "VAT REG NO 4123456789",
+        "conf": 90,
+        "y": 45,
+        "words": [
+          { "text": "VAT", "conf": 92, "bbox": [10, 45, 40, 60] },
+          { "text": "REG", "conf": 91, "bbox": [50, 45, 80, 60] },
+          { "text": "NO", "conf": 90, "bbox": [90, 45, 110, 60] },
+          { "text": "4123456789", "conf": 87, "bbox": [120, 45, 210, 60] }
+        ]
+      },
+      {
+        "text": "DATE 15/03/2026 TIME 14:30",
+        "conf": 92,
+        "y": 70,
+        "words": [
+          { "text": "DATE", "conf": 95, "bbox": [10, 70, 50, 85] },
+          { "text": "15/03/2026", "conf": 92, "bbox": [60, 70, 150, 85] },
+          { "text": "TIME", "conf": 92, "bbox": [160, 70, 190, 85] },
+          { "text": "14:30", "conf": 89, "bbox": [200, 70, 240, 85] }
+        ]
+      },
+      {
+        "text": "FULL CREAM MILK 2L R 34.99",
+        "conf": 88,
+        "y": 100,
+        "words": [
+          { "text": "FULL", "conf": 90, "bbox": [10, 100, 50, 115] },
+          { "text": "CREAM", "conf": 89, "bbox": [60, 100, 110, 115] },
+          { "text": "MILK", "conf": 90, "bbox": [120, 100, 160, 115] },
+          { "text": "2L", "conf": 85, "bbox": [170, 100, 190, 115] },
+          { "text": "R", "conf": 90, "bbox": [230, 100, 240, 115] },
+          { "text": "34.99", "conf": 86, "bbox": [250, 100, 300, 115] }
+        ]
+      },
+      {
+        "text": "BREAD WHITE 700G R 18.99",
+        "conf": 89,
+        "y": 120,
+        "words": [
+          { "text": "BREAD", "conf": 91, "bbox": [10, 120, 60, 135] },
+          { "text": "WHITE", "conf": 90, "bbox": [70, 120, 120, 135] },
+          { "text": "700G", "conf": 87, "bbox": [130, 120, 170, 135] },
+          { "text": "R", "conf": 91, "bbox": [230, 120, 240, 135] },
+          { "text": "18.99", "conf": 87, "bbox": [250, 120, 300, 135] }
+        ]
+      },
+      {
+        "text": "SUBTOTAL R 53.98",
+        "conf": 91,
+        "y": 150,
+        "words": [
+          { "text": "SUBTOTAL", "conf": 93, "bbox": [10, 150, 90, 165] },
+          { "text": "R", "conf": 92, "bbox": [230, 150, 240, 165] },
+          { "text": "53.98", "conf": 88, "bbox": [250, 150, 300, 165] }
+        ]
+      },
+      {
+        "text": "VAT 15% R 7.04",
+        "conf": 90,
+        "y": 170,
+        "words": [
+          { "text": "VAT", "conf": 92, "bbox": [10, 170, 40, 185] },
+          { "text": "15%", "conf": 90, "bbox": [50, 170, 80, 185] },
+          { "text": "R", "conf": 91, "bbox": [230, 170, 240, 185] },
+          { "text": "7.04", "conf": 87, "bbox": [250, 170, 300, 185] }
+        ]
+      },
+      {
+        "text": "TOTAL R 53.98",
+        "conf": 93,
+        "y": 195,
+        "words": [
+          { "text": "TOTAL", "conf": 95, "bbox": [10, 195, 60, 215] },
+          { "text": "R", "conf": 94, "bbox": [230, 195, 240, 215] },
+          { "text": "53.98", "conf": 90, "bbox": [250, 195, 300, 215] }
+        ]
+      }
+    ],
+    "width": 320,
+    "height": 400,
+    "lang": "eng",
+    "engine": "tesseract.js@6",
+    "capturedAt": 1773585000000,
+    "countryHint": "ZA",
+    "currencyHint": "ZAR"
+  },
+  "expected": {
+    "total": 53.98,
+    "date": "2026-03-15",
+    "merchant": "CHECKERS HYPER BRACKENFELL",
+    "currency": "ZAR",
+    "category": "groceries",
+    "tax": 7.04
+  }
+}

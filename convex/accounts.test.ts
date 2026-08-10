@@ -267,19 +267,18 @@ describe("invites + membership", () => {
 });
 
 describe("authz + deletion", () => {
-  test("getAccountBoard rejects non-member", async () => {
+  test("getAccountBoard returns null for non-member", async () => {
     const aliceId = await seedUser(t, "alice");
     const carolId = await seedUser(t, "carol");
     const { boardId } = await createAccount(aliceId, "family", "Fam");
-    await expect(
-      asUser(carolId).query(api.accounts.getAccountBoard, { boardId }),
-    ).rejects.toThrow(/Not a member/);
+    const res = await asUser(carolId).query(api.accounts.getAccountBoard, { boardId });
+    expect(res).toBeNull();
   });
 
   test("non-owner cannot rename / invite / remove", async () => {
     const aliceId = await seedUser(t, "alice");
     const bobId = await seedUser(t, "bob");
-    const { accountId, boardId } = await createAccount(
+    const { accountId } = await createAccount(
       aliceId,
       "family",
       "Fam",
@@ -361,9 +360,13 @@ describe("authz + deletion", () => {
 
     await asUser(aliceId).mutation(api.accounts.deleteAccount, { accountId });
 
-    await expect(
-      asUser(bobId).query(api.accounts.getAccountBoard, { boardId }),
-    ).rejects.toThrow(/Board not found/);
+    // After deletion the board is gone and bob is no longer a member, so
+    // getAccountBoard resolves to null (it never throws on missing boards).
+    const orphanBoard = await asUser(bobId).query(
+      api.accounts.getAccountBoard,
+      { boardId },
+    );
+    expect(orphanBoard).toBeNull();
     const listed = await asUser(aliceId).query(api.accounts.listMyAccounts, {});
     expect(listed.find((a: any) => a.boardId === boardId)).toBeUndefined();
   });
@@ -495,4 +498,40 @@ describe("invite token (QR / link)", () => {
     expect((board as any).members.length).toBe(2);
     expect((board as any).members).toContain(bobId);
   });
+
+  test("listMyAccounts returns inviteCode for joined members (F1 fix)", async () => {
+    const aliceId = await seedUser(t, "alice");
+    const bobId = await seedUser(t, "bob");
+    const { accountId, inviteCode } = await createAccount(aliceId, "friends", "Squad");
+    await makeProfile(bobId, "BOBSHARE");
+
+    await asUser(aliceId).mutation(api.accounts.inviteByCode, {
+      accountId,
+      code: "BOBSHARE",
+    });
+    const invites = await asUser(bobId).query(api.accounts.listInvites, {});
+    await asUser(bobId).mutation(api.accounts.acceptInvite, {
+      inviteId: invites[0].inviteId,
+    });
+
+    const bobAccounts = await asUser(bobId).query(api.accounts.listMyAccounts, {});
+    const joined = bobAccounts.find((a: any) => a.accountId === accountId);
+    expect(joined).toBeTruthy();
+    expect(joined!.inviteCode).toBe(inviteCode);
+  });
+
+  test("mutations throw ConvexError for unauthorized operations (F4 fix)", async () => {
+    const aliceId = await seedUser(t, "alice");
+    const bobId = await seedUser(t, "bob");
+    const { accountId } = await createAccount(aliceId, "family", "Fam");
+
+    await expect(
+      asUser(bobId).mutation(api.accounts.renameAccount, { accountId, name: "New Name" }),
+    ).rejects.toThrow("Only the owner can rename");
+
+    await expect(
+      asUser(bobId).mutation(api.accounts.deleteAccount, { accountId }),
+    ).rejects.toThrow("Only the owner can delete");
+  });
 });
+

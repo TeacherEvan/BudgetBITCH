@@ -1,0 +1,181 @@
+
+> budgetbitch@0.1.0 dev
+> node ./scripts/run-with-sanitized-env.mjs next dev --port 3100
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3100
+  - Environments: .env.local, .env
+
+ ✓ Starting...
+ ✓ Ready in 2.5s
+ ○ Compiling /sign-in ...
+ ✓ Compiled /sign-in in 3.8s (865 modules)
+ GET /sign-in 200 in 4475ms
+ ○ Compiling /dashboard ...
+ ✓ Compiled /wizard in 8.5s (4568 modules)
+ GET / 200 in 7723ms
+ GET /sign-in 200 in 6233ms
+ GET /dashboard 200 in 9420ms
+ GET /settings 200 in 7722ms
+ GET /dashboard 200 in 7733ms
+ GET /wizard 200 in 7742ms
+[record-cookie-consent] relay failed: Error
+    at ConvexHttpClient.mutationInner (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:282:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async ConvexHttpClient.processMutationQueue (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:313:24)
+ POST /api/legal/record-cookie-consent 502 in 475ms
+ GET / 200 in 285ms
+ GET /settings 200 in 316ms
+ GET /dashboard 200 in 342ms
+ GET /wizard 200 in 345ms
+ GET / 200 in 296ms
+ GET /wizard 200 in 312ms
+ GET /dashboard 200 in 316ms
+ GET /settings 200 in 85ms
+[record-cookie-consent] relay failed: Error
+    at ConvexHttpClient.mutationInner (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:282:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async ConvexHttpClient.processMutationQueue (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:313:24)
+ POST /api/legal/record-cookie-consent 502 in 496ms
+ GET /sign-in 200 in 51ms
+ GET /sign-in 200 in 39ms
+ GET / 200 in 133ms
+ GET /dashboard 200 in 135ms
+ GET /wizard 200 in 146ms
+ GET /settings 200 in 64ms
+[record-cookie-consent] relay failed: Error
+    at ConvexHttpClient.mutationInner (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:282:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async ConvexHttpClient.processMutationQueue (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:313:24)
+ POST /api/legal/record-cookie-consent 502 in 290ms
+ GET /sign-in 200 in 57ms
+[record-cookie-consent] relay failed: Error
+    at ConvexHttpClient.mutationInner (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:282:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async ConvexHttpClient.processMutationQueue (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:313:24)
+ POST /api/legal/record-cookie-consent 502 in 355ms
+ GET / 200 in 270ms
+ GET /wizard 200 in 264ms
+ GET /dashboard 200 in 279ms
+ GET /settings 200 in 270ms
+ GET / 200 in 233ms
+ GET /dashboard 200 in 230ms
+ GET /wizard 200 in 214ms
+[record-cookie-consent] relay failed: Error
+    at ConvexHttpClient.mutationInner (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:282:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async ConvexHttpClient.processMutationQueue (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:313:24)
+ POST /api/legal/record-cookie-consent 502 in 375ms
+ GET /settings 200 in 147ms
+ GET /sign-in 200 in 53ms
+ GET /sign-in 200 in 120ms
+ GET / 200 in 121ms
+ GET /dashboard 200 in 146ms
+ GET /wizard 200 in 152ms
+[record-cookie-consent] relay failed: Error
+    at ConvexHttpClient.mutationInner (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:282:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async ConvexHttpClient.processMutationQueue (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:313:24)
+ POST /api/legal/record-cookie-consent 502 in 292ms
+ GET /settings 200 in 348ms
+ GET / 200 in 249ms
+ GET /dashboard 200 in 197ms
+ GET /settings 200 in 175ms
+ GET /wizard 200 in 176ms
+[record-cookie-consent] relay failed: Error
+    at ConvexHttpClient.mutationInner (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:282:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async ConvexHttpClient.processMutationQueue (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:313:24)
+ POST /api/legal/record-cookie-consent 502 in 523ms
+ ○ Compiling /sign-up ...
+ ✓ Compiled /sign-up in 1683ms (4570 modules)
+ GET /sign-up 200 in 2284ms
+ GET /sign-in 200 in 116ms
+ GET / 200 in 320ms
+ GET /dashboard 200 in 323ms
+ GET /wizard 200 in 325ms
+[record-cookie-consent] relay failed: Error
+    at ConvexHttpClient.mutationInner (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:282:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async ConvexHttpClient.processMutationQueue (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:313:24)
+ POST /api/legal/record-cookie-consent 502 in 424ms
+ GET /settings 200 in 193ms
+ GET /dashboard 200 in 50ms
+[record-cookie-consent] relay failed: Error
+    at ConvexHttpClient.mutationInner (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:282:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async ConvexHttpClient.processMutationQueue (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:313:24)
+ POST /api/legal/record-cookie-consent 502 in 361ms
+ GET / 200 in 266ms
+ GET /settings 200 in 291ms
+ GET /dashboard 200 in 293ms
+ GET /wizard 200 in 293ms
+ GET /dashboard 200 in 67ms
+ GET /wizard 200 in 113ms
+[record-cookie-consent] relay failed: Error
+    at ConvexHttpClient.mutationInner (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:282:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async ConvexHttpClient.processMutationQueue (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:313:24)
+ POST /api/legal/record-cookie-consent 502 in 351ms
+ GET / 200 in 228ms
+ GET /dashboard 200 in 240ms
+ GET /wizard 200 in 231ms
+ GET /settings 200 in 231ms
+ GET / 200 in 253ms
+[record-cookie-consent] relay failed: Error
+    at ConvexHttpClient.mutationInner (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:282:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async ConvexHttpClient.processMutationQueue (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:313:24)
+ POST /api/legal/record-cookie-consent 502 in 422ms
+ GET /settings 200 in 279ms
+ GET /dashboard 200 in 296ms
+ GET /wizard 200 in 286ms
+ GET /sign-in 200 in 83ms
+ GET / 200 in 55ms
+ GET / 200 in 277ms
+[record-cookie-consent] relay failed: Error
+    at ConvexHttpClient.mutationInner (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:282:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async ConvexHttpClient.processMutationQueue (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:313:24)
+ POST /api/legal/record-cookie-consent 502 in 408ms
+ GET /settings 200 in 283ms
+ GET /wizard 200 in 291ms
+ GET /dashboard 200 in 296ms
+[record-cookie-consent] relay failed: Error
+    at ConvexHttpClient.mutationInner (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:282:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async ConvexHttpClient.processMutationQueue (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:313:24)
+ POST /api/legal/record-cookie-consent 502 in 334ms
+ GET / 200 in 306ms
+ GET /settings 200 in 312ms
+ GET /dashboard 200 in 324ms
+ GET /wizard 200 in 321ms
+ GET /sign-in 200 in 105ms
+ ✓ Compiled in 1960ms (2172 modules)
+ GET / 200 in 159ms
+ GET /settings 200 in 149ms
+ GET /wizard 200 in 167ms
+ GET /dashboard 200 in 168ms
+[record-cookie-consent] relay failed: Error
+    at ConvexHttpClient.mutationInner (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:282:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async ConvexHttpClient.processMutationQueue (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:313:24)
+ POST /api/legal/record-cookie-consent 502 in 439ms
+ GET /sign-in 200 in 81ms
+ GET / 200 in 211ms
+[record-cookie-consent] relay failed: Error
+    at ConvexHttpClient.mutationInner (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:282:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async ConvexHttpClient.processMutationQueue (webpack-internal:///(rsc)/./node_modules/convex/dist/esm/browser/http_client.js:313:24)
+ POST /api/legal/record-cookie-consent 502 in 295ms
+ GET /dashboard 200 in 229ms
+ GET /settings 200 in 229ms
+ GET /wizard 200 in 233ms
+ GET / 200 in 49ms
+ GET / 200 in 45ms
+ ○ Compiling /forgot-password ...
+ ✓ Compiled /forgot-password in 1360ms (4576 modules)
+ GET /forgot-password 200 in 1503ms
+ GET /sign-in 200 in 100ms
+ ○ Compiling /reset ...
+ ✓ Compiled /reset in 2.3s (4585 modules)

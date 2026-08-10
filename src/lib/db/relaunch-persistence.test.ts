@@ -20,14 +20,12 @@ import {
   addExpense,
   getExpenses,
   clearAllData,
-  serializeBoard,
   __closeDbForTest,
 } from './local-db';
 import {
   switchAccount,
   getCurrentAccountId,
   getLocalAccounts,
-  saveLocalAccount,
   getStashedAccount,
   adoptRemoteAccount,
   ensurePersonalAccount,

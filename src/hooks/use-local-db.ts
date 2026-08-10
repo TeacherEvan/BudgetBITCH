@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { 
   WizardProfile, 
   ExpenseEntry, 
+  IncomeEntry,
   BudgetCategory, 
   Bill, 
   SavingsGoal, 
@@ -27,6 +28,10 @@ import {
   deleteExpense,
   getExpenses,
   getExpensesByCategory,
+  addIncome,
+  updateIncome,
+  deleteIncome,
+  getIncomes,
   saveBudgetCategory,
   getBudgetCategory,
   getAllBudgets,
@@ -49,6 +54,8 @@ import {
   generateId,
 } from '@/lib/db/local-db';
 import { BOARD_CHANGED_EVENT } from '@/lib/types/budget';
+import { getActiveSharedDeleteGuard } from '@/components/shared-board/shared-delete-guard-provider';
+import { notify } from '@/lib/ui/notice';
 
 /**
  * Helper hook to register a window event listener that re-fetches local DB state
@@ -108,7 +115,7 @@ export function useExpenses() {
     let mounted = true;
     getExpenses().then(e => {
       if (mounted) {
-        setExpenses(e.sort((a, b) => b.date.localeCompare(a.date)));
+        setExpenses([...e].sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0)));
         setLoading(false);
       }
     }).catch(() => {
@@ -126,16 +133,30 @@ export function useExpenses() {
   const add = useCallback(async (expense: Omit<ExpenseEntry, 'id'>) => {
     const newExpense = { ...expense, id: generateId() };
     await addExpense(newExpense);
-    setExpenses(prev => [newExpense, ...prev].sort((a, b) => b.date.localeCompare(a.date)));
+    setExpenses(prev => [...prev, newExpense].sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0)));
   }, []);
 
   const update = useCallback(async (expense: ExpenseEntry) => {
     await updateExpense(expense);
     setExpenses(prev => prev.map(e => e.id === expense.id ? expense : e)
-      .sort((a, b) => b.date.localeCompare(a.date)));
+      .sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0)));
   }, []);
 
   const remove = useCallback(async (id: string) => {
+    const guard = getActiveSharedDeleteGuard();
+    if (guard?.isShared) {
+      // Two-party consent: raise a server-side request; the item stays until
+      // the partner approves (delete executes server-side, then re-syncs down).
+      // If that request fails for ANY reason we must fall back to a local
+      // delete — otherwise the button is a silent no-op.
+      try {
+        await guard.requestDelete('expenses', id);
+        notify('Delete sent to your partner for approval.', 'info');
+        return;
+      } catch (e) {
+        console.debug('Shared delete request failed, deleting locally:', e);
+      }
+    }
     await deleteExpense(id);
     setExpenses(prev => prev.filter(e => e.id !== id));
   }, []);
@@ -145,6 +166,64 @@ export function useExpenses() {
   }, []);
 
   return { expenses, loading, add, update, remove, getByCategory };
+}
+
+// Incomes
+export function useIncomes() {
+  const [incomes, setIncomes] = useState<IncomeEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(() => {
+    let mounted = true;
+    getIncomes().then(inc => {
+      if (mounted) {
+        setIncomes([...inc].sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0)));
+        setLoading(false);
+      }
+    }).catch(() => {
+      if (mounted) setLoading(false);
+    });
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    return load();
+  }, [load]);
+
+  useDatabaseListener(load);
+
+  const add = useCallback(async (income: Omit<IncomeEntry, 'id' | 'createdAt'>) => {
+    const newIncome = {
+      ...income,
+      id: generateId(),
+      createdAt: new Date().toISOString()
+    };
+    await addIncome(newIncome);
+    setIncomes(prev => [...prev, newIncome].sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0)));
+  }, []);
+
+  const update = useCallback(async (income: IncomeEntry) => {
+    await updateIncome(income);
+    setIncomes(prev => prev.map(i => i.id === income.id ? income : i)
+      .sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0)));
+  }, []);
+
+  const remove = useCallback(async (id: string) => {
+    const guard = getActiveSharedDeleteGuard();
+    if (guard?.isShared) {
+      try {
+        await guard.requestDelete('incomes', id);
+        notify('Delete sent to your partner for approval.', 'info');
+        return;
+      } catch (e) {
+        console.debug('Shared delete request failed, deleting locally:', e);
+      }
+    }
+    await deleteIncome(id);
+    setIncomes(prev => prev.filter(i => i.id !== id));
+  }, []);
+
+  return { incomes, loading, add, update, remove };
 }
 
 // Budgets
@@ -224,6 +303,16 @@ export function useBills() {
   }, []);
 
   const remove = useCallback(async (id: string) => {
+    const guard = getActiveSharedDeleteGuard();
+    if (guard?.isShared) {
+      try {
+        await guard.requestDelete('bills', id);
+        notify('Delete sent to your partner for approval.', 'info');
+        return;
+      } catch (e) {
+        console.debug('Shared delete request failed, deleting locally:', e);
+      }
+    }
     await deleteBill(id);
     setBills(prev => prev.filter(b => b.id !== id));
   }, []);
@@ -331,13 +420,29 @@ export function useNetWorth() {
 
   useDatabaseListener(load);
 
+  /**
+   * A new user has NO net-worth snapshot yet, so every `if (!snapshot) return;`
+   * guard below used to make the very first "Add Asset" / "Add Liability" a
+   * silent no-op. Seed an empty snapshot for today instead of bailing.
+   */
+  const baseSnapshot = useCallback((): NetWorthSnapshot => {
+    return (
+      snapshot ?? {
+        date: new Date().toISOString().slice(0, 10),
+        assets: [],
+        liabilities: [],
+        netWorth: 0,
+      }
+    );
+  }, [snapshot]);
+
   const addAsset = useCallback(async (asset: Asset) => {
-    if (!snapshot) return;
-    const newAssets = [...snapshot.assets, { ...asset, id: generateId() }];
-    const newSnapshot = { ...snapshot, assets: newAssets };
+    const base = baseSnapshot();
+    const newAssets = [...base.assets, { ...asset, id: generateId() }];
+    const newSnapshot = { ...base, assets: newAssets };
     await saveNetWorthSnapshot(newSnapshot);
     setSnapshot(newSnapshot);
-  }, [snapshot]);
+  }, [baseSnapshot]);
 
   const updateAsset = useCallback(async (asset: Asset) => {
     if (!snapshot) return;
@@ -356,12 +461,12 @@ export function useNetWorth() {
   }, [snapshot]);
 
   const addLiability = useCallback(async (liability: Liability) => {
-    if (!snapshot) return;
-    const newLiabilities = [...snapshot.liabilities, { ...liability, id: generateId() }];
-    const newSnapshot = { ...snapshot, liabilities: newLiabilities };
+    const base = baseSnapshot();
+    const newLiabilities = [...base.liabilities, { ...liability, id: generateId() }];
+    const newSnapshot = { ...base, liabilities: newLiabilities };
     await saveNetWorthSnapshot(newSnapshot);
     setSnapshot(newSnapshot);
-  }, [snapshot]);
+  }, [baseSnapshot]);
 
   const updateLiability = useCallback(async (liability: Liability) => {
     if (!snapshot) return;
@@ -435,6 +540,11 @@ export function useSubscriptions() {
   }, []);
 
   const remove = useCallback(async (id: string) => {
+    const guard = getActiveSharedDeleteGuard();
+    if (guard?.isShared) {
+      await guard.requestDelete('expenses', id);
+      return;
+    }
     await deleteExpense(id);
     setSubscriptions(prev => prev.filter(s => s.id !== id));
   }, []);

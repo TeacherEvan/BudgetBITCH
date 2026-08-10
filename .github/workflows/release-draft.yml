@@ -1,0 +1,58 @@
+name: Release Automation
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+# Force Node-20-targeted actions onto the runner's Node 24 (see ci.yml note).
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  release:
+    name: Create Release Draft
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify build & tests pass before release
+        run: |
+          npm test
+          npm run test:convex
+          npm run build
+        env:
+          NEXT_PUBLIC_CONVEX_URL: https://ci-build.convex.cloud
+          NEXT_PUBLIC_CONVEX_SITE_URL: https://ci-build.convex.site
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          SITE_URL: http://localhost:3000
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v3
+        with:
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

@@ -3,11 +3,11 @@
 import { motion } from "framer-motion";
 
 interface ManifestoNotificationProps {
-  locale: 'th' | 'en';
+  locale: string;
   onDismiss: () => void;
 }
 
-export function ManifestoNotification({ locale, onDismiss }: ManifestoNotificationProps) {
+export function ManifestoNotification({ onDismiss }: ManifestoNotificationProps) {
   const lines = [
     "This app is for you,... no *BULLSHIT* NO MARKETING.",
     "Work smart! Not hard!",
@@ -34,7 +34,7 @@ export function ManifestoNotification({ locale, onDismiss }: ManifestoNotificati
           {/* Typographic layout */}
           <div className="flex flex-col gap-1 text-[#F8F3E8] max-w-3xl">
             <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[#E8B020] mb-1">
-              ⚡ {locale === 'th' ? 'คำชี้แจงผู้เริ่มใช้งาน' : '⚡ ATTENTION ⚡'}
+              ⚡ {'⚡ ATTENTION ⚡'}
             </h3>
             {lines.map((line, index) => {
               // Format the *BULLSHIT* text
@@ -71,7 +71,7 @@ export function ManifestoNotification({ locale, onDismiss }: ManifestoNotificati
             className="px-5 py-2 bg-[#C9960C] text-[#080600] font-bold text-xs uppercase tracking-widest hover:bg-[#E8B020] active:scale-[0.97] transition-all cursor-pointer whitespace-nowrap"
             style={{ fontFamily: 'var(--font-display)' }}
           >
-            {locale === 'th' ? '[ รับทราบ. เริ่มใช้งาน ]' : "[ I UNDERSTAND. LET'S GO. ]"}
+            {"[ I UNDERSTAND. LET'S GO. ]"}
           </button>
         </div>
       </div>

@@ -29,13 +29,23 @@ on:
         required: false
         default: "main"
 
+concurrency:
+  group: rollback-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 env:
   NODE_VERSION: "22"
+  # Force Node-20-targeted actions onto the runner's Node 24 (see ci.yml note).
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   rollback:
     name: Rollback Production
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment: production
     steps:
       - name: Checkout repository
