@@ -62,7 +62,7 @@ push/PR to `main`. `npm run ci` runs the equivalent chain locally, in order.
 | **4. Convex Import Guard** | Custom Node guard | `npm run check:convex-imports` | Catches unresolvable imports inside `convex/` before they surface as a runtime "Could not find function" error. CI-only in the local runner. |
 | **5. Unit Tests** | Vitest + RTL | `npm test` | Unit and React component failures block merge. |
 | **6. Convex Tests** | Vitest + `convex-test` | `npm run test:convex` | Backend function and schema validation failures block merge. |
-| **7. Production Build** | Next.js 14 | `npm run build` | Compilation or bundling errors block merge. Runs `prebuild` → `check-convex-deployment.mjs`. |
+|| **7. Production Build** | Next.js 16.3.0 | `npm run build` | Compilation or bundling errors block merge. Runs `prebuild` → `check-convex-deployment.mjs`. |
 | **8. E2E Tests** | Playwright | `npm run test:e2e` | User-journey failures block merge. Skips cleanly when `NEXT_PUBLIC_CONVEX_URL` is unset. |
 | **9. Security Audit** | npm audit | `npm audit --audit-level=high` | Flags high/critical vulnerabilities. `continue-on-error: true` — advisory, retried up to 3×. |
 | **Deploy Guard** | Custom guard | `npm run check:convex` | Validates the client-baked `NEXT_PUBLIC_CONVEX_URL` targets the canonical prod slug. |

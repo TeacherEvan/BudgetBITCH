@@ -28,9 +28,9 @@ test.describe("PWA offline", () => {
     // Cached shell should still render the welcome window.
     await expect(page.getByText(/budget|bitch/i).first()).toBeVisible({ timeout: 8000 });
 
-    // Restore connectivity and wait for page to settle before error check.
+    // Restore connectivity; shell stays mounted (realtime reconnects).
     await page.context().setOffline(false);
-    await page.waitForLoadState("networkidle").catch(() => {});
+    await expect(page.getByText(/budget|bitch/i).first()).toBeVisible({ timeout: 5000 });
     errors.assertClean();
   });
 

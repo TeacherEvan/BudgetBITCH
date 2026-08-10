@@ -6,6 +6,7 @@ interface SyncQueueItem {
   id?: number;
   data: unknown;
   timestamp: number;
+  failCount?: number;
 }
 
 let syncQueueStore: SyncQueueItem[] = [];
@@ -28,6 +29,11 @@ vi.mock('@/lib/db/local-db', () => ({
         const item = { ...val, id: autoIncId++ };
         syncQueueStore.push(item);
         return item.id;
+      }
+    }),
+    put: vi.fn().mockImplementation(async (store: string, val: SyncQueueItem) => {
+      if (store === 'syncQueue') {
+        syncQueueStore = syncQueueStore.map((i) => (i.id === val.id ? { ...i, ...val } : i));
       }
     }),
     delete: vi.fn().mockImplementation(async (store: string, id: number) => {
@@ -194,7 +200,22 @@ describe('flushOfflineQueue (no item-skip on partial failure)', () => {
 
     expect(syncQueueStore).toHaveLength(1);
     expect(syncQueueStore[0].timestamp).toBe(1);
+    // The failed item keeps its failCount so it can be dropped after 3 tries
+    // instead of re-flushing forever.
+    expect(syncQueueStore[0].failCount).toBe(1);
     expect(mockConvex.mutation).toHaveBeenCalledTimes(2);
+  });
+
+  it('drops an item after 3 consecutive non-auth failures', async () => {
+    syncQueueStore = [
+      { id: 1, data: { totals: { income: 1 } }, timestamp: 1, failCount: 2 },
+    ];
+
+    mockConvex.mutation.mockRejectedValue(new Error('Document too large'));
+
+    await flushOfflineQueue();
+
+    expect(syncQueueStore).toHaveLength(0);
   });
 
   it('keeps the whole tail when auth drops mid-flush', async () => {

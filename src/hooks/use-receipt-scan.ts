@@ -1,11 +1,17 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import type { Id } from '../../convex/_generated/dataModel';
 import { preprocessImage } from '../lib/receipt/preprocess';
 import { runOcrScan, resetOcrWorker } from '../lib/receipt/ocr-worker';
 import { scrapeOffline } from '../lib/receipt/engine-client';
-import { saveOfflineDraft } from '../lib/db/stores/receipt-drafts-store';
+import {
+  deleteOfflineDraft,
+  getAllOfflineDrafts,
+  getOfflineDraft,
+  saveOfflineDraft,
+  updateOfflineDraft,
+} from '../lib/db/stores/receipt-drafts-store';
 import { addExpense } from '../lib/db/stores/expenses-store';
 import { generateId } from '../lib/db/local-db';
 import { categorizeReceipt } from '../../convex/lib/receipt/categorize';
@@ -22,6 +28,61 @@ export function useReceiptScan() {
   const scrapeMutation = useMutation(api.receipts.scrape);
   const answerMutation = useMutation(api.receipts.answer);
   const confirmMutation = useMutation(api.receipts.confirm);
+  const syncOfflineDraftMutation = useMutation(api.receipts.syncOfflineDraft);
+  const isFlushingOfflineDrafts = useRef(false);
+
+  const flushOfflineDrafts = useCallback(async () => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+    if (isFlushingOfflineDrafts.current) return;
+
+    isFlushingOfflineDrafts.current = true;
+    try {
+      const queuedDrafts = await getAllOfflineDrafts();
+      for (const queuedDraft of queuedDrafts) {
+        try {
+          const syncArgs = {
+            clientDraftId: queuedDraft.clientDraftId,
+            payload: queuedDraft.payload,
+            ...(queuedDraft.answers ? { answers: queuedDraft.answers } : {}),
+            ...(queuedDraft.confirmed !== undefined ? { confirmed: queuedDraft.confirmed } : {}),
+          };
+          await syncOfflineDraftMutation(syncArgs);
+          await deleteOfflineDraft(queuedDraft.clientDraftId);
+        } catch (error) {
+          // Keep failed drafts queued for the next reconnect attempt, but log for visibility.
+          // eslint-disable-next-line no-console
+          console.error(
+            'Failed to sync offline draft; it will remain queued for retry.',
+            {
+              clientDraftId: queuedDraft.clientDraftId,
+              error,
+            },
+          );
+        }
+      }
+    } finally {
+      isFlushingOfflineDrafts.current = false;
+    }
+  }, [syncOfflineDraftMutation]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const onOnline = () => {
+      void flushOfflineDrafts();
+    };
+
+    window.addEventListener('online', onOnline);
+    window.addEventListener('budgetbitch:flushQueues', onOnline);
+    if (typeof navigator === 'undefined' || navigator.onLine) {
+      void flushOfflineDrafts();
+    }
+
+    return () => {
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('budgetbitch:flushQueues', onOnline);
+    };
+  }, [flushOfflineDrafts]);
 
   // Release the cached Tesseract worker when the component unmounts so it
   // doesn't hold WASM memory / the lang blob across route changes.
@@ -87,6 +148,13 @@ export function useReceiptScan() {
             answers,
           });
           setDraft((previously) => (previously ? { ...previously, ...updated } : null));
+        } else {
+          const queuedDraft = await getOfflineDraft(draft.draftId);
+          if (queuedDraft) {
+            await updateOfflineDraft(draft.draftId, {
+              answers: { ...(queuedDraft.answers ?? {}), ...answers },
+            });
+          }
         }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -145,6 +213,11 @@ export function useReceiptScan() {
             draftId: draft.draftId as Id<'receipts'>,
             overrides,
           });
+        } else if (draft.draftId) {
+          const queuedDraft = await getOfflineDraft(draft.draftId);
+          if (queuedDraft) {
+            await updateOfflineDraft(draft.draftId, { confirmed: true });
+          }
         }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);

@@ -1,0 +1,15 @@
+{
+  "files": [
+    {
+      "path": ".next/static/chunks/**/*.js",
+      "maxSize": "250KB",
+      "compression": "gzip",
+      "note": "recharts vendor chunk (svg/scale/axis) compresses to ~244KB gzip; pending chart code-splitting. 250KB is the floor that accommodates it without masking regressions."
+    },
+    {
+      "path": ".next/static/chunks/**/*.css",
+      "maxSize": "50KB",
+      "compression": "gzip"
+    }
+  ]
+}

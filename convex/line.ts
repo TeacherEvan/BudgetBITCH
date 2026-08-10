@@ -5,6 +5,7 @@ import { internal } from "./_generated/api";
 import { getAuthUserId } from "./lib/auth";
 import { GEMINI_MODEL, geminiGenerateUrl } from "./lib/gemini";
 import { verifyLineSignature } from "./lib/line/verify";
+import { clog, clogError, clogMetric, genTraceId } from "./lib/log";
 import {
   normalizeCategory,
   validateAmount,
@@ -102,8 +103,15 @@ export const parseLineReceipt = internalAction({
     category: string;
     date: string | null;
   }> => {
+    const traceId = genTraceId();
+    const started = Date.now();
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
+      clogError("line_receipt_parse_failed", new Error("GEMINI_API_KEY missing"), {
+        traceId,
+        source: "line",
+        reason: "missing_api_key",
+      });
       throw new ConvexError(
         "Gemini API key is not configured in the backend environment. Please set GEMINI_API_KEY in your Convex dashboard.",
       );
@@ -141,6 +149,11 @@ export const parseLineReceipt = internalAction({
 
       if (!response.ok) {
         const errorText = await response.text();
+        clogError("line_receipt_parse_failed", new Error(`Gemini ${response.status}`), {
+          traceId,
+          source: "line",
+          geminiStatus: String(response.status),
+        });
         throw new Error(
           `Gemini API returned error status ${response.status}: ${errorText}`,
         );
@@ -149,6 +162,7 @@ export const parseLineReceipt = internalAction({
       const result = await response.json();
       const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!text) {
+        clogError("line_receipt_parse_failed", new Error("no_candidates"), { traceId, source: "line" });
         throw new Error("No parsing response candidates returned from Gemini API");
       }
 
@@ -183,6 +197,18 @@ export const parseLineReceipt = internalAction({
         source: "line",
       });
 
+      clog("info", "line_receipt_parsed", {
+        traceId,
+        source: "line",
+        receiptId,
+        category,
+        hasDate: date ? "true" : "false",
+        amount,
+        durationMs: Date.now() - started,
+      });
+      clogMetric("line_receipt_parse_ms", Date.now() - started, "ms", { source: "line" });
+      clogMetric("line_receipt_parse_total", amount, "count", { source: "line" });
+
       return {
         receiptId,
         amount,
@@ -191,8 +217,12 @@ export const parseLineReceipt = internalAction({
         date: date ?? null,
       };
     } catch (error) {
-      console.error("Error in parseLineReceipt action:", error);
       const message = error instanceof Error ? error.message : String(error);
+      clogError("line_receipt_parse_failed", error, {
+        traceId,
+        source: "line",
+        durationMs: Date.now() - started,
+      });
       throw new ConvexError(`Failed to parse LINE receipt: ${message}`);
     }
   },
@@ -207,6 +237,7 @@ export const parseLineReceipt = internalAction({
  * `parseLineReceipt`. Always responds 200 so LINE does not retry endlessly.
  */
 export const lineWebhook = httpAction(async (ctx, req) => {
+  const traceId = genTraceId();
   const secret = process.env.LINE_CHANNEL_SECRET ?? "";
   const accessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN ?? "";
 
@@ -215,6 +246,8 @@ export const lineWebhook = httpAction(async (ctx, req) => {
   // Always 200 on a missing/invalid signature so LINE stops retrying a bad push.
   const signature = req.headers.get("x-line-signature") ?? "";
   if (!secret || !(await verifyLineSignature(body, signature, secret))) {
+    clog("warn", "line_webhook_rejected", { traceId, reason: "bad_signature" });
+    clogMetric("line_webhook_events", 0, "count", { status_class: "unauthorized" });
     return new Response("ignored", { status: 200 });
   }
 
@@ -222,13 +255,20 @@ export const lineWebhook = httpAction(async (ctx, req) => {
   try {
     payload = JSON.parse(body);
   } catch {
+    clog("warn", "line_webhook_rejected", { traceId, reason: "bad_json" });
     return new Response("ignored", { status: 200 });
   }
 
   const events = (payload as { events?: unknown[] }).events;
   if (!Array.isArray(events)) {
+    clogMetric("line_webhook_events", 0, "count", { status_class: "no_events" });
     return new Response("ok", { status: 200 });
   }
+
+  clogMetric("line_webhook_events", events.length, "count", { status_class: "received" });
+  let imageMessages = 0;
+  let ingested = 0;
+  let contentFetchFailed = 0;
 
   for (const event of events) {
     const e = event as {
@@ -239,13 +279,17 @@ export const lineWebhook = httpAction(async (ctx, req) => {
     if (e.type !== "message" || e.message?.type !== "image" || !e.message.id) {
       continue;
     }
+    imageMessages++;
     const lineUserId = e.source?.userId;
     if (!lineUserId) continue;
 
     const mapping = (await ctx.runQuery(internal.line.getLineMapping, {
       lineUserId,
     })) as { userId: Id<"users">; accountId: string | null } | null;
-    if (!mapping) continue;
+    if (!mapping) {
+      clog("warn", "line_webhook_skipped", { traceId, lineUserId, reason: "no_mapping" });
+      continue;
+    }
     const userId = mapping.userId;
 
     // Fetch the original image bytes from LINE's content API.
@@ -260,20 +304,46 @@ export const lineWebhook = httpAction(async (ctx, req) => {
           const buf = Buffer.from(await contentRes.arrayBuffer());
           const mime = contentRes.headers.get("content-type") ?? "image/jpeg";
           base64Image = `data:${mime};base64,${buf.toString("base64")}`;
+        } else {
+          contentFetchFailed++;
+          clog("warn", "line_content_fetch_failed", {
+            traceId,
+            lineUserId,
+            status: String(contentRes.status),
+          });
         }
       } catch (err) {
-        console.error("Failed to fetch LINE message content:", err);
+        contentFetchFailed++;
+        clogError("line_content_fetch_failed", err, { traceId, lineUserId });
       }
     }
 
     if (!base64Image) continue;
 
-    await ctx.runAction(internal.line.parseLineReceipt, {
-      userId,
-      base64Image,
-      accountId: mapping.accountId ?? undefined,
-    });
+    try {
+      await ctx.runAction(internal.line.parseLineReceipt, {
+        userId,
+        base64Image,
+        accountId: mapping.accountId ?? undefined,
+      });
+      ingested++;
+    } catch (err) {
+      clogError("line_webhook_ingest_failed", err, { traceId, lineUserId });
+    }
   }
+
+  clogMetric("line_webhook_image_messages", imageMessages, "count", { source: "line" });
+  clogMetric("line_webhook_ingested", ingested, "count", { source: "line" });
+  if (contentFetchFailed > 0) {
+    clogMetric("line_webhook_content_fetch_failed", contentFetchFailed, "count", { source: "line" });
+  }
+  clog("info", "line_webhook_processed", {
+    traceId,
+    events: events.length,
+    imageMessages,
+    ingested,
+    contentFetchFailed,
+  });
 
   return new Response("ok", { status: 200 });
 });
