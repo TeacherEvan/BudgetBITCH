@@ -149,19 +149,60 @@ export async function gatherSnapshotData(): Promise<GatherResult> {
     console.error('Failed to gather full stores for backup snapshot:', err);
   }
 
+  // Keep the backup under Convex's 1MB document limit (see capBackup).
+  const cappedBackup = capBackup(fullBackupData);
+  const recomputedCounts: Record<string, number> = {};
+  for (const [k, v] of Object.entries(cappedBackup)) {
+    if (Array.isArray(v)) recomputedCounts[k] = v.length;
+  }
+
   return {
     accountId: await getCurrentAccountId(),
     wizardProfile: profile || null,
     totals,
     criticalExpenseCommitment,
-    fullBackupData,
-    storeCounts,
+    fullBackupData: cappedBackup,
+    storeCounts: recomputedCounts,
   };
 }
 
 function sanitizeForConvex<T>(obj: T): T {
   if (obj === undefined || obj === null) return obj;
   return JSON.parse(JSON.stringify(obj));
+}
+
+// Convex caps each document at ~1MB. fullBackupData is the entire serialized
+// IndexedDB, which for heavy users blows past that limit — the insert then
+// throws "document too large" as a bare Server Error, and because the offline
+// queue only deletes items on success, the same oversized payload re-flushes
+// forever. Cap the backup to a safe budget; if it exceeds, drop the oldest
+// records (per store) until it fits. storeCounts is recomputed from the
+// surviving records so the cloud metadata stays honest.
+const MAX_BACKUP_BYTES = 900 * 1024;
+
+function byteLength(obj: unknown): number {
+  return new TextEncoder().encode(JSON.stringify(obj)).length;
+}
+
+function capBackup(fullBackupData: Record<string, unknown[]>): Record<string, unknown[]> {
+  const size = byteLength(fullBackupData);
+  if (size <= MAX_BACKUP_BYTES) return fullBackupData;
+
+  console.warn(
+    `[Sync] Full backup is ${(size / 1024).toFixed(0)}KB (cap ${MAX_BACKUP_BYTES / 1024}KB); trimming oldest records per store.`
+  );
+  const capped: Record<string, unknown[]> = { ...fullBackupData };
+  let current = size;
+  // Progressively keep only the most recent half of the largest store.
+  while (current > MAX_BACKUP_BYTES) {
+    const stores = Object.keys(capped).filter((k) => Array.isArray(capped[k]) && capped[k].length > 1);
+    if (stores.length === 0) break;
+    const largest = stores.reduce((a, b) => (capped[a].length >= capped[b].length ? a : b));
+    const arr = capped[largest];
+    capped[largest] = arr.slice(Math.ceil(arr.length / 2));
+    current = byteLength(capped);
+  }
+  return capped;
 }
 
 export async function syncDailySnapshot(): Promise<{ success: boolean; date: string }> {
@@ -264,6 +305,7 @@ export async function queueOfflineSnapshot(data: SyncSnapshotArgs) {
     await db.add('syncQueue', {
       data: cleanData,
       timestamp: Date.now(),
+      failCount: 0,
     });
   } catch (err) {
     console.error('Failed to queue offline snapshot in IndexedDB:', err);
@@ -318,6 +360,17 @@ export async function flushOfflineQueue() {
           break;
         } else {
           console.error('Failed to flush offline snapshot:', error);
+          // Permanently-failing items (e.g. a payload that exceeds Convex's
+          // 1MB doc limit even after capping) would otherwise re-flush on every
+          // online event forever. Track failures and drop after a few tries so
+          // the queue can't wedge the app in an infinite error loop.
+          const fails = ((item as { failCount?: number }).failCount ?? 0) + 1;
+          if (item.id !== undefined && fails >= 3) {
+            await db.delete('syncQueue', item.id);
+            console.warn(`Dropped permanently-failing offline snapshot after ${fails} attempts.`);
+          } else if (item.id !== undefined) {
+            await db.put('syncQueue', { ...item, failCount: fails });
+          }
         }
       }
     }

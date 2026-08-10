@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore, useState } from "react";
-import { detectWebView } from "@/lib/webview";
+import { detectWebView, openInExternalBrowser } from "@/lib/webview";
 import { isNative } from "@/lib/native";
 
 const DISMISS_KEY = "bb:webview-banner-dismissed";
@@ -38,10 +38,11 @@ export function WebViewBanner() {
 
   const openInBrowser = () => {
     const url = window.location.href;
-    // Try to break out to the external browser. Webviews without a native
-    // "open in browser" affordance will simply reload here; the user can also
-    // use the share/sheet menu to open in Safari/Chrome.
-    window.location.href = url;
+    // Escape the host app's in-app WebView to the real external browser. On
+    // Android this uses an `intent://` deep link (the same mechanism chat apps
+    // use to "open in browser"); elsewhere it falls back to a location change,
+    // and the user can also use the share/sheet menu.
+    openInExternalBrowser(url);
   };
 
   return (

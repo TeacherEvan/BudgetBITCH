@@ -79,7 +79,11 @@ test.describe("Storage Diagnostics & Recovery", () => {
     const dialog = await openDiagnostics(page);
     // Wait for the async storage estimate to resolve first.
     await expect(dialog.getByText(/used:\s*\d/i)).toBeVisible({ timeout: 8000 });
-    const persisted = await dialog.getByText(/yes \(secure\)/i).isVisible();
+    // Web-first (no manual isVisible polling).
+    const persisted = await expect(dialog.getByText(/yes \(secure\)/i)).toBeVisible({ timeout: 2000 }).then(
+      () => true,
+      () => false,
+    );
     const requestBtn = dialog.getByTestId("request-persistence-btn");
     if (persisted) {
       await expect(requestBtn).toHaveCount(0);

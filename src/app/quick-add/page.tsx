@@ -81,6 +81,17 @@ export default function QuickAddPage() {
   const confirmBotDraft = useMutation(api.receipts.confirm);
   const [botDraftId, setBotDraftId] = useState<string | null>(null);
 
+  // Load the pending bot-ingested (LINE / TeacherBOY) receipt draft so the
+  // scraped amount/merchant surface on Quick Add without hunting the dashboard.
+  // The bot writes drafts to Convex (status: 'draft', source: 'line').
+  const botDrafts = useQuery(api.receipts.listReceipts, {
+    source: 'line',
+    status: 'draft',
+    limit: 1,
+  });
+  const confirmBotDraft = useMutation(api.receipts.confirm);
+  const [botDraftId, setBotDraftId] = useState<string | null>(null);
+
   // UI States
   const [isExpense, setIsExpense] = useState(true);
   const [inputText, setInputText] = useState('');

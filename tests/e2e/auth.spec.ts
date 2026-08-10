@@ -33,7 +33,6 @@ test.describe("Auth — sign-in page", () => {
   });
 
   test("opens forgot-password view from sign-in", async ({ page }) => {
-    await page.waitForLoadState("networkidle").catch(() => {});
     await page.getByRole("button", { name: /forgot password/i }).click();
     await expect(page.getByRole("button", { name: /send reset code/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /back to sign in/i })).toBeVisible();
@@ -102,7 +101,8 @@ test.describe("First-launch language select", () => {
     // Dismiss the splash robustly (retry in case the animated CTA misses a click).
     for (let i = 0; i < 3; i++) {
       await enter.click({ timeout: 5000 }).catch(() => {});
-      if (await splash.isHidden().catch(() => true)) break;
+      // Web-first soft check (no manual isHidden polling).
+      await expect(splash).toBeHidden({ timeout: 1000 }).catch(() => {});
     }
     await expect(splash).toBeHidden({ timeout: 10000 });
 

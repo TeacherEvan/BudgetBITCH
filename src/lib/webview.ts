@@ -35,3 +35,35 @@ export function getOpenInBrowserUrl(currentUrl?: string): string {
   if (typeof window !== "undefined") return window.location.href;
   return "https://budgetbitch.app";
 }
+
+// Build an Android `intent://` deep link that forces a URL to open in the
+// device's external (system) browser, escaping the host app's in-app WebView.
+// This is the exact mechanism chat apps (LINE, WhatsApp, Telegram, Facebook,
+// Instagram) use when they "open this in your browser". Returns null when the
+// runtime is not an Android WebView (e.g. iOS has no equivalent — callers
+// fall back to the share sheet there).
+export function buildExternalBrowserIntent(url: string): string | null {
+  if (typeof navigator === "undefined") return null;
+  if (!/Android/i.test(navigator.userAgent)) return null;
+  if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) return null;
+
+  try {
+    const u = new URL(url);
+    const path = u.pathname + u.search + u.hash || "/";
+    const scheme = u.protocol.replace(":", ""); // "https"
+    // intent://<host><path>#Intent;scheme=https;action=android.intent.action.VIEW;end
+    return `intent://${u.host}${path}#Intent;scheme=${scheme};action=android.intent.action.VIEW;end`;
+  } catch {
+    return null;
+  }
+}
+
+// Open the given URL in the real external browser where the platform allows.
+// - Android in-app WebView: `intent://` deep link escapes to the default browser.
+// - Elsewhere: best-effort location change (may reload in-place; the user can
+//   also use the share/sheet menu to open in Safari/Chrome).
+export function openInExternalBrowser(url: string): void {
+  if (typeof window === "undefined") return;
+  const intent = buildExternalBrowserIntent(url);
+  window.location.href = intent ?? url;
+}

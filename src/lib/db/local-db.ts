@@ -125,6 +125,7 @@ export interface BudgetBITCHDB extends DBSchema {
       id?: number;
       data: unknown;
       timestamp: number;
+      failCount?: number;
     };
   };
 }

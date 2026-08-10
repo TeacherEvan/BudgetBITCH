@@ -177,6 +177,28 @@
   }
 }
 
+/* ===== IMMERSIVE APP SHELL: block long-press highlight + text selection ===== */
+/* Kiosk-like mobile app: no text selection, no iOS callout, no tap flash.
+   Re-enabled on editable fields so users can still review/type (e.g. OCR
+   receipt review inputs). */
+html,
+body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input,
+textarea,
+select,
+[contenteditable='true'],
+[contenteditable=''] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
 /* ===== VIEWPORT CONTRACT + UTILITY SYSTEM (T1) ===== */
 .bb-viewport-fill {
   height: 100vh; /* fallback */

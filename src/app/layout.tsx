@@ -13,6 +13,7 @@ import { NativeBridge } from '@/components/native/native-bridge';
 import { SiteFooter } from '@/components/legal/site-footer';
 import { CookieConsentBanner } from '@/components/legal/cookie-consent-banner';
 import { WebVitalsInitializer } from '@/components/web-vitals-initializer';
+import { ObservabilityInitializer } from '@/components/observability-initializer';
 import { NextIntlClientProvider } from 'next-intl';
 import { cookies } from 'next/headers';
 import { resolveLocale, getLocaleMessages, localeCookieName } from '@/i18n/messages';
@@ -32,19 +33,25 @@ export const viewport: Viewport = {
 const inter = Inter({
   variable: '--font-inter',
   subsets: ['latin'],
-  display: 'swap',
+  // Body text — `optional` lets the browser skip the webfont if it is not
+  // already cached, avoiding the swap-induced layout shift (CLS). The
+  // system-ui fallback in globals.css renders identically for first paint.
+  display: 'optional',
 });
 
 const spaceGrotesk = Space_Grotesk({
   variable: '--font-space-grotesk',
   subsets: ['latin'],
+  // Display/headings — keep `swap` so the brand face shows immediately on
+  // first visit (critical above-the-fold content).
   display: 'swap',
 });
 
 const robotoMono = Roboto_Mono({
   variable: '--font-roboto-mono',
   subsets: ['latin'],
-  display: 'swap',
+  // Mono — rarely on the critical path, and changing it never shifts layout.
+  display: 'optional',
 });
 
 export const metadata: Metadata = {
@@ -72,6 +79,38 @@ export default async function RootLayout({
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="manifest" href="/manifest.json" />
+        {/* Speculation Rules: prerender authenticated app routes so SPA-style
+            navigation between /dashboard, /settings, /accounts, /wizard feels
+            instant. `moderate` eagerness prerenders on viewport-hover/idle.
+            Auth + legal + API + share-target routes are excluded — prerendering
+            them would waste bandwidth and could cache unauthenticated shells. */}
+        <script
+          type="speculationrules"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              prerender: [
+                {
+                  where: {
+                    href_matches: "/*",
+                    not: {
+                      href_matches: [
+                        "/api/*",
+                        "/sign-in*",
+                        "/sign-up*",
+                        "/reset*",
+                        "/forgot-password*",
+                        "/privacy*",
+                        "/terms*",
+                        "/cookie-policy*",
+                      ],
+                    },
+                  },
+                  eagerness: "moderate",
+                },
+              ],
+            }),
+          }}
+        />
       </head>
       <body className="flex min-h-screen flex-col bg-black text-white">
         <ErrorBoundary>
@@ -95,6 +134,7 @@ export default async function RootLayout({
           </ConvexClientProvider>
         </ErrorBoundary>
         <WebVitalsInitializer />
+        <ObservabilityInitializer />
       </body>
     </html>
   );
