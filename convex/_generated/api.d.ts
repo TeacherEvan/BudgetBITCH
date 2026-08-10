@@ -51,6 +51,12 @@ import type * as purge from "../purge.js";
 import type * as push from "../push.js";
 import type * as pushSend from "../pushSend.js";
 import type * as receipts from "../receipts.js";
+import type * as receipts_constants from "../receipts/constants.js";
+import type * as receipts_draftCrud from "../receipts/draftCrud.js";
+import type * as receipts_index from "../receipts/index.js";
+import type * as receipts_ingest from "../receipts/ingest.js";
+import type * as receipts_scanActions from "../receipts/scanActions.js";
+import type * as receipts_scrapeBot from "../receipts/scrapeBot.js";
 import type * as sharedBoards from "../sharedBoards.js";
 import type * as snapshots from "../snapshots.js";
 
@@ -104,6 +110,12 @@ declare const fullApi: ApiFromModules<{
   push: typeof push;
   pushSend: typeof pushSend;
   receipts: typeof receipts;
+  "receipts/constants": typeof receipts_constants;
+  "receipts/draftCrud": typeof receipts_draftCrud;
+  "receipts/index": typeof receipts_index;
+  "receipts/ingest": typeof receipts_ingest;
+  "receipts/scanActions": typeof receipts_scanActions;
+  "receipts/scrapeBot": typeof receipts_scrapeBot;
   sharedBoards: typeof sharedBoards;
   snapshots: typeof snapshots;
 }>;

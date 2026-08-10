@@ -213,6 +213,7 @@ export default defineSchema({
     rawGeminiResponse: v.optional(v.string()),
     imageMimeType: v.string(),
     imageSizeBytes: v.number(),
+    imageStorageId: v.optional(v.id("_storage")), // Convex storage ID for the original receipt photo
     // Processing metadata
     parsedAt: v.number(),
     geminiModel: v.string(), // e.g. "gemini-2.5-flash"
