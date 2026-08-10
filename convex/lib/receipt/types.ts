@@ -70,6 +70,9 @@ export type ReceiptItem = {
   title: string; // product / line name (editable)
   type: string; // category (editable)
   amount: number; // line amount (editable)
+  description?: string; // raw product description (engine maps title -> description)
+  qty?: number; // quantity, when the receipt lists it
+  unitPrice?: number; // per-unit price, when the receipt lists it
 };
 
 export type ScrapeResult = {
@@ -79,6 +82,7 @@ export type ScrapeResult = {
   evidence: Record<FieldName, OcrLine | null>;
   questions: Question[];
   items: ReceiptItem[]; // parsed line items (title/type/amount) from the receipt
+  lineItems: ReceiptItem[]; // alias of items, used by ingest/receipts/quick-add
 };
 
 export function makeLine(words: OcrWord[]): OcrLine {
