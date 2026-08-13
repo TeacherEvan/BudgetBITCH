@@ -13,7 +13,7 @@ prototype subtree was removed on 2026-07-20.)
 
 - Next.js App Router (v16.3.0)
 - React 18 + TypeScript (strict)
-- **Convex** 1.34.1 for backend (auth, database, realtime, HTTP endpoints)
+- **Convex** 1.43.0 for backend (auth, database, realtime, HTTP endpoints)
 - **IndexedDB** (via `idb`) for local-first offline data
 - **Service Worker** (`public/sw.js`) for PWA sync & background updates
 - **next-intl** (v4.13.5) for i18n — en, es, fr, de, pt, zh; cookie `bb-locale`
@@ -21,7 +21,7 @@ prototype subtree was removed on 2026-07-20.)
 - **framer-motion** 12.43.0 for animations
 - **recharts** 3.10.1 for data visualization
 - **zod** 4.4.3 for validation
-- **tesseract.js** 6.0.1 for client-side receipt OCR
+- **tesseract.js** 7.0.0 for client-side receipt OCR
 - **lottie-react** + **@rive-app/canvas** for lightweight brand motion
 - **qrcode.react** for shared-board / account invite QR codes
 - **web-push** (+ VAPID) for Web Push notifications (Convex action)
