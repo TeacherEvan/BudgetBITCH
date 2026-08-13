@@ -58,7 +58,7 @@
     "next-auth": "^5.0.0-beta.32",
     "next-intl": "^4.4.0",
     "qrcode.react": "^4.2.0",
-    "react": "19.2.8",
+    "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-is": "^19.2.8",
     "recharts": "^3.8.1",

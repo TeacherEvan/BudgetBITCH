@@ -13,7 +13,6 @@ import { NativeBridge } from '@/components/native/native-bridge';
 import { SiteFooter } from '@/components/legal/site-footer';
 import { CookieConsentBanner } from '@/components/legal/cookie-consent-banner';
 import { WebVitalsInitializer } from '@/components/web-vitals-initializer';
-import { ObservabilityInitializer } from '@/components/observability-initializer';
 import { NextIntlClientProvider } from 'next-intl';
 import { cookies } from 'next/headers';
 import { resolveLocale, getLocaleMessages, localeCookieName } from '@/i18n/messages';
@@ -134,7 +133,6 @@ export default async function RootLayout({
           </ConvexClientProvider>
         </ErrorBoundary>
         <WebVitalsInitializer />
-        <ObservabilityInitializer />
       </body>
     </html>
   );

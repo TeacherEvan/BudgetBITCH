@@ -114,6 +114,9 @@ export function scrape(payload: OcrPayload, options: EngineOptions = {}): Scrape
     title: it.description,
     type: categorizeReceipt(it.description, undefined),
     amount: it.amount,
+    description: it.description,
+    qty: typeof it.qty === 'number' ? it.qty : undefined,
+    unitPrice: typeof it.unit_price === 'number' ? it.unit_price : undefined,
   }));
 
   return {
@@ -122,5 +125,6 @@ export function scrape(payload: OcrPayload, options: EngineOptions = {}): Scrape
     evidence,
     questions,
     items: receiptItems,
+    lineItems: receiptItems,
   };
 }
