@@ -9,7 +9,10 @@ updates:
     labels:
       - "dependencies"
       - "automated"
-
+    ignore:
+      # eslint-plugin-import@2.32.0 requires eslint ^9, but we're on eslint@10
+      - dependency-name: "eslint-plugin-import"
+        versions: [">=2.32.0"]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -18,4 +21,3 @@ updates:
     labels:
       - "ci"
       - "automated"
-
