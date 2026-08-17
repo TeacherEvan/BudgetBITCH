@@ -41,7 +41,7 @@
     "@capacitor/keyboard": "^8.0.5",
     "@capacitor/splash-screen": "^8.0.2",
     "@capacitor/status-bar": "^8.0.3",
-    "@convex-dev/auth": "^0.0.94",
+    "@convex-dev/auth": "^0.0.95",
     "@parcel/watcher": "^2.6.0",
     "@rive-app/canvas": "^2.39.1",
     "@swc/core": "^1.15.46",
