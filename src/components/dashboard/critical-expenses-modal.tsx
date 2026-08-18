@@ -7,6 +7,7 @@ import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { ProgressRing } from '@/components/ui/progress-ring';
 import { Card } from '@/components/ui/card';
+import { Confetti } from '@/components/ui/confetti';
 import { notify } from '@/lib/ui/notice';
 import { CRITICAL_EXPENSES, CriticalExpenseKey } from '@/lib/types/budget';
 import { calculateCompoundProjection, getSuggestedCriticalExpenseCost } from '@/lib/utils/compound-calculator';
@@ -25,6 +26,7 @@ export function CriticalExpensesModal({ isOpen, onClose, locale }: CriticalExpen
   const { commitment, loading: commitmentLoading, save: saveCommitment, clear: clearCommitment } = useCriticalExpense();
   const [selectedExpense, setSelectedExpense] = useState<CriticalExpenseKey | null>(null);
   const [customAmount, setCustomAmount] = useState<string>('');
+  const [showConfetti, setShowConfetti] = useState(false);
   const formatCurrency = useCurrency();
 
   const expenseList = Object.entries(CRITICAL_EXPENSES) as [CriticalExpenseKey, typeof CRITICAL_EXPENSES[CriticalExpenseKey]][];
@@ -60,6 +62,8 @@ export function CriticalExpensesModal({ isOpen, onClose, locale }: CriticalExpen
         status: 'active',
         compoundProjection: projection,
       });
+      setShowConfetti(true);
+      notify('Goal committed! You are on your way to compound savings.', 'success');
       onClose();
     } catch (e) {
       console.error('Saving commitment failed:', e);
@@ -79,229 +83,232 @@ export function CriticalExpensesModal({ isOpen, onClose, locale }: CriticalExpen
   })();
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={'Cut One Expense This Month'}
-      description={'Pick one expense to cut and see your savings'}
-      size="lg"
-      showCloseButton={true}
-    >
-      {commitmentLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-400" />
-          <span className="ml-3 text-white/70">Loading...</span>
-        </div>
-      ) : committedExpense ? (
-        // Show current commitment
-        <div className="space-y-6">
-          <Card variant="accent" className="p-6 text-center">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <Target className="h-8 w-8 text-amber-400" />
-              <h3 className="text-xl font-semibold text-white">
-                {'Already Committed This Month'}
-              </h3>
-            </div>
-            
-            <div className="flex items-center justify-center gap-6 mb-4">
-              <ProgressRing 
-                value={progressValue} 
-                size={100} 
-                strokeWidth={8}
-                color="amber"
-                showValue={false}
-              />
-              <div className="text-left">
-                <p className="text-2xl font-bold text-amber-400 font-mono">
-                  {CRITICAL_EXPENSES[committedExpense]['labelEn']}
-                </p>
-                <p className="text-white/70">
-                  {'Cut'} {currentCommitment?.estimatedMonthlyCost?.toLocaleString()}/mo
-                </p>
-                <p className="text-sm text-white/50 mt-1">
-                  {'Will save'} 
-                  {formatCurrency(currentCommitment?.compoundProjection.oneYear || 0, locale)}/yr
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="bg-black/30 rounded-xl p-4">
-                <div className="text-2xl font-bold text-amber-400 font-mono">
-                  {formatCurrency(currentCommitment?.compoundProjection.oneYear || 0, locale)}
-                </div>
-                <div className="text-xs text-white/60">1 Year</div>
-              </div>
-              <div className="bg-black/30 rounded-xl p-4">
-                <div className="text-2xl font-bold text-amber-400 font-mono">
-                  {formatCurrency(currentCommitment?.compoundProjection.fiveYears || 0, locale)}
-                </div>
-                <div className="text-xs text-white/60">5 Years</div>
-              </div>
-              <div className="bg-black/30 rounded-xl p-4">
-                <div className="text-2xl font-bold text-amber-400 font-mono">
-                  {formatCurrency(currentCommitment?.compoundProjection.tenYears || 0, locale)}
-                </div>
-                <div className="text-xs text-white/60">10 Years</div>
-              </div>
-            </div>
-
-            <Button variant="secondary" className="w-full mt-4" onClick={() => { clearCommitment(); }}>
-              {'Change Selection'}
-            </Button>
-          </Card>
-        </div>
-      ) : (
-        // Show expense picker
-        <div className="space-y-6">
-          <div className="flex items-center gap-3 p-4 bg-amber-400/10 border border-amber-400/30 rounded-xl">
-            <Calculator className="h-8 w-8 text-amber-400" />
-            <div>
-              <p className="font-semibold text-white">
-                {'Rule: Pick ONLY 1 per month'}
-              </p>
-              <p className="text-sm text-white/60">
-                {'Invest savings at 7% annual return'}
-              </p>
-            </div>
+    <>
+      <Confetti isActive={showConfetti} onComplete={() => setShowConfetti(false)} />
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={'Cut One Expense This Month'}
+        description={'Pick one expense to cut and see your savings'}
+        size="lg"
+        showCloseButton={true}
+      >
+        {commitmentLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-400" />
+            <span className="ml-3 text-white/70">Loading...</span>
           </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            {expenseList.map(([key, expense]) => {
-              const isSelected = selectedExpense === key;
-              const suggested = suggestedAmounts[key] || 0;
-              const projection = calculateCompoundProjection({ monthlySavings: suggested });
+        ) : committedExpense ? (
+          // Show current commitment
+          <div className="space-y-6">
+            <Card variant="accent" className="p-6 text-center">
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <Target className="h-8 w-8 text-amber-400" />
+                <h3 className="text-xl font-semibold text-white">
+                  {'Already Committed This Month'}
+                </h3>
+              </div>
               
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => handleSelect(key)}
-                  className={`
-                    p-4 rounded-xl border-2 transition-all text-left relative
-                    ${isSelected 
-                      ? 'border-amber-400 bg-amber-400/10' 
-                      : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10'
-                    }
-                  `}
-                >
-                  <div className="flex items-start gap-3">
-                    <span className="text-3xl mt-1">{expense.icon}</span>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-white">
-                          {expense.labelEn}
-                        </span>
-                        {isSelected && (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 font-medium">
-                            {'Selected'}
+              <div className="flex items-center justify-center gap-6 mb-4">
+                <ProgressRing 
+                  value={progressValue} 
+                  size={100} 
+                  strokeWidth={8}
+                  color="amber"
+                  showValue={false}
+                />
+                <div className="text-left">
+                  <p className="text-2xl font-bold text-amber-400 font-mono">
+                    {CRITICAL_EXPENSES[committedExpense]['labelEn']}
+                  </p>
+                  <p className="text-white/70">
+                    {'Cut'} {currentCommitment?.estimatedMonthlyCost?.toLocaleString()}/mo
+                  </p>
+                  <p className="text-sm text-white/50 mt-1">
+                    {'Will save'} 
+                    {formatCurrency(currentCommitment?.compoundProjection.oneYear || 0, locale)}/yr
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div className="bg-black/30 rounded-xl p-4">
+                  <div className="text-2xl font-bold text-amber-400 font-mono">
+                    {formatCurrency(currentCommitment?.compoundProjection.oneYear || 0, locale)}
+                  </div>
+                  <div className="text-xs text-white/60">1 Year</div>
+                </div>
+                <div className="bg-black/30 rounded-xl p-4">
+                  <div className="text-2xl font-bold text-amber-400 font-mono">
+                    {formatCurrency(currentCommitment?.compoundProjection.fiveYears || 0, locale)}
+                  </div>
+                  <div className="text-xs text-white/60">5 Years</div>
+                </div>
+                <div className="bg-black/30 rounded-xl p-4">
+                  <div className="text-2xl font-bold text-amber-400 font-mono">
+                    {formatCurrency(currentCommitment?.compoundProjection.tenYears || 0, locale)}
+                  </div>
+                  <div className="text-xs text-white/60">10 Years</div>
+                </div>
+              </div>
+
+              <Button variant="secondary" className="w-full mt-4" onClick={() => { clearCommitment(); }}>
+                {'Change Selection'}
+              </Button>
+            </Card>
+          </div>
+        ) : (
+          // Show expense picker
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 p-4 bg-amber-400/10 border border-amber-400/30 rounded-xl">
+              <Calculator className="h-8 w-8 text-amber-400" />
+              <div>
+                <p className="font-semibold text-white">
+                  {'Rule: Pick ONLY 1 per month'}
+                </p>
+                <p className="text-sm text-white/60">
+                  {'Invest savings at 7% annual return'}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              {expenseList.map(([key, expense]) => {
+                const isSelected = selectedExpense === key;
+                const suggested = suggestedAmounts[key] || 0;
+                const projection = calculateCompoundProjection({ monthlySavings: suggested });
+                
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => handleSelect(key)}
+                    className={`
+                      p-4 rounded-xl border-2 transition-all text-left relative
+                      ${isSelected 
+                        ? 'border-amber-400 bg-amber-400/10' 
+                        : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10'
+                      }
+                    `}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="text-3xl mt-1">{expense.icon}</span>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-white">
+                            {expense.labelEn}
                           </span>
+                          {isSelected && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 font-medium">
+                              {'Selected'}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {suggested > 0 && (
+                          <div className="mt-2 flex items-center gap-2">
+                            <span className="text-xs text-white/50">
+                              {'Suggested'}:
+                            </span>
+                            <span className="text-sm font-mono text-amber-400">
+                              {formatCurrency(suggested, locale)}/mo
+                            </span>
+                            <span className="text-xs text-white/50">
+                              → {formatCurrency(projection.oneYear, locale)}/yr
+                            </span>
+                          </div>
                         )}
                       </div>
-                      
-                      {suggested > 0 && (
-                        <div className="mt-2 flex items-center gap-2">
-                          <span className="text-xs text-white/50">
-                            {'Suggested'}:
-                          </span>
-                          <span className="text-sm font-mono text-amber-400">
-                            {formatCurrency(suggested, locale)}/mo
-                          </span>
-                          <span className="text-xs text-white/50">
-                            → {formatCurrency(projection.oneYear, locale)}/yr
-                          </span>
-                        </div>
-                      )}
                     </div>
+                    {isSelected && (
+                      <div className="absolute top-2 right-2 flex items-center gap-1 text-amber-400">
+                        <AlertCircle className="h-4 w-4" />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {selectedExpense && (
+              <Card variant="strong" className="p-3 sm:p-4">
+                <h4 className="font-semibold text-white mb-4">
+                  {'Set Amount'}:
+                  {CRITICAL_EXPENSES[selectedExpense]['labelEn']}
+                </h4>
+                
+                <div className="space-y-4">
+                  <div className="relative">
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="100"
+                      value={customAmount}
+                      onChange={(e) => setCustomAmount(e.target.value)}
+                      className="w-full text-2xl font-mono text-center bg-black/30 border border-white/10 rounded-xl px-4 py-4 text-white placeholder:text-white/30 outline-none focus:border-amber-400"
+                      placeholder={'e.g. 3000'}
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50">
+                      {formatCurrency(0, locale).replace(/[\d.,\s]/g, '') || '$'}
+                    </span>
                   </div>
-                  {isSelected && (
-                    <div className="absolute top-2 right-2 flex items-center gap-1 text-amber-400">
-                      <AlertCircle className="h-4 w-4" />
+
+                  <div className="flex flex-wrap gap-2">
+                    {[1000, 3000, 5000, 8000, 10000].map(amt => (
+                      <button
+                        key={amt}
+                        type="button"
+                        onClick={() => setCustomAmount(String(amt))}
+                        className={`flex-1 min-w-[4.5rem] px-3 py-2 rounded-xl text-sm font-medium transition ${
+                          Number(customAmount) === amt
+                            ? 'bg-amber-400 text-slate-950'
+                            : 'bg-white/5 text-white/70 hover:bg-white/10'
+                        }`}
+                      >
+                        {formatCurrency(amt, locale)}
+                      </button>
+                    ))}
+                  </div>
+
+                  {Number(customAmount) > 0 && (
+                    <div className="grid grid-cols-3 gap-3 text-center pt-2">
+                      <div className="bg-black/30 rounded-xl p-3">
+                        <div className="text-xl font-bold text-amber-400 font-mono">
+                          {formatCurrency(calculateCompoundProjection({ monthlySavings: Number(customAmount) }).oneYear, locale)}
+                        </div>
+                        <div className="text-xs text-white/60">{'1 Year'}</div>
+                      </div>
+                      <div className="bg-black/30 rounded-xl p-3">
+                        <div className="text-xl font-bold text-amber-400 font-mono">
+                          {formatCurrency(calculateCompoundProjection({ monthlySavings: Number(customAmount) }).fiveYears, locale)}
+                        </div>
+                        <div className="text-xs text-white/60">{'5 Years'}</div>
+                      </div>
+                      <div className="bg-black/30 rounded-xl p-3">
+                        <div className="text-xl font-bold text-amber-400 font-mono">
+                          {formatCurrency(calculateCompoundProjection({ monthlySavings: Number(customAmount) }).tenYears, locale)}
+                        </div>
+                        <div className="text-xs text-white/60">{'10 Years'}</div>
+                      </div>
                     </div>
                   )}
-                </button>
-              );
-            })}
+
+                  <Button 
+                    variant="primary" 
+                    className="w-full sticky bottom-0 z-10 bg-amber-400"
+                    size="lg"
+                    onClick={handleSave}
+                    disabled={!customAmount || Number(customAmount) <= 0}
+                  >
+                    {'Commit & Start Cutting'}
+                  </Button>
+                </div>
+              </Card>
+            )}
           </div>
-
-          {selectedExpense && (
-            <Card variant="strong" className="p-3 sm:p-4">
-              <h4 className="font-semibold text-white mb-4">
-                {'Set Amount'}:
-                {CRITICAL_EXPENSES[selectedExpense]['labelEn']}
-              </h4>
-              
-              <div className="space-y-4">
-                <div className="relative">
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    min="0"
-                    step="100"
-                    value={customAmount}
-                    onChange={(e) => setCustomAmount(e.target.value)}
-                    className="w-full text-2xl font-mono text-center bg-black/30 border border-white/10 rounded-xl px-4 py-4 text-white placeholder:text-white/30 outline-none focus:border-amber-400"
-                    placeholder={'e.g. 3000'}
-                  />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50">
-                    {formatCurrency(0, locale).replace(/[\d.,\s]/g, '') || '$'}
-                  </span>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {[1000, 3000, 5000, 8000, 10000].map(amt => (
-                    <button
-                      key={amt}
-                      type="button"
-                      onClick={() => setCustomAmount(String(amt))}
-                      className={`flex-1 min-w-[4.5rem] px-3 py-2 rounded-xl text-sm font-medium transition ${
-                        Number(customAmount) === amt
-                          ? 'bg-amber-400 text-slate-950'
-                          : 'bg-white/5 text-white/70 hover:bg-white/10'
-                      }`}
-                    >
-                      {formatCurrency(amt, locale)}
-                    </button>
-                  ))}
-                </div>
-
-                {Number(customAmount) > 0 && (
-                  <div className="grid grid-cols-3 gap-3 text-center pt-2">
-                    <div className="bg-black/30 rounded-xl p-3">
-                      <div className="text-xl font-bold text-amber-400 font-mono">
-                        {formatCurrency(calculateCompoundProjection({ monthlySavings: Number(customAmount) }).oneYear, locale)}
-                      </div>
-                      <div className="text-xs text-white/60">{'1 Year'}</div>
-                    </div>
-                    <div className="bg-black/30 rounded-xl p-3">
-                      <div className="text-xl font-bold text-amber-400 font-mono">
-                        {formatCurrency(calculateCompoundProjection({ monthlySavings: Number(customAmount) }).fiveYears, locale)}
-                      </div>
-                      <div className="text-xs text-white/60">{'5 Years'}</div>
-                    </div>
-                    <div className="bg-black/30 rounded-xl p-3">
-                      <div className="text-xl font-bold text-amber-400 font-mono">
-                        {formatCurrency(calculateCompoundProjection({ monthlySavings: Number(customAmount) }).tenYears, locale)}
-                      </div>
-                      <div className="text-xs text-white/60">{'10 Years'}</div>
-                    </div>
-                  </div>
-                )}
-
-                <Button 
-                  variant="primary" 
-                  className="w-full sticky bottom-0 z-10 bg-amber-400"
-                  size="lg"
-                  onClick={handleSave}
-                  disabled={!customAmount || Number(customAmount) <= 0}
-                >
-                  {'Commit & Start Cutting'}
-                </Button>
-              </div>
-            </Card>
-          )}
-        </div>
-      )}
-    </Modal>
+        )}
+      </Modal>
+    </>
   );
 }

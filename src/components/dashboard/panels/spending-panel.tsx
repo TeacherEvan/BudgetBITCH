@@ -1,11 +1,15 @@
-// components/dashboard/panels/spending-panel.tsx
-// Merged Expenses + Budget panel: the tracker list/entry sits above the
-// budget overview charts so the user sees what they spent and against what
-// budget in one place.
 'use client';
 
+import dynamic from 'next/dynamic';
 import { ExpenseTracker } from './expense-tracker';
-import { BudgetVisual } from './budget-visual';
+
+const BudgetVisual = dynamic(
+  () => import('./budget-visual').then((mod) => mod.BudgetVisual),
+  {
+    ssr: false,
+    loading: () => <div className="h-64 bg-white/5 animate-pulse rounded-2xl" />,
+  }
+);
 
 interface SpendingPanelProps {
   locale?: string;
