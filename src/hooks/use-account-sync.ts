@@ -35,10 +35,12 @@ import { BOARD_CHANGED_EVENT } from "@/lib/types/budget";
 const BOARD_QUEUE_KEY = "budgetbitch:accountBoardQueue";
 const PUSH_DEBOUNCE_MS = 800;
 
-// Single-flight guard (RELIABILITY_HARDENING_PLAN step 3): the 'online' and
-// 'budgetbitch:flushQueues' listeners both call flushQueue, so two near-simultaneous
-// events could re-read the queue before the first deletes, double-pushing a board.
-let isFlushingBoard = false;
+// NOTE: isFlushingBoard was previously a module-level singleton, which caused
+// test isolation failures — a test that left the flag true would poison every
+// subsequent test in the same Vitest worker. It is now a useRef (see below)
+// so it resets with every component mount. Runtime single-flight semantics are
+// unchanged: one hook instance per mounted component still guards all concurrent
+// flushes within that component.
 
 export interface QueuedPush {
   boardId: string;
@@ -109,6 +111,12 @@ export function useAccountSync(): UseAccountSync {
   // Push timer (debounce local edits).
   const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingRef = useRef(false);
+  // Single-flight guard for flushQueue: the 'online' and 'budgetbitch:flushQueues'
+  // listeners both call flushQueue, so two near-simultaneous events could
+  // re-read the queue before the first deletes, double-pushing a board.
+  // Lives in a ref (not a module variable) so it resets on unmount and never
+  // leaks between test cases.
+  const isFlushingBoardRef = useRef(false);
 
   // Resolve the active account's boardId from local storage, falling back to
   // the Convex account listing when the local cache is empty.
@@ -175,11 +183,11 @@ export function useAccountSync(): UseAccountSync {
     if (!isAuthenticated || !isOnline()) return;
     // Single-flight guard: drop a concurrent entry; the in-flight flush drains
     // the whole queue, so no queued board is lost.
-    if (isFlushingBoard) return;
+    if (isFlushingBoardRef.current) return;
     const q = getQueue();
     if (q.length === 0) return;
 
-    isFlushingBoard = true;
+    isFlushingBoardRef.current = true;
     try {
       const remaining: QueuedPush[] = [];
       setSyncing(true);
@@ -207,7 +215,7 @@ export function useAccountSync(): UseAccountSync {
       setSyncing(false);
       setPushPending(remaining.length > 0);
     } finally {
-      isFlushingBoard = false;
+      isFlushingBoardRef.current = false;
     }
   }, [isAuthenticated, pushBoard]);
 
