@@ -22,13 +22,17 @@ vi.mock('@convex-dev/auth/react', () => ({
   useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
 }));
 
-// Single source of truth for the convex/react mock. A previous revision
-// declared TWO vi.mock('convex/react', ...) factories for the same module —
-// only one wins, and which one is not reliably deterministic across runs, so
-// listMyAccounts intermittently resolved to null and the dashboard fallback
-// couldn't resolve a boardId (the real cause of the CI flake). Keep exactly
-// one factory. listMyAccounts takes no args ({}); getAccountBoard takes
-// { boardId }.
+// Guards regression: double vi.mock factory for 'convex/react' (fixed in the
+// Budget Boss god-module decomposition, 2026-08-18). A previous revision
+// declared two factories for the same module — only one wins non-deterministically,
+// so listMyAccounts intermittently resolved to null, dropping every auto-push.
+// Fixed by keeping exactly one factory below.
+//
+// Guards regression: module-level isFlushingBoard singleton (fixed in the same
+// commit). A previous isFlushingBoard declared at module scope survived across
+// tests in the same Vitest worker — a test that left it true poisoned every
+// subsequent test. Fixed by moving it into a useRef inside the hook so it resets
+// on unmount. listMyAccounts takes no args ({}); getAccountBoard takes { boardId }.
 const myAccountsResult: unknown[] = [];
 vi.mock('convex/react', () => ({
   useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
