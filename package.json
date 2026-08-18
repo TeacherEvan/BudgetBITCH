@@ -50,7 +50,7 @@
     "@swc/core": "^1.15.46",
     "@types/web-push": "^3.6.4",
     "@vercel/analytics": "^2.0.1",
-    "agent-browser": "^0.33.2",
+    "agent-browser": "^0.34.0",
     "convex": "^1.44.0",
     "date-fns": "^4.1.0",
     "framer-motion": "^13.0.0",
