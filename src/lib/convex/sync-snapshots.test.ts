@@ -184,9 +184,11 @@ describe('flushOfflineQueue (no item-skip on partial failure)', () => {
   });
 
   it('retains only the items that actually failed; never skips the next item', async () => {
+    // Distinct calendar days so the new same-day compaction (SYNC-5) keeps both
+    // entries; the test asserts per-item failure isolation, not day-dedup.
     syncQueueStore = [
-      { id: 1, data: { totals: { income: 1 } }, timestamp: 1 },
-      { id: 2, data: { totals: { income: 2 } }, timestamp: 2 },
+      { id: 1, data: { totals: { income: 1 } }, timestamp: new Date('2026-08-18T09:00:00Z').getTime() },
+      { id: 2, data: { totals: { income: 2 } }, timestamp: new Date('2026-08-19T09:00:00Z').getTime() },
     ];
 
     let call = 0;
@@ -199,7 +201,7 @@ describe('flushOfflineQueue (no item-skip on partial failure)', () => {
     await flushOfflineQueue();
 
     expect(syncQueueStore).toHaveLength(1);
-    expect(syncQueueStore[0].timestamp).toBe(1);
+    expect(syncQueueStore[0].timestamp).toBe(new Date('2026-08-18T09:00:00Z').getTime());
     // The failed item keeps its failCount so it can be dropped after 3 tries
     // instead of re-flushing forever.
     expect(syncQueueStore[0].failCount).toBe(1);
@@ -219,10 +221,12 @@ describe('flushOfflineQueue (no item-skip on partial failure)', () => {
   });
 
   it('keeps the whole tail when auth drops mid-flush', async () => {
+    // Distinct calendar days so same-day compaction (SYNC-5) preserves all three
+    // before the auth-break aborts the flush.
     syncQueueStore = [
-      { id: 1, data: { totals: { income: 1 } }, timestamp: 1 },
-      { id: 2, data: { totals: { income: 2 } }, timestamp: 2 },
-      { id: 3, data: { totals: { income: 3 } }, timestamp: 3 },
+      { id: 1, data: { totals: { income: 1 } }, timestamp: new Date('2026-08-18T09:00:00Z').getTime() },
+      { id: 2, data: { totals: { income: 2 } }, timestamp: new Date('2026-08-19T09:00:00Z').getTime() },
+      { id: 3, data: { totals: { income: 3 } }, timestamp: new Date('2026-08-20T09:00:00Z').getTime() },
     ];
 
     mockConvex.mutation.mockRejectedValueOnce(new Error('Unauthenticated'));

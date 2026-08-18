@@ -193,12 +193,15 @@ describe('DashboardShell (mobile)', () => {
     expect(within(dialog).getByRole('heading', { level: 2 })).toBeInTheDocument();
   });
 
-  it('Critical Expenses modal body is scrollable (overflow-y-auto)', () => {
+  it('Critical Expenses modal body is scrollable (overflow-y-auto)', async () => {
     renderShell();
     const triggers = screen.getAllByRole('button', { name: /pick one expense to cut this month/i });
     fireEvent.click(triggers[0]);
+    // The modal is code-split via next/dynamic (ssr: false), so it resolves
+    // asynchronously in the test runtime. Await the dialog instead of querying
+    // it synchronously.
+    const dialog = await screen.findByRole('dialog');
     // The scrollable modal body wraps the "Pick one expense to cut" content.
-    const dialog = screen.getByRole('dialog');
     expect(dialog.querySelector('.overflow-y-auto')).not.toBeNull();
     expect(dialog.className).toContain('max-h-[85vh]');
   });

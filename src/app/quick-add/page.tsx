@@ -13,6 +13,7 @@ import { useReceiptScan } from '@/hooks/use-receipt-scan';
 import { useInboxPermission } from '@/hooks/use-inbox-permission';
 import { parseSMS, getBestCandidate } from '@/lib/sms-parser';
 import { repeatExpense } from '@/lib/db/stores/expenses-store';
+import { parseManualEntry, findRepeatCandidate } from '@/lib/quick-add/parse-entry';
 import { ReceiptVerifySheet } from '@/components/receipt/receipt-verify-sheet';
 import { type ExpenseCategory, type IncomeCategory, type ReceiptLineItem } from '@/lib/types/budget';
 import { mapCategory, reconcileLineItems } from '@/lib/receipt/map-category';
@@ -304,11 +305,7 @@ export default function QuickAddPage() {
   // with the same merchant (case-insensitive) as the scanned receipt.
   const repeatCandidate = useMemo(() => {
     if (entrySource !== 'receipt') return undefined;
-    const merchant = scannedMerchant.trim().toLowerCase();
-    if (!merchant) return undefined;
-    return (existingExpenses ?? [])
-      .filter((e) => e.merchant?.trim().toLowerCase() === merchant)
-      .sort((a, b) => (a.date < b.date ? 1 : -1))[0];
+    return findRepeatCandidate(existingExpenses, scannedMerchant);
   }, [entrySource, scannedMerchant, existingExpenses]);
 
   // One-tap repeat of the matched purchase. Independent of Save: the review
@@ -340,9 +337,7 @@ export default function QuickAddPage() {
     // Amount is optional on Quick Add: a note-only entry is saved as amount 0
     // so the user is never blocked from recording a spend. The manual/verified
     // save path below tolerates amountVal === 0.
-    const numberMatch = trimmed.match(/(\d+(?:\.\d+)?)/);
-    const amountVal = numberMatch ? parseFloat(numberMatch[1]) : 0;
-    const noteVal = (numberMatch ? trimmed.replace(numberMatch[0], '') : trimmed).trim();
+    const { amount: amountVal, note: noteVal } = parseManualEntry(trimmed);
 
     try {
       setLoading(true);
