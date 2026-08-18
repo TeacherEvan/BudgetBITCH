@@ -1,0 +1,32 @@
+{
+  "entry": [
+    "src/app/**/*.{ts,tsx}",
+    "src/app/api/**/route.ts",
+    "convex/**/*.ts",
+    "scripts/**/*.{ts,mjs}"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}",
+    "convex/**/*.ts",
+    "scripts/**/*.{ts,mjs}"
+  ],
+  "ignore": [
+    "convex/_generated/**",
+    "src/types/**",
+    "src/**/*.d.ts",
+    ".prune/**",
+    "docs/**",
+    "node_modules/**"
+  ],
+  "ignoreExportsUsedInFile": true,
+  "rules": {
+    "files": "warn",
+    "exports": "warn",
+    "types": "warn",
+    "nsExports": "warn",
+    "nsTypes": "warn",
+    "classMembers": "warn",
+    "enumMembers": "warn",
+    "duplicates": "warn"
+  }
+}
