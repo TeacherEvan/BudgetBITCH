@@ -2,13 +2,13 @@
 'use client';
 
 import { useState, useRef, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import type { CurrencyCode } from '@/lib/utils/currency';
 import Link from 'next/link';
 import { X, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { HeaderBar } from '@/components/layout/header-bar';
 import { AccountSwitcher } from '@/components/accounts/account-switcher';
-import { CriticalExpensesModal } from '@/components/dashboard/critical-expenses-modal';
 import { AlertsSidebar } from '@/components/dashboard/alerts-sidebar';
 import { PriorityGuide } from '@/components/dashboard/priority-guide';
 import { Modal } from '@/components/ui/modal';
@@ -20,14 +20,35 @@ import { useShimmerPref } from '@/hooks/use-shimmer-pref';
 import { CurrencyConverterCard } from '@/components/dashboard/currency-converter-card';
 import { BentoGrid, type PanelConfig } from '@/components/dashboard/bento-grid';
 import { MobilePanelTabs } from '@/components/dashboard/mobile-panel-tabs';
-import { ScenarioSandboxModal } from '@/components/dashboard/scenario-sandbox-modal';
-import { CashFlowProjectionCard } from '@/components/dashboard/cash-flow-projection-card';
-import { CategoryPivotCard } from '@/components/dashboard/category-pivot-card';
-import { BudgetVarianceGrid } from '@/components/dashboard/budget-variance-grid';
 import { buildPanels } from '@/components/dashboard/panels';
 import { PANEL_CONFIG, PANEL_ORDER, type PanelKey } from '@/components/dashboard/panelConfig';
 import { DailyDisposableHero } from '@/components/dashboard/daily-disposable-hero';
 import { ReceiptDraftsList } from '@/components/receipt/receipt-drafts-list';
+
+const CriticalExpensesModal = dynamic(
+  () => import('@/components/dashboard/critical-expenses-modal').then((mod) => mod.CriticalExpensesModal),
+  { ssr: false }
+);
+
+const ScenarioSandboxModal = dynamic(
+  () => import('@/components/dashboard/scenario-sandbox-modal').then((mod) => mod.ScenarioSandboxModal),
+  { ssr: false }
+);
+
+const CashFlowProjectionCard = dynamic(
+  () => import('@/components/dashboard/cash-flow-projection-card').then((mod) => mod.CashFlowProjectionCard),
+  { ssr: false, loading: () => <div className="h-48 bg-white/5 animate-pulse rounded-2xl" /> }
+);
+
+const CategoryPivotCard = dynamic(
+  () => import('@/components/dashboard/category-pivot-card').then((mod) => mod.CategoryPivotCard),
+  { ssr: false, loading: () => <div className="h-48 bg-white/5 animate-pulse rounded-2xl" /> }
+);
+
+const BudgetVarianceGrid = dynamic(
+  () => import('@/components/dashboard/budget-variance-grid').then((mod) => mod.BudgetVarianceGrid),
+  { ssr: false, loading: () => <div className="h-48 bg-white/5 animate-pulse rounded-2xl" /> }
+);
 
 interface DashboardShellProps {
   locale: string;

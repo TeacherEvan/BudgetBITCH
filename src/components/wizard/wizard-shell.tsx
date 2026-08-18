@@ -52,7 +52,7 @@ interface WizardShellProps {
 }
 
 export function WizardShell({ locale, onComplete, isModal = false }: WizardShellProps) {
-  const normLocale: string = 'en';
+  const normLocale: string = locale || 'en';
   const { override: currencyOverride } = useCurrencyOverride();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [stepValues, setStepValues] = useState<Partial<WizardProfile['answers']>>({});
@@ -89,7 +89,7 @@ export function WizardShell({ locale, onComplete, isModal = false }: WizardShell
         completed: true,
         completedAt: new Date().toISOString(),
         version: 1,
-        locale: ((['th', 'en', 'en-ZA'] as string[]).includes(locale) ? locale : 'en') as WizardProfile['locale'],
+        locale: (locale || 'en') as WizardProfile['locale'],
         answers: {
           income: stepValues.income ?? 0,
           rent: stepValues.rent ?? 0,
