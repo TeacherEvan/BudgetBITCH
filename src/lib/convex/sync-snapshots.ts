@@ -16,6 +16,7 @@ import { calculateNetWorthBaseline } from '@/lib/utils/budget-calculator';
 import type { WizardProfile } from '@/lib/types/budget';
 import { api } from '../../../convex/_generated/api';
 import { getCurrentAccountId } from '@/lib/db/accountStorage';
+import { compactQueueByDate, backoffWithJitter } from './sync-queue-compaction';
 
 import { convex as sharedConvexClient } from '@/components/providers/convex-client-provider';
 
@@ -342,7 +343,7 @@ export async function flushOfflineQueue() {
   isFlushingQueue = true;
   try {
     const db = await getDB();
-    const items = await db.getAll('syncQueue');
+    const items = compactQueueByDate(await db.getAll('syncQueue'));
     if (items.length === 0) return;
     
     for (const item of items) {
@@ -370,6 +371,9 @@ export async function flushOfflineQueue() {
             console.warn(`Dropped permanently-failing offline snapshot after ${fails} attempts.`);
           } else if (item.id !== undefined) {
             await db.put('syncQueue', { ...item, failCount: fails });
+            // Back off before the next online-event retry so we don't hammer
+            // the server at a fixed cadence; full jitter spreads concurrent flushes.
+            await new Promise((r) => setTimeout(r, backoffWithJitter(fails - 1)));
           }
         }
       }

@@ -32,4 +32,6 @@ export {
   templateSnapshot,
 } from "./scrapeBot";
 
+export { updateReceiptFields } from "./internal";
+
 export { ingestReceipt } from "./ingest";
