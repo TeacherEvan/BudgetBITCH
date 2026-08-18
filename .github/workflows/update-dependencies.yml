@@ -37,7 +37,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Cache Next.js build
         uses: actions/cache@v5
@@ -51,7 +51,7 @@ jobs:
         run: npm audit --audit-level=moderate || true
 
       - name: Update dependencies
-        run: npm update
+        run: npm update --legacy-peer-deps
 
       - name: Run Audit Fix (Lockfile only)
         run: npm audit fix --package-lock-only || true
