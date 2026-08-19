@@ -7,6 +7,7 @@ import { WizardProfile } from '@/lib/types/budget';
 import { saveWizardProfile } from '@/lib/db/local-db';
 import type { CurrencyCode } from '@/lib/utils/currency';
 import { useCurrencyOverride } from '@/hooks/use-currency-override';
+import type { AppLocale } from '@/i18n/messages';
 import { WizardProgress } from './wizard-progress';
 import { StepIncome } from './steps/step-income';
 import { StepRent } from './steps/step-rent';
@@ -46,13 +47,12 @@ const STEPS: WizardStepId[] = [
 ];
 
 interface WizardShellProps {
-  locale: string;
+  locale: AppLocale;
   onComplete: () => void;
   isModal?: boolean;
 }
 
 export function WizardShell({ locale, onComplete, isModal = false }: WizardShellProps) {
-  const normLocale: string = locale || 'en';
   const { override: currencyOverride } = useCurrencyOverride();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [stepValues, setStepValues] = useState<Partial<WizardProfile['answers']>>({});
@@ -89,7 +89,7 @@ export function WizardShell({ locale, onComplete, isModal = false }: WizardShell
         completed: true,
         completedAt: new Date().toISOString(),
         version: 1,
-        locale: (locale || 'en') as WizardProfile['locale'],
+        locale: locale,
         answers: {
           income: stepValues.income ?? 0,
           rent: stepValues.rent ?? 0,
@@ -102,7 +102,7 @@ export function WizardShell({ locale, onComplete, isModal = false }: WizardShell
           riskTolerance: stepValues.riskTolerance ?? 'medium',
           locationConsent: stepValues.locationConsent ?? false,
           receiptScanned: stepValues.receiptScanned ?? false,
-          currency: (stepValues.currency ?? currencyOverride ?? (locale === 'en-ZA' ? 'ZAR' : 'USD')) as CurrencyCode,
+          currency: (stepValues.currency ?? currencyOverride ?? 'USD') as CurrencyCode,
           ...stepValues,
         },
       };
@@ -134,7 +134,7 @@ export function WizardShell({ locale, onComplete, isModal = false }: WizardShell
       case 'income':
         return (
           <StepIncome
-            locale={normLocale}
+            locale={locale}
             value={stepValues.income as number}
             onChange={handleValueChange}
             error={errorMessage}
@@ -144,7 +144,7 @@ export function WizardShell({ locale, onComplete, isModal = false }: WizardShell
       case 'rent':
         return (
           <StepRent
-            locale={normLocale}
+            locale={locale}
             value={stepValues.rent as number}
             onChange={handleValueChange}
             error={errorMessage}
@@ -154,7 +154,7 @@ export function WizardShell({ locale, onComplete, isModal = false }: WizardShell
       case 'phoneInternet':
         return (
           <StepPhoneInternet
-            locale={normLocale}
+            locale={locale}
             value={stepValues.phoneInternet as number}
             onChange={handleValueChange}
             error={errorMessage}
@@ -164,7 +164,7 @@ export function WizardShell({ locale, onComplete, isModal = false }: WizardShell
       case 'healthcare':
         return (
           <StepHealthcare
-            locale={normLocale}
+            locale={locale}
             value={stepValues.healthcare as number}
             onChange={handleValueChange}
             error={errorMessage}
@@ -174,7 +174,7 @@ export function WizardShell({ locale, onComplete, isModal = false }: WizardShell
       case 'transport':
         return (
           <StepTransport
-            locale={normLocale}
+            locale={locale}
             value={stepValues.transport as number}
             onChange={handleValueChange}
             error={errorMessage}
@@ -184,7 +184,7 @@ export function WizardShell({ locale, onComplete, isModal = false }: WizardShell
       case 'entertainment':
         return (
           <StepEntertainment
-            locale={normLocale}
+            locale={locale}
             value={stepValues.entertainment as number}
             onChange={handleValueChange}
             error={errorMessage}
@@ -194,7 +194,7 @@ export function WizardShell({ locale, onComplete, isModal = false }: WizardShell
       case 'subscriptions':
         return (
           <StepSubscriptions
-            locale={normLocale}
+            locale={locale}
             value={stepValues.subscriptions as number}
             onChange={handleValueChange}
             error={errorMessage}
@@ -204,7 +204,7 @@ export function WizardShell({ locale, onComplete, isModal = false }: WizardShell
       case 'savingsRate':
         return (
           <StepSavingsRate
-            locale={normLocale}
+            locale={locale}
             value={stepValues.savingsRatePct as number}
             onChange={handleValueChange}
             error={errorMessage}
@@ -214,7 +214,7 @@ export function WizardShell({ locale, onComplete, isModal = false }: WizardShell
       case 'riskTolerance':
         return (
           <StepRiskTolerance
-            locale={normLocale}
+            locale={locale}
             value={(stepValues.riskTolerance as 'low' | 'medium' | 'high') || 'medium'}
             onChange={handleValueChange}
             error={errorMessage}
@@ -224,7 +224,7 @@ export function WizardShell({ locale, onComplete, isModal = false }: WizardShell
       case 'locationConsent':
         return (
           <StepLocationConsent
-            locale={normLocale}
+            locale={locale}
             value={stepValues.locationConsent as boolean}
             onChange={handleValueChange}
             error={errorMessage}
@@ -241,7 +241,7 @@ export function WizardShell({ locale, onComplete, isModal = false }: WizardShell
       <WizardProgress
         currentStep={currentStepIndex}
         totalSteps={STEPS.length}
-        locale={normLocale}
+        locale={locale}
       />
 
       <div className="flex-1 p-6 md:p-8 space-y-6">
