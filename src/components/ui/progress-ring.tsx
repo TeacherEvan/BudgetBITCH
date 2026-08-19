@@ -56,8 +56,6 @@ export function ProgressRing({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
           style={{ strokeDasharray: circumference, strokeDashoffset: offset }}
         />
       </svg>

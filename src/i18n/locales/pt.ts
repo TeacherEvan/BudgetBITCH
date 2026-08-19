@@ -600,5 +600,30 @@ export const pt: LocaleMessages = {
       subtitle: "Permita a localização para notícias locais e preços de combustível",
       prompt: "Ative a localização para obter preços de combustível próximos e notícias financeiras locais"
     }
+  },
+  quickAdd: {
+    title: "Adição rápida",
+    placeholder: "Digite o valor e depois a nota, ex. 120 almoço",
+    camera: "Escanear recibo",
+    inbox: "Caixa SMS/E-mail",
+    save: "Salvar",
+    scanning: "Escaneando e extraindo a foto do recibo...",
+    parsing: "Analisando mensagem SMS...",
+    successAdded: "Despesa registrada com sucesso!",
+    successIncome: "Renda adicionada com sucesso!",
+    failed: "Falha ao registrar a entrada!",
+    invalidAmount: "Digite um valor válido",
+    back: "Voltar",
+    expense: "Despesa (-)",
+    income: "Renda (+)",
+    permTitle: "Permissão de caixa SMS e e-mail",
+    permDesc: "Permitir que o Budget Boss analise mensagens de transações financeiras da sua caixa ou área de transferência para preencher os detalhes automaticamente?",
+    rememberChoice: "Lembrar minha decisão neste dispositivo",
+    allow: "Permitir acesso",
+    deny: "Negar acesso",
+    pasteSmsTitle: "Colar SMS ou notificação de e-mail",
+    pasteSmsPlaceholder: "Cole um alerta bancário ex. \"Pago $45.50 na STARBUCKS cartão 1234 em 08/01/2026\"",
+    extractBtn: "Extrair e preencher",
+    close: "Fechar",
   }
 };
