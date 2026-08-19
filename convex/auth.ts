@@ -2,6 +2,12 @@ import { convexAuth } from "@convex-dev/auth/server";
 import { Password } from "@convex-dev/auth/providers/Password";
 import { Email } from "@convex-dev/auth/providers/Email";
 
+// RFC-light single-address check: exactly one "@", a local part, a dot in the
+// domain. Rejects malformed input like "hermes@@test.com" (double @) so the
+// Password provider fails fast with a clear error instead of a generic
+// Convex Server Error during sign-in.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export function normalizePasswordEmail(email: unknown) {
   if (typeof email !== "string") {
     throw new Error("An email address is required.");
@@ -11,6 +17,10 @@ export function normalizePasswordEmail(email: unknown) {
 
   if (!normalizedEmail) {
     throw new Error("An email address is required.");
+  }
+
+  if (!EMAIL_RE.test(normalizedEmail)) {
+    throw new Error("Please enter a valid email address.");
   }
 
   return normalizedEmail;
