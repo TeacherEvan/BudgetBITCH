@@ -139,7 +139,7 @@ flowchart TD
 | `/dashboard` | `src/app/(app)/dashboard/page.tsx` | Protected dashboard (post-auth landing) |
 | `/wizard` | `src/app/(app)/wizard/page.tsx` | Protected 10-step launch wizard |
 | `/settings` | `src/app/settings/page.tsx` | Settings (theme, currency, sync, data, admin) |
-| `/quick-add` | `src/app/quick-add/page.tsx` | Standalone PWA widget: Camera (photo → HF bot TeacherBOY → Gemini → Convex → editable review; no LINE ID) + Inbox + Income; no manual amount; Repeat Purchase "+" |
+| `/quick-add` | `src/app/quick-add/page.tsx` + `src/hooks/use-quick-add-state.ts` + `src/components/quick-add/quick-add-camera-sheet.tsx` | Standalone PWA widget: Camera (photo → HF bot TeacherBOY → Gemini → Convex → editable review; no LINE ID) + Inbox + Income; no manual amount; Repeat Purchase "+". All mutation state + handlers live in `useQuickAddState` (extracted 2026-08-19 from an 819-line page); page is a thin render surface. |
 | `/sms-confirm` | `src/app/sms-confirm/page.tsx` | Confirm a parsed bank SMS into a transaction |
 | `/security` | `src/app/security/page.tsx` | Security disclosure page |
 | `/privacy` | `src/app/privacy/page.tsx` | Privacy policy |
