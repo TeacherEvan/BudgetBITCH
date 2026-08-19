@@ -5,6 +5,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
+import type { Id } from '../../convex/_generated/dataModel';
 import { useExpenses, useWizardProfile, useIncomes } from '@/hooks/use-local-db';
 import { useReceiptScan } from '@/hooks/use-receipt-scan';
 import { useInboxPermission } from '@/hooks/use-inbox-permission';
@@ -132,7 +133,7 @@ export function useQuickAddState(): QuickAddState {
     limit: 1,
   });
   const confirmBotDraft = useMutation(api.receipts.confirm);
-  const [botDraftId, setBotDraftId] = useState<string | null>(null);
+  const [botDraftId, setBotDraftId] = useState<Id<'receipts'> | null>(null);
 
   // UI States
   const [isExpense, setIsExpense] = useState(true);
@@ -257,7 +258,7 @@ export function useQuickAddState(): QuickAddState {
     }
     setIsExpense(true);
     setEntrySource('receipt');
-    setBotDraftId(bot._id as string);
+    setBotDraftId(bot._id as Id<'receipts'>);
     setScannedAmount(bot.amount ? String(bot.amount) : '');
     setScannedMerchant(String(bot.merchant ?? ''));
     setScannedCategory((bot.category as ExpenseCategory) ?? 'other');
@@ -309,7 +310,7 @@ export function useQuickAddState(): QuickAddState {
         // Confirm the bot-ingested Convex draft (idempotent; flips status to
         // confirmed and stores the reviewed overrides).
         await confirmBotDraft({
-          draftId: botDraftId as never,
+          draftId: botDraftId,
           overrides: {
             amount: Math.round(amtVal * 100) / 100,
             merchant: scannedMerchant.trim() || 'Photo Receipt',
