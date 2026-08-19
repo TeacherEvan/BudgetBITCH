@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { WizardShell } from '@/components/wizard/wizard-shell';
+import { resolveLocale } from '@/i18n/messages';
 import { getWizardProfile } from '@/lib/db/local-db';
 import { Loader2 } from 'lucide-react';
 
@@ -65,7 +66,7 @@ export function WizardClient({ wizardCompleted: initialWizardCompleted }: Wizard
 
   return (
     <WizardShell
-      locale={locale}
+      locale={resolveLocale(locale)}
       onComplete={handleWizardComplete}
     />
   );

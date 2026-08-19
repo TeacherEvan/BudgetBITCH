@@ -5,8 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Plus, Minus, Save, ArrowLeft, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useQuickAddState } from '@/hooks/use-quick-add-state';
-import { useLocale, useTranslations } from 'next-intl';
-import { getLocaleMessages, resolveLocale } from '@/i18n/messages';
+import { useTranslations } from 'next-intl';
 import { PermissionModal } from '@/components/quick-add/permission-modal';
 import { IncomeCategoryPicker } from '@/components/quick-add/income-category-picker';
 import { ScannedReceiptCard } from '@/components/quick-add/scanned-receipt-card';
@@ -18,8 +17,6 @@ import { QuickAddCameraSheet } from '@/components/quick-add/quick-add-camera-she
 export default function QuickAddPage() {
   const router = useRouter();
   const t = useTranslations('QuickAdd');
-  const locale = useLocale();
-  const l = getLocaleMessages(resolveLocale(locale)).quickAdd;
   const s = useQuickAddState();
 
   return (
@@ -173,12 +170,10 @@ export default function QuickAddPage() {
         onRememberChange={s.setRememberCheck}
         onDeny={s.handleDenyPermission}
         onGrant={s.handleGrantPermission}
-        labels={l}
       />
 
       <SmsPasteModal
         open={s.showSmsModal}
-        labels={l}
         sampleNotifications={s.sampleNotifications}
         rawSmsInput={s.rawSmsInput}
         onRawSmsChange={s.setRawSmsInput}

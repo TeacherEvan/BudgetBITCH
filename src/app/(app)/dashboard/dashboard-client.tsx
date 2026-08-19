@@ -6,12 +6,14 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { DashboardShell } from '@/components/dashboard/dashboard-shell';
 import { WizardShell } from '@/components/wizard/wizard-shell';
+import { resolveLocale } from '@/i18n/messages';
 import { ManifestoInterstitial } from '@/components/launch/manifesto-interstitial';
 import { useWizardProfile } from '@/hooks/use-local-db';
 import { useAccountSync } from '@/hooks/use-account-sync';
 import { initializeBudgetsFromWizard } from '@/lib/utils/budget-calculator';
 import { getWizardProfile, saveWizardProfile, saveCriticalExpenseCommitment } from '@/lib/db/local-db';
 import { logUserAction } from '@/lib/utils/action-logger';
+import { logInfo } from '@/lib/observability/logger';
 import { useQuery } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
 import type { CriticalExpenseKey } from '@/lib/types/budget';
@@ -79,7 +81,7 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
     if (profile) {
       try {
         await initializeBudgetsFromWizard(profile);
-        console.log('Budgets initialized from wizard');
+        logInfo('budgets_initialized_from_wizard');
       } catch (error) {
         console.error('Failed to initialize budgets:', error);
       }
@@ -133,7 +135,7 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
 
     (async () => {
       try {
-        console.log('Restoring completed wizard profile and settings from Convex snapshot...');
+        logInfo('restoring_wizard_profile_from_snapshot');
         setLoadingDismissed(false);
         setIsLoading(true);
         
@@ -199,7 +201,7 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
       {(!wizardCompleted || wizardForced) && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
           <WizardShell
-            locale={locale}
+            locale={resolveLocale(locale)}
             onComplete={handleWizardComplete}
             isModal={true}
           />

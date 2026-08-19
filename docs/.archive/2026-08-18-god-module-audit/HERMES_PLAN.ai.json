@@ -1,0 +1,48 @@
+{
+  "meta": {
+    "repo": "BudgetBITCH",
+    "group": "GAMES",
+    "generated": "2026-08-15 18:55",
+    "branch": "fix/ci-lockfile-sync",
+    "commits": "499",
+    "lang": "Node/JS",
+    "status": "proposed"
+  },
+  "items": [
+    {
+      "area": "Receipt OCR",
+      "action": "Wire the Quick-Add camera pipeline to the receipt-bridge + HuggingFace bot for offline-first OCR (docs/plans/*-receipt-bridge-*, *-quick-add-camera-pipeline-*)."
+    },
+    {
+      "area": "Reliability",
+      "action": "Execute docs/RELIABILITY_HARDENING_PLAN.md: close CI flake + lockfile-sync drift on fix/ci-lockfile-sync branch."
+    },
+    {
+      "area": "Daily figures",
+      "action": "Ship reconciled daily-figure + line-receipt-bot flows end-to-end (docs/plans/*-reconciled-daily-figure-*, *-line-receipt-bot-*)."
+    },
+    {
+      "area": "i18n/UX",
+      "action": "Finish next-intl locale coverage + Budget Boss display-name rollout across all surfaces."
+    }
+  ],
+  "instructions": "BudgetBITCH (GAMES): proposed workstreams. Agent reads HERMES_PLAN.html ticks: approve(a)=implement, change(c)=revisit/clarify, skip=ignore. Compact form below.",
+  "compact": [
+    {
+      "a": "R",
+      "summary": "Wire the Quick-Add camera pipeline to the receipt-bridge + HuggingFace bot for offline-first OCR (docs/plans/*-receipt-bridge-*, *-quick-add-camera-pipeline-*)."
+    },
+    {
+      "a": "R",
+      "summary": "Execute docs/RELIABILITY_HARDENING_PLAN.md: close CI flake + lockfile-sync drift on fix/ci-lockfile-sync branch."
+    },
+    {
+      "a": "D",
+      "summary": "Ship reconciled daily-figure + line-receipt-bot flows end-to-end (docs/plans/*-reconciled-daily-figure-*, *-line-receipt-bot-*)."
+    },
+    {
+      "a": "i",
+      "summary": "Finish next-intl locale coverage + Budget Boss display-name rollout across all surfaces."
+    }
+  ]
+}

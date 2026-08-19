@@ -198,9 +198,12 @@ describe('DashboardShell (mobile)', () => {
     const triggers = screen.getAllByRole('button', { name: /pick one expense to cut this month/i });
     fireEvent.click(triggers[0]);
     // The modal is code-split via next/dynamic (ssr: false), so it resolves
-    // asynchronously in the test runtime. Await the dialog instead of querying
-    // it synchronously.
-    const dialog = await screen.findByRole('dialog');
+    // asynchronously in the test runtime. Under parallel-worker suite load the
+    // dynamic chunk can take longer than the default 1000ms findBy timeout,
+    // producing an intermittent "Unable to find role dialog" failure. Poll with
+    // a longer budget (condition-based, not a blind sleep) so the legitimate
+    // async boundary resolves. See docs/.scratch-audit flake root-cause note.
+    const dialog = await screen.findByRole('dialog', undefined, { timeout: 4000 });
     // The scrollable modal body wraps the "Pick one expense to cut" content.
     expect(dialog.querySelector('.overflow-y-auto')).not.toBeNull();
     expect(dialog.className).toContain('max-h-[85vh]');
