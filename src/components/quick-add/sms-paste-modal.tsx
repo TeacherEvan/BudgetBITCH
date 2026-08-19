@@ -2,8 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { MessageSquare, X, Check } from 'lucide-react';
-
-type Labels = Record<string, string>;
+import { useTranslations } from 'next-intl';
 
 export type VerifiedSmsData = {
   amount: number;
@@ -15,7 +14,6 @@ export type VerifiedSmsData = {
 
 export function SmsPasteModal({
   open,
-  labels,
   sampleNotifications,
   rawSmsInput,
   onRawSmsChange,
@@ -27,7 +25,6 @@ export function SmsPasteModal({
   onClose,
 }: {
   open: boolean;
-  labels: Labels;
   sampleNotifications: string[];
   rawSmsInput: string;
   onRawSmsChange: (v: string) => void;
@@ -38,6 +35,7 @@ export function SmsPasteModal({
   onConfirm: () => void;
   onClose: () => void;
 }) {
+  const t = useTranslations('QuickAdd');
   if (!open) return null;
 
   return (
@@ -49,7 +47,7 @@ export function SmsPasteModal({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sky-400">
             <MessageSquare className="w-5 h-5" />
-            <h3 className="text-sm font-bold text-white">{labels.pasteSmsTitle}</h3>
+            <h3 className="text-sm font-bold text-white">{t('pasteSmsTitle')}</h3>
           </div>
           <button
             onClick={onClose}
@@ -86,7 +84,7 @@ export function SmsPasteModal({
           <textarea
             value={rawSmsInput}
             onChange={(e) => onRawSmsChange(e.target.value)}
-            placeholder={labels.pasteSmsPlaceholder}
+            placeholder={t('pasteSmsPlaceholder')}
             rows={3}
             className="w-full bg-white/5 border border-white/10 rounded-2xl p-3 text-xs text-white placeholder-white/30 focus:outline-none focus:border-sky-400/50"
             data-testid="sms-text-input"
@@ -153,7 +151,7 @@ export function SmsPasteModal({
             onClick={onClose}
             className="text-xs text-white/50 hover:text-white"
           >
-            {labels.close}
+            {t('close')}
           </button>
         </div>
       </div>
