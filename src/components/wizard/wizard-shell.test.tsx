@@ -4,7 +4,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { WizardShell } from './wizard-shell';
 import { saveWizardProfile } from '@/lib/db/local-db';
 import { NextIntlClientProvider } from 'next-intl';
-import { getLocaleMessages } from '@/i18n/messages';
+import { getLocaleMessages, type AppLocale } from '@/i18n/messages';
 
 vi.mock('@/lib/db/local-db', () => ({
   saveWizardProfile: vi.fn().mockResolvedValue(undefined),
@@ -23,7 +23,7 @@ vi.mock('convex/react', () => ({
 describe('WizardShell (10-Step BudgetWizard Onboarding)', () => {
   const mockOnComplete = vi.fn();
 
-  const renderWizard = (locale: string = 'en', onComplete = mockOnComplete) => {
+  const renderWizard = (locale: AppLocale = 'en', onComplete = mockOnComplete) => {
     const messages = getLocaleMessages('en');
     return render(
       <NextIntlClientProvider locale={locale} messages={messages}>
