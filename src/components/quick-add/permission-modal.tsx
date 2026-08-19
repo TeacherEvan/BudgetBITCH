@@ -2,8 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { ShieldCheck } from 'lucide-react';
-
-type Labels = Record<string, string>;
+import { useTranslations } from 'next-intl';
 
 export function PermissionModal({
   open,
@@ -11,15 +10,14 @@ export function PermissionModal({
   onRememberChange,
   onDeny,
   onGrant,
-  labels,
 }: {
   open: boolean;
   rememberCheck: boolean;
   onRememberChange: (v: boolean) => void;
   onDeny: () => void;
   onGrant: () => void;
-  labels: Labels;
 }) {
+  const t = useTranslations('QuickAdd');
   if (!open) return null;
 
   return (
@@ -32,9 +30,9 @@ export function PermissionModal({
           <div className="p-2.5 rounded-2xl bg-sky-400/10 border border-sky-400/20">
             <ShieldCheck className="w-6 h-6" />
           </div>
-          <h3 className="text-sm font-bold text-white leading-tight">{labels.permTitle}</h3>
+          <h3 className="text-sm font-bold text-white leading-tight">{t('permTitle')}</h3>
         </div>
-        <p className="text-xs text-white/70 leading-relaxed">{labels.permDesc}</p>
+        <p className="text-xs text-white/70 leading-relaxed">{t('permDesc')}</p>
         <label className="flex items-center gap-2.5 text-xs text-white/80 cursor-pointer pt-2 select-none">
           <input
             type="checkbox"
@@ -43,7 +41,7 @@ export function PermissionModal({
             className="w-4 h-4 rounded border-white/20 bg-white/10 text-sky-500 focus:ring-0 cursor-pointer"
             data-testid="remember-perm-checkbox"
           />
-          <span>{labels.rememberChoice}</span>
+          <span>{t('rememberChoice')}</span>
         </label>
         <div className="flex gap-2 pt-2">
           <Button
@@ -52,7 +50,7 @@ export function PermissionModal({
             onClick={onDeny}
             data-testid="deny-perm-btn"
           >
-            {labels.deny}
+            {t('deny')}
           </Button>
           <Button
             variant="primary"
@@ -60,7 +58,7 @@ export function PermissionModal({
             onClick={onGrant}
             data-testid="grant-perm-btn"
           >
-            {labels.allow}
+            {t('allow')}
           </Button>
         </div>
       </div>
