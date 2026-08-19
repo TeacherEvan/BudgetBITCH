@@ -56,6 +56,36 @@ vi.mock('next/navigation', () => ({
 // Mock Next Intl
 vi.mock('next-intl', () => ({
   useLocale: () => 'en',
+  // Quick Add migrated to next-intl; the test renders without a provider,
+  // so return the en catalog strings directly for the 'QuickAdd' namespace.
+  useTranslations: () => (key: string) => {
+    const en = {
+      title: 'Quick Add',
+      placeholder: 'Type amount then note, e.g. 120 lunch',
+      camera: 'Scan Receipt',
+      inbox: 'Inbox SMS/Email',
+      save: 'Save',
+      scanning: 'Scanning & scraping receipt photo...',
+      parsing: 'Parsing SMS message...',
+      successAdded: 'Expense recorded successfully!',
+      successIncome: 'Income added successfully!',
+      failed: 'Failed to record entry!',
+      invalidAmount: 'Please enter a valid amount',
+      back: 'Back',
+      expense: 'Expense (-)',
+      income: 'Income (+)',
+      permTitle: 'SMS & Email Inbox Permission',
+      permDesc: 'Allow Budget Boss to parse financial transaction messages from your inbox or clipboard to auto-fill details?',
+      rememberChoice: 'Remember my decision on this device',
+      allow: 'Allow Access',
+      deny: 'Deny Access',
+      pasteSmsTitle: 'Paste SMS or Email Notification',
+      pasteSmsPlaceholder: 'Paste bank alert e.g. "Paid $45.50 at STARBUCKS card 1234 on 08/01/2026"',
+      extractBtn: 'Scrape & Auto-Fill',
+      close: 'Close',
+    } as Record<string, string>;
+    return en[key] ?? key;
+  },
 }));
 
 // Mock Convex

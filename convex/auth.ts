@@ -41,10 +41,9 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         };
       },
       reset: Email({
-        id: "resend",
         name: "Resend",
         from: resendFrom(),
-        async sendVerificationRequest({ identifier, url, token }) {
+        async sendVerificationRequest({ identifier, url, token }: { identifier: string; url: string; token: string }) {
           // Host the reset link on the real app origin, not CONVEX_SITE_URL.
           const target = url.replace(/^https?:\/\/[^/]+/, appOrigin());
           await fetch("https://api.resend.com/emails", {

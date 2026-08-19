@@ -30,8 +30,8 @@ prototype subtree was removed on 2026-07-20.)
 - **Playwright** 1.62.1 for E2E tests
 - **Vercel** for deployment
 
-Not present: Prisma, Postgres, Inngest, Clerk, Sentry. `next-auth` is installed
-but the Google scaffold in `src/auth.ts` is unwired — shipped auth is Convex Auth.
+Not present: Prisma, Postgres, Inngest, Clerk, Sentry. The unwired `next-auth` Google
+scaffold (`src/auth.ts`) has been removed — shipped auth is Convex Auth.
 
 ### Directory Boundaries
 
@@ -98,7 +98,7 @@ but the Google scaffold in `src/auth.ts` is unwired — shipped auth is Convex A
   storage for webview compatibility. `AUTH_ROUTES.continue = "/auth/continue"`
   is a constant with no page behind it; post-auth users land on `/dashboard`.
 - `src/test/` — Test setup, smoke test
-- `src/types/` — Ambient declarations (jest-axe, next-auth, Speech API, test utils)
+- `src/types/` — Ambient declarations (jest-axe, Speech API, test utils)
 - `convex/` — Convex backend
   - `auth.ts` / `auth.config.ts` — Convex Auth (Password provider, Resend email)
   - `http.ts` — HTTP router (auth routes)

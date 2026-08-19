@@ -44,8 +44,8 @@ relevant surface. Don't start in `src/components/**` before checking
 - Vitest 4.1.10 + React Testing Library (unit), Playwright 1.62.1 (E2E), ESLint 9.39.5 (flat config `eslint.config.cjs`)
 
 There is **no** Prisma, Postgres, Inngest, Clerk, or Sentry in this repo. Do not
-add them. `next-auth` is installed and `src/auth.ts` + `src/app/api/auth/[...nextauth]`
-exist as an unwired Google-provider scaffold — the shipped auth path is Convex Auth.
+add them. The unwired `next-auth` scaffold (`src/auth.ts` + `src/app/api/auth/[...nextauth]`)
+has been removed — the shipped and only auth path is Convex Auth.
 
 ---
 

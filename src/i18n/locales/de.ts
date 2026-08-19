@@ -600,5 +600,30 @@ export const de: LocaleMessages = {
       subtitle: "Standort für lokale Nachrichten und Kraftstoffpreise erlauben",
       prompt: "Aktiviere den Standort, um nahegelegene Kraftstoffpreise und lokale Finanznachrichten zu erhalten"
     }
+  },
+  quickAdd: {
+    title: "Schnell hinzufügen",
+    placeholder: "Betrag eingeben, dann Notiz, z. B. 120 Mittagessen",
+    camera: "Beleg scannen",
+    inbox: "Postfach SMS/E-Mail",
+    save: "Speichern",
+    scanning: "Belegfoto wird gescannt & extrahiert...",
+    parsing: "SMS-Nachricht wird analysiert...",
+    successAdded: "Ausgabe erfolgreich erfasst!",
+    successIncome: "Einnahme erfolgreich hinzugefügt!",
+    failed: "Eintrag konnte nicht gespeichert werden!",
+    invalidAmount: "Bitte gültigen Betrag eingeben",
+    back: "Zurück",
+    expense: "Ausgabe (-)",
+    income: "Einnahme (+)",
+    permTitle: "SMS- & E-Mail-Postfach-Berechtigung",
+    permDesc: "Soll Budget Boss Finanztransaktionsnachrichten aus deinem Postfach oder der Zwischenablage analysieren, um Details automatisch auszufüllen?",
+    rememberChoice: "Entscheidung auf diesem Gerät merken",
+    allow: "Zugriff erlauben",
+    deny: "Zugriff verweigern",
+    pasteSmsTitle: "SMS oder E-Mail-Benachrichtigung einfügen",
+    pasteSmsPlaceholder: "Bankwarnung einfügen z. B. \"Bezahlt $45.50 bei STARBUCKS Karte 1234 am 08.01.2026\"",
+    extractBtn: "Extrahieren & Ausfüllen",
+    close: "Schließen",
   }
 };

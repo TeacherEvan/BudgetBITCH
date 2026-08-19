@@ -600,5 +600,30 @@ export const zh: LocaleMessages = {
       subtitle: "允许获取位置以查看本地新闻与燃油价格",
       prompt: "启用位置以获取附近的燃油价格与本地财经新闻"
     }
+  },
+  quickAdd: {
+    title: "快速添加",
+    placeholder: "先输入金额，再输入备注，例如 120 午餐",
+    camera: "扫描收据",
+    inbox: "收件箱短信/邮件",
+    save: "保存",
+    scanning: "正在扫描并提取收据照片...",
+    parsing: "正在解析短信...",
+    successAdded: "支出已成功记录！",
+    successIncome: "收入已成功添加！",
+    failed: "记录条目失败！",
+    invalidAmount: "请输入有效金额",
+    back: "返回",
+    expense: "支出 (-)",
+    income: "收入 (+)",
+    permTitle: "短信与邮件收件箱权限",
+    permDesc: "是否允许 Budget Boss 解析来自收件箱或剪贴板的金融交易消息以自动填写详情？",
+    rememberChoice: "在此设备上记住我的选择",
+    allow: "允许访问",
+    deny: "拒绝访问",
+    pasteSmsTitle: "粘贴短信或邮件通知",
+    pasteSmsPlaceholder: "粘贴银行提醒，例如 \"已在 STARBUCKS 刷卡 $45.50，卡号 1234，日期 08/01/2026\"",
+    extractBtn: "提取并自动填写",
+    close: "关闭",
   }
 };
