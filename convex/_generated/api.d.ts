@@ -56,6 +56,7 @@ import type * as receipts_constants from "../receipts/constants.js";
 import type * as receipts_draftCrud from "../receipts/draftCrud.js";
 import type * as receipts_index from "../receipts/index.js";
 import type * as receipts_ingest from "../receipts/ingest.js";
+import type * as receipts_internal from "../receipts/internal.js";
 import type * as receipts_scanActions from "../receipts/scanActions.js";
 import type * as receipts_scrapeBot from "../receipts/scrapeBot.js";
 import type * as sharedBoards from "../sharedBoards.js";
@@ -116,6 +117,7 @@ declare const fullApi: ApiFromModules<{
   "receipts/draftCrud": typeof receipts_draftCrud;
   "receipts/index": typeof receipts_index;
   "receipts/ingest": typeof receipts_ingest;
+  "receipts/internal": typeof receipts_internal;
   "receipts/scanActions": typeof receipts_scanActions;
   "receipts/scrapeBot": typeof receipts_scrapeBot;
   sharedBoards: typeof sharedBoards;
