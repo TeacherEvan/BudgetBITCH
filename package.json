@@ -89,7 +89,7 @@
     "@vitejs/plugin-react": "^6.0.4",
     "@vitejs/plugin-react-swc": "^4.3.2",
     "@vitest/coverage-v8": "^4.1.2",
-    "convex-test": "^0.0.55",
+    "convex-test": "^0.0.56",
     "eslint": "^10.8.1",
     "eslint-config-next": "^16.2.12",
     "eslint-import-resolver-node": "^0.4.0",
