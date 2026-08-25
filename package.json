@@ -49,7 +49,7 @@
     "@swc/core": "^1.15.46",
     "@types/web-push": "^3.6.4",
     "@vercel/analytics": "^2.0.1",
-    "convex": "^1.44.0",
+    "convex": "^1.45.0",
     "date-fns": "^4.1.0",
     "framer-motion": "^13.0.0",
     "idb": "^8.0.0",
