@@ -1,5 +1,16 @@
 # Budget Boss (`BudgetBITCH`)
 
+<img width="418" height="394" alt="Screenshot from 2026-08-29 12-08-04" src="https://github.com/user-attachments/assets/434d0e50-86fd-4804-ae1e-14bbd0ee74d4" />
+
+<img width="418" height="428" alt="Screenshot from 2026-08-29 12-08-13" src="https://github.com/user-attachments/assets/1e88dbfa-212e-4a32-9b17-b799b0441672" />
+
+<img width="355" height="147" alt="Screenshot from 2026-08-29 12-08-28" src="https://github.com/user-attachments/assets/4b21ab2b-7193-47f7-b4e7-9b28bbe59781" />
+
+<img width="1280" height="1024" alt="Screenshot from 2026-08-29 12-09-19" src="https://github.com/user-attachments/assets/16ffc3db-650d-4f22-8e0e-97d3c4a3d90b" />
+
+<img width="545" height="440" alt="Screenshot from 2026-08-29 12-09-32" src="https://github.com/user-attachments/assets/a80c1c8b-f9fd-4057-acf5-1cc2cb7441b3" />
+
+
 Budget Boss is a cinematic, privacy-first budgeting PWA built with Next.js App
 Router, Convex (auth, database, realtime), IndexedDB for local-first offline
 data, a Service Worker for PWA sync, next-intl for i18n, Tailwind CSS v4,
@@ -17,6 +28,8 @@ framer-motion, recharts, and zod.
 - [AGENTS.md](AGENTS.md) — conventions for AI agents and contributors
 
 ## Quality gates
+<img width="280" height="710" alt="Screenshot from 2026-08-29 12-10-55" src="https://github.com/user-attachments/assets/2b3e871b-808f-475f-a258-14048bef7024" />
+
 
 The repository enforces a shift-left quality gate pipeline
 (`.github/workflows/ci.yml`). Run the full local chain before pushing:
@@ -30,6 +43,9 @@ See [docs/CI_CD.md](docs/CI_CD.md) for gate specifications, build guard mechanic
 `scripts/check-convex-imports.mjs`), and Vercel rollback procedure.
 
 ## Features
+<img width="893" height="1018" alt="Screenshot from 2026-08-29 12-10-17" src="https://github.com/user-attachments/assets/dc170421-89b6-41e1-8275-c655f6f9c8b4" />
+
+<img width="482" height="1018" alt="Screenshot from 2026-08-29 12-10-36" src="https://github.com/user-attachments/assets/550b91cb-5300-4199-a5f8-e657dba6bbf5" />
 
 - **Start Smart onboarding** — Money Survival Blueprint 10-step wizard
   (`src/components/wizard/wizard-shell.tsx`: income, rent, phone/internet,
