@@ -1,0 +1,11 @@
+{
+  "plan": "2026-09-10-bigfile-BudgetBITCH-fr.ts.md",
+  "verdict": "NEEDS-REVISION",
+  "ready_for_impl": false,
+  "gaps": [
+    "**OBJ-006 through OBJ-012 are 7 identical filler objectives.** Each is labeled \"Hardening pass N\" with the exact same text (\"Tighten types / tighten prop drilling... post-extraction\") and the same validation (`type-check`). Only the number changes. This contradicts the plan's own claim of \"v2 \u2014 file-aware: objectives are derived from structural analysis.\" Seven copy-paste entries are not file-aware; they are padding.",
+    "**Structural checker reports `objectives=0`** despite 12 objectives being listed, and `has_header`, `has_imports`, `has_why`, `has_dod` all return `None`. The plan's actual format (pipe-table header, \"Top imports\" sample, \"Why this file matters\", \"Definition of Done\") does not match whatever schema the checker expects \u2014 the objectives may not be parseable by downstream tooling.",
+    "**OBJ-002 and OBJ-003 are process/audit tasks, not refactoring objectives.** \"Confirm `LocaleMessages` is the right shared utility\" and \"Run knip / ts-prune\" are verification steps that belong in a checklist or validation phase, not as tickable objectives in a refactoring plan. They have no extractable deliverable tied to `fr.ts` itself."
+  ],
+  "reviewed_at": "2026-09-10T20:57:03.721602+07:00"
+}

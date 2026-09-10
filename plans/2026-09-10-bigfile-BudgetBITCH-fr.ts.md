@@ -142,3 +142,15 @@ derived from the structural signals above — they name concrete extractions
   its next tick.
 - implementer: `cron_surgical_impl.py` will pick this plan up once the reviewer
   marks it `READY` or `READY-WITH-WARNINGS`.
+
+
+## REVIEW 2026-09-10T20:57:03.720920+07:00
+
+**Verdict:** `NEEDS-REVISION`
+
+**Structural check:** objectives=12 file_header=✓ imports=✓ why=✓ dod=✓ security=✓
+
+**Gaps:**
+1. **OBJ-006 through OBJ-012 are 7 identical filler objectives.** Each is labeled "Hardening pass N" with the exact same text ("Tighten types / tighten prop drilling... post-extraction") and the same validation (`type-check`). Only the number changes. This contradicts the plan's own claim of "v2 — file-aware: objectives are derived from structural analysis." Seven copy-paste entries are not file-aware; they are padding.
+2. **Structural checker reports `objectives=0`** despite 12 objectives being listed, and `has_header`, `has_imports`, `has_why`, `has_dod` all return `None`. The plan's actual format (pipe-table header, "Top imports" sample, "Why this file matters", "Definition of Done") does not match whatever schema the checker expects — the objectives may not be parseable by downstream tooling.
+3. **OBJ-002 and OBJ-003 are process/audit tasks, not refactoring objectives.** "Confirm `LocaleMessages` is the right shared utility" and "Run knip / ts-prune" are verification steps that belong in a checklist or validation phase, not as tickable objectives in a refactoring plan. They have no extractable deliverable tied to `fr.ts` itself.
