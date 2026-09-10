@@ -76,6 +76,9 @@ __pycache__/
 /android/
 /ios/
 
+# Pruning / agent handoff artifacts (generated, not project source)
+.prune/
+
 # Code-review skill artifacts (advisory, not project source)
 audit_report.md
 review_findings.md
