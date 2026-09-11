@@ -259,9 +259,36 @@ Backend (Convex dashboard):
 - `FEEDBACK_ADMIN_EMAIL` — recipient for in-app bug reports (`convex/feedback.ts`).
 - `GEMINI_API_KEY` — Google Gemini key for the server-side receipt parse action
   (`convex/receipts.ts`).
+- `LINE_CHANNEL_SECRET` — HMAC-SHA256 secret used to verify the
+  `x-line-signature` header on every inbound webhook request
+  (`convex/lib/line/verify.ts`). Without it the webhook rejects everything.
+- `LINE_CHANNEL_ACCESS_TOKEN` — Bearer token used to fetch image content from
+  the LINE Content API inside `convex/line.ts` (`lineWebhook`).
+- `NEXT_PUBLIC_LINE_LIFF_ID` — LIFF channel id loaded by the account-link
+  screen (`src/app/settings/line-link/page.tsx`) so an authenticated web user
+  can bind their LINE `userId` to their Convex account.
 
 `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` are read by the unwired NextAuth
 scaffold in `src/auth.ts` and are not required to run the app.
+
+## LINE receipt bot
+
+A user can send a receipt **photo in LINE** and have it land in the same
+`receipts` table the web app reads, under the correct Convex user. The flow:
+
+1. The authenticated web user opens **Settings → Link my LINE account**,
+   which loads the LIFF SDK, calls `liff.getProfile().userId`, and POSTs that
+   to the `linkLineAccount` mutation. This writes the LINE→Convex mapping
+   into the `lineUsers` table. The webhook never mints an identity — it only
+   *resolves* a pre-linked mapping.
+2. A photo message arrives at the LINE platform, which POSTs to
+   `POST /line/webhook` (Convex HTTP action `lineWebhook` in `convex/line.ts`).
+   The action verifies the HMAC signature first, then fetches the image bytes
+   from the LINE Content API, base64-encodes them, and resolves the Convex
+   `userId` from `lineUsers`.
+3. It runs `internal.line.parseLineReceipt`, which reuses the existing Gemini
+   2.5 Flash path (`convex/receipts.ts`) and persists the receipt tagged
+   `source: "line"`. The webhook always returns 200 so LINE does not retry.
 
 ## Start Smart regional data
 

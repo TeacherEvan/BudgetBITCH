@@ -168,7 +168,7 @@ the comment to be updated at fix time. Run it via `npm run check:comments`.
 | Feature | Domain logic | API/route | UI |
 |---|---|---|---|
 | Receipt scanning (app camera) | `convex/lib/receipt/*` | `convex/receipts.ts` (`proxyReceiptScan`, `ingestReceipt`) — bot identifies the user as `lineUserId="app:<convexUserId>"` (the `app:` prefix resolves directly as a Convex user id; NO LINE mapping involved) | `src/app/quick-add/page.tsx` |
-| LINE bot ingest | `convex/lib/receipt/*` | `convex/receipts.ts` (`ingestReceipt`) | TeacherBOY HF Space |
+| LINE bot ingest | `convex/lib/line/verify.ts`, `convex/line.ts` (`lineWebhook`, `parseLineReceipt`, `linkLineAccount`) | `convex/http.ts` (`POST /line/webhook`) | TeacherBOY HF Space → webhook → Gemini 2.5 Flash path, tagged `source: "line"`; identity resolved via `lineUsers` table |
 | Quick Add (exactly 3 features: Camera, Inbox, Income — manual amount entry is NOT a feature) | `src/lib/types/budget.ts` (`ExpenseEntry.entryDate` = date of entry, distinct from `date` = purchase date) | `src/lib/db/stores/expenses-store.ts` | `src/app/quick-add/page.tsx` |
 | Repeat Purchase | `src/lib/db/stores/expenses-store.ts` (`repeatExpense`) | — | `src/app/quick-add/page.tsx` (review-card "+" when scanned merchant matches a prior expense) + `src/components/dashboard/panels/expense-tracker.tsx` (per-row) |
 
