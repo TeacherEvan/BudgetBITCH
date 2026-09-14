@@ -131,12 +131,10 @@ test('downloadCsv triggers a browser download and revokes the object URL', () =>
 });
 
 test('downloadCsv returns false and does nothing outside a browser', () => {
-  const savedDoc = globalThis.document;
-  // @ts-expect-error - simulate non-DOM environment
-  globalThis.document = undefined;
+  vi.stubGlobal('document', undefined);
   const ok = downloadCsv('x', 'nope');
   expect(ok).toBe(false);
-  globalThis.document = savedDoc;
+  vi.unstubAllGlobals();
 });
 
 const LINE_ITEM_HEADER = 'date,merchant,item,category,qty,unitPrice,amount';
