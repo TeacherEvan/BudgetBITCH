@@ -9,6 +9,19 @@ export type LineItem = {
   unit_price?: number;
 };
 
+/**
+ * Read one numeric field out of a `qty x unit = total` match through the shared
+ * amount tokeniser, so `28,000` is twenty-eight thousand here exactly as it is
+ * everywhere else. Falls back to a separator-stripped integer read for bare
+ * counts (`3`), which `parseAmounts` intentionally ignores.
+ */
+function parseNumericToken(raw: string): number {
+  const tokens = parseAmounts(raw);
+  if (tokens.length > 0) return tokens[0].value;
+  const stripped = raw.replace(/[\s,.]/g, '');
+  return stripped.length > 0 ? Number(stripped) : Number.NaN;
+}
+
 export function extractTax(payload: NormalisedPayload): FieldCandidate | null {
   for (const line of payload.lines) {
     const text = line.text;
@@ -87,8 +100,14 @@ export function extractLineItems(payload: NormalisedPayload): LineItem[] {
     totalLineIdx = payload.lines.length;
   }
 
-  // Regex to find qty * unit_price = total patterns
-  const QTY_UNIT_PATTERN = /(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:[.,]\d{2})?)\s*[=]\s*(\d+(?:[.,]\d{2})?)/i;
+  // Regex to find qty * unit_price = total patterns.
+  //
+  // The price groups accept grouped thousands (`2 x 28,000 = 56,000`): the old
+  // `\d+(?:[.,]\d{2})?` groups stopped at the `28,00` prefix, the `=` then
+  // failed to line up and the whole qty/unit_price pair was silently dropped on
+  // every IDR/VND-style receipt. Values are re-read through `parseAmounts` so
+  // the grouping rules stay in one place.
+  const QTY_UNIT_PATTERN = /(\d+(?:\.\d+)?)\s*[x×]\s*(\d[\d ,.]*\d|\d)\s*[=]\s*(\d[\d ,.]*\d|\d)/i;
 
   for (let i = 0; i < totalLineIdx; i++) {
     const line = payload.lines[i];
@@ -112,9 +131,14 @@ export function extractLineItems(payload: NormalisedPayload): LineItem[] {
         const qtyUnitMatch = line.text.match(QTY_UNIT_PATTERN);
         if (qtyUnitMatch) {
           const qty = parseFloat(qtyUnitMatch[1]);
-          const unitPrice = parseFloat(qtyUnitMatch[2].replace(',', '.'));
-          const total = parseFloat(qtyUnitMatch[3].replace(',', '.'));
-          if (!Number.isNaN(qty) && !Number.isNaN(unitPrice) && Math.abs(qty * unitPrice - total) < 0.02) {
+          const unitPrice = parseNumericToken(qtyUnitMatch[2]);
+          const total = parseNumericToken(qtyUnitMatch[3]);
+          if (
+            !Number.isNaN(qty) &&
+            !Number.isNaN(unitPrice) &&
+            !Number.isNaN(total) &&
+            Math.abs(qty * unitPrice - total) < 0.02
+          ) {
             item.qty = qty;
             item.unit_price = unitPrice;
           }

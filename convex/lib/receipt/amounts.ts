@@ -22,8 +22,15 @@ export function parseAmounts(text: string): AmountToken[] {
 
   // Match numbers with standard decimal structure:
   // e.g. R 1 234.56, ฿1,234.56, 1234.56, 1.234,56, 105.00-
+  //
+  // The decimal alternatives end in `(?!\d)` so a three-digit *grouping* is
+  // never mistaken for a two-decimal tail: without it, `28,000` matched the
+  // prefix `28,00` and silently became 28.00 — a 1000x under-read on any
+  // currency that groups thousands but omits minor units (IDR, VND, CLP).
+  // The final alternative captures those grouped integers (`28,000`, `60.000`,
+  // `1.234.567`) at full value.
   const matches = cleanText.matchAll(
-    /(?:[R฿\$€£]\s*)?(-?\d{1,3}(?:[ ,.]\d{3})*(?:[\.,]\d{2})-?|-?\d+(?:[\.,]\d{2})-?)/g
+    /(?:[R฿\$€£]\s*)?(-?\d{1,3}(?:[ ,.]\d{3})*[\.,]\d{2}(?!\d)-?|-?\d+[\.,]\d{2}(?!\d)-?|-?\d{1,3}(?:[ ,.]\d{3})+(?!\d))/g
   );
 
   for (const match of matches) {
@@ -46,16 +53,25 @@ export function parseAmounts(text: string): AmountToken[] {
     }
 
     let decimalSep: '.' | ',' = '.';
-    // Determine decimal separator: if last non-digit is comma, decimalSep is ','
-    const commaIndex = numStr.lastIndexOf(',');
-    const dotIndex = numStr.lastIndexOf('.');
+    // A trailing group of exactly three digits is a thousands grouping, not a
+    // decimal tail (`28,000` = twenty-eight thousand, `60.000` = sixty
+    // thousand). Only a two-digit tail is treated as minor units.
+    const hasDecimalTail = /[\.,]\d{2}$/.test(numStr);
 
-    if (commaIndex > dotIndex) {
-      decimalSep = ',';
-      numStr = numStr.replace(/\./g, '').replace(',', '.');
+    if (!hasDecimalTail) {
+      numStr = numStr.replace(/[\s,.]/g, '');
     } else {
-      decimalSep = '.';
-      numStr = numStr.replace(/[\s,]/g, '');
+      // Determine decimal separator: if last non-digit is comma, decimalSep is ','
+      const commaIndex = numStr.lastIndexOf(',');
+      const dotIndex = numStr.lastIndexOf('.');
+
+      if (commaIndex > dotIndex) {
+        decimalSep = ',';
+        numStr = numStr.replace(/\./g, '').replace(',', '.');
+      } else {
+        decimalSep = '.';
+        numStr = numStr.replace(/[\s,]/g, '');
+      }
     }
 
     const val = parseFloat(numStr);

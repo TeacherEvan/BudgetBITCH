@@ -1,3 +1,4 @@
+import { parseAmounts } from './amounts';
 import type { OcrLine, OcrPayload } from './types';
 
 export type NormalisedLine = OcrLine & {
@@ -26,8 +27,12 @@ export function foldThaiDigits(text: string): string {
   return text.replace(/[๐-๙]/g, (ch) => THAI_DIGITS_MAP[ch] || ch);
 }
 
-// Regex matching numbers with decimal or comma standard amounts
-const AMOUNT_REGEX = /\b\d+(?:[\.,]\d{2})\b/;
+// `hasAmount` asks the same question `parseAmounts` answers, so it delegates
+// rather than keeping a second, weaker regex. The local
+// `/\b\d+(?:[\.,]\d{2})\b/` it replaces reported `false` for grouped-thousands
+// amounts (`TOTAL 28,000`, `TOTAL 60.000`) — the same defect fixed in
+// `amounts.ts`, and a silent one because the two definitions could drift apart
+// unnoticed.
 
 export function normaliseLineText(text: string): string {
   const folded = foldThaiDigits(text);
@@ -41,7 +46,7 @@ export function normaliseLine(input: string | OcrLine): NormalisedLine {
       : input;
 
   const text = normaliseLineText(lineObj.text);
-  const hasAmount = AMOUNT_REGEX.test(text);
+  const hasAmount = parseAmounts(text).length > 0;
   const isNoise = text.length === 0;
 
   return {

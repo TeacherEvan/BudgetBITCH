@@ -1,0 +1,313 @@
+{
+  "id": "invoice-002",
+  "capture": {
+    "bot": "huggingface.co/spaces/EvilEvan/TeacherBOY",
+    "botRevision": "15a087a4e3650358e03b163c6fca9b36f60df97a",
+    "agent": "ReceiptAgent (priority 8)",
+    "adapter": "src/services/receipt_bridge.gemini_text_to_ocr_payload",
+    "visionStage": {
+      "kind": "dataset-transcription",
+      "detail": "Human-verified OCR transcription shipped with the source dataset row; substituted for a live model call so fixtures stay free and deterministic. The bot prompt asks for exactly this: the receipt's raw text.",
+      "promptSha256": "b1e3bf1de236a905ff18af4bde00953feeb8255be62de8324336b62c32fb77ca",
+      "model": null
+    }
+  },
+  "image": {
+    "sha256": "af14d323ddd0e40550d91f982ce9053d8ef43d6d98a6d1a908eb38a80beb0a65",
+    "bytes": 285574,
+    "dataset": "mychen76/invoices-and-receipts_ocr_v1",
+    "config": "default",
+    "split": "test",
+    "rowIdx": 2,
+    "license": "Apache-2.0",
+    "homepage": "https://huggingface.co/datasets/mychen76/invoices-and-receipts_ocr_v1",
+    "note": "Scanned invoice/receipt images with parsed header + summary ground truth."
+  },
+  "datasetGroundTruth": {
+    "totalRaw": null,
+    "dateRaw": "06/02/2015",
+    "sellerRaw": "Trujillo-Hunt 430 Mark Ferry Suite 495 Maxside, DC 65686"
+  },
+  "rawText": "Invoice no: 62517865.\nDate of issue:\n06/02/2015\nSeller:\nClient:\nTrujillo-Hunt\nLee and Sons\n430 Mark Ferry Suite 495\n8552 Karen Islands\nMaxside, DC 65686\nEast Roger, ID 40416\nTax Id: 992-71-8540\nTax Id: 929-86-0601\nIBAN: GB73HCPH34959888432899\nITEMS\nNo.\nDescription\nQty\nUM\nNet price\nNet worth\nVAT [%]\nGross\nworth\nCare & Repair of Furniture\n2,00\neach\n4,25\n8,50\n10%\n9,35\n1.\nSUMMARY\nVAT [%]\nVAT\nNet worth\nGross worth\n10%\n9,35\n8,50\n0,85\nTotal\n$8,50\n$ 0,85\n$ 9,35",
+  "payload": {
+    "lines": [
+      {
+        "text": "Invoice no: 62517865.",
+        "conf": 85.0,
+        "y": 0.0,
+        "words": []
+      },
+      {
+        "text": "Date of issue:",
+        "conf": 85.0,
+        "y": 100.0,
+        "words": []
+      },
+      {
+        "text": "06/02/2015",
+        "conf": 85.0,
+        "y": 200.0,
+        "words": []
+      },
+      {
+        "text": "Seller:",
+        "conf": 85.0,
+        "y": 300.0,
+        "words": []
+      },
+      {
+        "text": "Client:",
+        "conf": 85.0,
+        "y": 400.0,
+        "words": []
+      },
+      {
+        "text": "Trujillo-Hunt",
+        "conf": 85.0,
+        "y": 500.0,
+        "words": []
+      },
+      {
+        "text": "Lee and Sons",
+        "conf": 85.0,
+        "y": 600.0,
+        "words": []
+      },
+      {
+        "text": "430 Mark Ferry Suite 495",
+        "conf": 85.0,
+        "y": 700.0,
+        "words": []
+      },
+      {
+        "text": "8552 Karen Islands",
+        "conf": 85.0,
+        "y": 800.0,
+        "words": []
+      },
+      {
+        "text": "Maxside, DC 65686",
+        "conf": 85.0,
+        "y": 900.0,
+        "words": []
+      },
+      {
+        "text": "East Roger, ID 40416",
+        "conf": 85.0,
+        "y": 1000.0,
+        "words": []
+      },
+      {
+        "text": "Tax Id: 992-71-8540",
+        "conf": 85.0,
+        "y": 1100.0,
+        "words": []
+      },
+      {
+        "text": "Tax Id: 929-86-0601",
+        "conf": 85.0,
+        "y": 1200.0,
+        "words": []
+      },
+      {
+        "text": "IBAN: GB73HCPH34959888432899",
+        "conf": 85.0,
+        "y": 1300.0,
+        "words": []
+      },
+      {
+        "text": "ITEMS",
+        "conf": 85.0,
+        "y": 1400.0,
+        "words": []
+      },
+      {
+        "text": "No.",
+        "conf": 85.0,
+        "y": 1500.0,
+        "words": []
+      },
+      {
+        "text": "Description",
+        "conf": 85.0,
+        "y": 1600.0,
+        "words": []
+      },
+      {
+        "text": "Qty",
+        "conf": 85.0,
+        "y": 1700.0,
+        "words": []
+      },
+      {
+        "text": "UM",
+        "conf": 85.0,
+        "y": 1800.0,
+        "words": []
+      },
+      {
+        "text": "Net price",
+        "conf": 85.0,
+        "y": 1900.0,
+        "words": []
+      },
+      {
+        "text": "Net worth",
+        "conf": 85.0,
+        "y": 2000.0,
+        "words": []
+      },
+      {
+        "text": "VAT [%]",
+        "conf": 85.0,
+        "y": 2100.0,
+        "words": []
+      },
+      {
+        "text": "Gross",
+        "conf": 85.0,
+        "y": 2200.0,
+        "words": []
+      },
+      {
+        "text": "worth",
+        "conf": 85.0,
+        "y": 2300.0,
+        "words": []
+      },
+      {
+        "text": "Care & Repair of Furniture",
+        "conf": 85.0,
+        "y": 2400.0,
+        "words": []
+      },
+      {
+        "text": "2,00",
+        "conf": 85.0,
+        "y": 2500.0,
+        "words": []
+      },
+      {
+        "text": "each",
+        "conf": 85.0,
+        "y": 2600.0,
+        "words": []
+      },
+      {
+        "text": "4,25",
+        "conf": 85.0,
+        "y": 2700.0,
+        "words": []
+      },
+      {
+        "text": "8,50",
+        "conf": 85.0,
+        "y": 2800.0,
+        "words": []
+      },
+      {
+        "text": "10%",
+        "conf": 85.0,
+        "y": 2900.0,
+        "words": []
+      },
+      {
+        "text": "9,35",
+        "conf": 85.0,
+        "y": 3000.0,
+        "words": []
+      },
+      {
+        "text": "1.",
+        "conf": 85.0,
+        "y": 3100.0,
+        "words": []
+      },
+      {
+        "text": "SUMMARY",
+        "conf": 85.0,
+        "y": 3200.0,
+        "words": []
+      },
+      {
+        "text": "VAT [%]",
+        "conf": 85.0,
+        "y": 3300.0,
+        "words": []
+      },
+      {
+        "text": "VAT",
+        "conf": 85.0,
+        "y": 3400.0,
+        "words": []
+      },
+      {
+        "text": "Net worth",
+        "conf": 85.0,
+        "y": 3500.0,
+        "words": []
+      },
+      {
+        "text": "Gross worth",
+        "conf": 85.0,
+        "y": 3600.0,
+        "words": []
+      },
+      {
+        "text": "10%",
+        "conf": 85.0,
+        "y": 3700.0,
+        "words": []
+      },
+      {
+        "text": "9,35",
+        "conf": 85.0,
+        "y": 3800.0,
+        "words": []
+      },
+      {
+        "text": "8,50",
+        "conf": 85.0,
+        "y": 3900.0,
+        "words": []
+      },
+      {
+        "text": "0,85",
+        "conf": 85.0,
+        "y": 4000.0,
+        "words": []
+      },
+      {
+        "text": "Total",
+        "conf": 85.0,
+        "y": 4100.0,
+        "words": []
+      },
+      {
+        "text": "$8,50",
+        "conf": 85.0,
+        "y": 4200.0,
+        "words": []
+      },
+      {
+        "text": "$ 0,85",
+        "conf": 85.0,
+        "y": 4300.0,
+        "words": []
+      },
+      {
+        "text": "$ 9,35",
+        "conf": 85.0,
+        "y": 4400.0,
+        "words": []
+      }
+    ],
+    "width": 1024,
+    "height": 4600,
+    "lang": "en",
+    "engine": "gemini-vision@1",
+    "capturedAt": 1767225600000,
+    "countryHint": "US",
+    "currencyHint": null
+  }
+}

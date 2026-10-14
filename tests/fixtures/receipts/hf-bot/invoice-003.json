@@ -1,0 +1,373 @@
+{
+  "id": "invoice-003",
+  "capture": {
+    "bot": "huggingface.co/spaces/EvilEvan/TeacherBOY",
+    "botRevision": "15a087a4e3650358e03b163c6fca9b36f60df97a",
+    "agent": "ReceiptAgent (priority 8)",
+    "adapter": "src/services/receipt_bridge.gemini_text_to_ocr_payload",
+    "visionStage": {
+      "kind": "dataset-transcription",
+      "detail": "Human-verified OCR transcription shipped with the source dataset row; substituted for a live model call so fixtures stay free and deterministic. The bot prompt asks for exactly this: the receipt's raw text.",
+      "promptSha256": "b1e3bf1de236a905ff18af4bde00953feeb8255be62de8324336b62c32fb77ca",
+      "model": null
+    }
+  },
+  "image": {
+    "sha256": "7540837789a6307a6966ef4d95b02b0de0f78db5d87b2e3f2bfee058b9c62b64",
+    "bytes": 317832,
+    "dataset": "mychen76/invoices-and-receipts_ocr_v1",
+    "config": "default",
+    "split": "test",
+    "rowIdx": 3,
+    "license": "Apache-2.0",
+    "homepage": "https://huggingface.co/datasets/mychen76/invoices-and-receipts_ocr_v1",
+    "note": "Scanned invoice/receipt images with parsed header + summary ground truth."
+  },
+  "datasetGroundTruth": {
+    "totalRaw": null,
+    "dateRaw": "10/01/2014",
+    "sellerRaw": "Nichols-Barajas 3882 Stacy Ville Apt. 488 Lake Kristinatown, ND 48049"
+  },
+  "rawText": "Invoice no: 56014042\nDate of issue:\n10/01/2014\nSeller:\nClient:\n Nichols-Barajas\nMckay PLC\n3882 Stacy Ville Apt. 488\n5542 Danielle Drive Suite 381\nLake Kristinatown, ND 48049\nWest Mason, ME 76671\nTax Id: 953-87-6813\nTax Id: 965-90-8517\nIBAN: GB08KXQT19711661357354\nITEMS\nNo.\nDescription\nQty\nUM\nNet price\nNet worth\nVAT [%]\nGross\nworth\n11,50\n10%\nJordan Hydro 2 (TD)-Child Size\n2,00\neach\n5,75\n12,65\n1.\n10c\nSketchers Energy Lights Boys\n12,00\n48,00\n10%\n4,00\neach\n52,80\nBlack Canvas Size 4 With\nCharging Cable\nSUMMARY\nVAT [%]\nNet worth\nVAT\nGross worth\n10%\n59,50\n5,95\n65,45\nTotal\n$ 59,50\n$ 5,95\n$ 65,45",
+  "payload": {
+    "lines": [
+      {
+        "text": "Invoice no: 56014042",
+        "conf": 85.0,
+        "y": 0.0,
+        "words": []
+      },
+      {
+        "text": "Date of issue:",
+        "conf": 85.0,
+        "y": 100.0,
+        "words": []
+      },
+      {
+        "text": "10/01/2014",
+        "conf": 85.0,
+        "y": 200.0,
+        "words": []
+      },
+      {
+        "text": "Seller:",
+        "conf": 85.0,
+        "y": 300.0,
+        "words": []
+      },
+      {
+        "text": "Client:",
+        "conf": 85.0,
+        "y": 400.0,
+        "words": []
+      },
+      {
+        "text": "Nichols-Barajas",
+        "conf": 85.0,
+        "y": 500.0,
+        "words": []
+      },
+      {
+        "text": "Mckay PLC",
+        "conf": 85.0,
+        "y": 600.0,
+        "words": []
+      },
+      {
+        "text": "3882 Stacy Ville Apt. 488",
+        "conf": 85.0,
+        "y": 700.0,
+        "words": []
+      },
+      {
+        "text": "5542 Danielle Drive Suite 381",
+        "conf": 85.0,
+        "y": 800.0,
+        "words": []
+      },
+      {
+        "text": "Lake Kristinatown, ND 48049",
+        "conf": 85.0,
+        "y": 900.0,
+        "words": []
+      },
+      {
+        "text": "West Mason, ME 76671",
+        "conf": 85.0,
+        "y": 1000.0,
+        "words": []
+      },
+      {
+        "text": "Tax Id: 953-87-6813",
+        "conf": 85.0,
+        "y": 1100.0,
+        "words": []
+      },
+      {
+        "text": "Tax Id: 965-90-8517",
+        "conf": 85.0,
+        "y": 1200.0,
+        "words": []
+      },
+      {
+        "text": "IBAN: GB08KXQT19711661357354",
+        "conf": 85.0,
+        "y": 1300.0,
+        "words": []
+      },
+      {
+        "text": "ITEMS",
+        "conf": 85.0,
+        "y": 1400.0,
+        "words": []
+      },
+      {
+        "text": "No.",
+        "conf": 85.0,
+        "y": 1500.0,
+        "words": []
+      },
+      {
+        "text": "Description",
+        "conf": 85.0,
+        "y": 1600.0,
+        "words": []
+      },
+      {
+        "text": "Qty",
+        "conf": 85.0,
+        "y": 1700.0,
+        "words": []
+      },
+      {
+        "text": "UM",
+        "conf": 85.0,
+        "y": 1800.0,
+        "words": []
+      },
+      {
+        "text": "Net price",
+        "conf": 85.0,
+        "y": 1900.0,
+        "words": []
+      },
+      {
+        "text": "Net worth",
+        "conf": 85.0,
+        "y": 2000.0,
+        "words": []
+      },
+      {
+        "text": "VAT [%]",
+        "conf": 85.0,
+        "y": 2100.0,
+        "words": []
+      },
+      {
+        "text": "Gross",
+        "conf": 85.0,
+        "y": 2200.0,
+        "words": []
+      },
+      {
+        "text": "worth",
+        "conf": 85.0,
+        "y": 2300.0,
+        "words": []
+      },
+      {
+        "text": "11,50",
+        "conf": 85.0,
+        "y": 2400.0,
+        "words": []
+      },
+      {
+        "text": "10%",
+        "conf": 85.0,
+        "y": 2500.0,
+        "words": []
+      },
+      {
+        "text": "Jordan Hydro 2 (TD)-Child Size",
+        "conf": 85.0,
+        "y": 2600.0,
+        "words": []
+      },
+      {
+        "text": "2,00",
+        "conf": 85.0,
+        "y": 2700.0,
+        "words": []
+      },
+      {
+        "text": "each",
+        "conf": 85.0,
+        "y": 2800.0,
+        "words": []
+      },
+      {
+        "text": "5,75",
+        "conf": 85.0,
+        "y": 2900.0,
+        "words": []
+      },
+      {
+        "text": "12,65",
+        "conf": 85.0,
+        "y": 3000.0,
+        "words": []
+      },
+      {
+        "text": "1.",
+        "conf": 85.0,
+        "y": 3100.0,
+        "words": []
+      },
+      {
+        "text": "10c",
+        "conf": 85.0,
+        "y": 3200.0,
+        "words": []
+      },
+      {
+        "text": "Sketchers Energy Lights Boys",
+        "conf": 85.0,
+        "y": 3300.0,
+        "words": []
+      },
+      {
+        "text": "12,00",
+        "conf": 85.0,
+        "y": 3400.0,
+        "words": []
+      },
+      {
+        "text": "48,00",
+        "conf": 85.0,
+        "y": 3500.0,
+        "words": []
+      },
+      {
+        "text": "10%",
+        "conf": 85.0,
+        "y": 3600.0,
+        "words": []
+      },
+      {
+        "text": "4,00",
+        "conf": 85.0,
+        "y": 3700.0,
+        "words": []
+      },
+      {
+        "text": "each",
+        "conf": 85.0,
+        "y": 3800.0,
+        "words": []
+      },
+      {
+        "text": "52,80",
+        "conf": 85.0,
+        "y": 3900.0,
+        "words": []
+      },
+      {
+        "text": "Black Canvas Size 4 With",
+        "conf": 85.0,
+        "y": 4000.0,
+        "words": []
+      },
+      {
+        "text": "Charging Cable",
+        "conf": 85.0,
+        "y": 4100.0,
+        "words": []
+      },
+      {
+        "text": "SUMMARY",
+        "conf": 85.0,
+        "y": 4200.0,
+        "words": []
+      },
+      {
+        "text": "VAT [%]",
+        "conf": 85.0,
+        "y": 4300.0,
+        "words": []
+      },
+      {
+        "text": "Net worth",
+        "conf": 85.0,
+        "y": 4400.0,
+        "words": []
+      },
+      {
+        "text": "VAT",
+        "conf": 85.0,
+        "y": 4500.0,
+        "words": []
+      },
+      {
+        "text": "Gross worth",
+        "conf": 85.0,
+        "y": 4600.0,
+        "words": []
+      },
+      {
+        "text": "10%",
+        "conf": 85.0,
+        "y": 4700.0,
+        "words": []
+      },
+      {
+        "text": "59,50",
+        "conf": 85.0,
+        "y": 4800.0,
+        "words": []
+      },
+      {
+        "text": "5,95",
+        "conf": 85.0,
+        "y": 4900.0,
+        "words": []
+      },
+      {
+        "text": "65,45",
+        "conf": 85.0,
+        "y": 5000.0,
+        "words": []
+      },
+      {
+        "text": "Total",
+        "conf": 85.0,
+        "y": 5100.0,
+        "words": []
+      },
+      {
+        "text": "$ 59,50",
+        "conf": 85.0,
+        "y": 5200.0,
+        "words": []
+      },
+      {
+        "text": "$ 5,95",
+        "conf": 85.0,
+        "y": 5300.0,
+        "words": []
+      },
+      {
+        "text": "$ 65,45",
+        "conf": 85.0,
+        "y": 5400.0,
+        "words": []
+      }
+    ],
+    "width": 1024,
+    "height": 5600,
+    "lang": "en",
+    "engine": "gemini-vision@1",
+    "capturedAt": 1767225600000,
+    "countryHint": "US",
+    "currencyHint": null
+  }
+}

@@ -22,7 +22,49 @@ const NEGATIVE_ANCHORS = [
   /\bTENDERED\b/i,
   /\bCASH\b/i,
   /\bROUNDING\b/i,
+  // A discount line frequently reads "TOTAL DISC -60.000": the TOTAL anchor
+  // matches, and the receipt's rebate is banked as the amount owed.
+  /\bDISC(?:OUNT)?\b/i,
+  // "TOTAL ITEMS 3" is a unit count, not money.
+  /\bTOTAL\s+ITEMS?\b/i,
+  /\bQTY\b/i,
 ];
+
+/**
+ * Amounts on an anchored TOTAL line may carry no separators at all
+ * (`TOTAL 91000` — IDR, VND, JPY and other minor-unit-less currencies).
+ * `parseAmounts` deliberately ignores bare integers everywhere else, because
+ * receipts are full of counts, till numbers and item codes. Restricting the
+ * bare-integer read to a line that already matched a total anchor keeps that
+ * conservatism where it matters.
+ */
+function parseBareIntegerAmounts(text: string): number[] {
+  const out: number[] = [];
+  for (const match of text.matchAll(/(?<![\d.,])(\d{2,6})(?![\d.,])/g)) {
+    out.push(parseInt(match[1], 10));
+  }
+  return out;
+}
+
+/** Totals are amounts owed: zero and negatives are never the receipt total. */
+function firstPositive(values: number[]): number | null {
+  for (let i = values.length - 1; i >= 0; i--) {
+    if (values[i] > 0) return values[i];
+  }
+  return null;
+}
+
+/**
+ * Same right-to-left scan as `firstPositive`, but zero is allowed: a zero-rated
+ * or exempt VAT line (`VAT 0.00`) is a legitimate tax reading, while a negative
+ * one (a refund's `VAT 22.50-`) must never be summed into a total.
+ */
+function rightmostNonNegative(values: number[]): number | null {
+  for (let i = values.length - 1; i >= 0; i--) {
+    if (values[i] >= 0) return values[i];
+  }
+  return null;
+}
 
 export function extractTotal(payload: NormalisedPayload): FieldCandidate | null {
   const lines = payload.lines;
@@ -39,12 +81,12 @@ export function extractTotal(payload: NormalisedPayload): FieldCandidate | null 
 
     // Check positive anchors
     if (POSITIVE_TOTAL_ANCHORS.some((pos) => pos.test(text))) {
-      const amounts = parseAmounts(text);
-      if (amounts.length > 0) {
-        // Take rightmost amount
-        const rightmost = amounts[amounts.length - 1];
+      const sameLine =
+        firstPositive(parseAmounts(text).map((a) => a.value)) ??
+        firstPositive(parseBareIntegerAmounts(text));
+      if (sameLine !== null) {
         return {
-          value: rightmost.value,
+          value: sameLine,
           conf: 0.9,
           evidenceLine: line,
           ruleId: 'anchor-same-line',
@@ -54,11 +96,10 @@ export function extractTotal(payload: NormalisedPayload): FieldCandidate | null 
       // Check next line if exists
       if (i + 1 < lines.length) {
         const nextLine = lines[i + 1];
-        const nextAmounts = parseAmounts(nextLine.text);
-        if (nextAmounts.length > 0) {
-          const rightmost = nextAmounts[nextAmounts.length - 1];
+        const nextValue = firstPositive(parseAmounts(nextLine.text).map((a) => a.value));
+        if (nextValue !== null) {
           return {
-            value: rightmost.value,
+            value: nextValue,
             conf: 0.85,
             evidenceLine: nextLine,
             ruleId: 'anchor-next-line',
@@ -75,16 +116,19 @@ export function extractTotal(payload: NormalisedPayload): FieldCandidate | null 
 
   for (const line of lines) {
     if (/\bSUBTOTAL\b/i.test(line.text) || /\bSUB\s*TOTAL\b/i.test(line.text)) {
-      const amounts = parseAmounts(line.text);
-      if (amounts.length > 0) {
-        subtotalVal = amounts[amounts.length - 1].value;
+      // Positive-only, for the same reason the anchor path is: a refund's
+      // `SUBTOTAL 150.00-` plus `VAT 22.50-` used to sum to a negative total and
+      // land on the draft as money owed.
+      const subtotalCandidate = firstPositive(parseAmounts(line.text).map((a) => a.value));
+      if (subtotalCandidate !== null) {
+        subtotalVal = subtotalCandidate;
         subtotalLine = line;
       }
     }
     if (/\b(?:VAT|TAX|BTW)\b/i.test(line.text) && !/REG\s*NO/i.test(line.text)) {
-      const amounts = parseAmounts(line.text);
-      if (amounts.length > 0) {
-        taxVal = amounts[amounts.length - 1].value;
+      const taxCandidate = rightmostNonNegative(parseAmounts(line.text).map((a) => a.value));
+      if (taxCandidate !== null) {
+        taxVal = taxCandidate;
       }
     }
   }

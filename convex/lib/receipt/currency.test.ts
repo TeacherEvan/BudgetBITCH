@@ -88,6 +88,26 @@ describe('currency — multi-currency symbol table', () => {
       expect(parseAmount('')).toBe(0.0);
       expect(parseAmount('no numbers')).toBe(0.0);
     });
+
+    // Guards regression: parseAmount kept its own three local regexes, the last
+    // of which was a loose `\b\d+[.,]?\d*\b`. `Rp 28,000` fell through to it and
+    // returned 28.00 — the same 1000x under-read fixed in amounts.ts, wearing a
+    // different hat. parseAmount now delegates to parseAmounts so the grouping
+    // rules live in exactly one place.
+    it('keeps the magnitude of grouped thousands', () => {
+      expect(parseAmount('Rp 28,000')).toBe(28000);
+      expect(parseAmount('TOTAL 60.000')).toBe(60000);
+      expect(parseAmount('1.234.567')).toBe(1234567);
+    });
+
+    it('reads European dot-thousands with a comma decimal tail', () => {
+      // The old dot-regex matched the `1.234` prefix and returned 234.56.
+      expect(parseAmount('1.234,56')).toBe(1234.56);
+    });
+
+    it('reads a separator-less integer amount', () => {
+      expect(parseAmount('TOTAL 91000')).toBe(91000);
+    });
   });
 
   describe('parseDate', () => {

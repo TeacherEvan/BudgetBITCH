@@ -1,0 +1,107 @@
+{
+  "id": "cord-002",
+  "capture": {
+    "bot": "huggingface.co/spaces/EvilEvan/TeacherBOY",
+    "botRevision": "15a087a4e3650358e03b163c6fca9b36f60df97a",
+    "agent": "ReceiptAgent (priority 8)",
+    "adapter": "src/services/receipt_bridge.gemini_text_to_ocr_payload",
+    "visionStage": {
+      "kind": "dataset-transcription",
+      "detail": "Human-verified OCR transcription shipped with the source dataset row; substituted for a live model call so fixtures stay free and deterministic. The bot prompt asks for exactly this: the receipt's raw text.",
+      "promptSha256": "b1e3bf1de236a905ff18af4bde00953feeb8255be62de8324336b62c32fb77ca",
+      "model": null
+    }
+  },
+  "image": {
+    "sha256": "bcf0c175181bfc6b2352ab8f452704b8f18e27fa51f2278bc5c41f6765179edb",
+    "bytes": 67501,
+    "dataset": "naver-clova-ix/cord-v2",
+    "config": "default",
+    "split": "test",
+    "rowIdx": 2,
+    "license": "CC BY 4.0",
+    "homepage": "https://huggingface.co/datasets/naver-clova-ix/cord-v2",
+    "note": "Real photographed Indonesian retail receipts (CORD v2)."
+  },
+  "datasetGroundTruth": {
+    "totalRaw": "28,000",
+    "subtotalRaw": "28,000",
+    "taxRaw": null,
+    "imageSize": {
+      "width": 864,
+      "height": 1296
+    }
+  },
+  "rawText": "JASMINE MT ( L )\n1\n24,000\nCOCONUT JELLY ( L )\n4,000\nSUB TOTAL 28,000\nTOTAL SAI S 28,000\nTOTAL ITEMS 1\nCASH 100,000\nCHANGE 72,000",
+  "payload": {
+    "lines": [
+      {
+        "text": "JASMINE MT ( L )",
+        "conf": 85.0,
+        "y": 0.0,
+        "words": []
+      },
+      {
+        "text": "1",
+        "conf": 85.0,
+        "y": 100.0,
+        "words": []
+      },
+      {
+        "text": "24,000",
+        "conf": 85.0,
+        "y": 200.0,
+        "words": []
+      },
+      {
+        "text": "COCONUT JELLY ( L )",
+        "conf": 85.0,
+        "y": 300.0,
+        "words": []
+      },
+      {
+        "text": "4,000",
+        "conf": 85.0,
+        "y": 400.0,
+        "words": []
+      },
+      {
+        "text": "SUB TOTAL 28,000",
+        "conf": 85.0,
+        "y": 500.0,
+        "words": []
+      },
+      {
+        "text": "TOTAL SAI S 28,000",
+        "conf": 85.0,
+        "y": 600.0,
+        "words": []
+      },
+      {
+        "text": "TOTAL ITEMS 1",
+        "conf": 85.0,
+        "y": 700.0,
+        "words": []
+      },
+      {
+        "text": "CASH 100,000",
+        "conf": 85.0,
+        "y": 800.0,
+        "words": []
+      },
+      {
+        "text": "CHANGE 72,000",
+        "conf": 85.0,
+        "y": 900.0,
+        "words": []
+      }
+    ],
+    "width": 1024,
+    "height": 1100,
+    "lang": "en",
+    "engine": "gemini-vision@1",
+    "capturedAt": 1767225600000,
+    "countryHint": "ID",
+    "currencyHint": null
+  }
+}

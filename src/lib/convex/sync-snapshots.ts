@@ -18,6 +18,7 @@ import { api } from '../../../convex/_generated/api';
 import { getCurrentAccountId } from '@/lib/db/accountStorage';
 
 import { convex as sharedConvexClient } from '@/components/providers/convex-client-provider';
+import { log, logError, logWarn, logDebug, withTrace, reportMetric } from '@/lib/observability/logger';
 
 function getConvexClient(): ConvexReactClient | null {
   const url = process.env.NEXT_PUBLIC_CONVEX_URL;
@@ -191,6 +192,7 @@ function capBackup(fullBackupData: Record<string, unknown[]>): Record<string, un
   console.warn(
     `[Sync] Full backup is ${(size / 1024).toFixed(0)}KB (cap ${MAX_BACKUP_BYTES / 1024}KB); trimming oldest records per store.`
   );
+  logWarn('sync_backup_trimmed', { sizeKb: Math.round(size / 1024), capKb: Math.round(MAX_BACKUP_BYTES / 1024) });
   const capped: Record<string, unknown[]> = { ...fullBackupData };
   let current = size;
   // Progressively keep only the most recent half of the largest store.
@@ -206,43 +208,49 @@ function capBackup(fullBackupData: Record<string, unknown[]>): Record<string, un
 }
 
 export async function syncDailySnapshot(): Promise<{ success: boolean; date: string }> {
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().split("T")[0];
   // Single-flight guard: the debounced auto-backup (account-sync-mount) can fire
   // at the same time as a manual "Sync Now" press or wizard completion; drop the
   // second concurrent entry so we don't gather + push the snapshot twice.
-  if (isSyncingDaily) return { success: false, date: today };
+  if (isSyncingDaily) {
+    logWarn("sync_daily_skipped", { reason: "single_flight", date: today });
+    return { success: false, date: today };
+  }
   isSyncingDaily = true;
 
   try {
-    const syncArgs = sanitizeForConvex(await gatherSnapshotData());
+    return await withTrace("sync_daily_snapshot", { date: today }, async () => {
+      const syncArgs = sanitizeForConvex(await gatherSnapshotData());
 
-    const convex = getConvexClient();
-    if (!convex) {
-      console.debug('Convex is not configured. Queueing snapshot offline.');
-      await queueOfflineSnapshot(syncArgs);
-      return { success: false, date: today };
-    }
+      const convex = getConvexClient();
+      if (!convex) {
+        logDebug("sync_daily_queued", { reason: "convex_unconfigured", date: today });
+        await queueOfflineSnapshot(syncArgs);
+        return { success: false, date: today };
+      }
 
-    if (!hasAuthToken()) {
-      console.debug('User is not authenticated yet. Queueing snapshot offline.');
-      await queueOfflineSnapshot(syncArgs);
-      return { success: false, date: today };
-    }
+      if (!hasAuthToken()) {
+        logDebug("sync_daily_queued", { reason: "unauthenticated", date: today });
+        await queueOfflineSnapshot(syncArgs);
+        return { success: false, date: today };
+      }
 
-    await convex.mutation(api.snapshots.upsertDailySnapshot, syncArgs);
-    return { success: true, date: today };
+      await convex.mutation(api.snapshots.upsertDailySnapshot, syncArgs);
+      log("info", "sync_daily_pushed", { date: today });
+      return { success: true, date: today };
+    });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     if (errorMessage.includes("Authentication required") || errorMessage.includes("Authentication") || errorMessage.includes("Unauthenticated")) {
-      console.debug('User is not authenticated yet. Queueing snapshot offline.');
+      logDebug("sync_daily_queued", { reason: "unauthenticated", date: today });
     } else {
-      console.error('Sync failed:', error);
+      logError("sync_daily_failed", error, { date: today });
     }
     // Queue the snapshot offline so it can retry once connectivity returns.
     try {
       await queueOfflineSnapshot(await gatherSnapshotData());
     } catch (queueErr) {
-      console.error('Failed to queue offline snapshot:', queueErr);
+      logError("sync_daily_queue_failed", queueErr, { date: today });
     }
 
     return { success: false, date: today };
@@ -330,12 +338,12 @@ export async function flushOfflineQueue() {
 
   const convex = getConvexClient();
   if (!convex) {
-    console.debug('Convex is not configured. Cannot flush offline queue.');
+    logDebug('sync_flush_skipped', { reason: 'convex_unconfigured' });
     return;
   }
 
   if (!hasAuthToken()) {
-    console.debug('User is not authenticated yet. Postponing offline queue flush.');
+    logDebug('sync_flush_skipped', { reason: 'unauthenticated' });
     return;
   }
 
@@ -345,6 +353,8 @@ export async function flushOfflineQueue() {
     const items = await db.getAll('syncQueue');
     if (items.length === 0) return;
     
+    let flushed = 0;
+    let dropped = 0;
     for (const item of items) {
       try {
         const cleanData = sanitizeForConvex(item.data);
@@ -352,14 +362,15 @@ export async function flushOfflineQueue() {
         if (item.id !== undefined) {
           await db.delete('syncQueue', item.id);
         }
-        console.debug('Flushed offline snapshot:', item.timestamp);
+        flushed++;
+        logDebug('sync_flush_item_ok', { timestamp: item.timestamp });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         if (errorMessage.includes("Authentication required") || errorMessage.includes("Authentication") || errorMessage.includes("Unauthenticated")) {
-          console.log('User is not authenticated yet. Postponing offline queue flush.');
+          logDebug('sync_flush_skipped', { reason: 'unauthenticated' });
           break;
         } else {
-          console.error('Failed to flush offline snapshot:', error);
+          logError('sync_flush_item_failed', error, { timestamp: item.timestamp });
           // Permanently-failing items (e.g. a payload that exceeds Convex's
           // 1MB doc limit even after capping) would otherwise re-flush on every
           // online event forever. Track failures and drop after a few tries so
@@ -367,15 +378,21 @@ export async function flushOfflineQueue() {
           const fails = ((item as { failCount?: number }).failCount ?? 0) + 1;
           if (item.id !== undefined && fails >= 3) {
             await db.delete('syncQueue', item.id);
-            console.warn(`Dropped permanently-failing offline snapshot after ${fails} attempts.`);
+            dropped++;
+            logWarn('sync_flush_item_dropped', { fails, timestamp: item.timestamp });
           } else if (item.id !== undefined) {
             await db.put('syncQueue', { ...item, failCount: fails });
           }
         }
       }
     }
+    if (flushed > 0 || dropped > 0) {
+      reportMetric('sync_flush_items', flushed, 'count', { result: 'flushed' });
+      if (dropped > 0) reportMetric('sync_flush_items', dropped, 'count', { result: 'dropped' });
+      log('info', 'sync_flush_completed', { flushed, dropped, queueLength: items.length });
+    }
   } catch (err) {
-    console.error('Failed to read syncQueue from IndexedDB:', err);
+    logError('sync_flush_read_failed', err);
   } finally {
     isFlushingQueue = false;
   }
@@ -394,7 +411,7 @@ export async function restoreFromCloudSnapshot(
   opts: { force?: boolean } = {}
 ): Promise<boolean> {
   if (!snapshot || !snapshot.fullBackupData) {
-    console.warn('[Sync] Cannot restore: Snapshot contains no backup data');
+    logWarn('sync_restore_skipped', { reason: 'no_backup_data' });
     return false;
   }
 
@@ -411,14 +428,17 @@ export async function restoreFromCloudSnapshot(
   );
   const snapshotTime = (snapshot as { createdAt?: number }).createdAt ?? 0;
   if (!opts.force && resetAt > 0 && snapshotTime > 0 && snapshotTime <= resetAt) {
-    console.log('[Sync] Skipping cloud restore: snapshot predates last reset.');
+    log('info', 'sync_restore_skipped', { reason: 'predates_reset', snapshotTime, resetAt });
     return false;
   }
   // Single-flight guard: the latestSnapshot query can re-fire (the host effect's
   // restoredSnapshotIdRef is set only AFTER this resolves), so two near-simultaneous
   // runs could both clear + overwrite the local stores. Drop the second concurrent
   // entry; the in-flight restore already covers it.
-  if (isRestoringSnapshot) return false;
+  if (isRestoringSnapshot) {
+    logWarn('sync_restore_skipped', { reason: 'single_flight' });
+    return false;
+  }
   isRestoringSnapshot = true;
   try {
     const db = await getDB();
@@ -440,7 +460,7 @@ export async function restoreFromCloudSnapshot(
         }
         await setCurrentAccountId(snapshot.accountId);
       } catch (e) {
-        console.warn('[Sync] Account-aware restore bookkeeping failed; restoring into active stores only:', e);
+        logWarn('sync_restore_account_bookkeeping_failed', { error: e instanceof Error ? e.message : String(e) });
       }
     }
 
@@ -449,6 +469,8 @@ export async function restoreFromCloudSnapshot(
     const activeStores = db.objectStoreNames
       ? allStores.filter((store) => db.objectStoreNames.contains(store))
       : [...allStores];
+    let restoredStores = 0;
+    let restoredItems = 0;
     if (activeStores.length > 0) {
       const tx = db.transaction([...activeStores], 'readwrite');
       for (const store of activeStores) {
@@ -472,13 +494,22 @@ export async function restoreFromCloudSnapshot(
           } else {
             await db.put(store, item as never);
           }
+          restoredItems++;
         }
+        restoredStores++;
       }
     }
-    console.log('[Sync] Database restored successfully from cloud snapshot');
+    reportMetric('sync_restore_stores', restoredStores, 'count');
+    reportMetric('sync_restore_items', restoredItems, 'count');
+    log('info', 'sync_restore_succeeded', {
+      accountId: snapshot.accountId,
+      stores: restoredStores,
+      items: restoredItems,
+      forced: !!opts.force,
+    });
     return true;
   } catch (err) {
-    console.error('Failed to restore from cloud snapshot:', err);
+    logError('sync_restore_failed', err);
     return false;
   } finally {
     isRestoringSnapshot = false;

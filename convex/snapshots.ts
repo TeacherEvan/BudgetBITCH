@@ -3,6 +3,7 @@ import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { Id } from "./_generated/dataModel";
+import { clog, clogError, clogMetric } from "./lib/log";
 
 /**
  * Upserts a daily snapshot of the user's budget data.
@@ -32,8 +33,10 @@ export const upsertDailySnapshot = mutation({
     storeCounts: v.optional(v.record(v.string(), v.number())),
   },
   handler: async (ctx, args) => {
+    const started = Date.now();
     const userId = await getAuthUserId(ctx);
     if (!userId) {
+      clogMetric("snapshot_upsert", 0, "count", { status_class: "unauthorized" });
       throw new ConvexError("Authentication required");
     }
 
@@ -57,6 +60,14 @@ export const upsertDailySnapshot = mutation({
         storeCounts: args.storeCounts,
         createdAt,
       });
+      clogMetric("snapshot_upsert", 1, "count", { status_class: "2xx", result: "updated" });
+      clog("info", "snapshot_upserted", {
+        userId,
+        date: today,
+        result: "updated",
+        stores: args.storeCounts ? Object.keys(args.storeCounts).length : 0,
+        durationMs: Date.now() - started,
+      });
       return { success: true, updated: true, date: today };
     } else {
       // Insert new snapshot
@@ -70,6 +81,14 @@ export const upsertDailySnapshot = mutation({
         fullBackupData: args.fullBackupData,
         storeCounts: args.storeCounts,
         createdAt,
+      });
+      clogMetric("snapshot_upsert", 1, "count", { status_class: "2xx", result: "created" });
+      clog("info", "snapshot_upserted", {
+        userId,
+        date: today,
+        result: "created",
+        stores: args.storeCounts ? Object.keys(args.storeCounts).length : 0,
+        durationMs: Date.now() - started,
       });
       return { success: true, created: true, date: today };
     }

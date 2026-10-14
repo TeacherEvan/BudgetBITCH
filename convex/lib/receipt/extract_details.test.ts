@@ -51,4 +51,29 @@ describe('Line items, tax, and currency extractors', () => {
       if (item.unit_price !== undefined) expect(typeof item.unit_price).toBe('number')
     }
   })
+
+  // Guards regression: QTY_UNIT_PATTERN's price groups were `\d+(?:[.,]\d{2})?`,
+  // which stopped at the `28,00` prefix of `28,000`. The `=` then failed to line
+  // up and the whole qty/unit_price pair was dropped on every grouped-thousands
+  // receipt. The groups now span the full grouped number and the values are
+  // re-read through parseAmounts.
+  test('reads qty x unit_price = total with grouped thousands', () => {
+    const norm = normalisePayload({
+      lines: [
+        { text: 'WARUNG NUSANTARA', conf: 90, y: 0, words: [] },
+        { text: 'NASI GORENG 2 x 28,000 = 56,000', conf: 90, y: 100, words: [] },
+        { text: 'TOTAL 56,000', conf: 90, y: 200, words: [] },
+      ],
+      width: 1024,
+      height: 400,
+      lang: 'en',
+      engine: 'gemini-vision@1',
+      capturedAt: 1760000000000,
+    })
+
+    const item = extractLineItems(norm).find((i) => i.description.includes('NASI'))
+    expect(item).toBeDefined()
+    expect(item?.qty).toBe(2)
+    expect(item?.unit_price).toBe(28000)
+  })
 })

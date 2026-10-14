@@ -50,3 +50,69 @@ describe("ingestRequestBodySchema", () => {
     expect(res.success).toBe(true);
   });
 });
+
+// Guards regression for the shipped ingestSchema.ts fix: every optional payload
+// hint moved from `.optional()` to `.nullish()`. The bot's adapter
+// (`receipt_bridge.gemini_text_to_ocr_payload`) serialises an absent hint as
+// JSON `null` rather than omitting the key — `"currencyHint": None` ships on
+// every scan — so `.optional()` 400'd every bot receipt in production while the
+// hand-written fixtures above, which omit the key, stayed green.
+describe("ingestRequestBodySchema accepts Python-style null hints", () => {
+  test("accepts currencyHint: null", () => {
+    const res = ingestRequestBodySchema.safeParse({
+      ...validPayload,
+      payload: { ...validPayload.payload, currencyHint: null },
+    });
+    expect(res.success).toBe(true);
+  });
+
+  test("accepts every payload-level hint as null", () => {
+    const res = ingestRequestBodySchema.safeParse({
+      lineUserId: "U123",
+      idempotencyKey: "idemp-null",
+      payload: {
+        lines: [{ text: "TOTAL 91000" }],
+        width: null,
+        height: null,
+        lang: null,
+        engine: null,
+        capturedAt: null,
+        countryHint: null,
+        currencyHint: null,
+      },
+    });
+    expect(res.success).toBe(true);
+  });
+
+  test("accepts conf, y and words as null inside payload.lines", () => {
+    const res = ingestRequestBodySchema.safeParse({
+      lineUserId: "U123",
+      idempotencyKey: "idemp-null-lines",
+      payload: {
+        lines: [{ text: "TOTAL 28,000", conf: null, y: null, words: null }],
+        currencyHint: null,
+      },
+    });
+    expect(res.success).toBe(true);
+  });
+
+  test("still rejects a wrong-typed hint rather than accepting anything", () => {
+    const res = ingestRequestBodySchema.safeParse({
+      ...validPayload,
+      payload: { ...validPayload.payload, currencyHint: 42 },
+    });
+    expect(res.success).toBe(false);
+    if (!res.success) {
+      expect(res.error.issues.some((i) => i.path.join(".") === "payload.currencyHint")).toBe(true);
+    }
+  });
+
+  test("still rejects a null text field, which the scraper cannot read", () => {
+    const res = ingestRequestBodySchema.safeParse({
+      lineUserId: "U123",
+      idempotencyKey: "idemp-null-text",
+      payload: { lines: [{ text: null, conf: null }] },
+    });
+    expect(res.success).toBe(false);
+  });
+});

@@ -1,0 +1,95 @@
+{
+  "id": "cord-003",
+  "capture": {
+    "bot": "huggingface.co/spaces/EvilEvan/TeacherBOY",
+    "botRevision": "15a087a4e3650358e03b163c6fca9b36f60df97a",
+    "agent": "ReceiptAgent (priority 8)",
+    "adapter": "src/services/receipt_bridge.gemini_text_to_ocr_payload",
+    "visionStage": {
+      "kind": "dataset-transcription",
+      "detail": "Human-verified OCR transcription shipped with the source dataset row; substituted for a live model call so fixtures stay free and deterministic. The bot prompt asks for exactly this: the receipt's raw text.",
+      "promptSha256": "b1e3bf1de236a905ff18af4bde00953feeb8255be62de8324336b62c32fb77ca",
+      "model": null
+    }
+  },
+  "image": {
+    "sha256": "175fdc716afc51e67bcb79954c3dad4b54633299ec124780e5af04a8e8305333",
+    "bytes": 68697,
+    "dataset": "naver-clova-ix/cord-v2",
+    "config": "default",
+    "split": "test",
+    "rowIdx": 3,
+    "license": "CC BY 4.0",
+    "homepage": "https://huggingface.co/datasets/naver-clova-ix/cord-v2",
+    "note": "Real photographed Indonesian retail receipts (CORD v2)."
+  },
+  "datasetGroundTruth": {
+    "totalRaw": "11,000",
+    "subtotalRaw": "11,000",
+    "taxRaw": null,
+    "imageSize": {
+      "width": 864,
+      "height": 1296
+    }
+  },
+  "rawText": "@11000\n1X\n11,000\nDONAT GULA\n1.00xITEMs\nSUBTOTAL 11,000\nTOTAL 11,000\nCASH 11,000",
+  "payload": {
+    "lines": [
+      {
+        "text": "@11000",
+        "conf": 85.0,
+        "y": 0.0,
+        "words": []
+      },
+      {
+        "text": "1X",
+        "conf": 85.0,
+        "y": 100.0,
+        "words": []
+      },
+      {
+        "text": "11,000",
+        "conf": 85.0,
+        "y": 200.0,
+        "words": []
+      },
+      {
+        "text": "DONAT GULA",
+        "conf": 85.0,
+        "y": 300.0,
+        "words": []
+      },
+      {
+        "text": "1.00xITEMs",
+        "conf": 85.0,
+        "y": 400.0,
+        "words": []
+      },
+      {
+        "text": "SUBTOTAL 11,000",
+        "conf": 85.0,
+        "y": 500.0,
+        "words": []
+      },
+      {
+        "text": "TOTAL 11,000",
+        "conf": 85.0,
+        "y": 600.0,
+        "words": []
+      },
+      {
+        "text": "CASH 11,000",
+        "conf": 85.0,
+        "y": 700.0,
+        "words": []
+      }
+    ],
+    "width": 1024,
+    "height": 900,
+    "lang": "en",
+    "engine": "gemini-vision@1",
+    "capturedAt": 1767225600000,
+    "countryHint": "ID",
+    "currencyHint": null
+  }
+}

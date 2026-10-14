@@ -24,6 +24,7 @@ import type * as legal from "../legal.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_gemini from "../lib/gemini.js";
 import type * as lib_line_verify from "../lib/line/verify.js";
+import type * as lib_log from "../lib/log.js";
 import type * as lib_receipt_amounts from "../lib/receipt/amounts.js";
 import type * as lib_receipt_categorize from "../lib/receipt/categorize.js";
 import type * as lib_receipt_confidence from "../lib/receipt/confidence.js";
@@ -51,6 +52,7 @@ import type * as purge from "../purge.js";
 import type * as push from "../push.js";
 import type * as pushSend from "../pushSend.js";
 import type * as receipts from "../receipts.js";
+import type * as seedLineLink from "../seedLineLink.js";
 import type * as sharedBoards from "../sharedBoards.js";
 import type * as snapshots from "../snapshots.js";
 
@@ -77,6 +79,7 @@ declare const fullApi: ApiFromModules<{
   "lib/auth": typeof lib_auth;
   "lib/gemini": typeof lib_gemini;
   "lib/line/verify": typeof lib_line_verify;
+  "lib/log": typeof lib_log;
   "lib/receipt/amounts": typeof lib_receipt_amounts;
   "lib/receipt/categorize": typeof lib_receipt_categorize;
   "lib/receipt/confidence": typeof lib_receipt_confidence;
@@ -104,6 +107,7 @@ declare const fullApi: ApiFromModules<{
   push: typeof push;
   pushSend: typeof pushSend;
   receipts: typeof receipts;
+  seedLineLink: typeof seedLineLink;
   sharedBoards: typeof sharedBoards;
   snapshots: typeof snapshots;
 }>;

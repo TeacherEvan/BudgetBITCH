@@ -1,3 +1,4 @@
+import { parseAmounts } from './amounts';
 import type { NormalisedPayload } from './normalise';
 
 /**
@@ -56,33 +57,30 @@ export function detectCurrency(text: string): { code: string; symbol: string } {
 
 /**
  * Extract a floating-point monetary amount from text.
- * Handles $45.20, 1,234.50, 120.00, 45,20 (European decimal comma).
+ * Handles $45.20, 1,234.50, 120.00, 45,20 (European decimal comma),
+ * grouped thousands (Rp 28,000 / 60.000 / 1.234.567) and separator-less
+ * integers (91000).
  * Returns 0.0 if no amount found.
+ *
+ * Delegates to `parseAmounts`, the single definition of "this substring is
+ * money". The local regexes it replaces carried the same grouped-thousands
+ * defect that was fixed in `amounts.ts`: `Rp 28,000` fell through to a loose
+ * `\d+[.,]?\d*` match and came back as 28.00, and `1.234,56` came back as
+ * 234.56 because the dot-thousands group was read as a word boundary.
  */
 export function parseAmount(text: string): number {
   if (!text) return 0.0;
 
-  // Primary: decimal with dot (1,234.50 or 45.20)
-  const dotMatch = text.match(/[\d,]+\.\d{2}\b/);
-  if (dotMatch) {
-    const cleaned = dotMatch[0].replace(/,/g, '');
-    const val = parseFloat(cleaned);
-    if (!Number.isNaN(val) && val > 0) return val;
+  for (const token of parseAmounts(text)) {
+    if (token.value > 0) return token.value;
   }
 
-  // Fallback: European decimal comma (45,20)
-  const commaMatch = text.match(/\b\d+,\d{2}\b/);
-  if (commaMatch) {
-    const cleaned = commaMatch[0].replace(',', '.');
-    const val = parseFloat(cleaned);
-    if (!Number.isNaN(val) && val > 0) return val;
-  }
-
-  // Loose fallback: any number
-  const looseMatch = text.match(/\b\d+[.,]?\d*\b/);
-  if (looseMatch) {
-    const cleaned = looseMatch[0].replace(',', '.');
-    const val = parseFloat(cleaned);
+  // `parseAmounts` deliberately ignores bare integers (receipts are full of
+  // counts and till numbers); callers of `parseAmount` hand over an already
+  // isolated amount string, so a separator-less total is still readable here.
+  const bareMatch = text.match(/(?<![\d.,])(\d{1,9})(?![\d.,])/);
+  if (bareMatch) {
+    const val = parseInt(bareMatch[1], 10);
     if (!Number.isNaN(val) && val > 0) return val;
   }
 

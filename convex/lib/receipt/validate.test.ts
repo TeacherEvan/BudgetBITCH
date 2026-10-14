@@ -39,4 +39,39 @@ describe('Arithmetic cross-validation and digit repair', () => {
 
     expect(result.adjustedTotalConf).toBeLessThan(0.6);
   });
+
+  // Guards regression: the digit-repair path re-read the repaired string with
+  // `replace(/[^0-9\.]/g, '')`, which collapsed `6O.OOO` to 60 and `1.234,56`
+  // to 1.234. The arithmetic confirmation could therefore never succeed on a
+  // grouped-thousands or European-format receipt, so a genuinely repairable
+  // total stayed low-confidence. The repaired string now goes through
+  // parseAmounts, the single money tokeniser.
+  test('confirms a repaired grouped-thousands total', () => {
+    const repaired = validateExtraction({
+      totalRaw: '6O.OOO',
+      total: 60000,
+      subtotal: 55000,
+      tax: 5000,
+      totalConf: 0.7,
+    });
+
+    expect(repaired.repairedDigits).toBe(true);
+    expect(repaired.adjustedTotalConf).toBeGreaterThan(0.7);
+  });
+
+  test('confirms a repaired European-format total', () => {
+    // The repair path only runs when totalRaw carries OCR-garbled glyphs, so
+    // the trailing 8 arrives as a B. Under the old digit-strip the string
+    // collapsed to 1.23458 and never matched subtotal + tax.
+    const repaired = validateExtraction({
+      totalRaw: '1.234,5B',
+      total: 1234.58,
+      subtotal: 1100.0,
+      tax: 134.58,
+      totalConf: 0.7,
+    });
+
+    expect(repaired.repairedDigits).toBe(true);
+    expect(repaired.adjustedTotalConf).toBeGreaterThan(0.7);
+  });
 });

@@ -21,6 +21,21 @@ describe('OCR line normalisation', () => {
     expect(resNoAmount.hasAmount).toBe(false);
   });
 
+  // Guards regression: hasAmount used a private `/\b\d+(?:[\.,]\d{2})\b/`, a
+  // second and weaker definition of "this line holds money". It answered false
+  // for grouped-thousands amounts, so an IDR/VND total line was flagged as
+  // amount-free and skipped downstream. hasAmount now delegates to parseAmounts.
+  test('flags grouped-thousands and separator-less amounts', () => {
+    expect(normaliseLine('TOTAL 28,000').hasAmount).toBe(true);
+    expect(normaliseLine('TOTAL 60.000').hasAmount).toBe(true);
+    expect(normaliseLine('SUBTOTAL 1.234.567').hasAmount).toBe(true);
+  });
+
+  test('still rejects lines whose digits are not money', () => {
+    expect(normaliseLine('TAX INVOICE').hasAmount).toBe(false);
+    expect(normaliseLine('TIME 14:30').hasAmount).toBe(false);
+  });
+
   test('normalises full payload preserving structure and adding normalised line data', () => {
     const payload: OcrPayload = {
       lines: [

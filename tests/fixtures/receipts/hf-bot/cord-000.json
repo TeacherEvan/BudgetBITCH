@@ -1,0 +1,113 @@
+{
+  "id": "cord-000",
+  "capture": {
+    "bot": "huggingface.co/spaces/EvilEvan/TeacherBOY",
+    "botRevision": "15a087a4e3650358e03b163c6fca9b36f60df97a",
+    "agent": "ReceiptAgent (priority 8)",
+    "adapter": "src/services/receipt_bridge.gemini_text_to_ocr_payload",
+    "visionStage": {
+      "kind": "dataset-transcription",
+      "detail": "Human-verified OCR transcription shipped with the source dataset row; substituted for a live model call so fixtures stay free and deterministic. The bot prompt asks for exactly this: the receipt's raw text.",
+      "promptSha256": "b1e3bf1de236a905ff18af4bde00953feeb8255be62de8324336b62c32fb77ca",
+      "model": null
+    }
+  },
+  "image": {
+    "sha256": "4e13b815b540420a4d68229494bd6259768c226a595114609970edae9a620aa9",
+    "bytes": 25639,
+    "dataset": "naver-clova-ix/cord-v2",
+    "config": "default",
+    "split": "test",
+    "rowIdx": 0,
+    "license": "CC BY 4.0",
+    "homepage": "https://huggingface.co/datasets/naver-clova-ix/cord-v2",
+    "note": "Real photographed Indonesian retail receipts (CORD v2)."
+  },
+  "datasetGroundTruth": {
+    "totalRaw": "60.000",
+    "subtotalRaw": "60.000",
+    "taxRaw": "5.455",
+    "imageSize": {
+      "width": 432,
+      "height": 648
+    }
+  },
+  "rawText": "-TICKET CP\n901016\n60.000\n60.000\n2\nTOTAL DISC $ -60.000\nTAX 5.455\nSubtotal 60.000\nTOTAL 60.000\n(Qty 2.00\nEDC CIMB NIAGA No: xx7730 60.000",
+  "payload": {
+    "lines": [
+      {
+        "text": "-TICKET CP",
+        "conf": 85.0,
+        "y": 0.0,
+        "words": []
+      },
+      {
+        "text": "901016",
+        "conf": 85.0,
+        "y": 100.0,
+        "words": []
+      },
+      {
+        "text": "60.000",
+        "conf": 85.0,
+        "y": 200.0,
+        "words": []
+      },
+      {
+        "text": "60.000",
+        "conf": 85.0,
+        "y": 300.0,
+        "words": []
+      },
+      {
+        "text": "2",
+        "conf": 85.0,
+        "y": 400.0,
+        "words": []
+      },
+      {
+        "text": "TOTAL DISC $ -60.000",
+        "conf": 85.0,
+        "y": 500.0,
+        "words": []
+      },
+      {
+        "text": "TAX 5.455",
+        "conf": 85.0,
+        "y": 600.0,
+        "words": []
+      },
+      {
+        "text": "Subtotal 60.000",
+        "conf": 85.0,
+        "y": 700.0,
+        "words": []
+      },
+      {
+        "text": "TOTAL 60.000",
+        "conf": 85.0,
+        "y": 800.0,
+        "words": []
+      },
+      {
+        "text": "(Qty 2.00",
+        "conf": 85.0,
+        "y": 900.0,
+        "words": []
+      },
+      {
+        "text": "EDC CIMB NIAGA No: xx7730 60.000",
+        "conf": 85.0,
+        "y": 1000.0,
+        "words": []
+      }
+    ],
+    "width": 1024,
+    "height": 1200,
+    "lang": "en",
+    "engine": "gemini-vision@1",
+    "capturedAt": 1767225600000,
+    "countryHint": "ID",
+    "currencyHint": null
+  }
+}

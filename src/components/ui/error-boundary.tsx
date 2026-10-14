@@ -4,6 +4,7 @@
 import { Component, type ReactNode } from 'react';
 import { AlertTriangle, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { logError } from '@/lib/observability/logger';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -26,9 +27,13 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, info: unknown) {
-    // Persist to console for local debugging; admin notification is user-triggered
-    // via the Report Bug button to avoid silent data egress.
-    console.error('[ErrorBoundary]', error, info);
+    // Persist a structured error event (queryable across sessions) and keep the
+    // existing user-triggered bug report (mailto) so we never silently egress PII.
+    logError('react_error_boundary', error, {
+      componentStack: typeof info === 'object' && info !== null && 'componentStack' in info
+        ? String((info as { componentStack?: unknown }).componentStack)
+        : undefined,
+    });
   }
 
   private handleReport = () => {

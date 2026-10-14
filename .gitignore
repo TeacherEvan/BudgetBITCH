@@ -88,3 +88,7 @@ ios/App/build/
 ios/App/Pods/
 .DS_Store
 
+
+# Scraped receipt images used to regenerate HF-bot fixtures (large binaries).
+# Re-fetch with: node scripts/scrape-receipt-corpus.mjs
+tests/fixtures/receipts/.corpus/

@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Budget Boss Architecture Diagram</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'JetBrains Mono', monospace; background: #020617; min-height: 100vh; padding: 2rem; color: white; }
+    .container { max-width: 1240px; margin: 0 auto; }
+    .header { margin-bottom: 2rem; }
+    .header-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+    .pulse-dot { width: 12px; height: 12px; background: #22d3ee; border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.025em; }
+    .subtitle { color: #94a3b8; font-size: 0.875rem; margin-left: 1.75rem; }
+    .diagram-container { background: rgba(15, 23, 42, 0.5); border-radius: 1rem; border: 1px solid #1e293b; padding: 1.5rem; overflow-x: auto; }
+    svg { width: 100%; min-width: 1040px; display: block; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-top: 2rem; }
+    .card { background: rgba(15, 23, 42, 0.5); border-radius: 0.75rem; border: 1px solid #1e293b; padding: 1.25rem; }
+    .card-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .card-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .card-dot.cyan { background: #22d3ee; }
+    .card-dot.emerald { background: #34d399; }
+    .card-dot.violet { background: #a78bfa; }
+    .card-dot.amber { background: #fbbf24; }
+    .card-dot.rose { background: #fb7185; }
+    .card-dot.slate { background: #94a3b8; }
+    .card h3 { font-size: 0.875rem; font-weight: 600; }
+    .card ul { list-style: none; color: #94a3b8; font-size: 0.75rem; }
+    .card li { margin-bottom: 0.375rem; }
+    .footer { text-align: center; margin-top: 1.5rem; color: #475569; font-size: 0.75rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-row">
+        <div class="pulse-dot"></div>
+        <h1>Budget Boss — System Architecture</h1>
+      </div>
+      <p class="subtitle">Next.js 14 (App Router) + Convex · local-first PWA · auth-first client gate · offline IndexedDB → Convex sync</p>
+    </div>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 1060 980">
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+          </marker>
+          <marker id="arrowheadCyan" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#22d3ee" />
+          </marker>
+          <marker id="arrowheadRose" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#fb7185" />
+          </marker>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+
+        <rect width="100%" height="100%" fill="url(#grid)" />
+
+        <!-- External boundary -->
+        <rect x="10" y="60" width="150" height="830" rx="12" fill="rgba(30,41,59,0.05)" stroke="#94a3b8" stroke-width="1" stroke-dasharray="8,4"/>
+        <text x="22" y="78" fill="#94a3b8" font-size="10" font-weight="600">External</text>
+
+        <!-- Client security / trust boundary -->
+        <rect x="170" y="60" width="370" height="640" rx="12" fill="rgba(136,19,55,0.04)" stroke="#fb7185" stroke-width="1" stroke-dasharray="4,4"/>
+        <text x="182" y="78" fill="#fb7185" font-size="10" font-weight="600">Client Surface — auth-first gate (RequireAuth / route-guard)</text>
+
+        <!-- Convex cloud boundary -->
+        <rect x="560" y="270" width="490" height="410" rx="12" fill="rgba(251,191,36,0.05)" stroke="#fbbf24" stroke-width="1" stroke-dasharray="8,4"/>
+        <text x="572" y="288" fill="#fbbf24" font-size="10" font-weight="600">Convex Platform (serverless)</text>
+
+        <!-- ARROWS (drawn behind components) -->
+        <line x1="140" y1="120" x2="198" y2="120" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowheadCyan)"/>
+        <text x="169" y="114" fill="#94a3b8" font-size="9" text-anchor="middle">HTTPS</text>
+
+        <line x1="140" y1="180" x2="470" y2="120" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowheadRose)"/>
+        <text x="300" y="160" fill="#fb7185" font-size="8" text-anchor="middle">sign-in</text>
+
+        <line x1="440" y1="125" x2="468" y2="125" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowheadCyan)"/>
+
+        <line x1="320" y1="210" x2="320" y2="228" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowheadCyan)"/>
+
+        <line x1="320" y1="300" x2="320" y2="318" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowheadCyan)"/>
+
+        <line x1="440" y1="355" x2="468" y2="355" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowheadCyan)"/>
+
+        <line x1="570" y1="125" x2="588" y2="125" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowheadRose)"/>
+        <text x="579" y="119" fill="#fb7185" font-size="8" text-anchor="middle">JWT</text>
+
+        <line x1="570" y1="325" x2="588" y2="335" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <line x1="670" y1="335" x2="588" y2="325" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+        <line x1="670" y1="250" x2="690" y2="300" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <text x="678" y="278" fill="#a78bfa" font-size="8" text-anchor="middle">sync</text>
+
+        <line x1="160" y1="750" x2="590" y2="400" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowhead)"/>
+        <text x="360" y="560" fill="#94a3b8" font-size="8" text-anchor="middle">LINE / SMS ingest</text>
+
+        <line x1="820" y1="150" x2="690" y2="385" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowhead)"/>
+        <text x="770" y="300" fill="#94a3b8" font-size="8" text-anchor="middle">OCR</text>
+
+        <line x1="400" y1="400" x2="560" y2="430" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <text x="480" y="408" fill="#94a3b8" font-size="8" text-anchor="middle">query</text>
+
+        <line x1="620" y1="370" x2="620" y2="568" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <line x1="920" y1="370" x2="920" y2="568" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+        <!-- ===== EXTERNAL COLUMN ===== -->
+        <rect x="30" y="100" width="110" height="60" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="30" y="100" width="110" height="60" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="85" y="122" fill="white" font-size="11" font-weight="600" text-anchor="middle">User</text>
+        <text x="85" y="138" fill="#94a3b8" font-size="9" text-anchor="middle">Browser / PWA</text>
+
+        <rect x="30" y="735" width="110" height="120" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="30" y="735" width="110" height="120" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="85" y="757" fill="white" font-size="11" font-weight="600" text-anchor="middle">Integrations</text>
+        <text x="85" y="775" fill="#94a3b8" font-size="8" text-anchor="middle">• LINE (TeacherBOY)</text>
+        <text x="85" y="789" fill="#94a3b8" font-size="8" text-anchor="middle">• Bank SMS (EU/SG/US)</text>
+        <text x="85" y="803" fill="#94a3b8" font-size="8" text-anchor="middle">• Gemini 2.5 Flash</text>
+        <text x="85" y="817" fill="#94a3b8" font-size="8" text-anchor="middle">• Resend email</text>
+        <text x="85" y="833" fill="#94a3b8" font-size="8" text-anchor="middle">• RSS / Market Watch</text>
+        <text x="85" y="847" fill="#94a3b8" font-size="7" text-anchor="middle">VAPID web push</text>
+
+        <!-- ===== CLIENT SURFACE (170-540) ===== -->
+        <rect x="190" y="95" width="280" height="70" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="190" y="95" width="280" height="70" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="330" y="117" fill="white" font-size="12" font-weight="600" text-anchor="middle">Next.js 14 App Router</text>
+        <text x="330" y="134" fill="#94a3b8" font-size="9" text-anchor="middle">Root gate page.tsx + (app)/dashboard | wizard</text>
+        <text x="330" y="150" fill="#22d3ee" font-size="8" text-anchor="middle">convex-client-provider · theme-provider</text>
+
+        <rect x="190" y="230" width="280" height="80" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="190" y="230" width="280" height="80" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="330" y="252" fill="white" font-size="11" font-weight="600" text-anchor="middle">UI / Feature Components</text>
+        <text x="330" y="269" fill="#94a3b8" font-size="8" text-anchor="middle">dashboard-shell · wizard-shell · accounts</text>
+        <text x="330" y="283" fill="#94a3b8" font-size="8" text-anchor="middle">shared-board · receipt-verify · settings</text>
+        <text x="330" y="299" fill="#94a3b8" font-size="7" text-anchor="middle">ui/ primitives · framer-motion · recharts</text>
+
+        <rect x="190" y="325" width="280" height="70" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="190" y="325" width="280" height="70" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="330" y="347" fill="white" font-size="11" font-weight="600" text-anchor="middle">Hooks + Domain Modules</text>
+        <text x="330" y="364" fill="#94a3b8" font-size="8" text-anchor="middle">use-local-db · use-budgets · use-accounts</text>
+        <text x="330" y="380" fill="#94a3b8" font-size="8" text-anchor="middle">modules/budgeting · modules/home-base</text>
+
+        <rect x="190" y="660" width="280" height="60" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="190" y="660" width="280" height="60" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="330" y="682" fill="white" font-size="11" font-weight="600" text-anchor="middle">Auth Boundary</text>
+        <text x="330" y="698" fill="#94a3b8" font-size="8" text-anchor="middle">RequireAuth · route-guard · lib/auth</text>
+
+        <rect x="190" y="745" width="280" height="70" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="190" y="745" width="280" height="70" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="330" y="767" fill="white" font-size="11" font-weight="600" text-anchor="middle">Convex Auth (Password)</text>
+        <text x="330" y="784" fill="#94a3b8" font-size="8" text-anchor="middle">Email/password + Resend email verify</text>
+        <text x="330" y="800" fill="#94a3b8" font-size="7" text-anchor="middle">token in localStorage (webview-safe)</text>
+
+        <!-- ===== LOCAL-FIRST DATA LAYER (client) ===== -->
+        <rect x="600" y="120" width="220" height="110" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="600" y="120" width="220" height="110" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="710" y="142" fill="white" font-size="11" font-weight="600" text-anchor="middle">IndexedDB (local-first)</text>
+        <text x="710" y="160" fill="#94a3b8" font-size="8" text-anchor="middle">idb · local-db.ts</text>
+        <text x="710" y="176" fill="#94a3b8" font-size="8" text-anchor="middle">• userData stores</text>
+        <text x="710" y="190" fill="#94a3b8" font-size="8" text-anchor="middle">• syncQueue (replay)</text>
+        <text x="710" y="206" fill="#a78bfa" font-size="8" text-anchor="middle">encrypted backup (crypto-backup)</text>
+        <text x="710" y="222" fill="#94a3b8" font-size="7" text-anchor="middle">offline writes → async Convex sync</text>
+
+        <rect x="600" y="160" width="220" height="20" rx="6" fill="none" stroke="none"/>
+
+        <!-- ===== CONVEX BACKEND (560-1050) ===== -->
+        <rect x="580" y="300" width="180" height="70" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="580" y="300" width="180" height="70" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="670" y="322" fill="white" font-size="11" font-weight="600" text-anchor="middle">HTTP Ingest</text>
+        <text x="670" y="339" fill="#94a3b8" font-size="8" text-anchor="middle">convex/http.ts</text>
+        <text x="670" y="355" fill="#94a3b8" font-size="8" text-anchor="middle">/receipts/ingest</text>
+        <text x="670" y="369" fill="#fbbf24" font-size="7" text-anchor="middle">CONVEX_SYNC_SECRET</text>
+
+        <rect x="800" y="300" width="230" height="70" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="800" y="300" width="230" height="70" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="915" y="322" fill="white" font-size="11" font-weight="600" text-anchor="middle">Server Functions</text>
+        <text x="915" y="339" fill="#94a3b8" font-size="8" text-anchor="middle">query / mutation / action</text>
+        <text x="915" y="355" fill="#94a3b8" font-size="8" text-anchor="middle">accounts · sharedBoards</text>
+        <text x="915" y="369" fill="#94a3b8" font-size="8" text-anchor="middle">snapshots · legal · feedback</text>
+
+        <rect x="580" y="420" width="180" height="80" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="580" y="420" width="180" height="80" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="670" y="442" fill="white" font-size="11" font-weight="600" text-anchor="middle">Receipt Engine</text>
+        <text x="670" y="459" fill="#94a3b8" font-size="8" text-anchor="middle">convex/receipts.ts</text>
+        <text x="670" y="475" fill="#94a3b8" font-size="8" text-anchor="middle">parseReceipt action</text>
+        <text x="670" y="491" fill="#94a3b8" font-size="7" text-anchor="middle">lib/receipt/* deterministic</text>
+
+        <rect x="800" y="420" width="230" height="80" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="800" y="420" width="230" height="80" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="915" y="442" fill="white" font-size="11" font-weight="600" text-anchor="middle">Web Push</text>
+        <text x="915" y="459" fill="#94a3b8" font-size="8" text-anchor="middle">push.ts / pushSend.ts</text>
+        <text x="915" y="475" fill="#94a3b8" font-size="8" text-anchor="middle">"use node" · VAPID</text>
+        <text x="915" y="491" fill="#94a3b8" font-size="7" text-anchor="middle">pushSubscriptions store</text>
+
+        <rect x="580" y="570" width="450" height="90" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="580" y="570" width="450" height="90" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="805" y="592" fill="white" font-size="11" font-weight="600" text-anchor="middle">Convex DB (schema.ts)</text>
+        <text x="805" y="609" fill="#94a3b8" font-size="8" text-anchor="middle">authTables · userProfiles · sharedBoards · accounts</text>
+        <text x="805" y="623" fill="#94a3b8" font-size="8" text-anchor="middle">boardMembers · accountBoards · invites</text>
+        <text x="805" y="637" fill="#94a3b8" font-size="8" text-anchor="middle">dailySnapshots · legalAgreements · cookieConsents</text>
+        <text x="805" y="651" fill="#94a3b8" font-size="8" text-anchor="middle">receipts · receiptTemplates · merchantAliases · feedbackReports</text>
+
+        <!-- ===== LEGEND (below all boundaries) ===== -->
+        <text x="30" y="912" fill="white" font-size="10" font-weight="600">Legend</text>
+        <rect x="30" y="922" width="16" height="10" rx="2" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1"/>
+        <text x="52" y="931" fill="#94a3b8" font-size="8">Frontend (React/Next)</text>
+        <rect x="190" y="922" width="16" height="10" rx="2" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1"/>
+        <text x="212" y="931" fill="#94a3b8" font-size="8">Backend / Auth</text>
+        <rect x="350" y="922" width="16" height="10" rx="2" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1"/>
+        <text x="372" y="931" fill="#94a3b8" font-size="8">Cloud Service</text>
+        <rect x="510" y="922" width="16" height="10" rx="2" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1"/>
+        <text x="532" y="931" fill="#94a3b8" font-size="8">Database</text>
+        <rect x="670" y="922" width="16" height="10" rx="2" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1"/>
+        <text x="692" y="931" fill="#94a3b8" font-size="8">External</text>
+        <line x1="800" y1="927" x2="816" y2="927" stroke="#fb7185" stroke-width="1" stroke-dasharray="4,4"/>
+        <text x="822" y="931" fill="#94a3b8" font-size="8">Auth / Security flow</text>
+        <rect x="950" y="922" width="16" height="10" rx="2" fill="transparent" stroke="#fb7185" stroke-width="1" stroke-dasharray="3,3"/>
+        <text x="972" y="931" fill="#94a3b8" font-size="8">Trust boundary</text>
+
+<!-- CARDS -->
+      </svg>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot cyan"></div>
+          <h3>Client / Frontend</h3>
+        </div>
+        <ul>
+          <li>• Next.js 14 App Router (Server Components + selective 'use client')</li>
+          <li>• Root gate page.tsx routes: welcome / wizard / board</li>
+          <li>• Feature components: dashboard, wizard, accounts, shared-board, receipt</li>
+          <li>• Hooks + pure-TS modules (budgeting / home-base)</li>
+          <li>• Tailwind v4 · framer-motion · recharts · next-intl (6 locales)</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot emerald"></div>
+          <h3>Local-First + Auth</h3>
+        </div>
+        <ul>
+          <li>• IndexedDB (idb) — offline writes, syncQueue replay on 'online'</li>
+          <li>• Encrypted backup export/import (crypto-backup)</li>
+          <li>• Convex Auth Password provider; token in localStorage (webview-safe)</li>
+          <li>• Client guard: RequireAuth + route-guard over /dashboard, /accounts, /settings, /wizard</li>
+          <li>• PWA: public/sw.js, manifest, Web Share Target</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot violet"></div>
+          <h3>Convex Backend</h3>
+        </div>
+        <ul>
+          <li>• HTTP ingest (convex/http.ts) /receipts/ingest bearer secret</li>
+          <li>• Server functions: accounts, sharedBoards, snapshots, legal, feedback</li>
+          <li>• Receipt engine: Gemini 2.5 Flash parseReceipt + deterministic lib/receipt</li>
+          <li>• Web Push (VAPID) via node action pushSend.ts</li>
+          <li>• 14-table schema + authTables; indexes required (no .filter/.collect)</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot amber"></div>
+          <h3>Integrations</h3>
+        </div>
+        <ul>
+          <li>• LINE (TeacherBOY) → POST OcrPayload to /receipts/ingest</li>
+          <li>• Bank SMS parser (EU/SG/US/generic) → /sms-confirm</li>
+          <li>• Gemini 2.5 Flash OCR; Resend email verify</li>
+          <li>• RSS Market Watch + vicinity feeds (/api/news)</li>
+          <li>• VAPID web push notifications</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot rose"></div>
+          <h3>Security Boundary</h3>
+        </div>
+        <ul>
+          <li>• Client trust boundary: auth-first gate, no middleware</li>
+          <li>• Convex identity derived server-side (ctx.auth.getUserIdentity)</li>
+          <li>• Ingest secret CONVEX_SYNC_SECRET; never pass userId from client</li>
+          <li>• CSP with per-request nonce (proxy); tesseract.js client OCR</li>
+          <li>• Encrypted local backups; legal/cookie consent audit trails</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot slate"></div>
+          <h3>Data Flow</h3>
+        </div>
+        <ul>
+          <li>• User → Next.js → RequireAuth → Convex Auth (JWT)</li>
+          <li>• Writes: IndexedDB immediate → async sync to Convex</li>
+          <li>• Reads: hooks query Convex; offline falls back to IndexedDB</li>
+          <li>• Receipts: client OCR draft → /ingest → Gemini → confirm</li>
+          <li>• Shared boards: keyed-merge (boardMerge.ts) across members</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="footer">
+      Budget Boss (BudgetBITCH repo) · Next.js 14 + Convex · generated from CODEBASE_INDEX.md / AGENTS.md · viewBox 1060×980
+    </p>
+  </div>
+</body>
+</html>

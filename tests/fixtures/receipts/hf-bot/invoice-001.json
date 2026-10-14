@@ -1,0 +1,607 @@
+{
+  "id": "invoice-001",
+  "capture": {
+    "bot": "huggingface.co/spaces/EvilEvan/TeacherBOY",
+    "botRevision": "15a087a4e3650358e03b163c6fca9b36f60df97a",
+    "agent": "ReceiptAgent (priority 8)",
+    "adapter": "src/services/receipt_bridge.gemini_text_to_ocr_payload",
+    "visionStage": {
+      "kind": "dataset-transcription",
+      "detail": "Human-verified OCR transcription shipped with the source dataset row; substituted for a live model call so fixtures stay free and deterministic. The bot prompt asks for exactly this: the receipt's raw text.",
+      "promptSha256": "b1e3bf1de236a905ff18af4bde00953feeb8255be62de8324336b62c32fb77ca",
+      "model": null
+    }
+  },
+  "image": {
+    "sha256": "31bc61a1e2343879c7d7593282f254aa9700385d70e02ea06b1016cd78a7af98",
+    "bytes": 398518,
+    "dataset": "mychen76/invoices-and-receipts_ocr_v1",
+    "config": "default",
+    "split": "test",
+    "rowIdx": 1,
+    "license": "Apache-2.0",
+    "homepage": "https://huggingface.co/datasets/mychen76/invoices-and-receipts_ocr_v1",
+    "note": "Scanned invoice/receipt images with parsed header + summary ground truth."
+  },
+  "datasetGroundTruth": {
+    "totalRaw": null,
+    "dateRaw": "05/29/2021",
+    "sellerRaw": "Hopkins and Sons 62283 Flores Tunnel North Luis, IA 69983"
+  },
+  "rawText": "Invoice no: 13194726\nDate of issue:\n05/29/2021\nSeller:\nClient:\nHopkins and Sons\nSims PLC\n62283 Flores Tunnel\nUSS Kramer\nNorth Luis, IA 69983\nFPO AA 81651\nTax Id: 952-73-7223\nTax Id: 995-88-9495\nIBAN: GB31LZXS20242755934691\nITEMS\nNo.\nDescription\nQty\nUM\nNet price\nNet worth\nVAT [%]\nGross\n worth\nBeach Lunch Lounge Striped\n1,00\neach\n16,99\n16,99\n10%\n18,69\n1\nShirt Dress Large Navy Blue\nWhite Long Sleeve Causal\nJams World Hawaiian  Dress\n5,00\n65,00\n325,00\neach\n10%\n357,50\n2.\nRayon sz.L\n LuLaRoe Nicole Dress Size Large\n2,00\neach\n1,99\n3,98\n10%\n4,38\n3.\n26\nJohnny Was Medium Linen Wrap\n2,00\neach\n89,99\n179,98\n10%\n197,98\n4.\nDress Dessert Rose Embroiderd\nBohemian\ns Long\", \n, \n, \n, \n, \n, \n, \n, \n, \n, \n, \n, \n, \" Hanna Anderson Women\n1,00\neach\n26,40\n6.\nLarge Coral Short Sleeve Casual\nFall Tee Shirt Dress\nSUMMARY\nVAT [%]\nNet worth\nVAT\nGross worth\n10%\n581,93\n58,19\n640,12\nTotal\n$ 640,12\n$ 581,93\n$58,19",
+  "payload": {
+    "lines": [
+      {
+        "text": "Invoice no: 13194726",
+        "conf": 85.0,
+        "y": 0.0,
+        "words": []
+      },
+      {
+        "text": "Date of issue:",
+        "conf": 85.0,
+        "y": 100.0,
+        "words": []
+      },
+      {
+        "text": "05/29/2021",
+        "conf": 85.0,
+        "y": 200.0,
+        "words": []
+      },
+      {
+        "text": "Seller:",
+        "conf": 85.0,
+        "y": 300.0,
+        "words": []
+      },
+      {
+        "text": "Client:",
+        "conf": 85.0,
+        "y": 400.0,
+        "words": []
+      },
+      {
+        "text": "Hopkins and Sons",
+        "conf": 85.0,
+        "y": 500.0,
+        "words": []
+      },
+      {
+        "text": "Sims PLC",
+        "conf": 85.0,
+        "y": 600.0,
+        "words": []
+      },
+      {
+        "text": "62283 Flores Tunnel",
+        "conf": 85.0,
+        "y": 700.0,
+        "words": []
+      },
+      {
+        "text": "USS Kramer",
+        "conf": 85.0,
+        "y": 800.0,
+        "words": []
+      },
+      {
+        "text": "North Luis, IA 69983",
+        "conf": 85.0,
+        "y": 900.0,
+        "words": []
+      },
+      {
+        "text": "FPO AA 81651",
+        "conf": 85.0,
+        "y": 1000.0,
+        "words": []
+      },
+      {
+        "text": "Tax Id: 952-73-7223",
+        "conf": 85.0,
+        "y": 1100.0,
+        "words": []
+      },
+      {
+        "text": "Tax Id: 995-88-9495",
+        "conf": 85.0,
+        "y": 1200.0,
+        "words": []
+      },
+      {
+        "text": "IBAN: GB31LZXS20242755934691",
+        "conf": 85.0,
+        "y": 1300.0,
+        "words": []
+      },
+      {
+        "text": "ITEMS",
+        "conf": 85.0,
+        "y": 1400.0,
+        "words": []
+      },
+      {
+        "text": "No.",
+        "conf": 85.0,
+        "y": 1500.0,
+        "words": []
+      },
+      {
+        "text": "Description",
+        "conf": 85.0,
+        "y": 1600.0,
+        "words": []
+      },
+      {
+        "text": "Qty",
+        "conf": 85.0,
+        "y": 1700.0,
+        "words": []
+      },
+      {
+        "text": "UM",
+        "conf": 85.0,
+        "y": 1800.0,
+        "words": []
+      },
+      {
+        "text": "Net price",
+        "conf": 85.0,
+        "y": 1900.0,
+        "words": []
+      },
+      {
+        "text": "Net worth",
+        "conf": 85.0,
+        "y": 2000.0,
+        "words": []
+      },
+      {
+        "text": "VAT [%]",
+        "conf": 85.0,
+        "y": 2100.0,
+        "words": []
+      },
+      {
+        "text": "Gross",
+        "conf": 85.0,
+        "y": 2200.0,
+        "words": []
+      },
+      {
+        "text": "worth",
+        "conf": 85.0,
+        "y": 2300.0,
+        "words": []
+      },
+      {
+        "text": "Beach Lunch Lounge Striped",
+        "conf": 85.0,
+        "y": 2400.0,
+        "words": []
+      },
+      {
+        "text": "1,00",
+        "conf": 85.0,
+        "y": 2500.0,
+        "words": []
+      },
+      {
+        "text": "each",
+        "conf": 85.0,
+        "y": 2600.0,
+        "words": []
+      },
+      {
+        "text": "16,99",
+        "conf": 85.0,
+        "y": 2700.0,
+        "words": []
+      },
+      {
+        "text": "16,99",
+        "conf": 85.0,
+        "y": 2800.0,
+        "words": []
+      },
+      {
+        "text": "10%",
+        "conf": 85.0,
+        "y": 2900.0,
+        "words": []
+      },
+      {
+        "text": "18,69",
+        "conf": 85.0,
+        "y": 3000.0,
+        "words": []
+      },
+      {
+        "text": "1",
+        "conf": 85.0,
+        "y": 3100.0,
+        "words": []
+      },
+      {
+        "text": "Shirt Dress Large Navy Blue",
+        "conf": 85.0,
+        "y": 3200.0,
+        "words": []
+      },
+      {
+        "text": "White Long Sleeve Causal",
+        "conf": 85.0,
+        "y": 3300.0,
+        "words": []
+      },
+      {
+        "text": "Jams World Hawaiian  Dress",
+        "conf": 85.0,
+        "y": 3400.0,
+        "words": []
+      },
+      {
+        "text": "5,00",
+        "conf": 85.0,
+        "y": 3500.0,
+        "words": []
+      },
+      {
+        "text": "65,00",
+        "conf": 85.0,
+        "y": 3600.0,
+        "words": []
+      },
+      {
+        "text": "325,00",
+        "conf": 85.0,
+        "y": 3700.0,
+        "words": []
+      },
+      {
+        "text": "each",
+        "conf": 85.0,
+        "y": 3800.0,
+        "words": []
+      },
+      {
+        "text": "10%",
+        "conf": 85.0,
+        "y": 3900.0,
+        "words": []
+      },
+      {
+        "text": "357,50",
+        "conf": 85.0,
+        "y": 4000.0,
+        "words": []
+      },
+      {
+        "text": "2.",
+        "conf": 85.0,
+        "y": 4100.0,
+        "words": []
+      },
+      {
+        "text": "Rayon sz.L",
+        "conf": 85.0,
+        "y": 4200.0,
+        "words": []
+      },
+      {
+        "text": "LuLaRoe Nicole Dress Size Large",
+        "conf": 85.0,
+        "y": 4300.0,
+        "words": []
+      },
+      {
+        "text": "2,00",
+        "conf": 85.0,
+        "y": 4400.0,
+        "words": []
+      },
+      {
+        "text": "each",
+        "conf": 85.0,
+        "y": 4500.0,
+        "words": []
+      },
+      {
+        "text": "1,99",
+        "conf": 85.0,
+        "y": 4600.0,
+        "words": []
+      },
+      {
+        "text": "3,98",
+        "conf": 85.0,
+        "y": 4700.0,
+        "words": []
+      },
+      {
+        "text": "10%",
+        "conf": 85.0,
+        "y": 4800.0,
+        "words": []
+      },
+      {
+        "text": "4,38",
+        "conf": 85.0,
+        "y": 4900.0,
+        "words": []
+      },
+      {
+        "text": "3.",
+        "conf": 85.0,
+        "y": 5000.0,
+        "words": []
+      },
+      {
+        "text": "26",
+        "conf": 85.0,
+        "y": 5100.0,
+        "words": []
+      },
+      {
+        "text": "Johnny Was Medium Linen Wrap",
+        "conf": 85.0,
+        "y": 5200.0,
+        "words": []
+      },
+      {
+        "text": "2,00",
+        "conf": 85.0,
+        "y": 5300.0,
+        "words": []
+      },
+      {
+        "text": "each",
+        "conf": 85.0,
+        "y": 5400.0,
+        "words": []
+      },
+      {
+        "text": "89,99",
+        "conf": 85.0,
+        "y": 5500.0,
+        "words": []
+      },
+      {
+        "text": "179,98",
+        "conf": 85.0,
+        "y": 5600.0,
+        "words": []
+      },
+      {
+        "text": "10%",
+        "conf": 85.0,
+        "y": 5700.0,
+        "words": []
+      },
+      {
+        "text": "197,98",
+        "conf": 85.0,
+        "y": 5800.0,
+        "words": []
+      },
+      {
+        "text": "4.",
+        "conf": 85.0,
+        "y": 5900.0,
+        "words": []
+      },
+      {
+        "text": "Dress Dessert Rose Embroiderd",
+        "conf": 85.0,
+        "y": 6000.0,
+        "words": []
+      },
+      {
+        "text": "Bohemian",
+        "conf": 85.0,
+        "y": 6100.0,
+        "words": []
+      },
+      {
+        "text": "s Long\",",
+        "conf": 85.0,
+        "y": 6200.0,
+        "words": []
+      },
+      {
+        "text": ",",
+        "conf": 85.0,
+        "y": 6300.0,
+        "words": []
+      },
+      {
+        "text": ",",
+        "conf": 85.0,
+        "y": 6400.0,
+        "words": []
+      },
+      {
+        "text": ",",
+        "conf": 85.0,
+        "y": 6500.0,
+        "words": []
+      },
+      {
+        "text": ",",
+        "conf": 85.0,
+        "y": 6600.0,
+        "words": []
+      },
+      {
+        "text": ",",
+        "conf": 85.0,
+        "y": 6700.0,
+        "words": []
+      },
+      {
+        "text": ",",
+        "conf": 85.0,
+        "y": 6800.0,
+        "words": []
+      },
+      {
+        "text": ",",
+        "conf": 85.0,
+        "y": 6900.0,
+        "words": []
+      },
+      {
+        "text": ",",
+        "conf": 85.0,
+        "y": 7000.0,
+        "words": []
+      },
+      {
+        "text": ",",
+        "conf": 85.0,
+        "y": 7100.0,
+        "words": []
+      },
+      {
+        "text": ",",
+        "conf": 85.0,
+        "y": 7200.0,
+        "words": []
+      },
+      {
+        "text": ",",
+        "conf": 85.0,
+        "y": 7300.0,
+        "words": []
+      },
+      {
+        "text": ", \" Hanna Anderson Women",
+        "conf": 85.0,
+        "y": 7400.0,
+        "words": []
+      },
+      {
+        "text": "1,00",
+        "conf": 85.0,
+        "y": 7500.0,
+        "words": []
+      },
+      {
+        "text": "each",
+        "conf": 85.0,
+        "y": 7600.0,
+        "words": []
+      },
+      {
+        "text": "26,40",
+        "conf": 85.0,
+        "y": 7700.0,
+        "words": []
+      },
+      {
+        "text": "6.",
+        "conf": 85.0,
+        "y": 7800.0,
+        "words": []
+      },
+      {
+        "text": "Large Coral Short Sleeve Casual",
+        "conf": 85.0,
+        "y": 7900.0,
+        "words": []
+      },
+      {
+        "text": "Fall Tee Shirt Dress",
+        "conf": 85.0,
+        "y": 8000.0,
+        "words": []
+      },
+      {
+        "text": "SUMMARY",
+        "conf": 85.0,
+        "y": 8100.0,
+        "words": []
+      },
+      {
+        "text": "VAT [%]",
+        "conf": 85.0,
+        "y": 8200.0,
+        "words": []
+      },
+      {
+        "text": "Net worth",
+        "conf": 85.0,
+        "y": 8300.0,
+        "words": []
+      },
+      {
+        "text": "VAT",
+        "conf": 85.0,
+        "y": 8400.0,
+        "words": []
+      },
+      {
+        "text": "Gross worth",
+        "conf": 85.0,
+        "y": 8500.0,
+        "words": []
+      },
+      {
+        "text": "10%",
+        "conf": 85.0,
+        "y": 8600.0,
+        "words": []
+      },
+      {
+        "text": "581,93",
+        "conf": 85.0,
+        "y": 8700.0,
+        "words": []
+      },
+      {
+        "text": "58,19",
+        "conf": 85.0,
+        "y": 8800.0,
+        "words": []
+      },
+      {
+        "text": "640,12",
+        "conf": 85.0,
+        "y": 8900.0,
+        "words": []
+      },
+      {
+        "text": "Total",
+        "conf": 85.0,
+        "y": 9000.0,
+        "words": []
+      },
+      {
+        "text": "$ 640,12",
+        "conf": 85.0,
+        "y": 9100.0,
+        "words": []
+      },
+      {
+        "text": "$ 581,93",
+        "conf": 85.0,
+        "y": 9200.0,
+        "words": []
+      },
+      {
+        "text": "$58,19",
+        "conf": 85.0,
+        "y": 9300.0,
+        "words": []
+      }
+    ],
+    "width": 1024,
+    "height": 9500,
+    "lang": "en",
+    "engine": "gemini-vision@1",
+    "capturedAt": 1767225600000,
+    "countryHint": "US",
+    "currencyHint": null
+  }
+}

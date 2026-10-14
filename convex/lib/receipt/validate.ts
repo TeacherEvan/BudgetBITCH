@@ -1,3 +1,5 @@
+import { parseAmounts } from './amounts';
+
 export type ValidationParams = {
   total?: number | null;
   totalRaw?: string;
@@ -32,7 +34,15 @@ export function validateExtraction(params: ValidationParams): ValidationResult {
       .replace(/[Il]/g, '1')
       .replace(/S/g, '5')
       .replace(/B/g, '8');
-    const repairedVal = parseFloat(repairedStr.replace(/[^0-9\.]/g, ''));
+    // Re-read the repaired string through the shared tokeniser. Stripping every
+    // non-digit except `.` turned `60.000` into 60 and `1.234,56` into 1.234,
+    // so the arithmetic check below could never confirm a repair on a
+    // grouped-thousands or European-format receipt.
+    const repairedTokens = parseAmounts(repairedStr);
+    const repairedVal =
+      repairedTokens.length > 0
+        ? repairedTokens[0].value
+        : parseFloat(repairedStr.replace(/[^0-9\.]/g, ''));
 
     if (!isNaN(repairedVal) && params.subtotal && params.tax) {
       if (Math.abs(params.subtotal + params.tax - repairedVal) <= 0.05) {

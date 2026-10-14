@@ -1,0 +1,319 @@
+{
+  "id": "invoice-000",
+  "capture": {
+    "bot": "huggingface.co/spaces/EvilEvan/TeacherBOY",
+    "botRevision": "15a087a4e3650358e03b163c6fca9b36f60df97a",
+    "agent": "ReceiptAgent (priority 8)",
+    "adapter": "src/services/receipt_bridge.gemini_text_to_ocr_payload",
+    "visionStage": {
+      "kind": "dataset-transcription",
+      "detail": "Human-verified OCR transcription shipped with the source dataset row; substituted for a live model call so fixtures stay free and deterministic. The bot prompt asks for exactly this: the receipt's raw text.",
+      "promptSha256": "b1e3bf1de236a905ff18af4bde00953feeb8255be62de8324336b62c32fb77ca",
+      "model": null
+    }
+  },
+  "image": {
+    "sha256": "f7ab9972d7790dc9b5974efa07b946d0cbee85501572a19c3537cb97e3de0d33",
+    "bytes": 298372,
+    "dataset": "mychen76/invoices-and-receipts_ocr_v1",
+    "config": "default",
+    "split": "test",
+    "rowIdx": 0,
+    "license": "Apache-2.0",
+    "homepage": "https://huggingface.co/datasets/mychen76/invoices-and-receipts_ocr_v1",
+    "note": "Scanned invoice/receipt images with parsed header + summary ground truth."
+  },
+  "datasetGroundTruth": {
+    "totalRaw": null,
+    "dateRaw": "09/18/2015",
+    "sellerRaw": "Bradley-Andrade 9879 Elizabeth Common Lake Jonathan, RI 12335"
+  },
+  "rawText": "Invoice no: 97159829\nDate of issue:\n09/18/2015\nSeller:\nClient:\nBradley-Andrade\nCastro PLC\n9879 Elizabeth Common\nUnit 9678 Box 9664\nLake Jonathan, RI 12335\nDPO AP 69387\nTax Id: 985-73-8194\nTax Id: 994-72-1270\nIBAN: GB81LZWO32519172531418\nITEMS\nUM\nNo.\nDescription\nQty\nNet price\nNet worth\nVAT [%]\nGross\n worth\n2,00\n444,60\n889,20\n12\" Marble Lapis Inlay Chess.\neach\n10%\n978,12\nTable Top With 2\" Pieces & 15'\nWooden Stand w537\nSUMMARY\nVAT [%]\nNet worth\nVAT\nGross worth\n10%\n889,20\n88,92\n978,12\nTotal\n$ 889,20\n$ 88,92\n$ 978,12",
+  "payload": {
+    "lines": [
+      {
+        "text": "Invoice no: 97159829",
+        "conf": 85.0,
+        "y": 0.0,
+        "words": []
+      },
+      {
+        "text": "Date of issue:",
+        "conf": 85.0,
+        "y": 100.0,
+        "words": []
+      },
+      {
+        "text": "09/18/2015",
+        "conf": 85.0,
+        "y": 200.0,
+        "words": []
+      },
+      {
+        "text": "Seller:",
+        "conf": 85.0,
+        "y": 300.0,
+        "words": []
+      },
+      {
+        "text": "Client:",
+        "conf": 85.0,
+        "y": 400.0,
+        "words": []
+      },
+      {
+        "text": "Bradley-Andrade",
+        "conf": 85.0,
+        "y": 500.0,
+        "words": []
+      },
+      {
+        "text": "Castro PLC",
+        "conf": 85.0,
+        "y": 600.0,
+        "words": []
+      },
+      {
+        "text": "9879 Elizabeth Common",
+        "conf": 85.0,
+        "y": 700.0,
+        "words": []
+      },
+      {
+        "text": "Unit 9678 Box 9664",
+        "conf": 85.0,
+        "y": 800.0,
+        "words": []
+      },
+      {
+        "text": "Lake Jonathan, RI 12335",
+        "conf": 85.0,
+        "y": 900.0,
+        "words": []
+      },
+      {
+        "text": "DPO AP 69387",
+        "conf": 85.0,
+        "y": 1000.0,
+        "words": []
+      },
+      {
+        "text": "Tax Id: 985-73-8194",
+        "conf": 85.0,
+        "y": 1100.0,
+        "words": []
+      },
+      {
+        "text": "Tax Id: 994-72-1270",
+        "conf": 85.0,
+        "y": 1200.0,
+        "words": []
+      },
+      {
+        "text": "IBAN: GB81LZWO32519172531418",
+        "conf": 85.0,
+        "y": 1300.0,
+        "words": []
+      },
+      {
+        "text": "ITEMS",
+        "conf": 85.0,
+        "y": 1400.0,
+        "words": []
+      },
+      {
+        "text": "UM",
+        "conf": 85.0,
+        "y": 1500.0,
+        "words": []
+      },
+      {
+        "text": "No.",
+        "conf": 85.0,
+        "y": 1600.0,
+        "words": []
+      },
+      {
+        "text": "Description",
+        "conf": 85.0,
+        "y": 1700.0,
+        "words": []
+      },
+      {
+        "text": "Qty",
+        "conf": 85.0,
+        "y": 1800.0,
+        "words": []
+      },
+      {
+        "text": "Net price",
+        "conf": 85.0,
+        "y": 1900.0,
+        "words": []
+      },
+      {
+        "text": "Net worth",
+        "conf": 85.0,
+        "y": 2000.0,
+        "words": []
+      },
+      {
+        "text": "VAT [%]",
+        "conf": 85.0,
+        "y": 2100.0,
+        "words": []
+      },
+      {
+        "text": "Gross",
+        "conf": 85.0,
+        "y": 2200.0,
+        "words": []
+      },
+      {
+        "text": "worth",
+        "conf": 85.0,
+        "y": 2300.0,
+        "words": []
+      },
+      {
+        "text": "2,00",
+        "conf": 85.0,
+        "y": 2400.0,
+        "words": []
+      },
+      {
+        "text": "444,60",
+        "conf": 85.0,
+        "y": 2500.0,
+        "words": []
+      },
+      {
+        "text": "889,20",
+        "conf": 85.0,
+        "y": 2600.0,
+        "words": []
+      },
+      {
+        "text": "12\" Marble Lapis Inlay Chess.",
+        "conf": 85.0,
+        "y": 2700.0,
+        "words": []
+      },
+      {
+        "text": "each",
+        "conf": 85.0,
+        "y": 2800.0,
+        "words": []
+      },
+      {
+        "text": "10%",
+        "conf": 85.0,
+        "y": 2900.0,
+        "words": []
+      },
+      {
+        "text": "978,12",
+        "conf": 85.0,
+        "y": 3000.0,
+        "words": []
+      },
+      {
+        "text": "Table Top With 2\" Pieces & 15'",
+        "conf": 85.0,
+        "y": 3100.0,
+        "words": []
+      },
+      {
+        "text": "Wooden Stand w537",
+        "conf": 85.0,
+        "y": 3200.0,
+        "words": []
+      },
+      {
+        "text": "SUMMARY",
+        "conf": 85.0,
+        "y": 3300.0,
+        "words": []
+      },
+      {
+        "text": "VAT [%]",
+        "conf": 85.0,
+        "y": 3400.0,
+        "words": []
+      },
+      {
+        "text": "Net worth",
+        "conf": 85.0,
+        "y": 3500.0,
+        "words": []
+      },
+      {
+        "text": "VAT",
+        "conf": 85.0,
+        "y": 3600.0,
+        "words": []
+      },
+      {
+        "text": "Gross worth",
+        "conf": 85.0,
+        "y": 3700.0,
+        "words": []
+      },
+      {
+        "text": "10%",
+        "conf": 85.0,
+        "y": 3800.0,
+        "words": []
+      },
+      {
+        "text": "889,20",
+        "conf": 85.0,
+        "y": 3900.0,
+        "words": []
+      },
+      {
+        "text": "88,92",
+        "conf": 85.0,
+        "y": 4000.0,
+        "words": []
+      },
+      {
+        "text": "978,12",
+        "conf": 85.0,
+        "y": 4100.0,
+        "words": []
+      },
+      {
+        "text": "Total",
+        "conf": 85.0,
+        "y": 4200.0,
+        "words": []
+      },
+      {
+        "text": "$ 889,20",
+        "conf": 85.0,
+        "y": 4300.0,
+        "words": []
+      },
+      {
+        "text": "$ 88,92",
+        "conf": 85.0,
+        "y": 4400.0,
+        "words": []
+      },
+      {
+        "text": "$ 978,12",
+        "conf": 85.0,
+        "y": 4500.0,
+        "words": []
+      }
+    ],
+    "width": 1024,
+    "height": 4700,
+    "lang": "en",
+    "engine": "gemini-vision@1",
+    "capturedAt": 1767225600000,
+    "countryHint": "US",
+    "currencyHint": null
+  }
+}
