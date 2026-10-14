@@ -49,7 +49,12 @@ Branch `fix/quick-add-i18n-modal-migration` off `origin/main` @ 69892f0. Commits
 
 ## 14. Remaining Work
 - None from this run.
-- Open from prior handover (unchanged, user decisions): OBJ-007 wizard `normLocale` typing; E2E creds; delete stale `refactor/quick-add-best-practices-origin` branch.
+- Open from prior handover (unchanged, user decisions): E2E creds; delete stale `refactor/quick-add-best-practices-origin` branch.
+
+## 14b. Second slice — OBJ-007 + prod-logging (same branch, commit ea00617)
+- **OBJ-007 (wizard normLocale typing):** `WizardShellProps.locale` narrowed from wide `string` to `AppLocale`; removed the unsafe `(locale || 'en') as WizardProfile['locale']` cast; callers (`wizard-client.tsx`, `dashboard-client.tsx`) now bridge via `resolveLocale(useLocale())` (canonical pattern from `layout.tsx`). Dropped the dead `en-ZA`→`ZAR` branch (en-ZA/en-TH are never active next-intl locales; `currencyOverride` is the canonical currency source). `normLocale` local removed. Test's `renderWizard` param retyped to `AppLocale`.
+- **Prod logging (code-review anti-pattern):** two dev `console.log` calls in `dashboard-client.tsx` routed through `logInfo` (structured, env-gated) from `@/lib/observability/logger`.
+- Verified: lint 0, typecheck 0, wizard+dashboard unit 4/4, full `npm run ci` green.
 
 ## 15. Final Recommendation
 READY. The Quick Add i18n migration is now complete and uniform across all surfaces and all 6 locales. Recommend merging `fix/quick-add-i18n-modal-migration` to `main`.
