@@ -21,7 +21,6 @@ const CURRENCY_OPTIONS: { code: CurrencyOverride; label: { en: string } }[] = [
   { code: 'CNY',     label: { en: 'Chinese Yuan (CNY)' } },
   { code: 'ZAR',     label: { en: 'South African Rand (ZAR)' } },
   { code: 'BRL',     label: { en: 'Brazilian Real (BRL)' } },
-  { code: 'INR',     label: { en: 'Indian Rupee (INR)' } },
   { code: 'CHF',     label: { en: 'Swiss Franc (CHF)' } },
   { code: 'KRW',     label: { en: 'Korean Won (KRW)' } },
 ];

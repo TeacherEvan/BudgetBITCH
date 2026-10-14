@@ -92,6 +92,37 @@ test("parseReceipt throws error when GEMINI_API_KEY is missing", async () => {
   ).rejects.toThrow(/Gemini API key is not configured/);
 });
 
+// Regression guard for the 2026-08-06 prod incident: convex/receipts.ts held a
+// Convex-credential-shaped value in GEMINI_API_KEY instead of the Google Gemini
+// developer key. parseReceipt forwards process.env.GEMINI_API_KEY verbatim into
+// the request URL, so a wrong/short/expired key produces a silent Google 401/403
+// at scan time (not a thrown error). If this ever regresses to reading a
+// different var or a different host, the request URL below will no longer match
+// the exact endpoint Google expects -> the test fails and blocks the ship.
+test("parseReceipt calls the exact Google Gemini endpoint with the configured GEMINI_API_KEY", async () => {
+  const userId = await seedUser(t, "endpoint-user");
+  const key = "AIzaTESTKEY_which_is_long_enough_to_look_real_1234567890";
+  vi.stubEnv("GEMINI_API_KEY", key);
+
+  const mockFetch = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      candidates: [{ content: { parts: [{ text: JSON.stringify({ amount: 1, merchant: "X", category: "other", date: null, lineItems: [] }) }] } }],
+    }),
+  });
+  vi.stubGlobal("fetch", mockFetch);
+
+  await asUser(userId).action(api.receipts.parseReceipt, {
+    base64Image: "data:image/png;base64,abcdef",
+  });
+
+  const [url] = mockFetch.mock.calls[0];
+  expect(url).toBe(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
+  );
+  vi.unstubAllGlobals();
+});
+
 test("parseReceipt handles API error responses", async () => {
   const userId = await seedUser(t, "receipt-user");
   const mockFetch = vi.fn().mockResolvedValue({

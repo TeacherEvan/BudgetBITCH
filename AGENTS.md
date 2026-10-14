@@ -153,11 +153,12 @@ the comment to be updated at fix time. Run it via `npm run check:comments`.
 | All unit tests | `npm test` (647 pass, ~3 skipped) |
 | Convex backend tests | `npm run test:convex` (195 pass) |
 | E2E (Playwright) | `npm run test:e2e` |
-| Full CI gate | `npm run ci` (11 steps via `scripts/run-full-ci.mjs`) |
+| Full CI gate | `npm run ci` (12 steps via `scripts/run-full-ci.mjs`) |
 | IDB store check | `npm run check:idb` |
 | CSP hosts check | `npm run check:csp` |
 | Convex import guard | `npm run check:convex-imports` |
 | Convex deploy guard | `npm run check:convex` |
+| Live Gemini key guard (receipt scan) | `npm run check:gemini-key` |
 | Stale test-comment check | `npm run check:comments` |
 | Watch tests | `npm run test:watch` |
 

@@ -71,7 +71,7 @@
   },
   "devDependencies": {
     "@capacitor/android": "^8.5.0",
-    "@capacitor/cli": "^8.5.0",
+    "@capacitor/cli": "^8.4.2",
     "@capacitor/ios": "^8.5.0",
     "@edge-runtime/vm": "^5.0.0",
     "@eslint/eslintrc": "^3.3.1",

@@ -11,11 +11,12 @@ const steps = [
   { name: '4/11 CSP / Source-host Drift Guard', cmd: 'node', args: ['scripts/check-csp-hosts.mjs'] },
   { name: '5/11 Convex Import Resolution Guard', cmd: 'node', args: ['scripts/check-convex-imports.mjs'], skipLocal: true },
   { name: '6/11 Unit & Component Tests (Vitest)', cmd: 'npm', args: ['test'] },
-  { name: '7/11 Convex Backend Tests', cmd: 'npm', args: ['run', 'test:convex'] },
-  { name: '8/11 Production Build (Next.js)', cmd: 'npm', args: ['run', 'build'] },
-  { name: '9/11 Security Audit (npm audit)', cmd: 'npm', args: ['audit', '--audit-level=high'], skipLocal: true },
-  { name: '10/11 Stale Bug-comment Guard', cmd: 'node', args: ['scripts/check-stale-bug-comments.mjs'] },
-  { name: '11/11 Deploy Guard (Convex URL check)', cmd: 'node', args: ['scripts/check-convex-deployment.mjs'], skipLocal: !hasConvexUrl && !isCI },
+  { name: '7/12 Convex Backend Tests', cmd: 'npm', args: ['run', 'test:convex'] },
+  { name: '8/12 Production Build (Next.js)', cmd: 'npm', args: ['run', 'build'] },
+  { name: '9/12 Security Audit (npm audit)', cmd: 'npm', args: ['audit', '--audit-level=high'], skipLocal: true },
+  { name: '10/12 Stale Bug-comment Guard', cmd: 'node', args: ['scripts/check-stale-bug-comments.mjs'] },
+  { name: '11/12 Deploy Guard (Convex URL check)', cmd: 'node', args: ['scripts/check-convex-deployment.mjs'], skipLocal: !hasConvexUrl && !isCI },
+  { name: '12/12 Live Gemini Key Guard (receipt scanning)', cmd: 'node', args: ['scripts/check-gemini-key.mjs'], skipLocal: !hasConvexUrl && !isCI },
 ];
 
 console.log('\n======================================================');

@@ -50,7 +50,6 @@ export function useReceiptScan() {
           await deleteOfflineDraft(queuedDraft.clientDraftId);
         } catch (error) {
           // Keep failed drafts queued for the next reconnect attempt, but log for visibility.
-          // eslint-disable-next-line no-console
           console.error(
             'Failed to sync offline draft; it will remain queued for retry.',
             {
