@@ -1,5 +1,11 @@
 # Budget Boss (`BudgetBITCH`)
 
+<!-- Art: Budget Boss promo, supplied by Evan 2026-10-26. AI-generated provenance; the 'PICKABOO' mark on the art is pending the Hand's confirmation. -->
+<p align="center">
+  <img src="docs/assets/budget-boss-hero.jpg" alt="Budget Boss — a regal lion in a suit and sunglasses, seated among gold coins over a city skyline" width="420" />
+</p>
+
+
 <img width="418" height="394" alt="Screenshot from 2026-08-29 12-08-04" src="https://github.com/user-attachments/assets/434d0e50-86fd-4804-ae1e-14bbd0ee74d4" />
 
 <img width="418" height="428" alt="Screenshot from 2026-08-29 12-08-13" src="https://github.com/user-attachments/assets/1e88dbfa-212e-4a32-9b17-b799b0441672" />
