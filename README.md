@@ -5,7 +5,7 @@
      after verification showed the GitHub handle `pickaboo` belongs to a third party
      (github.com/pickaboo, account held since 2013) and Pickaboo is an existing commercial brand. -->
 <p align="center">
-  <img src="docs/assets/budget-boss-hero.jpg" alt="Cover art: a lion in a dark suit, white shirt, red tie and sunglasses, seated behind stacks of gold coins, with a city skyline and a rising green arrow behind him, and a gold crown above the words Budget Boss." width="420" />
+  <img src="docs/assets/budget-boss-hero.jpg" alt="Cover art: a lion in a dark suit and sunglasses seated in a leather chair behind stacks of gold coins, with a night city skyline behind, a green rising arrow at top right, and a gold crown above the words Budget Boss." width="420" />
 </p>
 
 Budget Boss is a cinematic, privacy-first budgeting PWA built with Next.js App
