@@ -5,7 +5,7 @@
      after verification showed the GitHub handle `pickaboo` belongs to a third party
      (github.com/pickaboo, account held since 2013) and Pickaboo is an existing commercial brand. -->
 <p align="center">
-  <img src="docs/assets/budget-boss-hero.jpg" alt="Cover art: a lion in a dark suit and sunglasses seated in a leather chair behind stacks of gold coins, with a night city skyline behind, a green rising arrow at top right, and a gold crown above the words Budget Boss." width="420" />
+  <img src="docs/assets/budget-boss-hero.jpg" alt="Cover art: a lion in a dark suit and sunglasses seated in a leather chair behind stacks of gold coins, with a night city skyline behind, a green rising arrow at top right, and a gold crown above the words Budget Boss." width="384" height="260" />
 </p>
 
 Budget Boss is a cinematic, privacy-first budgeting PWA built with Next.js App
@@ -28,7 +28,6 @@ framer-motion, recharts, and zod.
 
 ## Quality gates
 <img width="280" height="710" alt="Screenshot from 2026-08-29 12-10-55" src="https://github.com/user-attachments/assets/2b3e871b-808f-475f-a258-14048bef7024" />
-
 
 The repository enforces a shift-left quality gate pipeline
 (`.github/workflows/ci.yml`). Run the full local chain before pushing:
