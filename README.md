@@ -28,7 +28,6 @@ framer-motion, recharts, and zod.
 - [AGENTS.md](AGENTS.md) — conventions for AI agents and contributors
 
 ## Quality gates
-<img width="280" height="710" alt="Screenshot from 2026-08-29 12-10-55" src="https://github.com/user-attachments/assets/2b3e871b-808f-475f-a258-14048bef7024" />
 
 The repository enforces a shift-left quality gate pipeline
 (`.github/workflows/ci.yml`). Run the full local chain before pushing:
@@ -42,9 +41,9 @@ See [docs/CI_CD.md](docs/CI_CD.md) for gate specifications, build guard mechanic
 `scripts/check-convex-imports.mjs`), and Vercel rollback procedure.
 
 ## Features
-<img width="893" height="1018" alt="Screenshot from 2026-08-29 12-10-17" src="https://github.com/user-attachments/assets/dc170421-89b6-41e1-8275-c655f6f9c8b4" />
+<img width="893" height="1018" alt="Settings screen with South African Rand selected, bar chart style and the gold theme, Market Watch categories, and the ZAR profile income field." src="https://github.com/user-attachments/assets/dc170421-89b6-41e1-8275-c655f6f9c8b4" />
 
-<img width="482" height="1018" alt="Screenshot from 2026-08-29 12-10-36" src="https://github.com/user-attachments/assets/550b91cb-5300-4199-a5f8-e657dba6bbf5" />
+<img width="482" height="1018" alt="Data tab of Settings: JSON export with encryption, JSON import, CSV export, Diagnostics &amp; Recovery, cloud sync, reset, and privacy cards." src="https://github.com/user-attachments/assets/550b91cb-5300-4199-a5f8-e657dba6bbf5" />
 
 - **Start Smart onboarding** — Money Survival Blueprint 10-step wizard
   (`src/components/wizard/wizard-shell.tsx`: income, rent, phone/internet,
@@ -299,6 +298,8 @@ labeled verified, estimated, or user-entered so the blueprint stays explainable.
 ## Screenshots
 
 Captured from the running app (August 2026).
+
+<img width="280" height="710" alt="Database Diagnostics &amp; Recovery window: storage quota and usage, a data integrity scan, local checkpoints, and three cloud recovery snapshots." src="https://github.com/user-attachments/assets/2b3e871b-808f-475f-a258-14048bef7024" />
 
 <img width="418" height="394" alt="Budget Boss welcome screen: a gold BB monogram above “BUDGET BOSS”, a “SHUT UP AND DO IT!!!” banner and a yellow “ENTER BOSS MODE” button on a dark brushed-gold background." src="https://github.com/user-attachments/assets/434d0e50-86fd-4804-ae1e-14bbd0ee74d4" />
 
