@@ -1,11 +1,12 @@
 # Budget Boss (`BudgetBITCH`)
 
 <!-- Art: Budget Boss promo supplied by Evan (@TeacherEvan), 2026-10-26.
-     Remediated 2026-10-27: the "PICKABOO" wordmark and hex logo were removed (bottom crop + patch)
-     after verification showed the GitHub handle `pickaboo` belongs to a third party
-     (github.com/pickaboo, account held since 2013) and Pickaboo is an existing commercial brand. -->
+     Remediated 2026-10-27: the "PICKABOO" hex logo, wordmark and underline were painted out in
+     place (no crop through the art) and the 1px light export border was trimmed, after verification
+     showed the GitHub handle `pickaboo` belongs to a third party (github.com/pickaboo, 2013) and
+     Pickaboo is an existing commercial brand. -->
 <p align="center">
-  <img src="docs/assets/budget-boss-hero.jpg" alt="Cover art: a lion in a dark suit and sunglasses seated in a leather chair behind stacks of gold coins, with a night city skyline behind, a green rising arrow at top right, and a gold crown above the words Budget Boss." width="384" height="260" />
+  <img src="docs/assets/budget-boss-hero.jpg" alt="Cover art: a lion in a dark suit and sunglasses seated in a leather chair behind stacks of gold coins, with a night city skyline behind, a green rising arrow at top right, and a gold crown above the words Budget Boss." width="381" height="302" />
 </p>
 
 Budget Boss is a cinematic, privacy-first budgeting PWA built with Next.js App
@@ -299,12 +300,12 @@ labeled verified, estimated, or user-entered so the blueprint stays explainable.
 
 Captured from the running app (August 2026).
 
-<img width="418" height="394" alt="Screenshot from 2026-08-29 12-08-04" src="https://github.com/user-attachments/assets/434d0e50-86fd-4804-ae1e-14bbd0ee74d4" />
+<img width="418" height="394" alt="Budget Boss welcome screen: a gold BB monogram above “BUDGET BOSS”, a “SHUT UP AND DO IT!!!” banner and a yellow “ENTER BOSS MODE” button on a dark brushed-gold background." src="https://github.com/user-attachments/assets/434d0e50-86fd-4804-ae1e-14bbd0ee74d4" />
 
-<img width="418" height="428" alt="Screenshot from 2026-08-29 12-08-13" src="https://github.com/user-attachments/assets/1e88dbfa-212e-4a32-9b17-b799b0441672" />
+<img width="418" height="428" alt="Money Flow Engine screen showing Money In at +100% and Money Out tracked, above a Funds Available (Net) card with a 100% Accurate badge." src="https://github.com/user-attachments/assets/1e88dbfa-212e-4a32-9b17-b799b0441672" />
 
-<img width="355" height="147" alt="Screenshot from 2026-08-29 12-08-28" src="https://github.com/user-attachments/assets/4b21ab2b-7193-47f7-b4e7-9b28bbe59781" />
+<img width="355" height="147" alt="Privacy notice card with a gold shield tick, “Your privacy, our promise”, copy explaining on-device encryption, a “Learn how your data is secured” link and a “Got it” button." src="https://github.com/user-attachments/assets/4b21ab2b-7193-47f7-b4e7-9b28bbe59781" />
 
-<img width="1280" height="1024" alt="Screenshot from 2026-08-29 12-09-19" src="https://github.com/user-attachments/assets/16ffc3db-650d-4f22-8e0e-97d3c4a3d90b" />
+<img width="1280" height="1024" alt="Dark Budget Boss dashboard with a tool sidebar, Daily Budget, Income Inflow and Budget Alerts cards, and a Latest Updates news column." src="https://github.com/user-attachments/assets/16ffc3db-650d-4f22-8e0e-97d3c4a3d90b" />
 
-<img width="545" height="440" alt="Screenshot from 2026-08-29 12-09-32" src="https://github.com/user-attachments/assets/a80c1c8b-f9fd-4057-acf5-1cc2cb7441b3" />
+<img width="545" height="440" alt="Accounts screen: “Run up to 5 independent budgets” with a New account button, a Sharing &amp; Collaboration Guidance card and a Personal board marked Active." src="https://github.com/user-attachments/assets/a80c1c8b-f9fd-4057-acf5-1cc2cb7441b3" />
