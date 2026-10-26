@@ -1,26 +1,17 @@
 # Budget Boss (`BudgetBITCH`)
 
-<!-- Art: Budget Boss promo, supplied by Evan 2026-10-26. AI-generated provenance; the 'PICKABOO' mark on the art is pending the Hand's confirmation. -->
+<!-- Art: Budget Boss promo supplied by Evan (GitHub @TeacherEvan / PicKaBoo), 2026-10-26.
+     "PICKABOO" on the art is the owner's own handle, used with permission. -->
 <p align="center">
-  <img src="docs/assets/budget-boss-hero.jpg" alt="Budget Boss — a regal lion in a suit and sunglasses, seated among gold coins over a city skyline" width="420" />
+  <img src="docs/assets/budget-boss-hero.jpg" alt="Cover art: a lion in a dark suit, white shirt, red tie and sunglasses, seated behind stacks of gold coins, with a city skyline and a rising green arrow behind him, and a gold crown above the words Budget Boss." width="384" height="344" />
 </p>
-
-
-<img width="418" height="394" alt="Screenshot from 2026-08-29 12-08-04" src="https://github.com/user-attachments/assets/434d0e50-86fd-4804-ae1e-14bbd0ee74d4" />
-
-<img width="418" height="428" alt="Screenshot from 2026-08-29 12-08-13" src="https://github.com/user-attachments/assets/1e88dbfa-212e-4a32-9b17-b799b0441672" />
-
-<img width="355" height="147" alt="Screenshot from 2026-08-29 12-08-28" src="https://github.com/user-attachments/assets/4b21ab2b-7193-47f7-b4e7-9b28bbe59781" />
-
-<img width="1280" height="1024" alt="Screenshot from 2026-08-29 12-09-19" src="https://github.com/user-attachments/assets/16ffc3db-650d-4f22-8e0e-97d3c4a3d90b" />
-
-<img width="545" height="440" alt="Screenshot from 2026-08-29 12-09-32" src="https://github.com/user-attachments/assets/a80c1c8b-f9fd-4057-acf5-1cc2cb7441b3" />
-
 
 Budget Boss is a cinematic, privacy-first budgeting PWA built with Next.js App
 Router, Convex (auth, database, realtime), IndexedDB for local-first offline
 data, a Service Worker for PWA sync, next-intl for i18n, Tailwind CSS v4,
 framer-motion, recharts, and zod.
+
+**Live:** https://budget-bitch-green.vercel.app
 
 > **Naming:** `BudgetBITCH` is the repository / package name. The user-facing
 > display name in all UI copy is **Budget Boss**.
@@ -302,3 +293,17 @@ The Start Smart flow uses curated, attributable regional inputs rather than
 open-ended scraping. Seeded assumptions keep the wizard responsive, then
 higher-trust data refines those defaults when available. Major assumptions are
 labeled verified, estimated, or user-entered so the blueprint stays explainable.
+
+## Screenshots
+
+Captured from the running app (August 2026).
+
+<img width="418" height="394" alt="Screenshot from 2026-08-29 12-08-04" src="https://github.com/user-attachments/assets/434d0e50-86fd-4804-ae1e-14bbd0ee74d4" />
+
+<img width="418" height="428" alt="Screenshot from 2026-08-29 12-08-13" src="https://github.com/user-attachments/assets/1e88dbfa-212e-4a32-9b17-b799b0441672" />
+
+<img width="355" height="147" alt="Screenshot from 2026-08-29 12-08-28" src="https://github.com/user-attachments/assets/4b21ab2b-7193-47f7-b4e7-9b28bbe59781" />
+
+<img width="1280" height="1024" alt="Screenshot from 2026-08-29 12-09-19" src="https://github.com/user-attachments/assets/16ffc3db-650d-4f22-8e0e-97d3c4a3d90b" />
+
+<img width="545" height="440" alt="Screenshot from 2026-08-29 12-09-32" src="https://github.com/user-attachments/assets/a80c1c8b-f9fd-4057-acf5-1cc2cb7441b3" />
