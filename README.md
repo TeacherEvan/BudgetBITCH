@@ -1,7 +1,9 @@
 # Budget Boss (`BudgetBITCH`)
 
-<!-- Art: Budget Boss promo supplied by Evan (GitHub @TeacherEvan / PicKaBoo), 2026-10-26.
-     "PICKABOO" on the art is the owner's own handle, used with permission. -->
+<!-- Art: Budget Boss promo supplied by Evan (@TeacherEvan), 2026-10-26.
+     Remediated 2026-10-27: the "PICKABOO" wordmark and hex logo were removed (bottom crop + patch)
+     after verification showed the GitHub handle `pickaboo` belongs to a third party
+     (github.com/pickaboo, account held since 2013) and Pickaboo is an existing commercial brand. -->
 <p align="center">
   <img src="docs/assets/budget-boss-hero.jpg" alt="Cover art: a lion in a dark suit, white shirt, red tie and sunglasses, seated behind stacks of gold coins, with a city skyline and a rising green arrow behind him, and a gold crown above the words Budget Boss." width="384" height="344" />
 </p>
