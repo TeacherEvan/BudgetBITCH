@@ -1,10 +1,10 @@
 // Bump CACHE_VERSION to force Service Worker clients to discard stale cached
 // app shells / chunks — required after a Convex deployment-URL change so
 // returning PWA users stop loading an old bundle that points at a dead backend.
-const CACHE_VERSION = 6;
+const CACHE_VERSION = 7;
 const APP_SHELL_CACHE = `bb-app-shell-v${CACHE_VERSION}`;
 const STATIC_ASSET_CACHE = `bb-static-assets-v${CACHE_VERSION}`;
-const SAFE_ROUTE_SHELLS = ["/", "/dashboard", "/wizard", "/settings"];
+const SAFE_ROUTE_SHELLS = ["/", "/dashboard", "/wizard", "/settings", "/accounts", "/quick-add"];
 const STATIC_ASSET_PATH_PREFIXES = ["/_next/static/", "/icons/"];
 
 // Cache app shell, launch city data, notes shell, calculator shell, and static assets.
