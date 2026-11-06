@@ -100,6 +100,7 @@ vi.mock('convex/react', () => ({
   useAction: () => mockProxyScan,
   useMutation: () => mockConvexMutation,
   useQuery: () => undefined,
+  ConvexReactClient: vi.fn(),
 }));
 
 // Mock the deterministic receipt scraper hook.

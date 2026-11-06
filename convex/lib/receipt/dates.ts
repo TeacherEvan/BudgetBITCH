@@ -70,7 +70,8 @@ export function extractDate(text: string, options: DateOptions = {}): DateCandid
     const day = parseInt(textMonthMatch[1], 10);
     const mStr = textMonthMatch[2].toUpperCase();
     let year = parseInt(textMonthMatch[3], 10);
-    year = normalizeBeToCe(year);
+    if (year < 100) year += 2000;
+    else year = normalizeBeToCe(year);
 
     const month = MONTH_MAP[mStr];
     if (month && isValidDate(year, month, day, nowMs)) {
@@ -105,7 +106,8 @@ export function extractDate(text: string, options: DateOptions = {}): DateCandid
     const first = parseInt(numMatch[1], 10);
     const second = parseInt(numMatch[2], 10);
     let year = parseInt(numMatch[3], 10);
-    year = normalizeBeToCe(year);
+    if (year < 100) year += 2000;
+    else year = normalizeBeToCe(year);
 
     let day = first;
     let month = second;

@@ -131,6 +131,36 @@ describe("line identity mapping (Task 2)", () => {
     expect(forU1).toHaveLength(1);
     expect(forU1[0].accountId).toBe("acc-2");
   });
+
+  it("Test D: linking an already-linked lineUserId by another user is rejected (anti-hijack)", async () => {
+    const t = newTest();
+    const aliceId = await t.run(async (ctx: any) =>
+      ctx.db.insert("users", { email: "alice@y.z" }),
+    );
+    const bobId = await t.run(async (ctx: any) =>
+      ctx.db.insert("users", { email: "bob@y.z" }),
+    );
+
+    // Alice links her LINE account
+    await asUser(aliceId)(t).mutation(api.line.linkLineAccount, {
+      lineUserId: "LINE_ALICE",
+      accountId: "acc-alice",
+    });
+
+    // Bob tries to link Alice's LINE account -> must throw
+    await expect(
+      asUser(bobId)(t).mutation(api.line.linkLineAccount, {
+        lineUserId: "LINE_ALICE",
+        accountId: "acc-bob",
+      }),
+    ).rejects.toThrow("already linked to another user");
+
+    // Verify mapping is still owned by Alice
+    const resolvedOwner = await t.query(internal.line.getConvexUserByLineId, {
+      lineUserId: "LINE_ALICE",
+    });
+    expect(resolvedOwner).toBe(aliceId);
+  });
 });
 
 // Webhook ingestion (Task 4): verifies signature, fetches the image, resolves

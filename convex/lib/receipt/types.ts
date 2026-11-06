@@ -1,9 +1,7 @@
 import type { LineItem } from './extract_details';
-import type { MinorUnits, FxMicros } from './ledgerMath';
+export type { MinorUnits, FxMicros } from './ledgerMath';
 
 // Branded types for financial and date boundaries (zero runtime cost)
-export type MinorUnits = MinorUnits;
-export type FxMicros = FxMicros;
 export type ISODateString = string & { readonly __brand: 'ISODateString' };
 
 /** Normalize Buddhist Era (BE) year to Gregorian (CE). BE = CE + 543. */

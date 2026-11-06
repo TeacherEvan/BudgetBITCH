@@ -95,7 +95,7 @@ export function extractTotal(payload: NormalisedPayload): FieldCandidate | null 
   const lines = payload.lines;
 
   // 1. Anchor search - collect ALL candidates with their confidence
-  const candidates: Array<{ value: number; conf: number; evidenceLine: NormalisedLine; ruleId: string }> = [];
+  const candidates: Array<{ value: number; conf: number; evidenceLine?: NormalisedLine; ruleId: string }> = [];
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];

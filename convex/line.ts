@@ -1,4 +1,4 @@
-import { httpAction, internalAction, internalQuery, mutation } from "./_generated/server";
+import { httpAction, internalAction, internalMutation, internalQuery, mutation } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
@@ -15,19 +15,37 @@ import {
 
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-/** Check and record webhook event idempotency. Returns true if already processed. */
-async function checkIdempotency(ctx: any, webhookEventId: string): Promise<boolean> {
-  const existing = await ctx.db
-    .query("processedWebhooks")
-    .withIndex("by_webhookEventId", (q) => q.eq("webhookEventId", webhookEventId))
-    .unique();
-  if (existing) return true;
-  await ctx.db.insert("processedWebhooks", {
-    webhookEventId,
-    createdAt: Date.now(),
-  });
-  return false;
-}
+/** Check and record webhook event idempotency in a mutation transaction. Returns true if already processed. */
+export const checkAndRecordWebhookEvent = internalMutation({
+  args: { webhookEventId: v.string() },
+  handler: async (ctx, { webhookEventId }): Promise<boolean> => {
+    const existing = await ctx.db
+      .query("processedWebhooks")
+      .withIndex("by_webhookEventId", (q) => q.eq("webhookEventId", webhookEventId))
+      .unique();
+    if (existing) return true;
+    await ctx.db.insert("processedWebhooks", {
+      webhookEventId,
+      createdAt: Date.now(),
+    });
+    return false;
+  },
+});
+
+/** Delete expired webhook idempotency records in batches. */
+export const deleteExpiredWebhookEvents = internalMutation({
+  args: { cutoff: v.number(), limit: v.number() },
+  handler: async (ctx, { cutoff, limit }) => {
+    const batch = await ctx.db
+      .query("processedWebhooks")
+      .withIndex("by_createdAt", (q) => q.lte("createdAt", cutoff))
+      .take(limit);
+    for (const row of batch) {
+      await ctx.db.delete(row._id);
+    }
+    return batch.length;
+  },
+});
 
 /** Clean up expired idempotency records (call from cron). */
 export const cleanupProcessedWebhooks = internalAction({
@@ -36,15 +54,12 @@ export const cleanupProcessedWebhooks = internalAction({
     const cutoff = Date.now() - IDEMPOTENCY_TTL_MS;
     let deleted = 0;
     while (true) {
-      const batch = await ctx.db
-        .query("processedWebhooks")
-        .withIndex("by_createdAt", (q) => q.lte("createdAt", cutoff))
-        .take(250);
-      for (const row of batch) {
-        await ctx.db.delete(row._id);
-        deleted++;
-      }
-      if (batch.length < 250) break;
+      const count: number = await ctx.runMutation(internal.line.deleteExpiredWebhookEvents, {
+        cutoff,
+        limit: 250,
+      });
+      deleted += count;
+      if (count < 250) break;
     }
     return { deleted };
   },
@@ -69,7 +84,12 @@ export const linkLineAccount = mutation({
       .withIndex("by_lineUserId", (q) => q.eq("lineUserId", args.lineUserId))
       .unique();
 
-    // Upsert: patch the existing mapping if this LINE user was already linked.
+    // Prevent hijacking: if this LINE account is already linked to a DIFFERENT user, reject.
+    if (existing && existing.userId !== userId) {
+      throw new ConvexError("This LINE account is already linked to another user");
+    }
+
+    // Upsert: patch the existing mapping if this LINE user was already linked by the same user.
     if (existing) {
       await ctx.db.patch(existing._id, {
         userId,
@@ -308,7 +328,9 @@ export const lineWebhook = httpAction(async (ctx, req) => {
     `fallback-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   
   // Check idempotency - if already processed, return 200 immediately
-  const alreadyProcessed = await checkIdempotency(ctx, webhookEventId);
+  const alreadyProcessed = await ctx.runMutation(internal.line.checkAndRecordWebhookEvent, {
+    webhookEventId,
+  });
   if (alreadyProcessed) {
     clog("info", "line_webhook_deduplicated", { traceId, webhookEventId });
     return new Response("ok", { status: 200 });
