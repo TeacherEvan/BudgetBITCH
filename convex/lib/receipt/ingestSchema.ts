@@ -9,11 +9,15 @@ import { z } from "zod";
  * `scrapeEngine(payload)` and `payload.lines?.map(...)`. Hardening the shape
  * here means a bad body is rejected with a 400 + actionable message instead of
  * throwing deep inside the scraper.
+ * 
+ * For app:<userId> identity delegation, an optional appToken field is required.
+ * Token format: "<userId>:<timestamp>:<hmac>"
  */
 export const ingestRequestBodySchema = z.object({
   lineUserId: z.string().min(1, "lineUserId is required"),
   idempotencyKey: z.string().min(1, "idempotencyKey is required"),
   source: z.string().optional(),        // "line" (default) | "app-camera"
+  appToken: z.string().optional(),      // HMAC token for app:<userId> validation
   payload: z.object({
     lines: z
       .array(

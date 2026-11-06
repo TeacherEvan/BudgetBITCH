@@ -47,7 +47,9 @@ export function runCorpus(
     totalQuestions += result.questions.length;
 
     const gotTotal = result.fields.total?.value;
-    if (gotTotal !== undefined && gotTotal !== null && Number(gotTotal) === exp.total) {
+    // Convert minor units to float for comparison with expected float values
+    const gotTotalFloat = gotTotal !== undefined && gotTotal !== null ? Number(gotTotal) / 100 : undefined;
+    if (gotTotalFloat !== undefined && Math.abs(gotTotalFloat - exp.total) < 0.01) {
       correctTotal++;
     } else {
       failures.push({

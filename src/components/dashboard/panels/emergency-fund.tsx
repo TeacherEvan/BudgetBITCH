@@ -13,6 +13,7 @@ import { Modal } from '@/components/ui/modal';
 import { useCurrency } from '@/hooks/use-currency';
 import { EmergencyFundSkeleton } from './emergency-fund-skeleton';
 import { notify } from '@/lib/ui/notice';
+import { ContextualInsightPill } from './contextual-insight-pill';
 
 interface EmergencyFundProps {
   locale?: string;
@@ -85,6 +86,14 @@ export function EmergencyFund({ locale = 'en' }: EmergencyFundProps) {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-4"
     >
+      {/* Behavioral Psychology Teachable Moment */}
+      <ContextualInsightPill
+        id="emergency-buffer-psychology"
+        principle="The Stress Inoculation Buffer"
+        badge="PEACE OF MIND"
+        insight="A cash reserve of just 1 month cuts financial stress markers by 40%. Don't wait until you can save 6 months—reach your first $1,000 milestone first."
+      />
+
       <div className="flex items-center justify-between">
         <motion.h3
           initial={{ opacity: 0, x: -10 }}

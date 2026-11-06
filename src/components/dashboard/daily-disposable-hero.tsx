@@ -7,6 +7,7 @@ import { useCurrency } from '@/hooks/use-currency';
 import { reconcileBudgetWithExpenses } from '@/lib/utils/budget-calculator';
 import { motion } from 'framer-motion';
 import { AddIncomeModal } from './add-income-modal';
+import { ContextualInsightPill } from './panels/contextual-insight-pill';
 
 interface DailyDisposableHeroProps {
   locale: string;
@@ -135,7 +136,16 @@ export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProp
   }
 
   return (
-    <div className="relative rounded-2xl border border-[var(--gold-border-strong)] bg-gradient-to-br from-[var(--bg-surface-2)] to-[var(--bg-surface-1)] p-6 md:p-8 overflow-hidden">
+    <div className="space-y-3 mb-3">
+      {/* Daily Mindfulness Teachable Moment */}
+      <ContextualInsightPill
+        id="daily-disposable-psychology"
+        principle="Cognitive Anchoring"
+        badge="DAILY CALM"
+        insight="Looking at a lump sum triggers an illusion of wealth. Dividing your uncommitted money by the exact days left anchors your subconscious to a stress-free daily ceiling."
+      />
+
+      <div className="relative rounded-2xl border border-[var(--gold-border-strong)] bg-gradient-to-br from-[var(--bg-surface-2)] to-[var(--bg-surface-1)] p-6 md:p-8 overflow-hidden">
       {/* Glow effect based on spending pressure */}
       <div 
         className="absolute inset-0 pointer-events-none opacity-20"
@@ -263,5 +273,6 @@ export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProp
         locale={locale}
       />
     </div>
+  </div>
   );
 }

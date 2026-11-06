@@ -53,6 +53,11 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
+// Mock Convex Auth for RequireAuth wrapper
+vi.mock('@convex-dev/auth/react', () => ({
+  useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
+}));
+
 // Mock Next Intl
 vi.mock('next-intl', () => ({
   useLocale: () => 'en',

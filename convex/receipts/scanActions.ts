@@ -48,6 +48,21 @@ export const proxyReceiptScan = action({
       throw new ConvexError("Receipt bot is not configured");
     }
 
+    // Generate HMAC token for app:<userId> identity delegation
+    // Token format: "<userId>:<timestamp>:<hmac>"
+    const timestamp = Date.now();
+    const message = `${userId}:${timestamp}`;
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(syncSecret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(message));
+    const hmac = Buffer.from(signature).toString("hex");
+    const appToken = `${userId}:${timestamp}:${hmac}`;
+
     const res = await fetch(`${botUrl.replace(/\/$/, "")}/receipt/scan`, {
       method: "POST",
       headers: {
@@ -59,6 +74,8 @@ export const proxyReceiptScan = action({
         userId,
         idempotencyKey: args.idempotencyKey,
         countryHint: args.countryHint,
+        lineUserId: `app:${userId}`,
+        appToken,
       }),
     });
 

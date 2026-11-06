@@ -1,4 +1,6 @@
 import type { NormalisedPayload } from './normalise';
+import type { MinorUnits } from "./ledgerMath";
+import { parseToMinorUnits } from "./ledgerMath";
 
 /**
  * Currency symbol → ISO code + display symbol map.
@@ -55,38 +57,44 @@ export function detectCurrency(text: string): { code: string; symbol: string } {
 }
 
 /**
- * Extract a floating-point monetary amount from text.
+ * Extract an integer minor-units monetary amount from text.
  * Handles $45.20, 1,234.50, 120.00, 45,20 (European decimal comma).
- * Returns 0.0 if no amount found.
+ * Returns 0 minor units if no amount found.
  */
-export function parseAmount(text: string): number {
-  if (!text) return 0.0;
+export function parseAmount(text: string): MinorUnits {
+  if (!text) return 0 as MinorUnits;
 
   // Primary: decimal with dot (1,234.50 or 45.20)
   const dotMatch = text.match(/[\d,]+\.\d{2}\b/);
   if (dotMatch) {
-    const cleaned = dotMatch[0].replace(/,/g, '');
-    const val = parseFloat(cleaned);
-    if (!Number.isNaN(val) && val > 0) return val;
+    try {
+      return parseToMinorUnits(dotMatch[0].replace(/,/g, ''));
+    } catch {
+      // fall through
+    }
   }
 
   // Fallback: European decimal comma (45,20)
   const commaMatch = text.match(/\b\d+,\d{2}\b/);
   if (commaMatch) {
-    const cleaned = commaMatch[0].replace(',', '.');
-    const val = parseFloat(cleaned);
-    if (!Number.isNaN(val) && val > 0) return val;
+    try {
+      return parseToMinorUnits(commaMatch[0].replace(',', '.'));
+    } catch {
+      // fall through
+    }
   }
 
   // Loose fallback: any number
   const looseMatch = text.match(/\b\d+[.,]?\d*\b/);
   if (looseMatch) {
-    const cleaned = looseMatch[0].replace(',', '.');
-    const val = parseFloat(cleaned);
-    if (!Number.isNaN(val) && val > 0) return val;
+    try {
+      return parseToMinorUnits(looseMatch[0].replace(',', '.'));
+    } catch {
+      // fall through
+    }
   }
 
-  return 0.0;
+  return 0 as MinorUnits;
 }
 
 /**

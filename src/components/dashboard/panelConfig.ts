@@ -40,10 +40,11 @@ export const PANEL_ORDER: PanelKey[] = [
   'forecast'
 ];
 
-export type ExcelTab = 'standard' | 'variance' | 'cashflow' | 'pivot';
+export type ExcelTab = 'standard' | 'variance' | 'cashflow' | 'pivot' | 'perspective';
 
 export const EXCEL_TABS: { key: ExcelTab; label: string; icon: string; color: string; bg: string }[] = [
   { key: 'standard', label: 'Standard Dashboard', icon: '📊', color: 'text-black', bg: 'bg-amber-400' },
+  { key: 'perspective', label: 'The Bigger Picture', icon: '🔭', color: 'text-black', bg: 'bg-gradient-to-r from-amber-400 to-yellow-500' },
   { key: 'variance', label: 'Excel Variance Grid', icon: '✨', color: 'text-black', bg: 'bg-emerald-400' },
   { key: 'cashflow', label: '30D Cash Flow', icon: '📅', color: 'text-black', bg: 'bg-amber-400' },
   { key: 'pivot', label: '50/30/20 Matrix', icon: '🧩', color: 'text-black', bg: 'bg-cyan-400' },

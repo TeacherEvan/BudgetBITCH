@@ -6,10 +6,47 @@ import { ingestRequestBodySchema } from "../lib/receipt/ingestSchema";
 import { scrape as scrapeEngine } from "../lib/receipt/engine";
 import type { OcrPayload } from "../lib/receipt/types";
 
+// HMAC-SHA256 token validation for app:<userId> identity delegation
+// Token format: "<userId>:<timestamp>:<hmac>"
+// HMAC = HMAC-SHA256("<userId>:<timestamp>", CONVEX_SYNC_SECRET)
+// Valid for 5 minutes to prevent replay
+async function validateAppToken(lineUserId: string, token: string, syncSecret: string): Promise<Id<"users"> | null> {
+  if (!lineUserId.startsWith("app:")) return null;
+  
+  const rawUserId = lineUserId.slice(4) as Id<"users">;
+  const parts = token.split(":");
+  if (parts.length !== 3) return null;
+  
+  const [tokenUserId, timestampStr, hmac] = parts;
+  if (tokenUserId !== rawUserId) return null;
+  
+  const timestamp = parseInt(timestampStr, 10);
+  if (isNaN(timestamp)) return null;
+  
+  // Check timestamp is within 5 minutes
+  const now = Date.now();
+  if (Math.abs(now - timestamp) > 5 * 60 * 1000) return null;
+  
+  // Verify HMAC
+  const message = `${rawUserId}:${timestamp}`;
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(syncSecret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["verify"]
+  );
+  const signature = new Uint8Array(Buffer.from(hmac, "hex"));
+  const valid = await crypto.subtle.verify("HMAC", key, signature, new TextEncoder().encode(message));
+  if (!valid) return null;
+  
+  return rawUserId;
+}
+
 // Budget Boss: HTTP action for TeacherBOY receipt ingestion
-// Authenticated via Bearer token (CONVEX_SYNC_SECRET), not user session.
+// Authenticated via Bearer token (CONVEX_SYNC_SECRET) + HMAC token for app: identity
 export const ingestReceipt = httpAction(async (ctx, req) => {
-  // Verify Bearer token
+  // Verify Bearer token (CONVEX_SYNC_SECRET)
   const authHeader = req.headers.get("Authorization") ?? "";
   const expectedToken = process.env.CONVEX_SYNC_SECRET ?? "";
 
@@ -65,23 +102,28 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
       { status: 400, headers: { "Content-Type": "application/json" } }
     );
   }
-  const { lineUserId, payload, idempotencyKey, source: requestSource } = parsed.data;
+  const { lineUserId, payload, idempotencyKey, source: requestSource, appToken } = parsed.data;
 
-  // Resolve user: "app:<userId>" bypasses LINE mapping (app camera flow);
-  // everything else uses the existing LINE path.
+  // Resolve user: "app:<userId>" requires valid HMAC token; everything else uses existing LINE path.
   let userId: Id<"users">;
   let accountId: string | undefined;
 
   if (lineUserId.startsWith("app:")) {
-    const rawUserId = lineUserId.slice(4) as Id<"users">;
-    const user = await ctx.runQuery(internal.receipts.getUserForIngest, { userId: rawUserId });
+    const validatedUserId = await validateAppToken(lineUserId, appToken ?? "", expectedToken);
+    if (!validatedUserId) {
+      return new Response(JSON.stringify({ success: false, error: "Invalid or expired app token" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    const user = await ctx.runQuery(internal.receipts.getUserForIngest, { userId: validatedUserId });
     if (!user) {
       return new Response(JSON.stringify({ success: false, error: "User not found" }), {
         status: 404,
         headers: { "Content-Type": "application/json" },
       });
     }
-    userId = rawUserId;
+    userId = validatedUserId;
     accountId = undefined;
   } else {
     // Existing LINE flow.

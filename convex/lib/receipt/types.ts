@@ -1,4 +1,17 @@
 import type { LineItem } from './extract_details';
+import type { MinorUnits, FxMicros } from './ledgerMath';
+
+// Branded types for financial and date boundaries (zero runtime cost)
+export type MinorUnits = MinorUnits;
+export type FxMicros = FxMicros;
+export type ISODateString = string & { readonly __brand: 'ISODateString' };
+
+/** Normalize Buddhist Era (BE) year to Gregorian (CE). BE = CE + 543. */
+export function normalizeBeToCe(year: number): number {
+  if (year >= 2500) return year - 543; // Full BE year (e.g., 2569 → 2026)
+  if (year >= 60 && year <= 99) return (2500 + year) - 543; // 2-digit BE year (e.g., 69 → 2026)
+  return year; // Assume already CE
+}
 
 export type OcrWord = {
   text: string;

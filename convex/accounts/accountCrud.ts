@@ -385,35 +385,43 @@ export const deleteAccount = mutation({
 
     if (acc.boardId) {
       const members = await getBoardMemberIds(ctx, acc.boardId);
-      const invites = await ctx.db
-        .query("invites")
-        .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
-        .collect();
-      for (const inv of invites) await ctx.db.delete(inv._id);
+      // Batch delete invites
+      while (true) {
+        const batch = await ctx.db
+          .query("invites")
+          .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
+          .take(250);
+        for (const inv of batch) await ctx.db.delete(inv._id);
+        if (batch.length < 250) break;
+      }
       const board = await ctx.db
         .query("accountBoards")
         .withIndex("by_boardId", (q) => q.eq("boardId", acc.boardId!))
         .unique();
       if (board) await ctx.db.delete(board._id);
-      const memberRows = await ctx.db
-        .query("boardMembers")
-        .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
-        .collect();
-      for (const m of memberRows) {
-        await ctx.db.delete(m._id);
-        if (m.userId !== userId) {
-          const mp = await ctx.db
-            .query("userProfiles")
-            .withIndex("by_user", (q) => q.eq("userId", m.userId))
-            .unique();
-          if (mp && mp.joinedBoardIds) {
-            await ctx.db.patch(mp._id, {
-              joinedBoardIds: mp.joinedBoardIds.filter(
-                (id) => id !== acc.boardId,
-              ),
-            });
+      // Batch delete boardMembers
+      while (true) {
+        const batch = await ctx.db
+          .query("boardMembers")
+          .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
+          .take(250);
+        for (const m of batch) {
+          await ctx.db.delete(m._id);
+          if (m.userId !== userId) {
+            const mp = await ctx.db
+              .query("userProfiles")
+              .withIndex("by_user", (q) => q.eq("userId", m.userId))
+              .unique();
+            if (mp && mp.joinedBoardIds) {
+              await ctx.db.patch(mp._id, {
+                joinedBoardIds: mp.joinedBoardIds.filter(
+                  (id) => id !== acc.boardId,
+                ),
+              });
+            }
           }
         }
+        if (batch.length < 250) break;
       }
       void members;
     }

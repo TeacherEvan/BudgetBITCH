@@ -223,14 +223,32 @@ async function postIngest(body: unknown, token = "test-sync-secret") {
   });
 }
 
+/** Generate a valid HMAC token for app:<userId> testing. */
+async function generateAppToken(userId: string, syncSecret: string, timestamp?: number): Promise<string> {
+  const ts = timestamp ?? Date.now();
+  const message = `${userId}:${ts}`;
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(syncSecret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(message));
+  const hmac = Buffer.from(signature).toString("hex");
+  return `${userId}:${ts}:${hmac}`;
+}
+
 test("ingestReceipt resolves an app: prefixed user without a LINE mapping", async () => {
   vi.stubEnv("CONVEX_SYNC_SECRET", "test-sync-secret");
   const userId = await seedUser(t, "app-camera-user");
+  const appToken = await generateAppToken(userId, "test-sync-secret");
 
   const res = await postIngest({
     lineUserId: `app:${userId}`,
     idempotencyKey: "app_no_mapping_1",
     source: "app-camera",
+    appToken,
     payload: ingestPayload(["MERCHANT CAFE", "TOTAL 91000"]),
   });
 
@@ -245,11 +263,13 @@ test("ingestReceipt returns 404 for an app: prefixed user that does not exist", 
   const realUserId = await seedUser(t, "real-user");
   // Structurally valid Convex ID for the users table, but deleted.
   await t.run(async (ctx: any) => ctx.db.delete(realUserId));
+  const appToken = await generateAppToken(realUserId, "test-sync-secret");
 
   const res = await postIngest({
     lineUserId: `app:${realUserId}`,
     idempotencyKey: "app_missing_user_1",
     source: "app-camera",
+    appToken,
     payload: ingestPayload(["MERCHANT CAFE", "TOTAL 91000"]),
   });
 
@@ -261,11 +281,13 @@ test("ingestReceipt returns 404 for an app: prefixed user that does not exist", 
 test("ingestReceipt persists source=app-camera instead of hardcoding line", async () => {
   vi.stubEnv("CONVEX_SYNC_SECRET", "test-sync-secret");
   const userId = await seedUser(t, "source-user");
+  const appToken = await generateAppToken(userId, "test-sync-secret");
 
   const res = await postIngest({
     lineUserId: `app:${userId}`,
     idempotencyKey: "app_source_1",
     source: "app-camera",
+    appToken,
     payload: ingestPayload(["MERCHANT CAFE", "TOTAL 91000"]),
   });
   expect(res.status).toBe(200);
@@ -282,10 +304,12 @@ test("ingestReceipt persists source=app-camera instead of hardcoding line", asyn
 test("ingestReceipt defaults source to line when the field is omitted", async () => {
   vi.stubEnv("CONVEX_SYNC_SECRET", "test-sync-secret");
   const userId = await seedUser(t, "default-source-user");
+  const appToken = await generateAppToken(userId, "test-sync-secret");
 
   const res = await postIngest({
     lineUserId: `app:${userId}`,
     idempotencyKey: "app_default_source_1",
+    appToken,
     payload: ingestPayload(["MERCHANT CAFE", "TOTAL 91000"]),
   });
   expect(res.status).toBe(200);
@@ -352,6 +376,15 @@ test("proxyReceiptScan sends the server-derived userId and never a client one", 
   expect(sent.userId).toBe(userId);
   expect(sent.countryHint).toBe("ID");
   expect(sent.idempotencyKey).toBe("proxy_ok_1");
+  expect(sent.lineUserId).toBe(`app:${userId}`);
+  expect(sent.appToken).toBeDefined();
+  expect(typeof sent.appToken).toBe("string");
+  // Validate the token format: userId:timestamp:hmac
+  const tokenParts = sent.appToken.split(":");
+  expect(tokenParts).toHaveLength(3);
+  expect(tokenParts[0]).toBe(userId);
+  expect(parseInt(tokenParts[1], 10)).toBeGreaterThan(Date.now() - 10000);
+  expect(tokenParts[2]).toMatch(/^[a-f0-9]{64}$/); // 64 hex chars = 32 bytes SHA-256
 });
 
 test("proxyReceiptScan surfaces a bot HTTP failure instead of returning junk", async () => {

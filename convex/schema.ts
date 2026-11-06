@@ -292,4 +292,36 @@ export default defineSchema({
     .index("by_user_and_normalised", ["userId", "normalised"])
     // Purge path: delete every alias for a user without a table scan.
     .index("by_user", ["userId"]),
+
+  // Sharded delta counters for shared boards — eliminates OCC contention on hot board documents.
+  // Each board has 16 shards; writes increment a single shard; reads sum all 16 shards.
+  boardShards: defineTable({
+    boardId: v.string(),
+    shardIndex: v.number(), // 0-15
+    totalMinor: v.int64(), // signed integer minor units
+    updatedAt: v.number(),
+  })
+    .index("by_board_and_shard", ["boardId", "shardIndex"]),
+
+  // Append-only ledger entries for shared boards (audit trail + recomputation source)
+  ledgerEntries: defineTable({
+    boardId: v.string(),
+    transactionId: v.string(),
+    memberId: v.id("users"),
+    amountMinor: v.int64(), // signed integer minor units
+    store: v.string(), // 'expenses' | 'incomes' | 'bills'
+    itemId: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_board_and_transaction", ["boardId", "transactionId"])
+    .index("by_board_and_member", ["boardId", "memberId"])
+    .index("by_createdAt", ["createdAt"]),
+
+  // Webhook idempotency for LINE receipts
+  processedWebhooks: defineTable({
+    webhookEventId: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_webhookEventId", ["webhookEventId"])
+    .index("by_createdAt", ["createdAt"]),
 });

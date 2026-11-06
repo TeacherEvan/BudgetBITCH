@@ -13,6 +13,43 @@ import {
   validateMerchant,
 } from "./receipts";
 
+const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+/** Check and record webhook event idempotency. Returns true if already processed. */
+async function checkIdempotency(ctx: any, webhookEventId: string): Promise<boolean> {
+  const existing = await ctx.db
+    .query("processedWebhooks")
+    .withIndex("by_webhookEventId", (q) => q.eq("webhookEventId", webhookEventId))
+    .unique();
+  if (existing) return true;
+  await ctx.db.insert("processedWebhooks", {
+    webhookEventId,
+    createdAt: Date.now(),
+  });
+  return false;
+}
+
+/** Clean up expired idempotency records (call from cron). */
+export const cleanupProcessedWebhooks = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    const cutoff = Date.now() - IDEMPOTENCY_TTL_MS;
+    let deleted = 0;
+    while (true) {
+      const batch = await ctx.db
+        .query("processedWebhooks")
+        .withIndex("by_createdAt", (q) => q.lte("createdAt", cutoff))
+        .take(250);
+      for (const row of batch) {
+        await ctx.db.delete(row._id);
+        deleted++;
+      }
+      if (batch.length < 250) break;
+    }
+    return { deleted };
+  },
+});
+
 // Links a LINE user ID to the authenticated Convex user (and optional account).
 // The userId is resolved server-side from auth — never taken from client args.
 export const linkLineAccount = mutation({
@@ -235,6 +272,7 @@ export const parseLineReceipt = internalAction({
  * message event fetches the original image from LINE, resolves the owning
  * Convex user from the LINE→Convex mapping, and ingests it via
  * `parseLineReceipt`. Always responds 200 so LINE does not retry endlessly.
+ * Includes idempotency protection via processedWebhooks table (24h TTL).
  */
 export const lineWebhook = httpAction(async (ctx, req) => {
   const traceId = genTraceId();
@@ -262,6 +300,17 @@ export const lineWebhook = httpAction(async (ctx, req) => {
   const events = (payload as { events?: unknown[] }).events;
   if (!Array.isArray(events)) {
     clogMetric("line_webhook_events", 0, "count", { status_class: "no_events" });
+    return new Response("ok", { status: 200 });
+  }
+
+  // Extract webhook event ID for idempotency (from LINE's delivery metadata)
+  const webhookEventId = req.headers.get("x-line-delivery-id") ?? 
+    `fallback-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  
+  // Check idempotency - if already processed, return 200 immediately
+  const alreadyProcessed = await checkIdempotency(ctx, webhookEventId);
+  if (alreadyProcessed) {
+    clog("info", "line_webhook_deduplicated", { traceId, webhookEventId });
     return new Response("ok", { status: 200 });
   }
 

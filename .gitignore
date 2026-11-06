@@ -49,6 +49,19 @@ logs/
 /docs/ideas/
 docs/.scratch-audit/
 
+# Binary artifacts (moved to CDN)
+public/tesseract/
+*.wasm.js
+*.traineddata.gz
+*.pid
+*.log
+docs/*.html
+!docs/README.md
+!docs/CODEBASE_INDEX.md
+!docs/CI_CD.md
+!docs/CHANGELOG.md
+!docs/ARCHITECTURE.md
+
 # local DB (dev only)
 *.idb
 local-db-*

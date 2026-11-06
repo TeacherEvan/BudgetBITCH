@@ -10,7 +10,7 @@ describe('Scraper engine entrypoint', () => {
     const result = scrape(checkers.payload, { now: Date.parse('2026-03-31T00:00:00Z') });
 
     expect(result).toBeDefined();
-    expect(result.fields.total?.value).toBe(53.98);
+    expect(result.fields.total?.value).toBe(5398); // 53.98 * 100 = 5398 minor units
     expect(result.fields.date?.value).toBe('2026-03-15');
     expect(result.fields.merchant?.value).toBe('CHECKERS HYPER BRACKENFELL');
     expect(result.fields.currency?.value).toBe('ZAR');

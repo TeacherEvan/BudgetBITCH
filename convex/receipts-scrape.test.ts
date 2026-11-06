@@ -91,7 +91,7 @@ describe('Receipt scraper backend API', () => {
     });
 
     expect(result.draftId).toBeDefined();
-    expect(result.fields.total?.value).toBe(53.98);
+    expect(result.fields.total?.value).toBe(5398); // 53.98 * 100 = 5398 minor units
 
     // Verify persisted draft row
     const draftRow = await authedT.run(async (ctx) => {

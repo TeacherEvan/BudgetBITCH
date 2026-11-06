@@ -74,19 +74,19 @@ describe('currency — multi-currency symbol table', () => {
 
   describe('parseAmount', () => {
     it('parses decimal amounts', () => {
-      expect(parseAmount('$45.20')).toBe(45.20);
-      expect(parseAmount('1,234.50')).toBe(1234.50);
-      expect(parseAmount('120.00')).toBe(120.00);
+      expect(parseAmount('$45.20')).toBe(4520); // 45.20 * 100 = 4520 minor units
+      expect(parseAmount('1,234.50')).toBe(123450); // 1234.50 * 100 = 123450 minor units
+      expect(parseAmount('120.00')).toBe(12000); // 120.00 * 100 = 12000 minor units
     });
 
     it('handles comma as decimal separator', () => {
       // This is the European format fallback
-      expect(parseAmount('45,20')).toBe(45.20);
+      expect(parseAmount('45,20')).toBe(4520); // 45.20 * 100 = 4520 minor units
     });
 
     it('returns 0 for empty or invalid', () => {
-      expect(parseAmount('')).toBe(0.0);
-      expect(parseAmount('no numbers')).toBe(0.0);
+      expect(parseAmount('')).toBe(0);
+      expect(parseAmount('no numbers')).toBe(0);
     });
   });
 

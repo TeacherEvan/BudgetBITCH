@@ -73,52 +73,64 @@ function emptyCounts(): PurgeCounts {
   };
 }
 
-/** Delete every board-scoped row for a board the caller owns. */
+/** Delete every board-scoped row for a board the caller owns, in batches. */
 async function destroyBoard(
   ctx: MutationCtx,
   boardId: string,
   ownerId: Id<"users">,
   counts: PurgeCounts,
 ): Promise<void> {
-  const memberRows = await ctx.db
-    .query("boardMembers")
-    .withIndex("by_board", (q) => q.eq("boardId", boardId))
-    .collect();
-  for (const row of memberRows) {
-    await ctx.db.delete(row._id);
-    counts.boardMemberships += 1;
-    if (row.userId !== ownerId) {
-      // Detach the co-member's profile from a board that no longer exists.
-      const memberProfile = await ctx.db
-        .query("userProfiles")
-        .withIndex("by_user", (q) => q.eq("userId", row.userId))
-        .unique();
-      if (memberProfile?.joinedBoardIds?.includes(boardId)) {
-        await ctx.db.patch(memberProfile._id, {
-          joinedBoardIds: memberProfile.joinedBoardIds.filter(
-            (id) => id !== boardId,
-          ),
-        });
+  // Batch delete boardMembers
+  while (true) {
+    const batch = await ctx.db
+      .query("boardMembers")
+      .withIndex("by_board", (q) => q.eq("boardId", boardId))
+      .take(250);
+    for (const row of batch) {
+      await ctx.db.delete(row._id);
+      counts.boardMemberships += 1;
+      if (row.userId !== ownerId) {
+        // Detach the co-member's profile from a board that no longer exists.
+        const memberProfile = await ctx.db
+          .query("userProfiles")
+          .withIndex("by_user", (q) => q.eq("userId", row.userId))
+          .unique();
+        if (memberProfile?.joinedBoardIds?.includes(boardId)) {
+          await ctx.db.patch(memberProfile._id, {
+            joinedBoardIds: memberProfile.joinedBoardIds.filter(
+              (id) => id !== boardId,
+            ),
+          });
+        }
       }
     }
+    if (batch.length < 250) break;
   }
 
-  const inviteRows = await ctx.db
-    .query("invites")
-    .withIndex("by_board", (q) => q.eq("boardId", boardId))
-    .collect();
-  for (const row of inviteRows) {
-    await ctx.db.delete(row._id);
-    counts.invites += 1;
+  // Batch delete invites
+  while (true) {
+    const batch = await ctx.db
+      .query("invites")
+      .withIndex("by_board", (q) => q.eq("boardId", boardId))
+      .take(250);
+    for (const row of batch) {
+      await ctx.db.delete(row._id);
+      counts.invites += 1;
+    }
+    if (batch.length < 250) break;
   }
 
-  const deleteRows = await ctx.db
-    .query("pendingDeletes")
-    .withIndex("by_board_status", (q) => q.eq("boardId", boardId))
-    .collect();
-  for (const row of deleteRows) {
-    await ctx.db.delete(row._id);
-    counts.pendingDeletes += 1;
+  // Batch delete pendingDeletes
+  while (true) {
+    const batch = await ctx.db
+      .query("pendingDeletes")
+      .withIndex("by_board_status", (q) => q.eq("boardId", boardId))
+      .take(250);
+    for (const row of batch) {
+      await ctx.db.delete(row._id);
+      counts.pendingDeletes += 1;
+    }
+    if (batch.length < 250) break;
   }
 
   const board = await ctx.db
@@ -198,35 +210,37 @@ export const purgeMyAccountData = mutation({
     }
 
     // ---- 3. Joined boards (leave; other members keep their data) -----------
-    const myMemberships = await ctx.db
-      .query("boardMembers")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-    for (const row of myMemberships) {
-      const board = await ctx.db
-        .query("accountBoards")
-        .withIndex("by_boardId", (q) => q.eq("boardId", row.boardId))
-        .unique();
-      if (board) {
-        await ctx.db.patch(board._id, {
-          members: board.members.filter((m) => m !== userId),
-        });
+    while (true) {
+      const batch = await ctx.db
+        .query("boardMembers")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .take(250);
+      for (const row of batch) {
+        const board = await ctx.db
+          .query("accountBoards")
+          .withIndex("by_boardId", (q) => q.eq("boardId", row.boardId))
+          .unique();
+        if (board) {
+          await ctx.db.patch(board._id, {
+            members: board.members.filter((m) => m !== userId),
+          });
+        }
+        await ctx.db.delete(row._id);
+        counts.boardMemberships += 1;
       }
-      await ctx.db.delete(row._id);
-      counts.boardMemberships += 1;
+      if (batch.length < 250) break;
     }
 
     // ---- 4. Couple boards (either side) ------------------------------------
-    const coupleBoards = [
-      ...(await ctx.db
-        .query("sharedBoards")
-        .withIndex("by_memberA", (q) => q.eq("memberA", userId))
-        .collect()),
-      ...(await ctx.db
-        .query("sharedBoards")
-        .withIndex("by_memberB", (q) => q.eq("memberB", userId))
-        .collect()),
-    ];
+    const coupleBoardsA = await ctx.db
+      .query("sharedBoards")
+      .withIndex("by_memberA", (q) => q.eq("memberA", userId))
+      .collect();
+    const coupleBoardsB = await ctx.db
+      .query("sharedBoards")
+      .withIndex("by_memberB", (q) => q.eq("memberB", userId))
+      .collect();
+    const coupleBoards = [...coupleBoardsA, ...coupleBoardsB];
     for (const board of coupleBoards) {
       const partnerId =
         board.memberA === userId ? board.memberB : board.memberA;
@@ -239,13 +253,17 @@ export const purgeMyAccountData = mutation({
       const partnerStillLinked =
         partnerProfile?.linkedBoardId === board.boardId;
 
-      const deleteRows = await ctx.db
-        .query("pendingDeletes")
-        .withIndex("by_board_status", (q) => q.eq("boardId", board.boardId))
-        .collect();
-      for (const row of deleteRows) {
-        await ctx.db.delete(row._id);
-        counts.pendingDeletes += 1;
+      // Batch delete pendingDeletes for this board
+      while (true) {
+        const batch = await ctx.db
+          .query("pendingDeletes")
+          .withIndex("by_board_status", (q) => q.eq("boardId", board.boardId))
+          .take(250);
+        for (const row of batch) {
+          await ctx.db.delete(row._id);
+          counts.pendingDeletes += 1;
+        }
+        if (batch.length < 250) break;
       }
 
       if (!partnerStillLinked) {
@@ -255,66 +273,84 @@ export const purgeMyAccountData = mutation({
     }
 
     // ---- 5. Invites the user sent or received ------------------------------
-    const sentInvites = await ctx.db
-      .query("invites")
-      .withIndex("by_fromUser", (q) => q.eq("fromUserId", userId))
-      .collect();
-    for (const row of sentInvites) {
-      await ctx.db.delete(row._id);
-      counts.invites += 1;
-    }
-    for (const status of ["pending", "accepted", "declined", "expired"]) {
-      const received = await ctx.db
+    while (true) {
+      const batch = await ctx.db
         .query("invites")
-        .withIndex("by_toUser_status", (q) =>
-          q.eq("toUserId", userId).eq("status", status),
-        )
-        .collect();
-      for (const row of received) {
+        .withIndex("by_fromUser", (q) => q.eq("fromUserId", userId))
+        .take(250);
+      for (const row of batch) {
         await ctx.db.delete(row._id);
         counts.invites += 1;
+      }
+      if (batch.length < 250) break;
+    }
+    for (const status of ["pending", "accepted", "declined", "expired"]) {
+      while (true) {
+        const batch = await ctx.db
+          .query("invites")
+          .withIndex("by_toUser_status", (q) =>
+            q.eq("toUserId", userId).eq("status", status),
+          )
+          .take(250);
+        for (const row of batch) {
+          await ctx.db.delete(row._id);
+          counts.invites += 1;
+        }
+        if (batch.length < 250) break;
       }
     }
 
     // ---- 6. Delete requests the user raised --------------------------------
-    const myDeleteRequests = await ctx.db
-      .query("pendingDeletes")
-      .withIndex("by_requestedBy", (q) => q.eq("requestedBy", userId))
-      .collect();
-    for (const row of myDeleteRequests) {
-      await ctx.db.delete(row._id);
-      counts.pendingDeletes += 1;
+    while (true) {
+      const batch = await ctx.db
+        .query("pendingDeletes")
+        .withIndex("by_requestedBy", (q) => q.eq("requestedBy", userId))
+        .take(250);
+      for (const row of batch) {
+        await ctx.db.delete(row._id);
+        counts.pendingDeletes += 1;
+      }
+      if (batch.length < 250) break;
     }
 
     // ---- 7. Device + identity bindings -------------------------------------
-    const subs = await ctx.db
-      .query("pushSubscriptions")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-    for (const row of subs) {
-      await ctx.db.delete(row._id);
-      counts.pushSubscriptions += 1;
+    while (true) {
+      const batch = await ctx.db
+        .query("pushSubscriptions")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .take(250);
+      for (const row of batch) {
+        await ctx.db.delete(row._id);
+        counts.pushSubscriptions += 1;
+      }
+      if (batch.length < 250) break;
     }
 
-    const lineRows = await ctx.db
-      .query("lineUsers")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-    for (const row of lineRows) {
-      await ctx.db.delete(row._id);
-      counts.lineIdentities += 1;
+    while (true) {
+      const batch = await ctx.db
+        .query("lineUsers")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .take(250);
+      for (const row of batch) {
+        await ctx.db.delete(row._id);
+        counts.lineIdentities += 1;
+      }
+      if (batch.length < 250) break;
     }
 
     // ---- 8. The private sharing profile itself -----------------------------
     // Deleted last: earlier steps read it to resolve boards. Dropping it also
     // retires the user's shareCode so nobody can link to the purged account.
-    const profiles = await ctx.db
-      .query("userProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-    for (const row of profiles) {
-      await ctx.db.delete(row._id);
-      counts.profiles += 1;
+    while (true) {
+      const batch = await ctx.db
+        .query("userProfiles")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .take(250);
+      for (const row of batch) {
+        await ctx.db.delete(row._id);
+        counts.profiles += 1;
+      }
+      if (batch.length < 250) break;
     }
 
     return { success: true, counts };

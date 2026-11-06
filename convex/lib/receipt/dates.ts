@@ -1,5 +1,8 @@
+import { normalizeBeToCe } from './types';
+import type { ISODateString } from './types';
+
 export type DateCandidate = {
-  date: string; // YYYY-MM-DD
+  date: ISODateString; // YYYY-MM-DD
   raw: string;
   isAmbiguous: boolean;
 };
@@ -35,11 +38,11 @@ const MONTH_MAP: Record<string, number> = {
   DECEMBER: 12,
 };
 
-function formatIso(year: number, month: number, day: number): string {
+function formatIso(year: number, month: number, day: number): ISODateString {
   const yStr = String(year).padStart(4, '0');
   const mStr = String(month).padStart(2, '0');
   const dStr = String(day).padStart(2, '0');
-  return `${yStr}-${mStr}-${dStr}`;
+  return `${yStr}-${mStr}-${dStr}` as ISODateString;
 }
 
 function isValidDate(year: number, month: number, day: number, nowMs: number): boolean {
@@ -67,7 +70,7 @@ export function extractDate(text: string, options: DateOptions = {}): DateCandid
     const day = parseInt(textMonthMatch[1], 10);
     const mStr = textMonthMatch[2].toUpperCase();
     let year = parseInt(textMonthMatch[3], 10);
-    if (year < 100) year += 2000;
+    year = normalizeBeToCe(year);
 
     const month = MONTH_MAP[mStr];
     if (month && isValidDate(year, month, day, nowMs)) {
@@ -83,10 +86,9 @@ export function extractDate(text: string, options: DateOptions = {}): DateCandid
   const isoMatch = text.match(/\b(\d{4})[-\/\.](\d{1,2})[-\/\.](\d{1,2})\b/);
   if (isoMatch) {
     let year = parseInt(isoMatch[1], 10);
+    year = normalizeBeToCe(year);
     const month = parseInt(isoMatch[2], 10);
     const day = parseInt(isoMatch[3], 10);
-
-    if (year > 2400) year -= 543; // Buddhist era
 
     if (isValidDate(year, month, day, nowMs)) {
       return {
@@ -103,9 +105,7 @@ export function extractDate(text: string, options: DateOptions = {}): DateCandid
     const first = parseInt(numMatch[1], 10);
     const second = parseInt(numMatch[2], 10);
     let year = parseInt(numMatch[3], 10);
-
-    if (year > 2400) year -= 543; // Buddhist era
-    else if (year < 100) year += 2000;
+    year = normalizeBeToCe(year);
 
     let day = first;
     let month = second;

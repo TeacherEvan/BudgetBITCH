@@ -8,6 +8,7 @@ import { useExpenses, useIncomes } from '@/hooks/use-local-db';
 import { parseSMS, type TransactionCandidate } from '@/lib/sms-parser';
 import { SmsConfirm } from '@/components/sms/sms-confirm';
 import type { ExpenseCategory } from '@/lib/types/budget';
+import { RequireAuth } from '@/components/auth/require-auth';
 
 const EXPENSE_CATEGORIES = new Set<ExpenseCategory>([
   'housing', 'transport', 'food', 'utilities', 'phone_internet',
@@ -83,8 +84,10 @@ function SmsConfirmInner() {
 
 export default function SmsConfirmPage() {
   return (
-    <Suspense fallback={null}>
-      <SmsConfirmInner />
-    </Suspense>
+    <RequireAuth>
+      <Suspense fallback={null}>
+        <SmsConfirmInner />
+      </Suspense>
+    </RequireAuth>
   );
 }

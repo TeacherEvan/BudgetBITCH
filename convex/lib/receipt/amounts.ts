@@ -1,5 +1,11 @@
+// convex/lib/receipt/amounts.ts
+// Integer minor-unit monetary arithmetic — zero IEEE-754 drift.
+
+import type { MinorUnits } from "./ledgerMath";
+import { parseToMinorUnits } from "./ledgerMath";
+
 export type AmountToken = {
-  value: number;
+  value: MinorUnits; // Integer minor units (cents/satang)
   raw: string;
   decimalSep: '.' | ',';
   isNegative?: boolean;
@@ -58,14 +64,17 @@ export function parseAmounts(text: string): AmountToken[] {
       numStr = numStr.replace(/[\s,]/g, '');
     }
 
-    const val = parseFloat(numStr);
-    if (!isNaN(val)) {
+    try {
+      const value = parseToMinorUnits(numStr);
+      const signedValue = isNegative ? (value * -1) : value;
       tokens.push({
-        value: isNegative ? -val : val,
+        value: signedValue as MinorUnits,
         raw,
         decimalSep,
         isNegative,
       });
+    } catch {
+      // Skip unparseable amounts
     }
   }
 

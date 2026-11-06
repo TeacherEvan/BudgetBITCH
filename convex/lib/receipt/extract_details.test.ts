@@ -11,7 +11,7 @@ describe('Line items, tax, and currency extractors', () => {
 
     const tax = extractTax(norm)
     expect(tax).toBeDefined()
-    expect(tax?.value).toBe(7.04)
+    expect(tax?.value).toBe(704) // 7.04 * 100 = 704 minor units
   })
 
   test('detects currency from glyphs and currencyHint', async () => {
@@ -33,7 +33,7 @@ describe('Line items, tax, and currency extractors', () => {
     const items = extractLineItems(norm)
     expect(items.length).toBeGreaterThanOrEqual(2)
     expect(items[0].description).toContain('MILK')
-    expect(items[0].amount).toBe(34.99)
+    expect(items[0].amount).toBe(3499) // 34.99 * 100 = 3499 minor units
   })
 
   test('extracts qty and unit_price when present', async () => {

@@ -9,6 +9,7 @@ import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useCurrency } from '@/hooks/use-currency';
+import { ContextualInsightPill } from './contextual-insight-pill';
 
 interface DebtPayoffProps {
   locale?: string;
@@ -108,6 +109,14 @@ export function DebtPayoff({ locale = 'en' }: DebtPayoffProps) {
 
   return (
     <div className="space-y-4">
+      {/* Behavioral Teachable Moment */}
+      <ContextualInsightPill
+        id="debt-momentum-psychology"
+        principle="The Goal-Gradient Effect"
+        badge="DOPAMINE MOMENTUM"
+        insight="Knocking out your smallest debt balance first triggers immediate psychological relief. Research shows emotional wins predict 100% debt-freedom far better than mathematical optimization alone."
+      />
+
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-white">{'📉 Debt Payoff'}</h3>
         <div className="flex gap-2">

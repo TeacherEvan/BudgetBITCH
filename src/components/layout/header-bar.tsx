@@ -1,13 +1,19 @@
 // components/layout/header-bar.tsx
 'use client';
 
-import { Wrench, Settings, BarChart2, PieChart, TrendingUp, Circle, ExternalLink } from 'lucide-react';
+import { Wrench, Settings, BarChart2, PieChart, TrendingUp, Circle, ExternalLink, GraduationCap } from 'lucide-react';
 import { useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { Modal } from '@/components/ui/modal';
 import { useDisplayPrefs, type GraphType } from '@/hooks/use-display-prefs';
 import { useNewsPrefs, ALL_GENRES, type NewsGenre } from '@/hooks/use-news-prefs';
 import { SyncStatusIndicator } from '@/components/ui/sync-status-indicator';
+
+const LearningHubModal = dynamic(
+  () => import('@/components/learning/learning-hub-modal').then((mod) => mod.LearningHubModal),
+  { ssr: false }
+);
 
 interface HeaderBarProps {
   locale: string;
@@ -41,6 +47,7 @@ const LANGUAGES: { code: string; flag: string; label: string; short: string }[] 
 
 export function HeaderBar({ locale, onLocaleChange }: HeaderBarProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [learningOpen, setLearningOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const activeLang = LANGUAGES.find((l) => l.code === locale) ?? LANGUAGES[0];
   const { graphType, setGraphType } = useDisplayPrefs();
@@ -108,9 +115,18 @@ export function HeaderBar({ locale, onLocaleChange }: HeaderBarProps) {
         </h1>
       </Link>
 
-      {/* Right: Sync Status + Quick Add + Settings wrench */}
+      {/* Right: Sync Status + Learn + Quick Add + Settings wrench */}
       <div className="flex items-center gap-2.5">
         <SyncStatusIndicator locale={locale} />
+        <button
+          type="button"
+          onClick={() => setLearningOpen(true)}
+          aria-label={'Financial Psychology & Masterclasses'}
+          className="flex h-9 items-center gap-1.5 rounded-xl border border-amber-400/30 bg-amber-400/10 px-2.5 text-xs font-bold text-amber-300 transition-colors hover:bg-amber-400/20"
+        >
+          <GraduationCap className="h-4 w-4 text-amber-400" />
+          <span className="hidden md:inline">Learn</span>
+        </button>
         <Link
           href="/quick-add"
           aria-label={'Quick Add'}
@@ -250,6 +266,12 @@ export function HeaderBar({ locale, onLocaleChange }: HeaderBarProps) {
           </div>
         </div>
       </Modal>
+
+      {/* Learning Hub Modal */}
+      <LearningHubModal
+        isOpen={learningOpen}
+        onClose={() => setLearningOpen(false)}
+      />
     </header>
   );
 }

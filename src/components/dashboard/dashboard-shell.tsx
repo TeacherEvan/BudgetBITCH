@@ -50,6 +50,19 @@ const BudgetVarianceGrid = dynamic(
   { ssr: false, loading: () => <div className="h-48 bg-white/5 animate-pulse rounded-2xl" /> }
 );
 
+const BiggerPictureCard = dynamic(
+  () => import('@/components/dashboard/bigger-picture-card').then((mod) => mod.BiggerPictureCard),
+  { ssr: false, loading: () => <div className="h-48 bg-white/5 animate-pulse rounded-2xl" /> }
+);
+
+const LearningHubModal = dynamic(
+  () => import('@/components/learning/learning-hub-modal').then((mod) => mod.LearningHubModal),
+  { ssr: false }
+);
+
+import { WeeklyReflectionCard } from '@/components/dashboard/weekly-reflection-card';
+import { useSavingsGoals, useDebtPayoff, useEmergencyFund } from '@/hooks/use-local-db';
+
 interface DashboardShellProps {
   locale: string;
   onLocaleChange?: (locale: string) => void;
@@ -62,13 +75,17 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
   const { budgets, loading: budgetsLoading } = useBudgets();
   const { bills } = useBills();
   const { expenses } = useExpenses();
+  const { goals: savingsGoals } = useSavingsGoals();
+  const { debts } = useDebtPayoff();
+  const { fund: emergencyFund } = useEmergencyFund();
+  const [learningHubOpen, setLearningHubOpen] = useState(false);
   const [criticalExpenseOpen, setCriticalExpenseOpen] = useState(false);
   const [openPanels, setOpenPanels] = useState<PanelKey[]>(['spending']);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [marketWatchOpen, setMarketWatchOpen] = useState(false);
   const [mobileActivePanel, setMobileActivePanel] = useState<PanelKey>('spending');
   const [scenarioModalOpen, setScenarioModalOpen] = useState(false);
-  const [excelTab, setExcelTab] = useState<'standard' | 'variance' | 'cashflow' | 'pivot'>('standard');
+  const [excelTab, setExcelTab] = useState<'standard' | 'variance' | 'cashflow' | 'pivot' | 'perspective'>('standard');
 
   // Location determines Market Watch availability (location-specific feeds only)
   const { location, requestLocation } = useResolvedLocation();
@@ -269,6 +286,9 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
 
         {/* THE ONLY SCROLL ZONE */}
         <div className="bb-scroll-zone flex flex-col px-4 py-4 sm:px-5 lg:px-6">
+          {/* Weekly Mindful Reflection Banner (Shame-Free) */}
+          <WeeklyReflectionCard />
+
           {/* Daily Disposable Hero */}
           <DailyDisposableHero locale={locale} onSetup={onSetup} />
 
@@ -277,7 +297,7 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
 
           {/* Excel Power Budgeting Control Bar */}
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 p-3 bg-neutral-900/80 backdrop-blur-xl rounded-2xl border border-white/10">
-            <div className="flex w-full items-center gap-1.5 overflow-x-auto scrollbar-none">
+            <div className="flex w-full sm:w-auto items-center gap-1.5 overflow-x-auto scrollbar-none">
               <button
                 type="button"
                 onClick={() => setExcelTab('standard')}
@@ -288,6 +308,17 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
                 }`}
               >
                 📊 Standard Dashboard
+              </button>
+              <button
+                type="button"
+                onClick={() => setExcelTab('perspective')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+                  excelTab === 'perspective'
+                    ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-black shadow-lg shadow-amber-400/20 font-bold'
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                🔭 The Bigger Picture
               </button>
               <button
                 type="button"
@@ -324,18 +355,38 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
               </button>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setScenarioModalOpen(true)}
-              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-500 to-amber-500 text-white font-bold text-xs shadow-lg hover:brightness-110 transition-all flex items-center gap-1.5 shrink-0 w-full sm:w-auto justify-center"
-            >
-              <span>⚙️</span>
-              <span>{'What-If Sandbox (Goal Seek)'}</span>
-            </button>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={() => setLearningHubOpen(true)}
+                className="px-3.5 py-1.5 rounded-xl bg-amber-400/15 border border-amber-400/30 text-amber-300 font-bold text-xs hover:bg-amber-400/25 transition-all flex items-center gap-1.5 shrink-0 justify-center"
+              >
+                <span>🎓</span>
+                <span>Learn Hub</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setScenarioModalOpen(true)}
+                className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-500 to-amber-500 text-white font-bold text-xs shadow-lg hover:brightness-110 transition-all flex items-center gap-1.5 shrink-0 justify-center"
+              >
+                <span>⚙️</span>
+                <span>{'What-If Sandbox'}</span>
+              </button>
+            </div>
           </div>
 
           {/* Panels or Excel Views */}
           <div className="mt-4">
+            {excelTab === 'perspective' && (
+              <BiggerPictureCard
+                locale={locale}
+                profile={profile}
+                bills={bills}
+                savingsGoals={savingsGoals}
+                debts={debts}
+                emergencyFundAmount={emergencyFund.currentAmount}
+              />
+            )}
             {excelTab === 'variance' && (
               <BudgetVarianceGrid locale={locale} currency={resolvedCurrency} expenses={expenses} />
             )}
@@ -520,6 +571,14 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
       >
         <AlertsSidebar locale={locale} isModal={true} />
       </Modal>
+
+      {/* Financial Psychology & Masterclasses Learning Hub Modal */}
+      <LearningHubModal
+        isOpen={learningHubOpen}
+        onClose={() => setLearningHubOpen(false)}
+        onNavigateTab={(tab) => setExcelTab(tab)}
+        onNavigatePanel={(panel) => setMobileActivePanel(panel as PanelKey)}
+      />
 
       {/* Mobile Floating Action Button (FAB) for Quick Add Widget */}
       <div className="fixed bottom-20 right-4 z-30 lg:hidden">

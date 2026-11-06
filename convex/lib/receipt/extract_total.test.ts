@@ -11,7 +11,7 @@ describe('Total extractor with anchor and geometry rules', () => {
 
     const res = extractTotal(norm);
     expect(res).toBeDefined();
-    expect(res?.value).toBe(53.98);
+    expect(res?.value).toBe(5398); // 53.98 * 100 = 5398 minor units
   });
 
   test('extracts correct total for TH receipt', async () => {
@@ -21,7 +21,7 @@ describe('Total extractor with anchor and geometry rules', () => {
 
     const res = extractTotal(norm);
     expect(res).toBeDefined();
-    expect(res?.value).toBe(26.0);
+    expect(res?.value).toBe(2600); // 26.0 * 100 = 2600 minor units
   });
 
   test('ignores TOTAL SAVINGS and extracts real TOTAL', async () => {
@@ -31,7 +31,7 @@ describe('Total extractor with anchor and geometry rules', () => {
 
     const res = extractTotal(norm);
     expect(res).toBeDefined();
-    expect(res?.value).toBe(340.0);
+    expect(res?.value).toBe(34000); // 340.0 * 100 = 34000 minor units
   });
 
   test('falls back gracefully when TOTAL line is missing but subtotal+vat exist', async () => {
@@ -41,6 +41,6 @@ describe('Total extractor with anchor and geometry rules', () => {
 
     const res = extractTotal(norm);
     expect(res).toBeDefined();
-    expect(res?.value).toBe(172.5);
+    expect(res?.value).toBe(17250); // 172.5 * 100 = 17250 minor units
   });
 });

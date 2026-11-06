@@ -22,6 +22,9 @@ vi.mock('@/hooks/use-local-db', () => ({
   useBudgets: () => ({ budgets: [], loading: false, save: vi.fn(), get: vi.fn() }),
   useBills: () => ({ bills: [], loading: false, add: vi.fn(), update: vi.fn(), remove: vi.fn() }),
   useExpenses: () => ({ expenses: [], loading: false, add: vi.fn(), remove: vi.fn(), update: vi.fn() }),
+  useSavingsGoals: () => ({ goals: [], loading: false, add: vi.fn(), update: vi.fn(), remove: vi.fn() }),
+  useDebtPayoff: () => ({ debts: [], loading: false, add: vi.fn(), update: vi.fn(), remove: vi.fn() }),
+  useEmergencyFund: () => ({ fund: { targetAmount: 0, currentAmount: 0 }, loading: false, update: vi.fn() }),
 }));
 
 vi.mock('@/hooks/use-critical-expense', () => ({
