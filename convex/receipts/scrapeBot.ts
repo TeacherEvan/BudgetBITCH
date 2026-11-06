@@ -218,14 +218,14 @@ export const templateSnapshot = query({
     const templates = await ctx.db
       .query("receiptTemplates")
       .withIndex("by_enabled", (q) => q.eq("enabled", true))
-      .collect();
+      .take(100);
 
     let aliases: Doc<"merchantAliases">[] = [];
     if (userId) {
       aliases = await ctx.db
         .query("merchantAliases")
         .withIndex("by_user_and_normalised", (q) => q.eq("userId", userId))
-        .collect();
+        .take(100);
     }
 
     return { templates, aliases };

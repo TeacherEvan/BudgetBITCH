@@ -54,7 +54,11 @@ export function usePsychologyStorage() {
 
         let parsedStreak: StreakState = DEFAULT_STREAK;
         if (typeof rawStreak === 'string') {
-          try { parsedStreak = JSON.parse(rawStreak); } catch {}
+          try {
+            parsedStreak = JSON.parse(rawStreak);
+          } catch (e) {
+            console.warn('[PsychologyStorage] Corrupt streak JSON, resetting to default:', e);
+          }
         }
         // Record visit today automatically
         const updatedStreak = recordHabitActivity(parsedStreak);
@@ -62,11 +66,19 @@ export function usePsychologyStorage() {
         await db.put('bbMeta', JSON.stringify(updatedStreak), HABIT_KEY);
 
         if (typeof rawLessons === 'string') {
-          try { setLessons(JSON.parse(rawLessons)); } catch {}
+          try {
+            setLessons(JSON.parse(rawLessons));
+          } catch (e) {
+            console.warn('[PsychologyStorage] Corrupt lessons JSON:', e);
+          }
         }
 
         if (typeof rawReflections === 'string') {
-          try { setReflections(JSON.parse(rawReflections)); } catch {}
+          try {
+            setReflections(JSON.parse(rawReflections));
+          } catch (e) {
+            console.warn('[PsychologyStorage] Corrupt reflections JSON:', e);
+          }
         }
       } catch (err) {
         console.warn('[PsychologyStorage] Hydration fallback:', err);

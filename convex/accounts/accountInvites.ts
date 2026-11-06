@@ -29,11 +29,11 @@ export const inviteByCode = mutation({
     const memberRows = await ctx.db
       .query("boardMembers")
       .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
-      .collect();
+      .take(MAX_MEMBERS + 1);
     const pendingInviteRows = await ctx.db
       .query("invites")
       .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
-      .collect();
+      .take(MAX_MEMBERS + 1);
     const pendingInvites = pendingInviteRows.filter(
       (r) => r.status === "pending",
     ).length;
@@ -93,14 +93,14 @@ export const createInviteToken = mutation({
     const memberRows = await ctx.db
       .query("boardMembers")
       .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
-      .collect();
+      .take(MAX_MEMBERS + 1);
 
     const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
     const now = Date.now();
     const tokenRows = await ctx.db
       .query("invites")
       .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
-      .collect();
+      .take(MAX_MEMBERS * 2);
 
     for (const r of tokenRows) {
       if (r.status === "pending" && !r.toUserId && now - r.createdAt > SEVEN_DAYS_MS) {
@@ -156,11 +156,13 @@ export const redeemInviteToken = mutation({
       .unique();
     if (!acc || !acc.boardId) throw new ConvexError("Account not found");
 
-    const boardRows = await ctx.db
+    const isMember = (await ctx.db
       .query("boardMembers")
-      .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
-      .collect();
-    if (boardRows.some((r) => r.userId === userId)) {
+      .withIndex("by_user_and_board", (q) =>
+        q.eq("userId", userId).eq("boardId", acc.boardId!),
+      )
+      .first()) !== null;
+    if (isMember) {
       await ctx.db.patch(invite._id, { status: "accepted", toUserId: userId });
       return { accountId: acc.accountId, boardId: acc.boardId, alreadyMember: true };
     }
@@ -172,7 +174,7 @@ export const redeemInviteToken = mutation({
     const members = await ctx.db
       .query("boardMembers")
       .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
-      .collect();
+      .take(MAX_MEMBERS);
     if (members.length >= MAX_MEMBERS) {
       throw new ConvexError(`An account can have at most ${MAX_MEMBERS} members`);
     }
@@ -205,7 +207,7 @@ export const listInvites = query({
       .withIndex("by_toUser_status", (q) =>
         q.eq("toUserId", userId).eq("status", "pending"),
       )
-      .collect();
+      .take(100);
     return rows.map((r) => ({
       inviteId: r._id,
       boardId: r.boardId,
@@ -296,12 +298,12 @@ export const removeMember = mutation({
     }
     if (!acc.boardId) throw new ConvexError("Account has no shared board");
 
-    const memberRow = (
-      await ctx.db
-        .query("boardMembers")
-        .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
-        .collect()
-    ).find((r) => r.userId === target);
+    const memberRow = await ctx.db
+      .query("boardMembers")
+      .withIndex("by_user_and_board", (q) =>
+        q.eq("userId", target).eq("boardId", acc.boardId!),
+      )
+      .first();
     if (memberRow) await ctx.db.delete(memberRow._id);
 
     const board = await ctx.db
@@ -345,12 +347,12 @@ export const leaveAccount = mutation({
     }
     if (!acc.boardId) throw new ConvexError("Account has no shared board");
 
-    const memberRow = (
-      await ctx.db
-        .query("boardMembers")
-        .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
-        .collect()
-    ).find((r) => r.userId === userId);
+    const memberRow = await ctx.db
+      .query("boardMembers")
+      .withIndex("by_user_and_board", (q) =>
+        q.eq("userId", userId).eq("boardId", acc.boardId!),
+      )
+      .first();
     if (memberRow) await ctx.db.delete(memberRow._id);
 
     const board = await ctx.db

@@ -62,7 +62,8 @@ function getQueue(): QueuedPush[] {
   if (typeof window === "undefined") return [];
   try {
     return JSON.parse(localStorage.getItem(BOARD_QUEUE_KEY) || "[]");
-  } catch {
+  } catch (err) {
+    console.warn("Failed to parse account board sync queue from localStorage:", err);
     return [];
   }
 }

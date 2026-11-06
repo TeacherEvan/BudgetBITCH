@@ -50,11 +50,12 @@ export const pushAccountBoard = mutation({
         return { success: false, reason: "Board not found" };
       }
     }
-    const memberRows = await ctx.db
+    const isMember = (await ctx.db
       .query("boardMembers")
-      .withIndex("by_board", (q) => q.eq("boardId", targetBoardId))
-      .collect();
-    const isMember = memberRows.some((r) => r.userId === userId);
+      .withIndex("by_user_and_board", (q) =>
+        q.eq("userId", userId).eq("boardId", targetBoardId),
+      )
+      .first()) !== null;
     if (!isMember) {
       return { success: false, reason: "Not a member of this board" };
     }
@@ -87,11 +88,12 @@ export const getAccountBoard = query({
       .withIndex("by_boardId", (q) => q.eq("boardId", targetBoardId))
       .unique();
     if (!board) return null;
-    const members = await ctx.db
+    const isMember = (await ctx.db
       .query("boardMembers")
-      .withIndex("by_board", (q) => q.eq("boardId", targetBoardId))
-      .collect();
-    const isMember = members.some((r) => r.userId === userId);
+      .withIndex("by_user_and_board", (q) =>
+        q.eq("userId", userId).eq("boardId", targetBoardId),
+      )
+      .first()) !== null;
     if (!isMember) return null;
     return board;
   },

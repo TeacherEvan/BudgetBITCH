@@ -292,7 +292,8 @@ export async function getOfflineQueueCount(): Promise<number> {
   try {
     const db = await getDB();
     return await db.count('syncQueue');
-  } catch {
+  } catch (err) {
+    console.error('Failed to get offline queue count from IndexedDB:', err);
     return 0;
   }
 }

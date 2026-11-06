@@ -2,7 +2,7 @@
 import { MutationCtx, QueryCtx } from "../_generated/server";
 import { Doc, Id } from "../_generated/dataModel";
 import { ConvexError } from "convex/values";
-import { INVITE_CODE_LEN } from "./types";
+import { INVITE_CODE_LEN, MAX_MEMBERS } from "./types";
 
 export function generateInviteCode(): string {
   return Math.random()
@@ -50,7 +50,7 @@ export async function getBoardMemberIds(
   const rows = await ctx.db
     .query("boardMembers")
     .withIndex("by_board", (q) => q.eq("boardId", boardId))
-    .collect();
+    .take(MAX_MEMBERS);
   return rows
     .map((r) => r.userId)
     .filter((id): id is Id<"users"> => id !== undefined);

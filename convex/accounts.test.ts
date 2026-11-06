@@ -523,7 +523,7 @@ describe("invite token (QR / link)", () => {
   test("mutations throw ConvexError for unauthorized operations (F4 fix)", async () => {
     const aliceId = await seedUser(t, "alice");
     const bobId = await seedUser(t, "bob");
-    const { accountId } = await createAccount(aliceId, "family", "Fam");
+    const { accountId, boardId } = await createAccount(aliceId, "family", "Fam");
 
     await expect(
       asUser(bobId).mutation(api.accounts.renameAccount, { accountId, name: "New Name" }),
@@ -532,6 +532,20 @@ describe("invite token (QR / link)", () => {
     await expect(
       asUser(bobId).mutation(api.accounts.deleteAccount, { accountId }),
     ).rejects.toThrow("Only the owner can delete");
+
+    // Regression test for purchaseNotes bounded indexed check: non-member rejected
+    await expect(
+      asUser(bobId).mutation(api.accounts.setPurchaseNote, {
+        boardId,
+        expenseId: "exp_1",
+        note: "Hacked note",
+      }),
+    ).rejects.toThrow("Not a member of this board");
+
+    const notes = await asUser(bobId).query(api.accounts.getPurchaseNotes, {
+      boardId,
+    });
+    expect(notes).toBeNull();
   });
 });
 

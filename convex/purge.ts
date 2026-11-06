@@ -197,16 +197,19 @@ export const purgeMyAccountData = mutation({
     }
 
     // ---- 2. Owned accounts (board data destroyed for all members) ----------
-    const ownedAccounts = await ctx.db
-      .query("accounts")
-      .withIndex("by_owner", (q) => q.eq("ownerId", userId))
-      .collect();
-    for (const acc of ownedAccounts) {
-      if (acc.boardId) {
-        await destroyBoard(ctx, acc.boardId, userId, counts);
+    while (true) {
+      const ownedAccounts = await ctx.db
+        .query("accounts")
+        .withIndex("by_owner", (q) => q.eq("ownerId", userId))
+        .take(100);
+      for (const acc of ownedAccounts) {
+        if (acc.boardId) {
+          await destroyBoard(ctx, acc.boardId, userId, counts);
+        }
+        await ctx.db.delete(acc._id);
+        counts.accounts += 1;
       }
-      await ctx.db.delete(acc._id);
-      counts.accounts += 1;
+      if (ownedAccounts.length < 100) break;
     }
 
     // ---- 3. Joined boards (leave; other members keep their data) -----------
@@ -235,11 +238,11 @@ export const purgeMyAccountData = mutation({
     const coupleBoardsA = await ctx.db
       .query("sharedBoards")
       .withIndex("by_memberA", (q) => q.eq("memberA", userId))
-      .collect();
+      .take(100);
     const coupleBoardsB = await ctx.db
       .query("sharedBoards")
       .withIndex("by_memberB", (q) => q.eq("memberB", userId))
-      .collect();
+      .take(100);
     const coupleBoards = [...coupleBoardsA, ...coupleBoardsB];
     for (const board of coupleBoards) {
       const partnerId =

@@ -116,7 +116,7 @@ export async function verifyBoardTotal(
   const ledgerEntries = await ctx.db
     .query("ledgerEntries")
     .withIndex("by_board_and_transaction", (q) => q.eq("boardId", boardId))
-    .collect();
+    .take(500);
   
   const ledgerTotal = ledgerEntries.reduce(
     (sum: number, entry: { amountMinor: bigint }) => sum + Number(entry.amountMinor),

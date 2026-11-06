@@ -33,12 +33,11 @@ export const setPurchaseNote = mutation({
       .unique();
     if (!board) throw new ConvexError("Board not found");
 
-    const members = await ctx.db
+    const member = await ctx.db
       .query("boardMembers")
-      .withIndex("by_board", (q) => q.eq("boardId", args.boardId))
-      .collect();
-    const isMember = members.some((r) => r.userId === userId);
-    if (!isMember) throw new ConvexError("Not a member of this board");
+      .withIndex("by_user_and_board", (q) => q.eq("userId", userId).eq("boardId", args.boardId))
+      .first();
+    if (!member) throw new ConvexError("Not a member of this board");
 
     const now = Date.now();
     const existingNotes = (board.data as BoardData)?.[PURCHASE_NOTES_KEY]?.value as Record<string, PurchaseNote> | undefined;
@@ -76,12 +75,11 @@ export const getPurchaseNotes = query({
       .unique();
     if (!board) return null;
 
-    const members = await ctx.db
+    const member = await ctx.db
       .query("boardMembers")
-      .withIndex("by_board", (q) => q.eq("boardId", args.boardId))
-      .collect();
-    const isMember = members.some((r) => r.userId === userId);
-    if (!isMember) return null;
+      .withIndex("by_user_and_board", (q) => q.eq("userId", userId).eq("boardId", args.boardId))
+      .first();
+    if (!member) return null;
 
     const notesData = (board.data as BoardData)?.[PURCHASE_NOTES_KEY]?.value as Record<string, PurchaseNote> | undefined ?? {};
     return notesData;
@@ -100,12 +98,11 @@ export const deletePurchaseNote = mutation({
       .unique();
     if (!board) throw new ConvexError("Board not found");
 
-    const members = await ctx.db
+    const member = await ctx.db
       .query("boardMembers")
-      .withIndex("by_board", (q) => q.eq("boardId", args.boardId))
-      .collect();
-    const isMember = members.some((r) => r.userId === userId);
-    if (!isMember) throw new ConvexError("Not a member of this board");
+      .withIndex("by_user_and_board", (q) => q.eq("userId", userId).eq("boardId", args.boardId))
+      .first();
+    if (!member) throw new ConvexError("Not a member of this board");
 
     const existingNotes = (board.data as BoardData)?.[PURCHASE_NOTES_KEY]?.value as Record<string, PurchaseNote> | undefined ?? {};
     if (!existingNotes[args.expenseId]) return { success: true };

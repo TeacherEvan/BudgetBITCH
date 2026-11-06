@@ -64,7 +64,7 @@ export const _listForUser = internalQuery({
     return ctx.db
       .query("pushSubscriptions")
       .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
+      .take(50);
   },
 });
 
