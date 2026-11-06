@@ -4,7 +4,6 @@ import { useConvexAuth } from "@convex-dev/auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { isLocalUnlocked, isLocalModePreferred } from "@/lib/auth/local-lock";
-import { isConvexConfigured } from "@/components/providers/convex-client-provider";
 
 // Client-side route guard for protected pages.
 // Checks BOTH local vault unlock status AND Convex cloud authentication (if active).
@@ -28,13 +27,12 @@ export function RequireAuth({
   useEffect(() => {
     setMounted(true);
     setLocalUnlocked(isLocalUnlocked());
-    setIsLocalMode(isLocalModePreferred() || !isConvexConfigured());
+    setIsLocalMode(isLocalModePreferred());
   }, []);
 
-  // When operating in local mode or when Convex is not configured,
-  // access depends solely on whether the local vault is unlocked.
-  // When operating in cloud mode with Convex configured, require Convex auth or local unlock.
-  const isAllowed = isLocalMode ? localUnlocked : (localUnlocked && (isConvexAuthenticated || !isConvexConfigured()));
+  // When operating in local mode, access depends solely on whether the local vault is unlocked.
+  // When operating in cloud mode, require Convex authentication AND local unlock.
+  const isAllowed = isLocalMode ? localUnlocked : (localUnlocked && isConvexAuthenticated);
 
   useEffect(() => {
     if (!mounted) return;

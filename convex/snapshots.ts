@@ -103,13 +103,12 @@ export const getLatestSnapshot = query({
 export const listCloudSnapshots = query({
   args: {},
   handler: async (ctx) => {
-    let userId: Id<"users"> | null;
+    let userId: Id<"users"> | null = null;
     try {
       userId = await getAuthUserId(ctx);
     } catch (e) {
-      throw new ConvexError(
-        `Auth failed in listCloudSnapshots: ${e instanceof Error ? e.message : String(e)}`,
-      );
+      console.error("Auth failed in listCloudSnapshots:", e);
+      return [];
     }
     if (!userId) return [];
     return await ctx.db

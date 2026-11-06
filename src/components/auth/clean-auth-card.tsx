@@ -7,13 +7,11 @@ import { ForgotPasswordForm } from "./forgot-password-form";
 import { ProTipsCard } from "@/components/pro-tips/pro-tips-card";
 import {
   hasLocalPassword,
-  isLocalUnlocked,
   unlockLocalVault,
   setLocalPassword,
   isLocalModePreferred,
   setLocalModePreferred,
 } from "@/lib/auth/local-lock";
-import { isConvexConfigured } from "@/components/providers/convex-client-provider";
 import { Lock, ShieldCheck, KeyRound } from "lucide-react";
 
 type CleanAuthCardProps = {
@@ -29,7 +27,7 @@ export function CleanAuthCard({ initialFlow, redirectTo = "/dashboard" }: CleanA
   const [view, setView] = useState<View>("auth");
   const [localMode, setLocalMode] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
-    return isLocalModePreferred() || !isConvexConfigured() || !isLocalUnlocked();
+    return isLocalModePreferred();
   });
 
   // Local lock states

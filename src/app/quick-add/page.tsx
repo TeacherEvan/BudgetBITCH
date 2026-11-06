@@ -17,7 +17,7 @@ import { RequireAuth } from '@/components/auth/require-auth';
 
 export default function QuickAddPage() {
   const router = useRouter();
-  const t = useTranslations('QuickAdd');
+  const t = useTranslations('quickAdd');
   const s = useQuickAddState();
 
   return (

@@ -94,8 +94,61 @@ export function CurrencyConverterCard({ baseCurrency, amount = 100 }: CurrencyCo
   // Convert on mount and whenever the inputs change, so the card is never
   // stuck showing an em-dash until the user manually hits Update.
   useEffect(() => {
-    void convert();
-  }, [convert]);
+    let mounted = true;
+    const run = async () => {
+      if (from === to) {
+        if (!mounted) return;
+        setResult(Number(value) || 0);
+        setRate(1);
+        setError(null);
+        setOffline(false);
+        setUpdatedAt(Date.now());
+        return;
+      }
+      setLoading(true);
+      setError(null);
+      try {
+        const rates = await fetchRates();
+        if (!mounted) return;
+        const f = rates[from];
+        const t = rates[to];
+        if (!f || !t) throw new Error('unsupported pair');
+        // value in EUR, then to target
+        const inEur = (Number(value) || 0) / f;
+        const converted = inEur * t;
+        setResult(converted);
+        setRate(t / f);
+        setUpdatedAt(Date.now());
+        setOffline(false);
+      } catch {
+        if (!mounted) return;
+        // Live rates are unreachable (offline, CSP block, API outage). Degrade to
+        // the dated static snapshot rather than leaving the card useless.
+        const f = FALLBACK_RATES[from];
+        const t = FALLBACK_RATES[to];
+        if (f && t) {
+          const inEur = (Number(value) || 0) / f;
+          setResult(inEur * t);
+          setRate(t / f);
+          setUpdatedAt(Date.now());
+          setOffline(true);
+        } else {
+          setError('No rate available for this currency pair.');
+          setResult(null);
+          setRate(null);
+          setOffline(false);
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+    void run();
+    return () => {
+      mounted = false;
+    };
+  }, [from, to, value, fetchRates]);
 
   const fmt = (n: number, code: CurrencyCode) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: code, maximumFractionDigits: 2 }).format(n);

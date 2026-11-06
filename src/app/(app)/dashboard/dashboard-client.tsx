@@ -15,6 +15,7 @@ import { getWizardProfile, saveWizardProfile, saveCriticalExpenseCommitment } fr
 import { logUserAction } from '@/lib/utils/action-logger';
 import { logInfo } from '@/lib/observability/logger';
 import { useQuery } from 'convex/react';
+import { useConvexAuth } from '@convex-dev/auth/react';
 import { api } from '../../../../convex/_generated/api';
 import type { CriticalExpenseKey } from '@/lib/types/budget';
 import { syncDailySnapshot } from '@/lib/convex/sync-snapshots';
@@ -49,7 +50,12 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
     }
   }, [isRedo]);
 
-  const latestSnapshot = useQuery(api.snapshots.getLatestSnapshot);
+  const auth = useConvexAuth();
+  const isAuthenticated = auth?.isAuthenticated ?? false;
+  const latestSnapshot = useQuery(
+    api.snapshots.getLatestSnapshot,
+    isAuthenticated ? {} : 'skip'
+  );
 
   // Manifesto gate — shown once per account, before the dashboard is interactive
   const [showManifesto, setShowManifesto] = useState(false);
