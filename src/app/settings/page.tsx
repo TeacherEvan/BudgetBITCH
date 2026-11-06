@@ -50,6 +50,7 @@ export default function SettingsPage() {
   const handleSignOut = async () => {
     try {
       await signOut();
+      await (await import("@/lib/db/data-owner")).clearLocalDataOnSignOut();
       router.replace('/');
     } catch (e) {
       console.error('Sign out failed:', e);

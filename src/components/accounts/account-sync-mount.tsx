@@ -1,7 +1,7 @@
 // components/accounts/account-sync-mount.tsx
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery } from 'convex/react';
 import { useConvexAuth } from '@convex-dev/auth/react';
 import { api } from '../../../convex/_generated/api';
@@ -9,6 +9,7 @@ import { useAccountSync } from '@/hooks/use-account-sync';
 import { restoreFromCloudSnapshot, syncDailySnapshot } from '@/lib/convex/sync-snapshots';
 import { getExpenses, RESET_TOMBSTONE_KEY } from '@/lib/db/local-db';
 import { ensurePersonalAccount } from '@/lib/db/accountStorage';
+import { claimLocalDataOwner } from '@/lib/db/data-owner';
 import { setCurrentMember } from '@/lib/db/current-member';
 import { BOARD_CHANGED_EVENT, notifyBoardChanged } from '@/lib/types/budget';
 
@@ -35,6 +36,29 @@ export function AccountSyncMount() {
     api.feedback.getCurrentUser,
     isAuthenticated ? {} : 'skip'
   );
+
+  // Local data is bound to one identity. Until ownership is verified (and the
+  // store wiped if a different user signed in), no cloud restore may run.
+  const [ownerReady, setOwnerReady] = useState(false);
+  const tokenIdentifier = currentUser?.tokenIdentifier;
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setOwnerReady(false);
+      return;
+    }
+    if (!tokenIdentifier) return;
+    let cancelled = false;
+    claimLocalDataOwner(tokenIdentifier)
+      .then((r) => {
+        if (cancelled) return;
+        if (r === 'switched') notifyBoardChanged('remote');
+        setOwnerReady(true);
+      })
+      .catch((err) => console.error('[AccountSyncMount] owner claim failed:', err));
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, tokenIdentifier]);
 
   const restoredSnapshotIdRef = useRef<string | null>(null);
   const snapshotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -68,7 +92,7 @@ export function AccountSyncMount() {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated || !latestSnapshot) return;
+    if (!isAuthenticated || !ownerReady || !latestSnapshot) return;
     if (!latestSnapshot.fullBackupData) return;
     const snapshotId = String(latestSnapshot._id || latestSnapshot.createdAt || '');
     if (restoredSnapshotIdRef.current === snapshotId) return;
@@ -103,11 +127,11 @@ export function AccountSyncMount() {
         console.error('[AccountSyncMount] Failed to auto-restore cloud snapshot:', err);
       }
     })();
-  }, [isAuthenticated, latestSnapshot]);
+  }, [isAuthenticated, ownerReady, latestSnapshot]);
 
   // Debounced auto-backup of daily snapshot when local data changes
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !ownerReady) return;
 
     const onDataChanged = (e: Event) => {
       const customEvent = e as CustomEvent<{ source?: string }>;
@@ -125,7 +149,7 @@ export function AccountSyncMount() {
       window.removeEventListener(BOARD_CHANGED_EVENT, onDataChanged);
       if (snapshotTimerRef.current) clearTimeout(snapshotTimerRef.current);
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, ownerReady]);
 
   return null;
 }
