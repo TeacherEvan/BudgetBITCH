@@ -7,6 +7,19 @@ import { ReactNode } from "react";
 const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL || "https://placeholder.convex.cloud";
 export const convex = new ConvexReactClient(convexUrl);
 
+/**
+ * Returns true if a live Convex backend is configured via NEXT_PUBLIC_CONVEX_URL
+ * (i.e. not the placeholder or undefined).
+ */
+export function isConvexConfigured(): boolean {
+  const url = process.env.NEXT_PUBLIC_CONVEX_URL;
+  return Boolean(
+    url &&
+    !url.includes("placeholder.convex.cloud") &&
+    (url.startsWith("https://") || url.startsWith("http://"))
+  );
+}
+
 const DUMMY_REFRESH_TOKEN = "dummy";
 
 function isRefreshTokenKey(key: string): boolean {

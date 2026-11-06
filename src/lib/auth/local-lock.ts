@@ -10,11 +10,32 @@ const LOCAL_LOCK_HASH_KEY = 'bb:localLockHash';
 const LOCAL_LOCK_SALT_KEY = 'bb:localLockSalt';
 const LOCAL_SESSION_KEY = 'bb:localSessionActive';
 const LOCAL_OWNER_ID_KEY = 'bb:localOwnerId';
+const LOCAL_MODE_PREF_KEY = 'bb:localModePreferred';
 
 export interface LocalLockState {
   hasLock: boolean;
   isUnlocked: boolean;
   ownerId: string | null;
+}
+
+/**
+ * Returns true if the user has chosen to use the app in offline / local-only mode.
+ */
+export function isLocalModePreferred(): boolean {
+  if (typeof window === 'undefined') return false;
+  return localStorage.getItem(LOCAL_MODE_PREF_KEY) === 'true';
+}
+
+/**
+ * Persists the user preference to run in local-only / offline vault mode.
+ */
+export function setLocalModePreferred(preferred: boolean): void {
+  if (typeof window === 'undefined') return;
+  if (preferred) {
+    localStorage.setItem(LOCAL_MODE_PREF_KEY, 'true');
+  } else {
+    localStorage.removeItem(LOCAL_MODE_PREF_KEY);
+  }
 }
 
 /**

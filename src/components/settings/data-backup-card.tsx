@@ -24,6 +24,8 @@ import { format } from 'date-fns';
 import { ChangePasswordModal } from '@/components/settings/change-password-modal';
 import { StorageDiagnosticsModal } from '@/components/settings/storage-diagnostics-modal';
 import { DecryptImportModal } from '@/components/settings/decrypt-import-modal';
+import { LocalVaultModal } from '@/components/settings/local-vault-modal';
+import { hasLocalPassword } from '@/lib/auth/local-lock';
 
 import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
@@ -93,6 +95,7 @@ export function DataBackupCard({
   const [importStatus, setImportStatus] = useState<Status>('idle');
   const [syncStatus, setSyncStatus] = useState<Status>('idle');
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  const [localVaultOpen, setLocalVaultOpen] = useState(false);
   
   const deleteAllSnapshotsMut = useMutation(api.snapshots.deleteAllUserSnapshots);
   const purgeAccountDataMut = useMutation(api.purge.purgeMyAccountData);
@@ -554,6 +557,23 @@ export function DataBackupCard({
           <div className="pt-4 border-t border-white/10">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-amber-400" />
+                <p className="text-sm font-medium text-white">Local Vault Lock</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLocalVaultOpen(true)}
+                className="text-xs font-semibold text-amber-400 hover:text-amber-300"
+              >
+                {typeof window !== 'undefined' && hasLocalPassword() ? 'Manage PIN / Password' : 'Set Master Password'}
+              </button>
+            </div>
+            <p className="text-xs text-white/50">Protect device-stored budgets with master PIN or password without cloud accounts.</p>
+          </div>
+
+          <div className="pt-4 border-t border-white/10">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
                 <KeyRound className="w-4 h-4 text-amber-400" />
                 <p className="text-sm font-medium text-white">{l.password}</p>
               </div>
@@ -569,6 +589,12 @@ export function DataBackupCard({
           </div>
         </Card>
       </section>
+
+      <LocalVaultModal
+        isOpen={localVaultOpen}
+        onClose={() => setLocalVaultOpen(false)}
+        locale={locale}
+      />
 
       <ChangePasswordModal
         isOpen={changePasswordOpen}

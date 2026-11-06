@@ -3,7 +3,8 @@
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { isLocalUnlocked, hasLocalPassword } from "@/lib/auth/local-lock";
+import { isLocalUnlocked, isLocalModePreferred } from "@/lib/auth/local-lock";
+import { isConvexConfigured } from "@/components/providers/convex-client-provider";
 
 // Client-side route guard for protected pages.
 // Checks BOTH local vault unlock status AND Convex cloud authentication (if active).
@@ -22,32 +23,43 @@ export function RequireAuth({
 
   const [mounted, setMounted] = useState(false);
   const [localUnlocked, setLocalUnlocked] = useState(true);
+  const [isLocalMode, setIsLocalMode] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     setLocalUnlocked(isLocalUnlocked());
+    setIsLocalMode(isLocalModePreferred() || !isConvexConfigured());
   }, []);
 
-  // An app is allowed if:
-  // 1. Local vault is unlocked AND (user is Convex-authenticated OR using local/offline mode)
-  // Or if no local lock is required and Convex is either authenticated or not blocking.
-  const isUnlocked = localUnlocked;
-  const isPermitted = isUnlocked && (isConvexAuthenticated || !hasLocalPassword());
+  // When operating in local mode or when Convex is not configured,
+  // access depends solely on whether the local vault is unlocked.
+  // When operating in cloud mode with Convex configured, require Convex auth or local unlock.
+  const isAllowed = isLocalMode ? localUnlocked : (localUnlocked && (isConvexAuthenticated || !isConvexConfigured()));
 
   useEffect(() => {
     if (!mounted) return;
 
-    // If Convex is still loading, wait for it unless we are unlocked locally without Convex requirement
-    if (isConvexLoading && !isUnlocked) return;
+    // If in local mode, we don't wait for Convex
+    if (isLocalMode) {
+      if (!localUnlocked) {
+        const url = new URL(redirectTo, window.location.origin);
+        url.searchParams.set("redirectTo", window.location.pathname);
+        router.replace(url.toString());
+      }
+      return;
+    }
 
-    if (!isPermitted && !isConvexAuthenticated) {
+    // In cloud mode: wait for Convex if it's still loading
+    if (isConvexLoading) return;
+
+    if (!isAllowed) {
       const url = new URL(redirectTo, window.location.origin);
       url.searchParams.set("redirectTo", window.location.pathname);
       router.replace(url.toString());
     }
-  }, [mounted, isConvexLoading, isConvexAuthenticated, isPermitted, isUnlocked, redirectTo, router]);
+  }, [mounted, isConvexLoading, isLocalMode, localUnlocked, isAllowed, redirectTo, router]);
 
-  if (!mounted || (isConvexLoading && !isUnlocked) || (!isPermitted && !isConvexAuthenticated)) {
+  if (!mounted || (!isLocalMode && isConvexLoading) || !isAllowed) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black">
         <div className="animate-pulse text-amber-400">Loading…</div>

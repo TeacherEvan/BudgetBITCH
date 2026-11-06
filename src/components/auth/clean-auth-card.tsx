@@ -10,7 +10,10 @@ import {
   isLocalUnlocked,
   unlockLocalVault,
   setLocalPassword,
+  isLocalModePreferred,
+  setLocalModePreferred,
 } from "@/lib/auth/local-lock";
+import { isConvexConfigured } from "@/components/providers/convex-client-provider";
 import { Lock, ShieldCheck, KeyRound } from "lucide-react";
 
 type CleanAuthCardProps = {
@@ -24,7 +27,10 @@ export function CleanAuthCard({ initialFlow, redirectTo = "/dashboard" }: CleanA
   const router = useRouter();
   const [flow, setFlow] = useState<"signIn" | "signUp">(initialFlow);
   const [view, setView] = useState<View>("auth");
-  const [localMode, setLocalMode] = useState<boolean>(() => !isLocalUnlocked());
+  const [localMode, setLocalMode] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return isLocalModePreferred() || !isConvexConfigured() || !isLocalUnlocked();
+  });
 
   // Local lock states
   const [masterPassword, setMasterPassword] = useState("");
@@ -37,6 +43,8 @@ export function CleanAuthCard({ initialFlow, redirectTo = "/dashboard" }: CleanA
   const handleLocalUnlock = async (e: React.FormEvent) => {
     e.preventDefault();
     setLocalError(null);
+
+    setLocalModePreferred(true);
 
     if (hasConfiguredLock) {
       const ok = await unlockLocalVault(masterPassword);
@@ -179,7 +187,10 @@ export function CleanAuthCard({ initialFlow, redirectTo = "/dashboard" }: CleanA
             <div className="mt-6 pt-4 border-t border-white/5 text-center text-sm">
               <button
                 type="button"
-                onClick={() => setLocalMode(false)}
+                onClick={() => {
+                  setLocalModePreferred(false);
+                  setLocalMode(false);
+                }}
                 className="text-white/60 hover:text-amber-400 cursor-pointer"
               >
                 Switch to Cloud Account Login
@@ -211,7 +222,10 @@ export function CleanAuthCard({ initialFlow, redirectTo = "/dashboard" }: CleanA
             <div className="mt-4 pt-3 border-t border-white/5">
               <button
                 type="button"
-                onClick={() => setLocalMode(true)}
+                onClick={() => {
+                  setLocalModePreferred(true);
+                  setLocalMode(true);
+                }}
                 className="w-full flex items-center justify-center gap-2 rounded-2xl border border-amber-400/30 bg-amber-400/10 px-4 py-2.5 text-sm font-semibold text-amber-300 hover:bg-amber-400/20 transition cursor-pointer"
               >
                 <Lock className="h-4 w-4" />
