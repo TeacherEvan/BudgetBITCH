@@ -1,20 +1,20 @@
 # Budget Boss (`BudgetBITCH`)
 
-<img width="418" height="394" alt="Screenshot from 2026-08-29 12-08-04" src="https://github.com/user-attachments/assets/434d0e50-86fd-4804-ae1e-14bbd0ee74d4" />
-
-<img width="418" height="428" alt="Screenshot from 2026-08-29 12-08-13" src="https://github.com/user-attachments/assets/1e88dbfa-212e-4a32-9b17-b799b0441672" />
-
-<img width="355" height="147" alt="Screenshot from 2026-08-29 12-08-28" src="https://github.com/user-attachments/assets/4b21ab2b-7193-47f7-b4e7-9b28bbe59781" />
-
-<img width="1280" height="1024" alt="Screenshot from 2026-08-29 12-09-19" src="https://github.com/user-attachments/assets/16ffc3db-650d-4f22-8e0e-97d3c4a3d90b" />
-
-<img width="545" height="440" alt="Screenshot from 2026-08-29 12-09-32" src="https://github.com/user-attachments/assets/a80c1c8b-f9fd-4057-acf5-1cc2cb7441b3" />
-
+<!-- Art: Budget Boss promo supplied by Evan (@TeacherEvan), 2026-10-26.
+     Remediated 2026-10-27: the "PICKABOO" hex logo, wordmark and underline were painted out in
+     place (no crop through the art) and the 1px light export border was trimmed, after verification
+     showed the GitHub handle `pickaboo` belongs to a third party (github.com/pickaboo, 2013) and
+     Pickaboo is an existing commercial brand. -->
+<p align="center">
+  <img src="docs/assets/budget-boss-hero.jpg" alt="Cover art: a lion in a dark suit and sunglasses seated in a leather chair behind stacks of gold coins, with a night city skyline behind, a green rising arrow at top right, and a gold crown above the words Budget Boss." width="381" height="302" />
+</p>
 
 Budget Boss is a cinematic, privacy-first budgeting PWA built with Next.js App
 Router, Convex (auth, database, realtime), IndexedDB for local-first offline
 data, a Service Worker for PWA sync, next-intl for i18n, Tailwind CSS v4,
 framer-motion, recharts, and zod.
+
+**Live:** https://budget-bitch-green.vercel.app
 
 > **Naming:** `BudgetBITCH` is the repository / package name. The user-facing
 > display name in all UI copy is **Budget Boss**.
@@ -28,8 +28,6 @@ framer-motion, recharts, and zod.
 - [AGENTS.md](AGENTS.md) — conventions for AI agents and contributors
 
 ## Quality gates
-<img width="280" height="710" alt="Screenshot from 2026-08-29 12-10-55" src="https://github.com/user-attachments/assets/2b3e871b-808f-475f-a258-14048bef7024" />
-
 
 The repository enforces a shift-left quality gate pipeline
 (`.github/workflows/ci.yml`). Run the full local chain before pushing:
@@ -43,9 +41,9 @@ See [docs/CI_CD.md](docs/CI_CD.md) for gate specifications, build guard mechanic
 `scripts/check-convex-imports.mjs`), and Vercel rollback procedure.
 
 ## Features
-<img width="893" height="1018" alt="Screenshot from 2026-08-29 12-10-17" src="https://github.com/user-attachments/assets/dc170421-89b6-41e1-8275-c655f6f9c8b4" />
+<img width="893" height="1018" alt="Settings screen with South African Rand selected, bar chart style and the gold theme, Market Watch categories, and the ZAR profile income field." src="https://github.com/user-attachments/assets/dc170421-89b6-41e1-8275-c655f6f9c8b4" />
 
-<img width="482" height="1018" alt="Screenshot from 2026-08-29 12-10-36" src="https://github.com/user-attachments/assets/550b91cb-5300-4199-a5f8-e657dba6bbf5" />
+<img width="482" height="1018" alt="Data tab of Settings: JSON export with encryption, JSON import, CSV export, Diagnostics &amp; Recovery, cloud sync, reset, and privacy cards." src="https://github.com/user-attachments/assets/550b91cb-5300-4199-a5f8-e657dba6bbf5" />
 
 - **Start Smart onboarding** — Money Survival Blueprint 10-step wizard
   (`src/components/wizard/wizard-shell.tsx`: income, rent, phone/internet,
@@ -296,3 +294,19 @@ The Start Smart flow uses curated, attributable regional inputs rather than
 open-ended scraping. Seeded assumptions keep the wizard responsive, then
 higher-trust data refines those defaults when available. Major assumptions are
 labeled verified, estimated, or user-entered so the blueprint stays explainable.
+
+## Screenshots
+
+Captured from the running app (August 2026).
+
+<img width="280" height="710" alt="Database Diagnostics &amp; Recovery window: storage quota and usage, a data integrity scan, local checkpoints, and three cloud recovery snapshots." src="https://github.com/user-attachments/assets/2b3e871b-808f-475f-a258-14048bef7024" />
+
+<img width="418" height="394" alt="Budget Boss welcome screen: a gold BB monogram above “BUDGET BOSS”, a “SHUT UP AND DO IT!!!” banner and a yellow “ENTER BOSS MODE” button on a dark brushed-gold background." src="https://github.com/user-attachments/assets/434d0e50-86fd-4804-ae1e-14bbd0ee74d4" />
+
+<img width="418" height="428" alt="Money Flow Engine screen showing Money In at +100% and Money Out tracked, above a Funds Available (Net) card with a 100% Accurate badge." src="https://github.com/user-attachments/assets/1e88dbfa-212e-4a32-9b17-b799b0441672" />
+
+<img width="355" height="147" alt="Privacy notice card with a gold shield tick, “Your privacy, our promise”, copy explaining on-device encryption, a “Learn how your data is secured” link and a “Got it” button." src="https://github.com/user-attachments/assets/4b21ab2b-7193-47f7-b4e7-9b28bbe59781" />
+
+<img width="1280" height="1024" alt="Dark Budget Boss dashboard with a tool sidebar, Daily Budget, Income Inflow and Budget Alerts cards, and a Latest Updates news column." src="https://github.com/user-attachments/assets/16ffc3db-650d-4f22-8e0e-97d3c4a3d90b" />
+
+<img width="545" height="440" alt="Accounts screen: “Run up to 5 independent budgets” with a New account button, a Sharing &amp; Collaboration Guidance card and a Personal board marked Active." src="https://github.com/user-attachments/assets/a80c1c8b-f9fd-4057-acf5-1cc2cb7441b3" />
