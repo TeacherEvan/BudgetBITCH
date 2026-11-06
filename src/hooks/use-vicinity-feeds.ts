@@ -67,9 +67,13 @@ export function useVicinityFeeds(locale: string): VicinityFeedResult {
       setError('Failed to load news');
       const cached = localStorage.getItem(CACHE_KEY);
       if (cached) {
-        const { items, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < CACHE_TTL * 2) {
-          setItems(items.slice(0, 10));
+        try {
+          const { items, timestamp } = JSON.parse(cached);
+          if (Date.now() - timestamp < CACHE_TTL * 2) {
+            setItems(items.slice(0, 10));
+          }
+        } catch {
+          // ignore corrupted local storage cache
         }
       }
     } finally {

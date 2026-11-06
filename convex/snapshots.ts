@@ -148,41 +148,53 @@ export const deleteAllUserSnapshots = mutation({
       return { success: false, deletedSnapshots: 0, deletedReceipts: 0 };
     }
 
-    // 1. Delete all daily snapshots
-    const snapshots = await ctx.db
-      .query("dailySnapshots")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-
-    for (const snap of snapshots) {
-      await ctx.db.delete(snap._id);
+    // 1. Delete daily snapshots in batches
+    let deletedSnapshots = 0;
+    while (true) {
+      const batch = await ctx.db
+        .query("dailySnapshots")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .take(500);
+      for (const snap of batch) {
+        await ctx.db.delete(snap._id);
+      }
+      deletedSnapshots += batch.length;
+      if (batch.length < 500) break;
     }
 
-    // 2. Delete all receipts
-    const receipts = await ctx.db
-      .query("receipts")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-
-    for (const rec of receipts) {
-      await ctx.db.delete(rec._id);
+    // 2. Delete receipts in batches
+    let deletedReceipts = 0;
+    while (true) {
+      const batch = await ctx.db
+        .query("receipts")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .take(500);
+      for (const rec of batch) {
+        await ctx.db.delete(rec._id);
+      }
+      deletedReceipts += batch.length;
+      if (batch.length < 500) break;
     }
 
-    // 3. Delete all merchant aliases
-    const aliases = await ctx.db
-      .query("merchantAliases")
-      .withIndex("by_user_and_normalised", (q) => q.eq("userId", userId))
-      .collect();
-
-    for (const alias of aliases) {
-      await ctx.db.delete(alias._id);
+    // 3. Delete merchant aliases in batches
+    let deletedAliases = 0;
+    while (true) {
+      const batch = await ctx.db
+        .query("merchantAliases")
+        .withIndex("by_user_and_normalised", (q) => q.eq("userId", userId))
+        .take(500);
+      for (const alias of batch) {
+        await ctx.db.delete(alias._id);
+      }
+      deletedAliases += batch.length;
+      if (batch.length < 500) break;
     }
 
     return {
       success: true,
-      deletedSnapshots: snapshots.length,
-      deletedReceipts: receipts.length,
-      deletedAliases: aliases.length,
+      deletedSnapshots,
+      deletedReceipts,
+      deletedAliases,
     };
   },
 });

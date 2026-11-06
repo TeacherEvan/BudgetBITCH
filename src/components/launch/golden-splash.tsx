@@ -314,6 +314,7 @@ export function GoldenSplash({ onProceed }: GoldenSplashProps) {
     }));
 
     let frameCount = 0;
+    let activeDustCount = 0;
     let lastPhase = phaseRef.current;
 
     const tick = () => {
@@ -358,12 +359,12 @@ export function GoldenSplash({ onProceed }: GoldenSplashProps) {
       // Spawn logic: spawns gold-dust from the bottom continuously (every 3 frames, max 60 active)
       frameCount++;
       if (frameCount % 3 === 0) {
-        const activeDustCount = pool.filter(p => p.active && p.kind === 'gold-dust').length;
         if (activeDustCount < 60) {
           const p = acquireParticle(pool);
           if (p) {
             const spawned = spawnParticle('gold-dust', width, height, false);
             Object.assign(p, spawned);
+            activeDustCount++;
           }
         }
       }
@@ -374,6 +375,7 @@ export function GoldenSplash({ onProceed }: GoldenSplashProps) {
 
         p.life++;
         if (p.life >= p.maxLife) {
+          if (p.kind === 'gold-dust') activeDustCount--;
           releaseParticle(pool, p);
           continue;
         }

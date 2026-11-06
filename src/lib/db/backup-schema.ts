@@ -235,7 +235,12 @@ export async function createBackupPayload(
 export async function parseAndValidateBackup(
   payloadString: string
 ): Promise<{ data: BackupData; isEncrypted: boolean }> {
-  const rawPayload = JSON.parse(payloadString);
+  let rawPayload: unknown;
+  try {
+    rawPayload = JSON.parse(payloadString);
+  } catch (err) {
+    throw new Error('Invalid JSON format in backup file');
+  }
   const parsedPayload = BackupPayloadSchema.parse(rawPayload);
 
   if (parsedPayload.isEncrypted) {

@@ -147,32 +147,41 @@ export const purgeMyAccountData = mutation({
     }
     const counts = emptyCounts();
 
-    // ---- 1. Per-user financial records -------------------------------------
-    const snapshots = await ctx.db
-      .query("dailySnapshots")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-    for (const row of snapshots) {
-      await ctx.db.delete(row._id);
-      counts.snapshots += 1;
+    // ---- 1. Per-user financial records (batched deletion) -----------------
+    while (true) {
+      const batch = await ctx.db
+        .query("dailySnapshots")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .take(500);
+      for (const row of batch) {
+        await ctx.db.delete(row._id);
+        counts.snapshots += 1;
+      }
+      if (batch.length < 500) break;
     }
 
-    const receipts = await ctx.db
-      .query("receipts")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-    for (const row of receipts) {
-      await ctx.db.delete(row._id);
-      counts.receipts += 1;
+    while (true) {
+      const batch = await ctx.db
+        .query("receipts")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .take(500);
+      for (const row of batch) {
+        await ctx.db.delete(row._id);
+        counts.receipts += 1;
+      }
+      if (batch.length < 500) break;
     }
 
-    const aliases = await ctx.db
-      .query("merchantAliases")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-    for (const row of aliases) {
-      await ctx.db.delete(row._id);
-      counts.merchantAliases += 1;
+    while (true) {
+      const batch = await ctx.db
+        .query("merchantAliases")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .take(500);
+      for (const row of batch) {
+        await ctx.db.delete(row._id);
+        counts.merchantAliases += 1;
+      }
+      if (batch.length < 500) break;
     }
 
     // ---- 2. Owned accounts (board data destroyed for all members) ----------

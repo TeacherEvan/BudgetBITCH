@@ -10,6 +10,8 @@ export const PROTECTED_PAGE_PREFIXES = [
   "/accounts",
   "/settings",
   "/wizard",
+  "/quick-add",
+  "/sms-confirm",
 ] as const;
 
 export const PROTECTED_API_PREFIXES = [
