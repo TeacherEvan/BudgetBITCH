@@ -99,3 +99,28 @@ export function formatCurrency(
 export function parseCurrency(value: string): number {
   return Number(value.replace(/[^0-9.-]/g, '')) || 0;
 }
+
+/**
+ * Banker's rounding to 2 decimal places (cents).
+ * Uses Number.EPSILON to kill float drift (0.1 + 0.2 -> 0.3, not 0.30000000000000004).
+ * This is the SINGLE source of truth for all financial rounding in the app.
+ * 
+ * @param value - The number to round (e.g. 33.333333)
+ * @returns Rounded to 2dp (e.g. 33.33)
+ * 
+ * Usage:
+ *   roundCurrency(33.3333) // 33.33
+ *   roundCurrency(0.1 + 0.2) // 0.3
+ *   roundCurrency(100 / 3) // 33.33
+ */
+export function roundCurrency(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+/**
+ * Round to 1 decimal place (used for runway months display).
+ * Same EPSILON guard as roundCurrency.
+ */
+export function roundCurrency1dp(value: number): number {
+  return Math.round((value + Number.EPSILON) * 10) / 10;
+}

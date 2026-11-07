@@ -50,9 +50,11 @@ export interface LedgerRow {
   expense?: ExpenseEntry;
 }
 
-/** Round to 2dp, killing float drift (0.1 + 0.2 -> 0.3, not 0.30000000000000004). */
+import { roundCurrency } from '@/lib/utils/currency';
+
+/** @deprecated Use roundCurrency from @/lib/utils/currency instead. */
 export function round2(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
+  return roundCurrency(value);
 }
 
 function sumItems(items: readonly ReceiptLineItem[]): number {

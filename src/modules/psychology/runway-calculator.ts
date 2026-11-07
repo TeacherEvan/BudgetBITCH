@@ -254,6 +254,8 @@ export function calculateFinancialHealthIndex(params: FinancialHealthIndexParams
   };
 }
 
+import { roundCurrency1dp } from '@/lib/utils/currency';
+
 /**
  * Interactive Horizon What-If Simulator:
  * Quantifies how trimming recurring fixed costs or boosting monthly savings
@@ -266,15 +268,15 @@ export function simulateHorizonAdjustments(
   deltaFixedReduction: number
 ): HorizonSimulationResult {
   const safeBurn = Math.max(1, monthlyFixedBurn);
-  const currentRunway = Math.round((Math.max(0, currentSavings) / safeBurn) * 10) / 10;
+  const currentRunway = roundCurrency1dp(Math.max(0, currentSavings) / safeBurn);
 
   const newFixedBurn = Math.max(1, safeBurn - Math.max(0, deltaFixedReduction));
   // In 12 months, the extra savings accumulates
   const projectedExtraSavingsInOneYear = Math.max(0, deltaMonthlySavings) * 12 + Math.max(0, deltaFixedReduction) * 12;
   const newProjectedSavings = Math.max(0, currentSavings) + projectedExtraSavingsInOneYear;
 
-  const simulatedRunway = Math.round((newProjectedSavings / newFixedBurn) * 10) / 10;
-  const monthsGained = Math.max(0, Math.round((simulatedRunway - currentRunway) * 10) / 10);
+  const simulatedRunway = roundCurrency1dp(newProjectedSavings / newFixedBurn);
+  const monthsGained = Math.max(0, roundCurrency1dp(simulatedRunway - currentRunway));
   const annualWealthDelta = projectedExtraSavingsInOneYear;
 
   return {

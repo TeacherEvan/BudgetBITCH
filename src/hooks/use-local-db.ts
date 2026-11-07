@@ -61,7 +61,7 @@ import { notify } from '@/lib/ui/notice';
  * Helper hook to register a window event listener that re-fetches local DB state
  * whenever the local board data changes (e.g. from partner sync pulls or account switches).
  */
-function useDatabaseListener(callback: () => void) {
+export function useDatabaseListener(callback: () => void) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     window.addEventListener(BOARD_CHANGED_EVENT, callback);
@@ -542,8 +542,13 @@ export function useSubscriptions() {
   const remove = useCallback(async (id: string) => {
     const guard = getActiveSharedDeleteGuard();
     if (guard?.isShared) {
-      await guard.requestDelete('expenses', id);
-      return;
+      try {
+        await guard.requestDelete('expenses', id);
+        notify('Delete sent to your partner for approval.', 'info');
+        return;
+      } catch (e) {
+        console.debug('Shared delete request failed, deleting locally:', e);
+      }
     }
     await deleteExpense(id);
     setSubscriptions(prev => prev.filter(s => s.id !== id));

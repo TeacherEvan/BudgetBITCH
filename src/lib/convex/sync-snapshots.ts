@@ -214,8 +214,9 @@ export async function syncDailySnapshot(): Promise<{ success: boolean; date: str
   if (isSyncingDaily) return { success: false, date: today };
   isSyncingDaily = true;
 
+  let syncArgs: GatherResult | null = null;
   try {
-    const syncArgs = sanitizeForConvex(await gatherSnapshotData());
+    syncArgs = sanitizeForConvex(await gatherSnapshotData());
 
     const convex = getConvexClient();
     if (!convex) {
@@ -241,7 +242,8 @@ export async function syncDailySnapshot(): Promise<{ success: boolean; date: str
     }
     // Queue the snapshot offline so it can retry once connectivity returns.
     try {
-      await queueOfflineSnapshot(await gatherSnapshotData());
+      const payloadToQueue = syncArgs ?? sanitizeForConvex(await gatherSnapshotData());
+      await queueOfflineSnapshot(payloadToQueue);
     } catch (queueErr) {
       console.error('Failed to queue offline snapshot:', queueErr);
     }
