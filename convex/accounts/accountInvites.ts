@@ -116,10 +116,9 @@ export const createInviteToken = mutation({
       throw new ConvexError(`An account can have at most ${MAX_MEMBERS} members`);
     }
 
-    const token =
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID().replace(/-/g, "").slice(0, 16)
-        : Math.random().toString(36).slice(2, 18);
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    const token = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("").slice(0, 16);
 
     await ctx.db.insert("invites", {
       boardId: acc.boardId,

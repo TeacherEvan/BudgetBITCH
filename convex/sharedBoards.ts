@@ -38,10 +38,17 @@ function mergeRecords(
   return { merged: base, changed };
 }
 
+const SHARE_CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+
 function generateShareCode(): string {
-  // Short, human-shareable, uppercase. Collision handled by caller retry.
-  // Single random slice, zero-padded so the code is always SHARE_CODE_LEN chars.
-  return Math.random().toString(36).slice(2, 2 + SHARE_CODE_LEN).toUpperCase().padEnd(SHARE_CODE_LEN, "0");
+  // Short, human-shareable, uppercase CSPRNG token. Collision handled by caller retry.
+  const bytes = new Uint8Array(SHARE_CODE_LEN);
+  crypto.getRandomValues(bytes);
+  let code = "";
+  for (let i = 0; i < SHARE_CODE_LEN; i++) {
+    code += SHARE_CODE_ALPHABET[bytes[i] % SHARE_CODE_ALPHABET.length];
+  }
+  return code;
 }
 
 async function ensureProfileDoc(

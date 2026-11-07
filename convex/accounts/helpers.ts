@@ -4,12 +4,21 @@ import { Doc, Id } from "../_generated/dataModel";
 import { ConvexError } from "convex/values";
 import { INVITE_CODE_LEN, MAX_MEMBERS } from "./types";
 
+// Unambiguous 32-character alphabet (no 0/O or 1/I confusion)
+const CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+
+function generateSecureRandomCode(len: number): string {
+  const bytes = new Uint8Array(len);
+  crypto.getRandomValues(bytes);
+  let code = "";
+  for (let i = 0; i < len; i++) {
+    code += CODE_ALPHABET[bytes[i] % CODE_ALPHABET.length];
+  }
+  return code;
+}
+
 export function generateInviteCode(): string {
-  return Math.random()
-    .toString(36)
-    .slice(2, 2 + INVITE_CODE_LEN)
-    .toUpperCase()
-    .padEnd(INVITE_CODE_LEN, "0");
+  return generateSecureRandomCode(INVITE_CODE_LEN);
 }
 
 export async function ensureProfileDoc(
@@ -22,11 +31,7 @@ export async function ensureProfileDoc(
     .first();
   if (existing) return existing;
   for (let attempt = 0; attempt < 10; attempt++) {
-    const shareCode = Math.random()
-      .toString(36)
-      .slice(2, 2 + INVITE_CODE_LEN)
-      .toUpperCase()
-      .padEnd(INVITE_CODE_LEN, "0");
+    const shareCode = generateSecureRandomCode(INVITE_CODE_LEN);
     try {
       const id = await ctx.db.insert("userProfiles", {
         userId,

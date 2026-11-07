@@ -130,20 +130,16 @@ export const requestItemDelete = mutation({
     if (!isMember(ref, userId)) throw new ConvexError("Not a member of this board");
 
     // If a pending request for this item already exists, don't duplicate.
-    // Use batched query to avoid unbounded collect.
-    let existing = null;
-    while (true) {
-      const batch = await ctx.db
-        .query("pendingDeletes")
-        .withIndex("by_board_status", (q) =>
-          q.eq("boardId", args.boardId).eq("status", "pending"),
-        )
-        .take(250);
-      existing = batch.find(
-        (d) => d.store === args.store && d.itemId === args.itemId,
-      );
-      if (existing || batch.length < 250) break;
-    }
+    // Query bounded batch of pending deletes for this board.
+    const batch = await ctx.db
+      .query("pendingDeletes")
+      .withIndex("by_board_status", (q) =>
+        q.eq("boardId", args.boardId).eq("status", "pending"),
+      )
+      .take(500);
+    const existing = batch.find(
+      (d) => d.store === args.store && d.itemId === args.itemId,
+    );
     if (existing) return { pendingId: existing._id, alreadyPending: true };
 
     const otherId = otherMemberId(ref, userId);
@@ -235,27 +231,12 @@ export const listPendingDeletes = query({
     if (!isMember(ref, userId)) throw new ConvexError("Not a member of this board");
 
     // Batched query to avoid unbounded collect
-    const rows: Array<{
-      _id: Id<"pendingDeletes">;
-      _creationTime: number;
-      itemSnapshot?: any;
-      boardId: string;
-      status: string;
-      store: string;
-      itemId: string;
-      requestedBy: Id<"users">;
-      requestedAt: number;
-    }> = [];
-    while (true) {
-      const batch = await ctx.db
-        .query("pendingDeletes")
-        .withIndex("by_board_status", (q) =>
-          q.eq("boardId", args.boardId).eq("status", "pending"),
-        )
-        .take(250);
-      rows.push(...batch);
-      if (batch.length < 250) break;
-    }
+    const rows = await ctx.db
+      .query("pendingDeletes")
+      .withIndex("by_board_status", (q) =>
+        q.eq("boardId", args.boardId).eq("status", "pending"),
+      )
+      .take(500);
 
     // Enrich with display info. The partner (other member) is the one who can act.
     return rows.map((r) => ({
