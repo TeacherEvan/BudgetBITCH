@@ -408,3 +408,37 @@ test("proxyReceiptScan surfaces a bot HTTP failure instead of returning junk", a
     }),
   ).rejects.toThrow(/Receipt bot scan failed \(502\)/);
 });
+
+test("ingestReceipt isolates idempotencyKey per user (guards cross-tenant leak)", async () => {
+  vi.stubEnv("CONVEX_SYNC_SECRET", "test-sync-secret");
+  const userA = await seedUser(t, "tenant-a");
+  const userB = await seedUser(t, "tenant-b");
+  const tokenA = await generateAppToken(userA, "test-sync-secret");
+  const tokenB = await generateAppToken(userB, "test-sync-secret");
+
+  const resA = await postIngest({
+    lineUserId: `app:${userA}`,
+    idempotencyKey: "shared_key_1",
+    source: "app-camera",
+    appToken: tokenA,
+    payload: ingestPayload(["SECRET CLINIC A", "TOTAL 53.98"]),
+  });
+  expect(resA.status).toBe(200);
+  const bodyA = await resA.json();
+
+  const resB = await postIngest({
+    lineUserId: `app:${userB}`,
+    idempotencyKey: "shared_key_1",
+    source: "app-camera",
+    appToken: tokenB,
+    payload: ingestPayload(["COFFEE SHOP B", "TOTAL 12.50"]),
+  });
+  expect(resB.status).toBe(200);
+  const bodyB = await resB.json();
+
+  // Different users with the same clientDraftId must create distinct drafts
+  expect(bodyB.draftId).not.toBe(bodyA.draftId);
+  expect(bodyA.fields.total.value).toBe(53.98);
+  expect(bodyB.fields.total.value).toBe(12.5);
+});
+

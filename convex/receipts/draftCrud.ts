@@ -33,13 +33,15 @@ export const saveReceipt = internalMutation({
   },
 });
 
-// Internal query: get receipt by clientDraftId (for idempotency)
+// Internal query: get receipt by clientDraftId for a specific user (for tenant-safe idempotency)
 export const getReceiptByClientDraftId = internalQuery({
-  args: { clientDraftId: v.string() },
+  args: { userId: v.id("users"), clientDraftId: v.string() },
   handler: async (ctx, args) => {
     return await ctx.db
       .query("receipts")
-      .withIndex("by_clientDraftId", (q) => q.eq("clientDraftId", args.clientDraftId))
+      .withIndex("by_user_and_clientDraftId", (q) =>
+        q.eq("userId", args.userId).eq("clientDraftId", args.clientDraftId)
+      )
       .first();
   },
 });

@@ -248,7 +248,8 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_user_and_account", ["userId", "accountId"])
     .index("by_parsedAt", ["parsedAt"])
-    .index("by_clientDraftId", ["clientDraftId"]),
+    .index("by_clientDraftId", ["clientDraftId"])
+    .index("by_user_and_clientDraftId", ["userId", "clientDraftId"]),
 
   // LINE (LIFF) identity mapping: links a LINE user ID to a Convex user/account
   // so the LINE receipt-bot webhook can resolve the correct owner for an upload.

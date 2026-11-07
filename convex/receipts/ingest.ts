@@ -140,19 +140,31 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
 
   const resolvedSource = requestSource ?? "line";
 
-  // Check idempotency - look for existing draft with this clientDraftId
-  const existing = await ctx.runQuery(internal.receipts.getReceiptByClientDraftId, { clientDraftId: idempotencyKey });
+  // Check idempotency - look for existing draft for THIS user with this clientDraftId
+  const existing = await ctx.runQuery(internal.receipts.getReceiptByClientDraftId, {
+    userId,
+    clientDraftId: idempotencyKey,
+  });
 
   if (existing) {
     // Return existing draft
     const result = existing as any;
+    const existingFields = result.fields ?? {
+      total: typeof result.amount === "number" ? { value: result.amount, conf: 1 } : null,
+      merchant: result.merchant ? { value: result.merchant, conf: 1 } : null,
+      category: result.category ? { value: result.category, conf: 1 } : null,
+      date: result.date ? { value: result.date, conf: 1 } : null,
+      tax: typeof result.tax === "number" ? { value: result.tax, conf: 1 } : null,
+      currency: result.currency ? { value: result.currency, conf: 1 } : null,
+    };
     return new Response(JSON.stringify({
       success: true,
       draftId: existing._id,
       alreadySynced: true,
-      fields: result.fields,
+      fields: existingFields,
       confidence: result.confidence,
       questions: result.questionsAsked,
+      lineItems: result.lineItems ?? [],
       source: resolvedSource,
     }), {
       status: 200,
@@ -163,14 +175,26 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
   // Run the scraper engine (validated payload is structurally an OcrPayload)
   const scraped = scrapeEngine(payload as OcrPayload);
 
-  // Extract fields
-  const amount = typeof scraped.fields.total?.value === "number" ? scraped.fields.total.value : 0;
+  // Extract fields: scrapeEngine returns minor units (cents/satang), convert to major currency units (e.g. 5398 -> 53.98)
+  const rawTotal = typeof scraped.fields.total?.value === "number" ? scraped.fields.total.value : 0;
+  const amount = rawTotal > 0 ? Math.round(rawTotal) / 100 : 0;
   const merchant = typeof scraped.fields.merchant?.value === "string" ? scraped.fields.merchant.value : "Unknown Merchant";
   const category = typeof scraped.fields.category?.value === "string" ? scraped.fields.category.value : "other";
   const date = typeof scraped.fields.date?.value === "string" ? scraped.fields.date.value : undefined;
   const currency = typeof scraped.fields.currency?.value === "string" ? scraped.fields.currency.value : undefined;
-  const tax = typeof scraped.fields.tax?.value === "number" ? scraped.fields.tax.value : undefined;
-  const lineItems = scraped.lineItems;
+  const rawTax = typeof scraped.fields.tax?.value === "number" ? scraped.fields.tax.value : undefined;
+  const tax = rawTax !== undefined ? Math.round(rawTax) / 100 : undefined;
+  const lineItems = (scraped.lineItems ?? []).map((it) => ({
+    ...it,
+    amount: Math.round(it.amount) / 100,
+    ...(typeof it.unitPrice === "number" ? { unitPrice: Math.round(it.unitPrice) / 100 } : {}),
+  }));
+
+  const normalizedFields = {
+    ...scraped.fields,
+    total: scraped.fields.total ? { ...scraped.fields.total, value: amount } : null,
+    tax: scraped.fields.tax && tax !== undefined ? { ...scraped.fields.tax, value: tax } : null,
+  };
 
   // Insert draft receipt via internal mutation
   const draftId = await ctx.runMutation(internal.receipts.saveReceipt, {
@@ -200,7 +224,7 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
   return new Response(JSON.stringify({
     success: true,
     draftId,
-    fields: scraped.fields,
+    fields: normalizedFields,
     confidence: scraped.confidence,
     evidence: scraped.evidence,
     questions: scraped.questions,

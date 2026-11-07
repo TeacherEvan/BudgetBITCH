@@ -165,7 +165,9 @@ export const syncOfflineDraft = mutation({
 
     const existing = await ctx.db
       .query("receipts")
-      .withIndex("by_clientDraftId", (q) => q.eq("clientDraftId", args.clientDraftId))
+      .withIndex("by_user_and_clientDraftId", (q) =>
+        q.eq("userId", userId).eq("clientDraftId", args.clientDraftId)
+      )
       .first();
 
     if (existing) {
