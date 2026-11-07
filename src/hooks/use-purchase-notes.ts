@@ -13,6 +13,7 @@ import { api } from '../../convex/_generated/api';
 import { getCurrentAccountId } from '@/lib/db/accountStorage';
 import { getLocalAccounts } from '@/lib/db/accountStorage';
 import type { LocalAccountMeta } from '@/lib/types/accounts';
+import { BOARD_CHANGED_EVENT } from '@/lib/types/budget';
 
 export interface PurchaseNote {
   note: string;
@@ -55,18 +56,27 @@ export function usePurchaseNotes(): UsePurchaseNotes {
     boardId ? { boardId } : 'skip',
   ) ?? null) as NoteMap | null;
 
-  useEffect(() => {
-    let cancelled = false;
+  const refreshBoardId = useCallback(() => {
     getActiveBoardId().then((id) => {
-      if (!cancelled) {
-        setBoardId(id);
-        setReady(true);
-      }
+      setBoardId(id);
+      setReady(true);
     });
-    return () => {
-      cancelled = true;
+  }, []);
+
+  useEffect(() => {
+    refreshBoardId();
+  }, [refreshBoardId, convex]);
+
+  useEffect(() => {
+    const handleBoardChanged = (e: Event) => {
+      const customEvent = e as CustomEvent<{ source?: string }>;
+      if (customEvent.detail?.source === 'switch') {
+        refreshBoardId();
+      }
     };
-  }, [convex]);
+    window.addEventListener(BOARD_CHANGED_EVENT, handleBoardChanged);
+    return () => window.removeEventListener(BOARD_CHANGED_EVENT, handleBoardChanged);
+  }, [refreshBoardId]);
 
   const setNote = useCallback(
     async (expenseId: string, note: string) => {

@@ -370,3 +370,43 @@ test("purge removes boardShards and ledgerEntries for owned accounts", async () 
   expect(after.shards).toHaveLength(0);
   expect(after.ledger).toHaveLength(0);
 });
+
+test("purge destroys personal board and permits re-pushing after reset", async () => {
+  const alice = await seedUser("alice");
+
+  // Push personal board
+  const pushRes = await asUser(alice).mutation(api.accounts.pushAccountBoard, {
+    boardId: "personal",
+    data: {
+      "expenses:p1": { value: { id: "p1", amount: 120 }, updatedAt: Date.now() },
+    },
+    updatedAt: Date.now(),
+  });
+  expect(pushRes.success).toBe(true);
+
+  const personalBoardBefore = await t.run(async (ctx: any) =>
+    ctx.db.query("accountBoards").withIndex("by_boardId", (q: any) => q.eq("boardId", `personal_${alice}`)).first(),
+  );
+  expect(personalBoardBefore).not.toBeNull();
+
+  // Purge account data
+  const purgeRes = await asUser(alice).mutation(api.purge.purgeMyAccountData, {});
+  expect(purgeRes.success).toBe(true);
+
+  // Personal board should be destroyed
+  const personalBoardAfter = await t.run(async (ctx: any) =>
+    ctx.db.query("accountBoards").withIndex("by_boardId", (q: any) => q.eq("boardId", `personal_${alice}`)).first(),
+  );
+  expect(personalBoardAfter).toBeNull();
+
+  // Subsequent push to personal board after reset should succeed cleanly without "Not a member" error
+  const rePushRes = await asUser(alice).mutation(api.accounts.pushAccountBoard, {
+    boardId: "personal",
+    data: {
+      "expenses:p2": { value: { id: "p2", amount: 45 }, updatedAt: Date.now() },
+    },
+    updatedAt: Date.now(),
+  });
+  expect(rePushRes.success).toBe(true);
+  expect(rePushRes.applied).toBe(true);
+});

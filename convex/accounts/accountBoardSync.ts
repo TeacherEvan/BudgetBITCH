@@ -50,14 +50,30 @@ export const pushAccountBoard = mutation({
         return { success: false, reason: "Board not found" };
       }
     }
-    const isMember = (await ctx.db
+    let isMember = (await ctx.db
       .query("boardMembers")
       .withIndex("by_user_and_board", (q) =>
         q.eq("userId", userId).eq("boardId", targetBoardId),
       )
       .first()) !== null;
     if (!isMember) {
-      return { success: false, reason: "Not a member of this board" };
+      // Self-heal for personal board: if caller owns the board, restore ownership membership
+      if ((args.boardId === "personal" || args.boardId === `personal_${userId}`) && board.ownerId === userId) {
+        await ctx.db.insert("boardMembers", {
+          boardId: targetBoardId,
+          userId,
+          role: "owner",
+          joinedAt: Date.now(),
+        });
+        if (!board.members.includes(userId)) {
+          await ctx.db.patch(board._id, {
+            members: [...board.members, userId],
+          });
+        }
+        isMember = true;
+      } else {
+        return { success: false, reason: "Not a member of this board" };
+      }
     }
 
     const incoming = (args.data ?? {}) as Record<string, StoredRecord>;

@@ -127,5 +127,5 @@ export async function getCriticalExpenseCommitment(month: string): Promise<Criti
 export async function deleteCriticalExpenseCommitment(month: string): Promise<void> {
   const db = await getDB();
   await db.delete('criticalExpenseCommitments', month);
-  notifyBoardChanged();
+  await afterBoardMutation('criticalExpenseCommitments', month);
 }

@@ -1,5 +1,5 @@
 // lib/db/stores/repair-store.ts
-import { getDB } from '../local-db';
+import { getDB, recordLocalWritesBulk, notifyBoardChanged } from '../local-db';
 
 // Helper sanitizers for database health auditing
 function sanitizeNonNegative(val: unknown, fallback = 0): { value: number; patched: boolean } {
@@ -50,6 +50,8 @@ export async function auditAndRepairDatabase(): Promise<{ status: 'healthy' | 'r
     logs.push(`Found ${debts.length} debts.`);
 
     let repairedCount = 0;
+    const now = Date.now();
+    const pendingWrites: Array<{ store: string; key: string; timestamp: number }> = [];
 
     // 1. Audit Expenses
     for (const exp of expenses) {
@@ -63,6 +65,7 @@ export async function auditAndRepairDatabase(): Promise<{ status: 'healthy' | 'r
       }
       if (patched) {
         await db.put('expenses', exp);
+        pendingWrites.push({ store: 'expenses', key: exp.id, timestamp: now });
         repairedCount++;
       }
     }
@@ -79,6 +82,7 @@ export async function auditAndRepairDatabase(): Promise<{ status: 'healthy' | 'r
       }
       if (patched) {
         await db.put('incomes', inc);
+        pendingWrites.push({ store: 'incomes', key: inc.id, timestamp: now });
         repairedCount++;
       }
     }
@@ -92,6 +96,7 @@ export async function auditAndRepairDatabase(): Promise<{ status: 'healthy' | 'r
         bill.amount = amountRes.value;
         bill.dueDay = dueDayRes.value;
         await db.put('bills', bill);
+        pendingWrites.push({ store: 'bills', key: bill.id, timestamp: now });
         repairedCount++;
       }
     }
@@ -105,6 +110,7 @@ export async function auditAndRepairDatabase(): Promise<{ status: 'healthy' | 'r
         goal.targetAmount = targetRes.value;
         goal.currentAmount = currentRes.value;
         await db.put('savingsGoals', goal);
+        pendingWrites.push({ store: 'savingsGoals', key: goal.id, timestamp: now });
         repairedCount++;
       }
     }
@@ -118,11 +124,16 @@ export async function auditAndRepairDatabase(): Promise<{ status: 'healthy' | 'r
         debt.balance = balanceRes.value;
         debt.minimumPayment = minPaymentRes.value;
         await db.put('debts', debt);
+        pendingWrites.push({ store: 'debts', key: debt.id, timestamp: now });
         repairedCount++;
       }
     }
 
     if (repairedCount > 0) {
+      if (pendingWrites.length > 0) {
+        await recordLocalWritesBulk(pendingWrites);
+      }
+      notifyBoardChanged('local');
       logs.push(`Repaired ${repairedCount} corrupted or invalid records across financial stores.`);
       return { status: 'repaired', logs };
     }

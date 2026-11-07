@@ -169,6 +169,13 @@ export const deleteAllUserSnapshots = mutation({
         .withIndex("by_user", (q) => q.eq("userId", userId))
         .take(500);
       for (const rec of batch) {
+        if (rec.imageStorageId) {
+          try {
+            await ctx.storage.delete(rec.imageStorageId);
+          } catch {
+            // Non-fatal if storage file already removed
+          }
+        }
         await ctx.db.delete(rec._id);
       }
       deletedReceipts += batch.length;

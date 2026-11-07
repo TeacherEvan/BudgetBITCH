@@ -7,6 +7,7 @@ export interface StoredRecord {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   value: any;
   updatedAt: number;
+  deleted?: boolean;
 }
 
 /**
@@ -25,7 +26,12 @@ export function mergeRecords(
     const prev = base[key];
     // Incoming wins when newer; ties keep the incoming value (deterministic).
     if (!prev || rec.updatedAt >= prev.updatedAt) {
-      if (prev && prev.updatedAt === rec.updatedAt && prev.value === rec.value) {
+      if (
+        prev &&
+        prev.updatedAt === rec.updatedAt &&
+        prev.value === rec.value &&
+        Boolean(prev.deleted) === Boolean(rec.deleted)
+      ) {
         continue; // identical — no change
       }
       base[key] = rec;

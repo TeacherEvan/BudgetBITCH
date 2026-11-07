@@ -453,49 +453,53 @@ export async function restoreFromCloudSnapshot(
       }
     }
 
-    // Clear and restore each store
+    // Clear and restore each store in a single atomic transaction
     const allStores = [...USER_DATA_STORES, 'settings'] as const;
     const activeStores = db.objectStoreNames
       ? allStores.filter((store) => db.objectStoreNames.contains(store))
       : [...allStores];
+
+    const now = Date.now();
+    const pendingWrites: Array<{ store: string; key: string; timestamp: number }> = [];
+
     if (activeStores.length > 0) {
       const tx = db.transaction([...activeStores], 'readwrite');
       for (const store of activeStores) {
         await tx.objectStore(store).clear();
       }
-      await tx.done;
-    }
 
-    const now = Date.now();
-    const pendingWrites: Array<{ store: string; key: string; timestamp: number }> = [];
-    for (const store of allStores) {
-      const items = backup[store];
-      if (Array.isArray(items)) {
-        for (const item of items) {
-          // wizardProfile & settings have no keyPath; restore under their
-          // fixed 'current' key so the app (which only reads 'current') sees them.
-          if (
-            (store === 'wizardProfile' || store === 'settings') &&
-            item && typeof item === 'object' &&
-            !('id' in (item as Record<string, unknown>))
-          ) {
-            await db.put(store, item as never, 'current' as never);
-            pendingWrites.push({ store, key: 'current', timestamp: now });
-          } else {
-            await db.put(store, item as never);
-            const rec = item as Record<string, unknown>;
-            const key =
-              store === 'budgets' ? (rec?.category as string) :
-              store === 'netWorthSnapshots' ? (rec?.date as string) :
-              store === 'criticalExpenseCommitments' ? (rec?.month as string) :
-              (rec?.id as string);
-            if (key) {
-              pendingWrites.push({ store, key: String(key), timestamp: now });
+      for (const store of allStores) {
+        const items = backup[store];
+        if (Array.isArray(items)) {
+          const storeObj = tx.objectStore(store);
+          for (const item of items) {
+            // wizardProfile & settings have no keyPath; restore under their
+            // fixed 'current' key so the app (which only reads 'current') sees them.
+            if (
+              (store === 'wizardProfile' || store === 'settings') &&
+              item && typeof item === 'object' &&
+              !('id' in (item as Record<string, unknown>))
+            ) {
+              await storeObj.put(item as never, 'current' as never);
+              pendingWrites.push({ store, key: 'current', timestamp: now });
+            } else {
+              await storeObj.put(item as never);
+              const rec = item as Record<string, unknown>;
+              const key =
+                store === 'budgets' ? (rec?.category as string) :
+                store === 'netWorthSnapshots' ? (rec?.date as string) :
+                store === 'criticalExpenseCommitments' ? (rec?.month as string) :
+                (rec?.id as string);
+              if (key) {
+                pendingWrites.push({ store, key: String(key), timestamp: now });
+              }
             }
           }
         }
       }
+      await tx.done;
     }
+
     if (pendingWrites.length > 0) {
       await recordLocalWritesBulk(pendingWrites);
     }

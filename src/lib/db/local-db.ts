@@ -309,6 +309,30 @@ export async function getLocalWrite(store: string, key: string): Promise<number>
   }
 }
 
+/**
+ * Read all local write timestamps in a single readonly transaction,
+ * eliminating N sequential transactions during board serialization and remote merge.
+ */
+export async function getAllLocalWrites(): Promise<Map<string, number>> {
+  const result = new Map<string, number>();
+  try {
+    const db = await getDB();
+    if (!db.objectStoreNames.contains('localWrites')) return result;
+    const tx = db.transaction('localWrites', 'readonly');
+    let cursor = await tx.store.openCursor();
+    while (cursor) {
+      if (typeof cursor.key === 'string' && typeof cursor.value === 'number') {
+        result.set(cursor.key, cursor.value);
+      }
+      cursor = await cursor.continue();
+    }
+    await tx.done;
+  } catch {
+    // Non-fatal: returns whatever could be read
+  }
+  return result;
+}
+
 export async function afterBoardMutation(store: string, key: string): Promise<void> {
   await recordLocalWrite(store, key);
   notifyBoardChanged('local');

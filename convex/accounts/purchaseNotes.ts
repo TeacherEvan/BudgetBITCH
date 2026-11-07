@@ -17,6 +17,20 @@ interface PurchaseNote {
 
 type BoardData = Record<string, { value: unknown; updatedAt: number }> | null;
 
+function extractNotesMap(raw: unknown): Record<string, PurchaseNote> {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const obj = raw as Record<string, unknown>;
+  // Auto-heal if a legacy flat PurchaseNote { note, updatedBy, updatedAt } was stored at root
+  if (
+    typeof obj.note === 'string' &&
+    typeof obj.updatedAt === 'number' &&
+    typeof obj.updatedBy === 'string'
+  ) {
+    return {};
+  }
+  return obj as Record<string, PurchaseNote>;
+}
+
 export const setPurchaseNote = mutation({
   args: {
     boardId: v.string(),
@@ -40,14 +54,16 @@ export const setPurchaseNote = mutation({
     if (!member) throw new ConvexError("Not a member of this board");
 
     const now = Date.now();
-    const existingNotes = (board.data as BoardData)?.[PURCHASE_NOTES_KEY]?.value as Record<string, PurchaseNote> | undefined;
-    const incomingNotes: Record<string, { value: PurchaseNote; updatedAt: number }> = {
+    const existingNotes = extractNotesMap((board.data as BoardData)?.[PURCHASE_NOTES_KEY]?.value);
+    const incomingNotes: Record<string, { value: Record<string, PurchaseNote>; updatedAt: number }> = {
       [PURCHASE_NOTES_KEY]: {
         value: {
-          ...existingNotes?.[args.expenseId] ?? { note: "", updatedBy: "", updatedAt: 0 },
-          note: args.note,
-          updatedBy: userId,
-          updatedAt: now,
+          ...existingNotes,
+          [args.expenseId]: {
+            note: args.note,
+            updatedBy: userId,
+            updatedAt: now,
+          },
         },
         updatedAt: now,
       },
@@ -81,7 +97,7 @@ export const getPurchaseNotes = query({
       .first();
     if (!member) return null;
 
-    const notesData = (board.data as BoardData)?.[PURCHASE_NOTES_KEY]?.value as Record<string, PurchaseNote> | undefined ?? {};
+    const notesData = extractNotesMap((board.data as BoardData)?.[PURCHASE_NOTES_KEY]?.value);
     return notesData;
   },
 });
@@ -104,7 +120,7 @@ export const deletePurchaseNote = mutation({
       .first();
     if (!member) throw new ConvexError("Not a member of this board");
 
-    const existingNotes = (board.data as BoardData)?.[PURCHASE_NOTES_KEY]?.value as Record<string, PurchaseNote> | undefined ?? {};
+    const existingNotes = extractNotesMap((board.data as BoardData)?.[PURCHASE_NOTES_KEY]?.value);
     if (!existingNotes[args.expenseId]) return { success: true };
 
     const now = Date.now();

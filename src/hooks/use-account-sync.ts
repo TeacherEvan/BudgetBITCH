@@ -235,11 +235,12 @@ export function useAccountSync(): UseAccountSync {
     if (isOnline()) {
       try {
         setSyncing(true);
-        await pushBoard({ boardId: bid, data: data as never, updatedAt });
-        // Set lastAppliedAt to client's push timestamp. If server merged remote
-        // partner changes (bumping server updatedAt), the pull effect sees
-        // remote.updatedAt > lastAppliedAt and applies the merged partner records.
-        lastAppliedAt.current = updatedAt;
+        const res = (await pushBoard({ boardId: bid, data: data as never, updatedAt })) as
+          | { success?: boolean; applied?: boolean; updatedAt?: number }
+          | undefined;
+        // Suppress redundant self-echo pull: if server advanced updatedAt to args.updatedAt + 1
+        // without newer remote changes, update lastAppliedAt to server's new updatedAt.
+        lastAppliedAt.current = Math.max(updatedAt, res?.updatedAt ?? updatedAt);
         setLastError(null);
       } catch (e) {
         setLastError(e instanceof Error ? e.message : "Push failed");

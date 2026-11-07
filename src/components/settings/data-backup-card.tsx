@@ -135,7 +135,7 @@ export function DataBackupCard({
         '# Budgets',
         exportBudgetsToCsv(budgets, true),
       ].join('\n');
-      downloadCsv(sections, `budgetbitch-data-${stamp}.csv`);
+      downloadCsv(sections, `budget-boss-data-${stamp}.csv`);
     } catch (err) {
       console.error('CSV export failed:', err);
     } finally {

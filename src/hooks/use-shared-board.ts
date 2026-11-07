@@ -69,6 +69,7 @@ export function useSharedBoard(): UseSharedBoard {
   const lastAppliedAt = useRef<number>(0);
   const applyingRemote = useRef<boolean>(false);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFlushingQueueRef = useRef<boolean>(false);
 
   const myProfile = useQuery(
     api.sharedBoards.getMyProfile,
@@ -172,27 +173,35 @@ export function useSharedBoard(): UseSharedBoard {
   }, [isActive, board]);
 
   const flushQueue = useCallback(async () => {
+    if (isFlushingQueueRef.current) return;
     const queue = readQueue();
     if (queue.length === 0) return;
-    const remaining: QueuedPush[] = [];
-    for (const item of queue) {
-      try {
-        if (!boardId) break;
-        const res = await pushBoard({
-          boardId,
-          data: item.data,
-          updatedAt: item.updatedAt,
-        });
-        if (res.applied) {
-          setLastSyncedAt(item.updatedAt);
-        } else {
+
+    isFlushingQueueRef.current = true;
+    try {
+      const remaining: QueuedPush[] = [];
+      for (const item of queue) {
+        try {
+          if (!boardId) break;
+          const res = (await pushBoard({
+            boardId,
+            data: item.data,
+            updatedAt: item.updatedAt,
+          })) as { success?: boolean; applied?: boolean; updatedAt?: number } | undefined;
+          if (res?.applied) {
+            setLastSyncedAt(item.updatedAt);
+            lastAppliedAt.current = Math.max(item.updatedAt, res.updatedAt ?? item.updatedAt);
+          } else {
+            remaining.push(item);
+          }
+        } catch {
           remaining.push(item);
         }
-      } catch {
-        remaining.push(item);
       }
+      writeQueue(remaining);
+    } finally {
+      isFlushingQueueRef.current = false;
     }
-    writeQueue(remaining);
   }, [boardId, pushBoard]);
 
   // PUSH: debounce local edits, then push (or queue if offline).
@@ -205,8 +214,13 @@ export function useSharedBoard(): UseSharedBoard {
       const data = await serializeBoardForSync();
       if (navigator.onLine) {
         try {
-          const res = await pushBoard({ boardId, data, updatedAt });
-          if (res.applied) setLastSyncedAt(updatedAt);
+          const res = (await pushBoard({ boardId, data, updatedAt })) as
+            | { success?: boolean; applied?: boolean; updatedAt?: number }
+            | undefined;
+          if (res?.applied) {
+            setLastSyncedAt(updatedAt);
+            lastAppliedAt.current = Math.max(updatedAt, res.updatedAt ?? updatedAt);
+          }
         } catch {
           const queue = readQueue();
           queue.push({ data, updatedAt });
@@ -277,8 +291,13 @@ export function useSharedBoard(): UseSharedBoard {
     const updatedAt = Date.now();
     const data = await serializeBoardForSync();
     try {
-      const res = await pushBoard({ boardId, data, updatedAt });
-      if (res.applied) setLastSyncedAt(updatedAt);
+      const res = (await pushBoard({ boardId, data, updatedAt })) as
+        | { success?: boolean; applied?: boolean; updatedAt?: number }
+        | undefined;
+      if (res?.applied) {
+        setLastSyncedAt(updatedAt);
+        lastAppliedAt.current = Math.max(updatedAt, res.updatedAt ?? updatedAt);
+      }
     } catch {
       const queue = readQueue();
       queue.push({ data, updatedAt });

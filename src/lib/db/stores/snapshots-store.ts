@@ -1,6 +1,11 @@
 import type { NetWorthSnapshot, BoardSnapshot } from '@/lib/types/budget';
 import { notifyBoardChanged } from '@/lib/types/budget';
-import { getDB, afterBoardMutation, getLocalWrite, recordLocalWritesBulk } from '../local-db';
+import {
+  getDB,
+  afterBoardMutation,
+  recordLocalWritesBulk,
+  getAllLocalWrites,
+} from '../local-db';
 
 // Net Worth Snapshots
 export async function saveNetWorthSnapshot(snapshot: NetWorthSnapshot): Promise<void> {
@@ -132,26 +137,41 @@ export async function replaceBoardData(board: BoardSnapshot): Promise<void> {
  * merge (boardMerge.ts) a real conflict-free sync: a record you didn't touch
  * keeps its old timestamp and is NOT clobbered by your push.
  */
-async function tsFor(store: string, key: string | number): Promise<number> {
-  try {
-    return await getLocalWrite(store, String(key));
-  } catch {
-    return 0;
+export async function serializeBoardForSync(): Promise<Record<string, { value: unknown; updatedAt: number; deleted?: boolean }>> {
+  const [board, writesMap] = await Promise.all([
+    serializeBoard(),
+    getAllLocalWrites(),
+  ]);
+  const out: Record<string, { value: unknown; updatedAt: number; deleted?: boolean }> = {};
+
+  const ts = (store: string, key: string | number) => writesMap.get(`${store}:${key}`) ?? 0;
+
+  for (const e of board.expenses ?? []) out[`expenses:${e.id}`] = { value: e, updatedAt: ts('expenses', e.id) };
+  for (const b of board.budgets ?? []) out[`budgets:${b.category}`] = { value: b, updatedAt: ts('budgets', b.category) };
+  for (const i of board.incomes ?? []) out[`incomes:${i.id}`] = { value: i, updatedAt: ts('incomes', i.id) };
+  for (const b of board.bills ?? []) out[`bills:${b.id}`] = { value: b, updatedAt: ts('bills', b.id) };
+  for (const g of board.savingsGoals ?? []) out[`savingsGoals:${g.id}`] = { value: g, updatedAt: ts('savingsGoals', g.id) };
+  for (const s of board.netWorthSnapshots ?? []) out[`netWorthSnapshots:${s.date}`] = { value: s, updatedAt: ts('netWorthSnapshots', s.date) };
+  for (const d of board.debts ?? []) out[`debts:${d.id}`] = { value: d, updatedAt: ts('debts', d.id) };
+  for (const c of board.criticalExpenseCommitments ?? []) out[`criticalExpenseCommitments:${c.month}`] = { value: c, updatedAt: ts('criticalExpenseCommitments', c.month) };
+
+  // For any key recorded in localWrites that belongs to one of the 8 synced stores
+  // but is no longer present in local storage (i.e. was deleted), emit an LWW tombstone
+  // so remote peers and server accountBoards learn of the deletion.
+  const SYNCED_STORES = new Set([
+    'expenses', 'budgets', 'incomes', 'bills', 'savingsGoals',
+    'netWorthSnapshots', 'debts', 'criticalExpenseCommitments',
+  ]);
+  for (const [compositeKey, writeTs] of writesMap.entries()) {
+    if (out[compositeKey]) continue; // record is alive
+    const colonIdx = compositeKey.indexOf(':');
+    if (colonIdx === -1) continue;
+    const store = compositeKey.slice(0, colonIdx);
+    if (!SYNCED_STORES.has(store)) continue;
+    if (writeTs > 0) {
+      out[compositeKey] = { value: null, updatedAt: writeTs, deleted: true };
+    }
   }
-}
-
-export async function serializeBoardForSync(): Promise<Record<string, { value: unknown; updatedAt: number }>> {
-  const board = await serializeBoard();
-  const out: Record<string, { value: unknown; updatedAt: number }> = {};
-
-  for (const e of board.expenses ?? []) out[`expenses:${e.id}`] = { value: e, updatedAt: await tsFor('expenses', e.id) };
-  for (const b of board.budgets ?? []) out[`budgets:${b.category}`] = { value: b, updatedAt: await tsFor('budgets', b.category) };
-  for (const i of board.incomes ?? []) out[`incomes:${i.id}`] = { value: i, updatedAt: await tsFor('incomes', i.id) };
-  for (const b of board.bills ?? []) out[`bills:${b.id}`] = { value: b, updatedAt: await tsFor('bills', b.id) };
-  for (const g of board.savingsGoals ?? []) out[`savingsGoals:${g.id}`] = { value: g, updatedAt: await tsFor('savingsGoals', g.id) };
-  for (const s of board.netWorthSnapshots ?? []) out[`netWorthSnapshots:${s.date}`] = { value: s, updatedAt: await tsFor('netWorthSnapshots', s.date) };
-  for (const d of board.debts ?? []) out[`debts:${d.id}`] = { value: d, updatedAt: await tsFor('debts', d.id) };
-  for (const c of board.criticalExpenseCommitments ?? []) out[`criticalExpenseCommitments:${c.month}`] = { value: c, updatedAt: await tsFor('criticalExpenseCommitments', c.month) };
 
   return out;
 }
@@ -174,16 +194,25 @@ export function serializeSnapshotForSync(snapshot: BoardSnapshot): Record<string
 /**
  * Apply a server keyed-map onto local stores. Writes each record's value into
  * the matching store/key, preserving local-only records the server didn't
- * touch. Does NOT emit BOARD_CHANGED_EVENT (avoid echo-back push).
+ * touch. Deletes records when the remote map supplies a newer tombstone.
+ * Does NOT emit BOARD_CHANGED_EVENT (avoid echo-back push).
  */
-export async function applyRemoteBoard(map: Record<string, { value: unknown; updatedAt: number }>): Promise<void> {
+export async function applyRemoteBoard(
+  map: Record<string, { value: unknown; updatedAt: number; deleted?: boolean }>,
+): Promise<void> {
   const db = await getDB();
   const stores = [
     'wizardProfile', 'expenses', 'budgets', 'bills', 'savingsGoals',
     'netWorthSnapshots', 'debts', 'criticalExpenseCommitments', 'incomes',
   ] as const;
 
-  const stage: { store: typeof stores[number]; value: unknown; explicitKey?: string | number; updatedAt: number }[] = [];
+  const stage: {
+    store: typeof stores[number];
+    value: unknown;
+    explicitKey?: string | number;
+    updatedAt: number;
+    deleted?: boolean;
+  }[] = [];
   for (const [key, rec] of Object.entries(map)) {
     const [store, ...rest] = key.split(':');
     const recordKey = rest.join(':');
@@ -191,17 +220,18 @@ export async function applyRemoteBoard(map: Record<string, { value: unknown; upd
     if (store === 'wizardProfile') {
       continue;
     } else {
-      stage.push({ store: store as typeof stores[number], value: rec.value, explicitKey: recordKey, updatedAt: rec.updatedAt });
+      stage.push({
+        store: store as typeof stores[number],
+        value: rec.value,
+        explicitKey: recordKey,
+        updatedAt: rec.updatedAt,
+        deleted: rec.deleted ?? rec.value === null,
+      });
     }
   }
 
-  const localTsMap = new Map<string, number>();
-  await Promise.all(
-    stage.map(async (item) => {
-      const ts = await getLocalWrite(item.store, String(item.explicitKey));
-      localTsMap.set(`${item.store}:${item.explicitKey}`, ts);
-    }),
-  );
+  // Read all local write timestamps in a single transaction
+  const localTsMap = await getAllLocalWrites();
 
   const activeStores = db.objectStoreNames
     ? stores.filter((s) => db.objectStoreNames.contains(s))
@@ -209,14 +239,24 @@ export async function applyRemoteBoard(map: Record<string, { value: unknown; upd
   if (activeStores.length === 0) return;
   const tx = db.transaction(activeStores, 'readwrite');
   const appliedWrites: Array<{ store: string; key: string; updatedAt: number }> = [];
+
   for (const item of stage) {
     const localTs = localTsMap.get(`${item.store}:${item.explicitKey}`) ?? 0;
     if (item.updatedAt <= localTs) continue;
-    if (item.store === 'wizardProfile' && item.explicitKey !== undefined) {
-      await tx.objectStore(item.store).put(item.value as never, item.explicitKey as never);
+
+    if (item.deleted || item.value === null) {
+      // Remote deletion/tombstone: remove local record if present
+      if (item.explicitKey !== undefined) {
+        await tx.objectStore(item.store).delete(item.explicitKey as never);
+      }
     } else {
-      await tx.objectStore(item.store).put(item.value as never);
+      if (item.store === 'wizardProfile' && item.explicitKey !== undefined) {
+        await tx.objectStore(item.store).put(item.value as never, item.explicitKey as never);
+      } else {
+        await tx.objectStore(item.store).put(item.value as never);
+      }
     }
+
     appliedWrites.push({
       store: item.store,
       key: String(item.explicitKey),

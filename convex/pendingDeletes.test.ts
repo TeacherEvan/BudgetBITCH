@@ -61,7 +61,12 @@ describe("pendingDeletes (two-party consent)", () => {
     const board = await t.run(async (ctx: any) =>
       ctx.db.query("sharedBoards").withIndex("by_boardId", (q: any) => q.eq("boardId", "board_1")).unique(),
     );
-    expect(board.data["expenses:e1"]).toBeUndefined();
+    // Deleted item is recorded as an LWW tombstone on the board so clients can apply the deletion
+    expect(board.data["expenses:e1"]).toMatchObject({
+      deleted: true,
+      value: null,
+    });
+    expect(board.data["expenses:e1"].updatedAt).toBeGreaterThan(0);
   });
 
   test("other member rejects → no delete happens", async () => {

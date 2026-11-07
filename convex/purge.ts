@@ -39,7 +39,7 @@
 import { ConvexError } from "convex/values";
 import { mutation, MutationCtx } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { Id } from "./_generated/dataModel";
+import { Id, Doc } from "./_generated/dataModel";
 
 export interface PurgeCounts {
   snapshots: number;
@@ -209,6 +209,13 @@ export const purgeMyAccountData = mutation({
         .withIndex("by_user", (q) => q.eq("userId", userId))
         .take(500);
       for (const row of batch) {
+        if (row.imageStorageId) {
+          try {
+            await ctx.storage.delete(row.imageStorageId);
+          } catch {
+            // Storage blob may already be removed or missing
+          }
+        }
         await ctx.db.delete(row._id);
         counts.receipts += 1;
       }
@@ -228,6 +235,9 @@ export const purgeMyAccountData = mutation({
     }
 
     // ---- 2. Owned accounts (board data destroyed for all members) ----------
+    // Also destroy the user's personal board if one was created
+    await destroyBoard(ctx, `personal_${userId}`, userId, counts);
+
     while (true) {
       const ownedAccounts = await ctx.db
         .query("accounts")
@@ -245,22 +255,29 @@ export const purgeMyAccountData = mutation({
 
     // ---- 3. Joined boards (leave; other members keep their data) -----------
     while (true) {
-      const batch = await ctx.db
+      const batch: Doc<"boardMembers">[] = await ctx.db
         .query("boardMembers")
         .withIndex("by_user", (q) => q.eq("userId", userId))
         .take(250);
       for (const row of batch) {
-        const board = await ctx.db
+        const board: Doc<"accountBoards"> | null = await ctx.db
           .query("accountBoards")
           .withIndex("by_boardId", (q) => q.eq("boardId", row.boardId))
           .unique();
         if (board) {
-          await ctx.db.patch(board._id, {
-            members: board.members.filter((m) => m !== userId),
-          });
+          if (board.ownerId === userId) {
+            await destroyBoard(ctx, row.boardId, userId, counts);
+          } else {
+            await ctx.db.patch(board._id, {
+              members: board.members.filter((m: Id<"users">) => m !== userId),
+            });
+            await ctx.db.delete(row._id);
+            counts.boardMemberships += 1;
+          }
+        } else {
+          await ctx.db.delete(row._id);
+          counts.boardMemberships += 1;
         }
-        await ctx.db.delete(row._id);
-        counts.boardMemberships += 1;
       }
       if (batch.length < 250) break;
     }

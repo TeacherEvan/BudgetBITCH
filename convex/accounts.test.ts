@@ -547,5 +547,48 @@ describe("invite token (QR / link)", () => {
     });
     expect(notes).toBeNull();
   });
+
+  test("purchaseNotes CRUD correctly stores and returns map keyed by expenseId", async () => {
+    const aliceId = await seedUser(t, "alice");
+    const { boardId } = await createAccount(aliceId, "family", "Fam");
+
+    // Set first note
+    await asUser(aliceId).mutation(api.accounts.setPurchaseNote, {
+      boardId,
+      expenseId: "exp_1",
+      note: "Groceries receipt note",
+    });
+
+    // Set second note on another expense
+    await asUser(aliceId).mutation(api.accounts.setPurchaseNote, {
+      boardId,
+      expenseId: "exp_2",
+      note: "Dinner with friends",
+    });
+
+    // Query notes as member
+    const notes = await asUser(aliceId).query(api.accounts.getPurchaseNotes, { boardId });
+    expect(notes).toBeDefined();
+    expect(notes!["exp_1"]).toMatchObject({
+      note: "Groceries receipt note",
+      updatedBy: aliceId,
+    });
+    expect(notes!["exp_2"]).toMatchObject({
+      note: "Dinner with friends",
+      updatedBy: aliceId,
+    });
+    expect(notes!["exp_1"].updatedAt).toBeGreaterThan(0);
+
+    // Delete one note
+    await asUser(aliceId).mutation(api.accounts.deletePurchaseNote, {
+      boardId,
+      expenseId: "exp_1",
+    });
+
+    const notesAfterDelete = await asUser(aliceId).query(api.accounts.getPurchaseNotes, { boardId });
+    expect(notesAfterDelete!["exp_1"]).toBeUndefined();
+    expect(notesAfterDelete!["exp_2"]).toBeDefined();
+    expect(notesAfterDelete!["exp_2"].note).toBe("Dinner with friends");
+  });
 });
 

@@ -74,20 +74,24 @@ async function applyDeleteToBoard(
   byUserId: Id<"users">,
 ) {
   const key = `${store}:${itemId}`;
+  const now = Date.now();
+  const rawData = (ref.board.data as Record<string, { value: unknown; updatedAt?: number; deleted?: boolean }>) ?? {};
+  const data = { ...rawData };
+  const prevTs = data[key]?.updatedAt ?? 0;
+  const deletedAt = Math.max(now, prevTs + 1);
+  data[key] = { value: null, updatedAt: deletedAt, deleted: true };
+  const newUpdatedAt = Math.max(ref.board.updatedAt, deletedAt);
+
   if (ref.kind === "couple") {
-    const data = { ...((ref.board.data as Record<string, unknown>) ?? {}) };
-    delete data[key];
     await ctx.db.patch(ref.board._id, {
       data,
-      updatedAt: Date.now(),
+      updatedAt: newUpdatedAt,
       updatedBy: byUserId,
     });
   } else {
-    const data = { ...((ref.board.data as Record<string, unknown>) ?? {}) };
-    delete data[key];
     await ctx.db.patch(ref.board._id, {
       data,
-      updatedAt: Date.now(),
+      updatedAt: newUpdatedAt,
       updatedBy: byUserId,
     });
   }

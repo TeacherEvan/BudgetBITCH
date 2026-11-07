@@ -38,6 +38,8 @@ import {
   getCriticalExpenseCommitment,
   deleteCriticalExpenseCommitment,
   applyRemoteBoard,
+  serializeBoardForSync,
+  deleteExpense,
   recordLocalWriteAt,
   getLocalWrite,
 } from './local-db';
@@ -196,6 +198,59 @@ describe('shared board serialize/replace', () => {
     // Emitted exactly once for the whole bulk operation
     expect(handler).toHaveBeenCalledTimes(1);
     window.removeEventListener(BOARD_CHANGED_EVENT, handler);
+  });
+
+  it('serializeBoardForSync emits LWW tombstones for deleted records and applyRemoteBoard applies tombstones', async () => {
+    // 1. Add an expense and serialize
+    const exp: ExpenseEntry = {
+      id: 'exp-del-1',
+      date: '2026-07-19',
+      category: 'food',
+      merchant: 'Test Del',
+      amount: 50,
+      source: 'manual',
+    };
+    await addExpense(exp);
+    const initialSync = await serializeBoardForSync();
+    expect(initialSync['expenses:exp-del-1']).toBeDefined();
+    expect(initialSync['expenses:exp-del-1'].value).toBeDefined();
+    expect(initialSync['expenses:exp-del-1'].deleted).toBeUndefined();
+
+    // 2. Delete the expense locally
+    await deleteExpense('exp-del-1');
+    expect(await getExpenses()).toHaveLength(0);
+
+    // 3. Next serializeBoardForSync emits tombstone with deleted:true and value:null
+    const syncAfterDelete = await serializeBoardForSync();
+    expect(syncAfterDelete['expenses:exp-del-1']).toMatchObject({
+      value: null,
+      deleted: true,
+    });
+    expect(syncAfterDelete['expenses:exp-del-1'].updatedAt).toBeGreaterThan(0);
+
+    // 4. Test applyRemoteBoard applying a tombstone to remove an existing record
+    const exp2: ExpenseEntry = {
+      id: 'exp-del-2',
+      date: '2026-07-19',
+      category: 'food',
+      merchant: 'Test Del 2',
+      amount: 100,
+      source: 'manual',
+    };
+    await addExpense(exp2);
+    expect(await getExpenses()).toHaveLength(1);
+
+    const now = Date.now();
+    await applyRemoteBoard({
+      'expenses:exp-del-2': {
+        value: null,
+        updatedAt: now + 5000,
+        deleted: true,
+      },
+    });
+
+    // Verified: local record removed by remote tombstone
+    expect(await getExpenses()).toHaveLength(0);
   });
 });
 
