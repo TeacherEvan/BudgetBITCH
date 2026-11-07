@@ -317,7 +317,14 @@ export function GoldenSplash({ onProceed }: GoldenSplashProps) {
     let activeDustCount = 0;
     let lastPhase = phaseRef.current;
 
-    const tick = () => {
+    let lastTime = performance.now();
+
+    const tick = (now: number = performance.now()) => {
+      const elapsed = now - lastTime;
+      lastTime = now;
+      // Normalize dt relative to 60fps (16.67ms per frame), clamped to prevent huge jumps after backgrounding
+      const dt = Math.min(Math.max(elapsed / 16.67, 0.2), 3.0);
+
       if (document.hidden) {
         animationFrameId = requestAnimationFrame(tick);
         return;
@@ -373,7 +380,7 @@ export function GoldenSplash({ onProceed }: GoldenSplashProps) {
       for (const p of pool) {
         if (!p.active) continue;
 
-        p.life++;
+        p.life += dt;
         if (p.life >= p.maxLife) {
           if (p.kind === 'gold-dust') activeDustCount--;
           releaseParticle(pool, p);
@@ -383,21 +390,21 @@ export function GoldenSplash({ onProceed }: GoldenSplashProps) {
         const t = p.life / p.maxLife;
         p.opacity = Math.sin(t * Math.PI); // easeInOut-ish opacity
 
-        // Physics: gravity, wind/turbulence, rotation, rotVel, life/maxLife
+        // Physics: gravity, wind/turbulence, rotation, rotVel, scaled by dt
         if (p.kind === 'gold-dust') {
-          p.vy += 0.01;
-          p.vx += Math.sin(p.life * 0.05 + p.seed * 10) * 0.08;
+          p.vy += 0.01 * dt;
+          p.vx += Math.sin(p.life * 0.05 + p.seed * 10) * 0.08 * dt;
         } else if (p.kind === 'coin') {
-          p.vy += 0.15;
-          p.vx += Math.sin(p.life * 0.02 + p.seed * 5) * 0.02;
+          p.vy += 0.15 * dt;
+          p.vx += Math.sin(p.life * 0.02 + p.seed * 5) * 0.02 * dt;
         } else {
-          p.vx *= 0.98;
-          p.vy *= 0.98;
+          p.vx *= Math.pow(0.98, dt);
+          p.vy *= Math.pow(0.98, dt);
         }
 
-        p.x += p.vx;
-        p.y += p.vy;
-        p.rotation += p.rotVel;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.rotation += p.rotVel * dt;
 
         if (p.kind === 'gold-dust') {
           drawGoldDust(ctx, p);

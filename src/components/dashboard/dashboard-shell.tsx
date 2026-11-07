@@ -275,7 +275,7 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
                   )}
                   <span className="text-xl">{config.icon}</span>
                   <span className={`flex-1 text-left text-sm font-medium truncate ${isOpen ? 'text-[var(--gold-bright)]' : 'text-[var(--text-2)]'}`}>
-                    {config.label.en}
+                    {(config.label as Record<string, string>)[locale] ?? config.label.en}
                   </span>
                   {isOpen ? <ChevronUp className="text-[var(--text-muted)]" /> : <ChevronDown className="text-[var(--text-muted)]" />}
                 </button>
@@ -468,7 +468,7 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
       />
 
       {/* Mobile Bottom Sheet Sidebar */}
-      <div data-testid="mobile-sheet" className={`lg:hidden fixed bottom-0 left-0 right-0 z-40 transform rounded-t-2xl border-t bg-[var(--bg-base)]/95 p-4 backdrop-blur-xl transition-transform duration-300 ${mobileMenuOpen ? 'translate-y-0' : 'translate-y-full'}`} style={{ maxHeight: '82vh', overflowY: 'auto' }}>
+      <div data-testid="mobile-sheet" className={`lg:hidden fixed bottom-0 left-0 right-0 z-40 transform rounded-t-2xl border-t bg-[var(--bg-base)]/95 p-4 backdrop-blur-xl transition-transform duration-300 pb-[env(safe-area-inset-bottom)] ${mobileMenuOpen ? 'translate-y-0' : 'translate-y-full'}`} style={{ maxHeight: '82vh', overflowY: 'auto' }}>
         <button
           onClick={() => setMobileMenuOpen(false)}
           aria-label={'Close menu'}
@@ -547,7 +547,7 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
                 }`}
               >
                 <span className="text-xl">{config.icon}</span>
-                <span className={`flex-1 text-left text-sm font-medium truncate ${isActive ? 'text-[var(--gold-bright)]' : 'text-[var(--text-2)]'}`}>{config.label.en}</span>
+                <span className={`flex-1 text-left text-sm font-medium truncate ${isActive ? 'text-[var(--gold-bright)]' : 'text-[var(--text-2)]'}`}>{(config.label as Record<string, string>)[locale] ?? config.label.en}</span>
               </button>
             );
           })}

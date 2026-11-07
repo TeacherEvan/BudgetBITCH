@@ -108,13 +108,10 @@ export type QuickAddState = {
  */
 export function useQuickAddState(): QuickAddState {
   const t = useTranslations('QuickAdd');
-  const { add: addExpense } = useExpenses();
+  // Single useExpenses hook subscription feeds both addExpense and existingExpenses
+  const { expenses: existingExpenses, add: addExpense } = useExpenses();
   const { add: addIncome } = useIncomes();
   const { profile, save: saveProfile } = useWizardProfile();
-  // Existing expenses feed the Repeat Purchase "+" on the scanned-receipt
-  // review card: when the scanned merchant matches a prior purchase, offer a
-  // one-tap repeat alongside Save. (useExpenses exposes the full list.)
-  const { expenses: existingExpenses } = useExpenses();
 
   const { draft, scanImage, answerQuestion, confirmDraft } = useReceiptScan();
   const { status: inboxPermStatus, grantPermission, denyPermission } = useInboxPermission();
@@ -567,6 +564,16 @@ export function useQuickAddState(): QuickAddState {
           URL.revokeObjectURL(url);
           if (fileInputRef.current) fileInputRef.current.value = '';
         }
+      };
+      img.onerror = () => {
+        setLoading(false);
+        URL.revokeObjectURL(url);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        setToast({
+          show: true,
+          message: 'Could not decode receipt image. Please select a valid photo file (JPEG or PNG).',
+          type: 'error',
+        });
       };
       img.src = url;
     };

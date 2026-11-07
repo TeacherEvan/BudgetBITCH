@@ -238,7 +238,7 @@ export async function parseAndValidateBackup(
   let rawPayload: unknown;
   try {
     rawPayload = JSON.parse(payloadString);
-  } catch (err) {
+  } catch {
     throw new Error('Invalid JSON format in backup file');
   }
   const parsedPayload = BackupPayloadSchema.parse(rawPayload);
