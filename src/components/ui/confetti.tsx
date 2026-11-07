@@ -41,17 +41,23 @@ export function Confetti({
   }, [colorPalette]);
 
   useEffect(() => {
+    let lastTime = performance.now();
     animateRef.current = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
+      const now = performance.now();
+      const elapsed = now - lastTime;
+      lastTime = now;
+      const dt = Math.min(Math.max(elapsed / 16.67, 0.2), 3.0);
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
       let allDead = true;
       particles.current.forEach(p => {
         if (p.y < canvas.height + 20) {
           allDead = false;
-          p.vy += 0.3; // gravity
-          p.x += p.vx;
-          p.y += p.vy;
-          p.rotation += p.rotationSpeed;
+          p.vy += 0.3 * dt; // gravity
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          p.rotation += p.rotationSpeed * dt;
           
           ctx.save();
           ctx.translate(p.x, p.y);
@@ -70,6 +76,11 @@ export function Confetti({
 
   useEffect(() => {
     if (!isActive) return;
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      onComplete?.();
+      return;
+    }
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -77,8 +88,12 @@ export function Confetti({
     if (!ctx) return;
 
     const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      if (typeof ctx.setTransform === 'function') {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
     };
     resize();
     window.addEventListener('resize', resize);

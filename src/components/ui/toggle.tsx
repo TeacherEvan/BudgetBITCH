@@ -32,7 +32,7 @@ export const Toggle = forwardRef<HTMLButtonElement, ToggleProps>(
     };
 
     const thumbTranslate = {
-      sm: checked ? 'translate-x-4' : 'translate-x-0',
+      sm: checked ? 'translate-x-3.5' : 'translate-x-0',
       md: checked ? 'translate-x-5' : 'translate-x-0',
       lg: checked ? 'translate-x-7' : 'translate-x-0',
     };
@@ -47,16 +47,16 @@ export const Toggle = forwardRef<HTMLButtonElement, ToggleProps>(
           onClick={handleClick}
           disabled={disabled}
           className={`
-            relative inline-flex shrink-0 cursor-pointer rounded-full border-2 transition-all duration-200
-            ${checked ? 'bg-amber-400 border-amber-400' : 'bg-white/10 border-white/20'}
-            ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-amber-400/50 hover:border-amber-400/50'}
+            relative inline-flex shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200
+            ${checked ? 'bg-[var(--accent-strong)] border-[var(--accent-strong)]' : 'bg-white/10 border-white/20'}
+            ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-110'}
             ${sizeStyles[size]} ${className}
           `}
           {...props}
         >
           <span
             className={`
-              absolute top-1/2 left-1/2 transform -translate-y-1/2 transition-transform duration-200
+              absolute top-0.5 left-0.5 transition-transform duration-200 ease-out
               bg-white rounded-full shadow ${thumbSize[size]} ${thumbTranslate[size]}
             `}
             aria-hidden="true"

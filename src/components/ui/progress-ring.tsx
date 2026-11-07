@@ -49,7 +49,7 @@ export function ProgressRing({
           r={radius}
         />
         <circle
-          className={`${colors[color]} transition-all duration-500 ease-out`}
+          className={`${colors[color]} transition-[stroke-dashoffset] duration-500 ease-out`}
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           fill="none"
@@ -61,7 +61,7 @@ export function ProgressRing({
       </svg>
       {showValue && (
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-sm font-bold text-white">
+          <span className="text-sm font-bold text-white tabular-nums">
             {Math.round(value)}%
           </span>
         </div>

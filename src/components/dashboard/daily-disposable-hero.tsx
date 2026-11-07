@@ -18,6 +18,11 @@ function CountUp({ value, duration = 800, formatter }: { value: number; duration
   const [displayValue, setDisplayValue] = useState(0);
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      setDisplayValue(value);
+      return;
+    }
+
     let startTimestamp: number | null = null;
     let animationFrameId: number;
 
@@ -38,7 +43,7 @@ function CountUp({ value, duration = 800, formatter }: { value: number; duration
     };
   }, [value, duration]);
 
-  return <span>{formatter(displayValue)}</span>;
+  return <span className="tabular-nums">{formatter(displayValue)}</span>;
 }
 
 function LiveClock() {
@@ -64,7 +69,7 @@ function LiveClock() {
     return () => clearInterval(interval);
   }, []);
 
-  return <span className="text-[10px] md:text-[11px] font-bold text-[var(--text-muted)] tracking-wider">{time} LOCAL</span>;
+  return <span className="text-[10px] md:text-[11px] font-bold text-[var(--text-muted)] tracking-wider tabular-nums font-mono">{time} LOCAL</span>;
 }
 
 export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProps) {
@@ -188,7 +193,7 @@ export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProp
         </div>
 
         {/* Usage bar — % of planned disposable already used */}
-        <div className="w-full flex items-center justify-between text-xs text-[var(--text-muted)] mb-2 font-mono">
+        <div className="w-full flex items-center justify-between text-xs text-[var(--text-muted)] mb-2 font-mono tabular-nums">
           <span>{'Budget Used'}</span>
           <span className={`${usagePercentage >= 95 ? "text-[var(--danger)]" : usagePercentage >= 80 ? "text-[var(--warning)]" : "text-[var(--gold-bright)]"}`}>
             ({usagePercentage}%)
@@ -196,10 +201,10 @@ export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProp
         </div>
         <div className="w-full h-[6px] bg-white/12 rounded-full overflow-hidden mb-6">
           <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${usagePercentage}%` }}
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: Math.min(1, usagePercentage / 100) }}
             transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-            className={`h-full ${barColorClass} rounded-full`}
+            className={`h-full ${barColorClass} rounded-full origin-left w-full`}
             style={{
               boxShadow: usagePercentage >= 95 
                 ? "0 0 10px rgba(232,64,64,0.4)"
@@ -216,7 +221,7 @@ export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProp
             <span className="block text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-0.5">
               {'Left Today'}
             </span>
-            <span className="text-emerald-400 font-semibold font-mono">
+            <span className="text-emerald-400 font-semibold font-mono tabular-nums">
               {formatCurrency(dailyRemaining, locale)}
             </span>
           </div>
@@ -227,13 +232,14 @@ export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProp
               </span>
               <button 
                 onClick={() => setIsAddIncomeOpen(true)}
-                className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors px-1"
+                className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors px-1.5 py-0.5 rounded border border-emerald-400/30 bg-emerald-400/10 min-h-[28px] min-w-[28px] inline-flex items-center justify-center cursor-pointer"
                 title={'Add Income'}
+                aria-label={'Add Income'}
               >
                 +
               </button>
             </div>
-            <span className="text-[var(--text-1)] font-semibold font-mono">
+            <span className="text-[var(--text-1)] font-semibold font-mono tabular-nums">
               {formatCurrency(income, locale)}/mo
             </span>
           </div>
@@ -241,7 +247,7 @@ export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProp
             <span className="block text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-0.5">
               {'Fixed'}
             </span>
-            <span className="text-[var(--text-1)] font-semibold font-mono">
+            <span className="text-[var(--text-1)] font-semibold font-mono tabular-nums">
               {formatCurrency(totalFixedExpenses, locale)}/mo
             </span>
           </div>
@@ -249,7 +255,7 @@ export function DailyDisposableHero({ locale, onSetup }: DailyDisposableHeroProp
             <span className="block text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-0.5">
               {'Savings'}
             </span>
-            <span className="text-[var(--text-1)] font-semibold font-mono">
+            <span className="text-[var(--text-1)] font-semibold font-mono tabular-nums">
               {formatCurrency(savingsTarget, locale)}/mo
             </span>
           </div>

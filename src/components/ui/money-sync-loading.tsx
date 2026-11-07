@@ -97,9 +97,9 @@ export function MoneySyncLoading({
             </div>
             <div className="mt-2 w-full h-1 bg-zinc-900 rounded-full overflow-hidden">
               <motion.div
-                className="h-full bg-emerald-400"
-                initial={{ width: '0%' }}
-                animate={{ width: '100%' }}
+                className="h-full bg-emerald-400 w-full origin-left"
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: [0, 1] }}
                 transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
               />
             </div>
@@ -126,9 +126,9 @@ export function MoneySyncLoading({
             </div>
             <div className="mt-2 w-full h-1 bg-zinc-900 rounded-full overflow-hidden">
               <motion.div
-                className="h-full bg-amber-400"
-                initial={{ width: '0%' }}
-                animate={{ width: '85%' }}
+                className="h-full bg-amber-400 w-full origin-left"
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: 0.85 }}
                 transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
               />
             </div>
@@ -151,9 +151,9 @@ export function MoneySyncLoading({
           </div>
           <div className="w-full h-2 bg-black/60 rounded-full overflow-hidden p-0.5 border border-amber-400/20">
             <motion.div
-              className="h-full bg-gradient-to-r from-amber-300 to-yellow-500 rounded-full"
-              initial={{ width: '10%' }}
-              animate={{ width: ['10%', '90%', '100%'] }}
+              className="h-full bg-gradient-to-r from-amber-300 to-yellow-500 rounded-full w-full origin-left"
+              initial={{ scaleX: 0.1 }}
+              animate={{ scaleX: [0.1, 0.9, 1] }}
               transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
             />
           </div>

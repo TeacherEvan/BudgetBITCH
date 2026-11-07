@@ -72,8 +72,8 @@ export const Slider = forwardRef<HTMLInputElement, SliderProps>(
             className="absolute top-1/2 left-0 right-0 h-1 -translate-y-1/2 bg-white/10 rounded-full overflow-hidden"
           >
             <div 
-              className="h-full bg-amber-400 rounded-full transition-all duration-100"
-              style={{ width: `${percentage}%` }}
+              className={`h-full bg-[var(--accent-strong)] rounded-full origin-left ${isDragging ? '' : 'transition-transform duration-100 ease-out'}`}
+              style={{ transform: `scaleX(${percentage / 100})`, width: '100%' }}
             />
           </div>
           <input
@@ -97,9 +97,8 @@ export const Slider = forwardRef<HTMLInputElement, SliderProps>(
             ref={thumbRef}
             className={`
               absolute top-1/2 transform -translate-x-1/2 -translate-y-1/2
-              w-5 h-5 rounded-full bg-amber-400 border-2 border-white
-              shadow-lg transition-transform duration-100
-              ${isDragging ? 'scale-110' : ''}
+              w-5 h-5 rounded-full bg-[var(--accent-strong)] border-2 border-white
+              shadow-lg pointer-events-none ${isDragging ? 'scale-110' : 'transition-transform duration-100'}
               ${disabled ? 'opacity-50' : ''}
             `}
             style={{ left: `${percentage}%` }}

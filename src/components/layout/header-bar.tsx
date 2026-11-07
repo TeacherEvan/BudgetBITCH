@@ -54,7 +54,7 @@ export function HeaderBar({ locale, onLocaleChange }: HeaderBarProps) {
   const { isGenreEnabled, toggleGenre } = useNewsPrefs();
 
   return (
-    <header className="sticky top-0 z-40 flex items-center justify-between gap-2 sm:gap-3 border-b border-[rgba(201,150,12,0.18)] bg-black/60 px-3 sm:px-4 py-3 backdrop-blur-[24px] shadow-header">
+    <header className="sticky top-0 z-40 flex items-center justify-between gap-2 sm:gap-3 border-b border-[rgba(201,150,12,0.18)] bg-black/60 px-3 sm:px-4 py-3 backdrop-blur-md shadow-header">
       {/* Left: language selector */}
       <div className="relative flex items-center">
         <button

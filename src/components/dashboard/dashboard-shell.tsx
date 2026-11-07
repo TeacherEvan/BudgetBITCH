@@ -296,7 +296,7 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
           <ReceiptDraftsList />
 
           {/* Excel Power Budgeting Control Bar */}
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 p-3 bg-neutral-900/80 backdrop-blur-xl rounded-2xl border border-white/10">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 p-3 bg-neutral-900/80 backdrop-blur-md rounded-2xl border border-white/10">
             <div className="flex w-full sm:w-auto items-center gap-1.5 overflow-x-auto scrollbar-none">
               <button
                 type="button"
@@ -468,7 +468,7 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
       />
 
       {/* Mobile Bottom Sheet Sidebar */}
-      <div data-testid="mobile-sheet" className={`lg:hidden fixed bottom-0 left-0 right-0 z-40 transform rounded-t-2xl border-t bg-[var(--bg-base)]/95 p-4 backdrop-blur-xl transition-transform duration-300 pb-[env(safe-area-inset-bottom)] ${mobileMenuOpen ? 'translate-y-0' : 'translate-y-full'}`} style={{ maxHeight: '82vh', overflowY: 'auto' }}>
+      <div data-testid="mobile-sheet" className={`lg:hidden fixed bottom-0 left-0 right-0 z-40 transform rounded-t-2xl border-t bg-[var(--bg-base)]/95 p-4 backdrop-blur-md transition-transform duration-300 pb-[env(safe-area-inset-bottom)] ${mobileMenuOpen ? 'translate-y-0' : 'translate-y-full'}`} style={{ maxHeight: '82vh', overflowY: 'auto' }}>
         <button
           onClick={() => setMobileMenuOpen(false)}
           aria-label={'Close menu'}

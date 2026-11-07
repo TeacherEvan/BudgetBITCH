@@ -31,8 +31,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           ref={ref}
           id={selectId}
           className={`
-            w-full rounded-xl bg-black/30 px-4 py-3 text-white outline-none transition appearance-none
-            ${error ? 'border-rose-500/50 focus:border-rose-500 focus:ring-rose-500/20' : 'border-white/10 focus:border-emerald-400 focus:ring-emerald-400/20'}
+            w-full rounded-xl border bg-black/30 px-4 py-3 text-white outline-none transition appearance-none
+            ${error ? 'border-rose-500/50 focus:border-rose-500 focus:ring-rose-500/20' : 'border-white/10 focus:border-[var(--accent-strong)] focus:ring-[var(--accent-strong)]/20'}
           `}
           aria-invalid={error ? 'true' : 'false'}
           aria-describedby={error ? `${selectId}-error` : helperText ? `${selectId}-helper` : undefined}

@@ -10,10 +10,10 @@ export interface CardProps extends HTMLAttributes<HTMLDivElement> {
 export const Card = forwardRef<HTMLDivElement, CardProps>(
   ({ variant = 'default', className = '', children, ...props }, ref) => {
     const variantStyles = {
-      default: 'bg-black/20 border-white/10',
-      strong: 'bg-white/5 border-white/10',
-      accent: 'bg-amber-500/10 border-amber-500/20',
-      muted: 'bg-black/30 border-white/5',
+      default: 'bg-black/30 border-white/10 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]',
+      strong: 'bg-[var(--bg-surface-2)] border-[var(--gold-border-soft)] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]',
+      accent: 'bg-[var(--accent)]/10 border-[var(--accent)]/30 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12)]',
+      muted: 'bg-black/40 border-white/5',
     };
 
     return (

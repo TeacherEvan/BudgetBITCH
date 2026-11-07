@@ -43,7 +43,7 @@ export function NetWorthHeader({ locale, totalAssets, totalLiabilities, netWorth
         initial={{ opacity: 0, y: 10, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ delay: 0.15 }}
-        className={`rounded-xl p-4 ${isPositive ? 'bg-emerald-400/10 border-emerald-400/30' : 'bg-rose-400/10 border-rose-400/30'}`}
+        className={`rounded-xl border p-4 ${isPositive ? 'bg-emerald-400/10 border-emerald-400/30' : 'bg-rose-400/10 border-rose-400/30'}`}
       >
         <p className="text-sm text-amber-400">{'Net Worth'}</p>
         <p className={`text-2xl font-bold font-mono ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>

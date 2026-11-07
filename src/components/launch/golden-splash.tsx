@@ -311,7 +311,7 @@ export function GoldenSplash({ onProceed }: GoldenSplashProps) {
     const resize = () => {
       width = window.innerWidth;
       height = window.innerHeight;
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = width * dpr;
       canvas.height = height * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
