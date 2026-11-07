@@ -1,7 +1,7 @@
 // src/components/dashboard/scenario-sandbox-modal.tsx
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { formatMoney, type CurrencyCode } from '@/lib/utils/currency';
@@ -83,8 +83,32 @@ export function ScenarioSandboxModal({
   const [income, setIncome] = useState(baseIncome);
   const [fixedExpenses, setFixedExpenses] = useState(baseFixed);
   const [variableExpenses, setVariableExpenses] = useState(baseVariable);
-  const [savingsGoalTarget] = useState(100000);
+  const [savingsGoalTarget, setSavingsGoalTarget] = useState(baseIncome * 2);
   const [activePreset, setActivePreset] = useState<string | null>(null);
+
+  // Sync state whenever the profile finishes loading / hydrating from IndexedDB
+  useEffect(() => {
+    if (profile?.answers?.income) {
+      const inc = profile.answers.income;
+      setIncome(inc);
+      setFixedExpenses(inc * 0.45);
+      setVariableExpenses(inc * 0.35);
+      setSavingsGoalTarget(inc * 2);
+    }
+  }, [profile?.answers?.income]);
+
+  // Compute dynamic slider bounds based on baseline income
+  const incomeMin = Math.max(100, Math.round(baseIncome * 0.2));
+  const incomeMax = Math.round(baseIncome * 3);
+  const incomeStep = Math.max(10, Math.round(baseIncome * 0.01));
+
+  const fixedMin = Math.max(50, Math.round(baseFixed * 0.2));
+  const fixedMax = Math.round(baseFixed * 2.5);
+  const fixedStep = Math.max(10, Math.round(baseFixed * 0.01));
+
+  const varMin = 0;
+  const varMax = Math.round(baseVariable * 3);
+  const varStep = Math.max(10, Math.round(baseVariable * 0.01));
 
   const applyPreset = (preset: typeof PRESETS[number]) => {
     setActivePreset(preset.id);
@@ -174,9 +198,9 @@ export function ScenarioSandboxModal({
             </div>
             <input
               type="range"
-              min={10000}
-              max={250000}
-              step={1000}
+              min={incomeMin}
+              max={incomeMax}
+              step={incomeStep}
               value={income}
               onChange={e => {
                 setActivePreset(null);
@@ -193,9 +217,9 @@ export function ScenarioSandboxModal({
             </div>
             <input
               type="range"
-              min={5000}
-              max={150000}
-              step={1000}
+              min={fixedMin}
+              max={fixedMax}
+              step={fixedStep}
               value={fixedExpenses}
               onChange={e => {
                 setActivePreset(null);
@@ -212,9 +236,9 @@ export function ScenarioSandboxModal({
             </div>
             <input
               type="range"
-              min={1000}
-              max={100000}
-              step={1000}
+              min={varMin}
+              max={varMax}
+              step={varStep}
               value={variableExpenses}
               onChange={e => {
                 setActivePreset(null);

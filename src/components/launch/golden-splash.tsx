@@ -58,7 +58,7 @@ export function drawCoin(ctx: CanvasRenderingContext2D, p: Particle) {
     ctx.font = `bold ${p.size * 1.1}px sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("€", 0, 0);
+    ctx.fillText("✦", 0, 0);
   }
   ctx.restore();
 }
@@ -91,7 +91,8 @@ export function drawSparkle(ctx: CanvasRenderingContext2D, p: Particle) {
   ctx.restore();
 }
 
-export function spawnParticle(
+export function resetParticle(
+  p: Particle,
   kind: ParticleType,
   w: number,
   h: number,
@@ -161,22 +162,46 @@ export function spawnParticle(
     vy = Math.sin(angle) * speed;
   }
 
-  return {
-    x,
-    y,
-    vx,
-    vy,
+  p.x = x;
+  p.y = y;
+  p.vx = vx;
+  p.vy = vy;
+  p.life = 0;
+  p.maxLife = maxLife;
+  p.size = size;
+  p.opacity = 0;
+  p.rotation = rotation;
+  p.rotVel = rotVel;
+  p.kind = kind;
+  p.color = color;
+  p.seed = seed;
+  p.active = true;
+  return p;
+}
+
+export function spawnParticle(
+  kind: ParticleType,
+  w: number,
+  h: number,
+  fromCenter: boolean = false
+): Particle {
+  const p: Particle = {
+    x: 0,
+    y: 0,
+    vx: 0,
+    vy: 0,
     life: 0,
-    maxLife,
-    size,
+    maxLife: 0,
+    size: 0,
     opacity: 0,
-    rotation,
-    rotVel,
+    rotation: 0,
+    rotVel: 0,
     kind,
-    color,
-    seed,
+    color: '#FFFFFF',
+    seed: 0,
     active: true,
   };
+  return resetParticle(p, kind, w, h, fromCenter);
 }
 
 export const POOL_SIZE = 120;
@@ -289,7 +314,7 @@ export function GoldenSplash({ onProceed }: GoldenSplashProps) {
       const dpr = window.devicePixelRatio || 1;
       canvas.width = width * dpr;
       canvas.height = height * dpr;
-      ctx.scale(dpr, dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
 
     window.addEventListener("resize", resize);
@@ -340,13 +365,13 @@ export function GoldenSplash({ onProceed }: GoldenSplashProps) {
           for (let i = 0; i < 15; i++) {
             const p = acquireParticle(pool);
             if (p) {
-              Object.assign(p, spawnParticle("coin", width, height, true));
+              resetParticle(p, "coin", width, height, true);
             }
           }
           for (let i = 0; i < 20; i++) {
             const p = acquireParticle(pool);
             if (p) {
-              Object.assign(p, spawnParticle("sparkle", width, height, true));
+              resetParticle(p, "sparkle", width, height, true);
             }
           }
         } else if (currentPhase === "invitation") {
@@ -354,7 +379,7 @@ export function GoldenSplash({ onProceed }: GoldenSplashProps) {
           for (let i = 0; i < 10; i++) {
             const p = acquireParticle(pool);
             if (p) {
-              Object.assign(p, spawnParticle("sparkle", width, height, true));
+              resetParticle(p, "sparkle", width, height, true);
               p.x = width / 2;
               p.y = height * 0.3;
             }
@@ -369,8 +394,7 @@ export function GoldenSplash({ onProceed }: GoldenSplashProps) {
         if (activeDustCount < 60) {
           const p = acquireParticle(pool);
           if (p) {
-            const spawned = spawnParticle('gold-dust', width, height, false);
-            Object.assign(p, spawned);
+            resetParticle(p, 'gold-dust', width, height, false);
             activeDustCount++;
           }
         }

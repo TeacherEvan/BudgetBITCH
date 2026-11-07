@@ -131,10 +131,15 @@ export async function unlockLocalVault(password: string): Promise<boolean> {
   const storedHash = localStorage.getItem(LOCAL_LOCK_HASH_KEY);
   const storedSaltHex = localStorage.getItem(LOCAL_LOCK_SALT_KEY);
 
-  if (!storedHash || !storedSaltHex) {
+  if (!storedHash) {
     // If no password set, mark as unlocked
     sessionStorage.setItem(LOCAL_SESSION_KEY, 'unlocked');
     return true;
+  }
+
+  // If a password was set but the salt is missing, fail closed
+  if (!storedSaltHex) {
+    return false;
   }
 
   // Parse salt

@@ -11,6 +11,8 @@ import {
   getDB,
   USER_DATA_STORES,
   RESET_TOMBSTONE_KEY,
+  recordLocalWritesBulk,
+  notifyBoardChanged,
 } from '@/lib/db/local-db';
 import { calculateNetWorthBaseline } from '@/lib/utils/budget-calculator';
 import type { WizardProfile } from '@/lib/types/budget';
@@ -464,6 +466,8 @@ export async function restoreFromCloudSnapshot(
       await tx.done;
     }
 
+    const now = Date.now();
+    const pendingWrites: Array<{ store: string; key: string; timestamp: number }> = [];
     for (const store of allStores) {
       const items = backup[store];
       if (Array.isArray(items)) {
@@ -476,12 +480,26 @@ export async function restoreFromCloudSnapshot(
             !('id' in (item as Record<string, unknown>))
           ) {
             await db.put(store, item as never, 'current' as never);
+            pendingWrites.push({ store, key: 'current', timestamp: now });
           } else {
             await db.put(store, item as never);
+            const rec = item as Record<string, unknown>;
+            const key =
+              store === 'budgets' ? (rec?.category as string) :
+              store === 'netWorthSnapshots' ? (rec?.date as string) :
+              store === 'criticalExpenseCommitments' ? (rec?.month as string) :
+              (rec?.id as string);
+            if (key) {
+              pendingWrites.push({ store, key: String(key), timestamp: now });
+            }
           }
         }
       }
     }
+    if (pendingWrites.length > 0) {
+      await recordLocalWritesBulk(pendingWrites);
+    }
+    notifyBoardChanged('local');
     console.log('[Sync] Database restored successfully from cloud snapshot');
     return true;
   } catch (err) {

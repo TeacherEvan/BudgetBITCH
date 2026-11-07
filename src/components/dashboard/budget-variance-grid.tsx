@@ -5,7 +5,7 @@ import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { formatMoney, type CurrencyCode } from '@/lib/utils/currency';
 import type { ExpenseEntry, ExpenseCategory } from '@/lib/types/budget';
-import { useExpenses } from '@/hooks/use-local-db';
+import { useExpenses, useBudgets } from '@/hooks/use-local-db';
 import { rollupCategoryActuals, flattenLedgerRows } from '@/modules/budgeting/line-item-rollup';
 import {
   ArrowUpDown,
@@ -97,10 +97,21 @@ export function BudgetVarianceGrid({
   locale = 'en',
 }: BudgetVarianceGridProps) {
   const { expenses: hookExpenses } = useExpenses();
+  const { budgets } = useBudgets();
   const activeExpenses = propExpenses && propExpenses.length > 0 ? propExpenses : hookExpenses;
 
   const [sortField, setSortField] = useState<SortField>('variance');
   const [sortAsc, setSortAsc] = useState(true);
+
+  const userBudgetsMap = useMemo(() => {
+    const map: Partial<Record<ExpenseCategory, number>> = {};
+    for (const b of budgets) {
+      if (b.monthlyLimit > 0) {
+        map[b.category] = b.monthlyLimit;
+      }
+    }
+    return map;
+  }, [budgets]);
 
   const gridData = useMemo(() => {
     // Itemized receipts split across their line-item categories; everything
@@ -110,7 +121,7 @@ export function BudgetVarianceGrid({
     const rows: CategoryBudgetConfig[] = (Object.keys(DEFAULT_BUDGETS) as ExpenseCategory[]).map(cat => ({
       category: cat,
       nameEn: CATEGORY_NAMES[cat]?.en ?? cat,
-      budgeted: DEFAULT_BUDGETS[cat],
+      budgeted: userBudgetsMap[cat] ?? DEFAULT_BUDGETS[cat],
       actual: actualMap[cat] || 0,
     }));
 
@@ -126,7 +137,7 @@ export function BudgetVarianceGrid({
 
       return sortAsc ? result : -result;
     });
-  }, [activeExpenses, sortField, sortAsc]);
+  }, [activeExpenses, sortField, sortAsc, userBudgetsMap]);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {

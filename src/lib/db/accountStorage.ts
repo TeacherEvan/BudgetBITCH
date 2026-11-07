@@ -16,6 +16,7 @@
 import {
   serializeBoard,
   replaceBoardData,
+  applyRemoteBoard,
   clearAllUserData,
   getDB,
   getWizardProfile,
@@ -230,6 +231,36 @@ export async function adoptRemoteAccount(
   await saveLocalAccount({ ...meta, hasLocalData: true });
   await restoreAccountToActive(snapshot);
   await setCurrentAccountId(meta.accountId);
+}
+
+/**
+ * Adopt a remote board returned as a keyed map from Convex (getAccountBoard)
+ * into local storage and set it as active.
+ */
+export async function adoptRemoteBoardMap(
+  meta: LocalAccountMeta,
+  remoteMap: Record<string, { value: unknown; updatedAt: number }>,
+): Promise<void> {
+  const current = await getCurrentAccountId();
+  if (current !== meta.accountId) {
+    await stashCurrentAccount(current);
+  }
+  await clearAllUserData();
+  await applyRemoteBoard(remoteMap);
+  const hydratedSnapshot = await serializeBoard();
+  const database = await db();
+  await database.put(
+    ACCOUNTS_DATA_STORE,
+    {
+      accountId: meta.accountId,
+      snapshot: clone(hydratedSnapshot),
+      stashedAt: Date.now(),
+    } as StashedAccount,
+    meta.accountId,
+  );
+  await saveLocalAccount({ ...meta, hasLocalData: true });
+  await setCurrentAccountId(meta.accountId);
+  notifyBoardChanged('switch');
 }
 
 export type { UmbrellaKey };

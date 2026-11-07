@@ -6,6 +6,7 @@ import {
   replaceBoardData,
   saveWizardProfile,
   addExpense,
+  addExpensesBulk,
   getWizardProfile,
   getExpenses,
   clearAllData,
@@ -36,6 +37,9 @@ import {
   saveCriticalExpenseCommitment,
   getCriticalExpenseCommitment,
   deleteCriticalExpenseCommitment,
+  applyRemoteBoard,
+  recordLocalWriteAt,
+  getLocalWrite,
 } from './local-db';
 import { BOARD_CHANGED_EVENT } from '@/lib/types/budget';
 import type { WizardProfile, ExpenseEntry, NewsItem } from '@/lib/types/budget';
@@ -170,6 +174,27 @@ describe('shared board serialize/replace', () => {
     await addExpense(makeExpense());
 
     expect(handler).toHaveBeenCalledTimes(2);
+    window.removeEventListener(BOARD_CHANGED_EVENT, handler);
+  });
+
+  it('addExpensesBulk persists entries atomically, stamps localWrites and emits board-changed once', async () => {
+    const handler = vi.fn();
+    window.addEventListener(BOARD_CHANGED_EVENT, handler);
+
+    const batch = [
+      { ...makeExpense(), id: 'bulk-1', amount: 50 },
+      { ...makeExpense(), id: 'bulk-2', amount: 150 },
+      { ...makeExpense(), id: 'bulk-3', amount: 250 },
+    ];
+
+    await addExpensesBulk(batch);
+
+    const after = await getExpenses();
+    expect(after).toHaveLength(3);
+    expect(after.map((e) => e.id).sort()).toEqual(['bulk-1', 'bulk-2', 'bulk-3']);
+
+    // Emitted exactly once for the whole bulk operation
+    expect(handler).toHaveBeenCalledTimes(1);
     window.removeEventListener(BOARD_CHANGED_EVENT, handler);
   });
 });
@@ -383,5 +408,85 @@ describe('critical expense commitments', () => {
 
     await deleteCriticalExpenseCommitment('2026-07');
     expect(await getCriticalExpenseCommitment('2026-07')).toBeUndefined();
+  });
+});
+
+describe('applyRemoteBoard LWW conflict resolution', () => {
+  beforeEach(async () => {
+    await clearAllData();
+    localStorage.clear();
+  });
+
+  it('overwrites local record when remote updatedAt is greater than localTs', async () => {
+    // 1. Local expense written at timestamp 1000
+    await addExpense({
+      id: 'exp-conflict-1',
+      date: '2026-08-01',
+      category: 'food',
+      merchant: 'Local Supermarket',
+      amount: 40,
+      source: 'manual',
+    });
+    await recordLocalWriteAt('expenses', 'exp-conflict-1', 1000);
+
+    // 2. Incoming remote map with newer timestamp 2000
+    const remoteMap = {
+      'expenses:exp-conflict-1': {
+        value: {
+          id: 'exp-conflict-1',
+          date: '2026-08-01',
+          category: 'food',
+          merchant: 'Remote Supermarket',
+          amount: 45,
+          source: 'manual',
+        },
+        updatedAt: 2000,
+      },
+    };
+
+    await applyRemoteBoard(remoteMap);
+
+    const expenses = await getExpenses();
+    expect(expenses).toHaveLength(1);
+    expect(expenses[0].merchant).toBe('Remote Supermarket');
+    expect(expenses[0].amount).toBe(45);
+    expect(await getLocalWrite('expenses', 'exp-conflict-1')).toBe(2000);
+  });
+
+  it('rejects remote record when remote updatedAt is less than or equal to localTs', async () => {
+    // 1. Local expense written at timestamp 3000
+    await addExpense({
+      id: 'exp-conflict-2',
+      date: '2026-08-01',
+      category: 'food',
+      merchant: 'Local Bistro',
+      amount: 100,
+      source: 'manual',
+    });
+    await recordLocalWriteAt('expenses', 'exp-conflict-2', 3000);
+
+    // 2. Incoming stale/equal remote record with timestamp 3000
+    const staleMap = {
+      'expenses:exp-conflict-2': {
+        value: {
+          id: 'exp-conflict-2',
+          date: '2026-08-01',
+          category: 'food',
+          merchant: 'Stale Bistro',
+          amount: 80,
+          source: 'manual',
+        },
+        updatedAt: 3000,
+      },
+    };
+
+    await applyRemoteBoard(staleMap);
+
+    // Local record and local clock must be preserved
+    const expenses = await getExpenses();
+    expect(expenses).toHaveLength(1);
+    expect(expenses[0].merchant).toBe('Local Bistro');
+    expect(expenses[0].amount).toBe(100);
+    expect(await getLocalWrite('expenses', 'exp-conflict-2')).toBe(3000);
   });
 });

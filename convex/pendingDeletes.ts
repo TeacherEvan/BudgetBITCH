@@ -62,7 +62,7 @@ function isMember(ref: NonNullable<BoardMemberRef>, userId: Id<"users">): boolea
   return ref.board.members.includes(userId);
 }
 
-const STORES = ["expenses", "incomes", "bills"] as const;
+const STORES = ["expenses", "incomes", "bills", "savingsGoals", "debts"] as const;
 type StoreName = (typeof STORES)[number];
 
 /** Apply the delete to the board's serialized data and bump updatedAt. */
@@ -117,7 +117,13 @@ async function notifyPartner(
 export const requestItemDelete = mutation({
   args: {
     boardId: v.string(),
-    store: v.union(v.literal("expenses"), v.literal("incomes"), v.literal("bills")),
+    store: v.union(
+      v.literal("expenses"),
+      v.literal("incomes"),
+      v.literal("bills"),
+      v.literal("savingsGoals"),
+      v.literal("debts"),
+    ),
     itemId: v.string(),
     itemSnapshot: v.optional(v.any()),
   },

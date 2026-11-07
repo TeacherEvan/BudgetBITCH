@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
-import { USER_DATA_STORES, clearAllData, markResetTombstone, getDB, createLocalCheckpoint } from '@/lib/db/local-db';
+import { USER_DATA_STORES, clearAllData, markResetTombstone, getDB, createLocalCheckpoint, recordLocalWritesBulk, notifyBoardChanged } from '@/lib/db/local-db';
 import { logUserAction } from '@/lib/utils/action-logger';
 import { createBackupPayload, parseAndValidateBackup, type BackupData } from '@/lib/db/backup-schema';
 import { encryptBackup, decryptBackup } from '@/lib/db/crypto-backup';
@@ -64,7 +64,11 @@ export async function clearSyncAndQueues(): Promise<void> {
     await db.clear('receiptDrafts');
   }
   for (const key of RESET_QUEUE_KEYS) {
-    localStorage.removeItem(key);
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // ignore
+    }
   }
 }
 
@@ -175,11 +179,15 @@ export function DataBackupCard({
     clearProfile?.();
 
     // 6. Clear localStorage keys except RESET_PRESERVE
-    for (let i = localStorage.length - 1; i >= 0; i--) {
-      const key = localStorage.key(i);
-      if (key && !RESET_PRESERVE.includes(key)) {
-        localStorage.removeItem(key);
+    try {
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        if (key && !RESET_PRESERVE.includes(key)) {
+          localStorage.removeItem(key);
+        }
       }
+    } catch {
+      // ignore
     }
 
     // 7. Clear sessionStorage
@@ -218,7 +226,7 @@ export function DataBackupCard({
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `budgetbitch-backup-${format(new Date(), 'yyyy-MM-dd')}${payload.isEncrypted ? '.enc' : ''}.json`;
+      a.download = `budget-boss-backup-${format(new Date(), 'yyyy-MM-dd')}${payload.isEncrypted ? '.enc' : ''}.json`;
       a.click();
       URL.revokeObjectURL(url);
       setExportStatus('success');
@@ -234,28 +242,54 @@ export function DataBackupCard({
     // 1. Create a failsafe local checkpoint before modifying anything
     await createLocalCheckpoint('Pre-Import Backup');
     const db = await getDB();
-    // Note: We are going to use a single transaction for clearing and writing.
     const allStores = [...USER_DATA_STORES, 'settings'] as const;
     const tx = db.transaction(allStores, 'readwrite');
     // Clear existing stores
     for (const store of allStores) {
       await tx.objectStore(store).clear();
     }
-    // Write new data
+    // Write new data inside the transaction, and collect write timestamps
+    // to record in 'localWrites' AFTER tx commits (preventing TransactionInactiveError).
+    const now = Date.now();
+    const pendingWrites: Array<{ store: string; key: string }> = [];
     for (const [store, items] of Object.entries(data)) {
+      if (!allStores.includes(store as (typeof allStores)[number])) continue;
       const storeObj = tx.objectStore(store as (typeof allStores)[number]);
       if (store === 'wizardProfile' || store === 'settings') {
         if (items.length > 0) {
           // We expect only one item, but we take the first one.
           await storeObj.put(items[0] as never, 'current' as never);
+          pendingWrites.push({ store, key: 'current' });
         }
       } else {
         for (const item of items) {
           await storeObj.put(item as never);
+          const rec = item as Record<string, unknown>;
+          const key =
+            store === 'budgets' ? (rec?.category as string) :
+            store === 'netWorthSnapshots' ? (rec?.date as string) :
+            store === 'criticalExpenseCommitments' ? (rec?.month as string) :
+            (rec?.id as string);
+          if (key) {
+            pendingWrites.push({ store, key: String(key) });
+          }
         }
       }
     }
     await tx.done;
+
+    // Stamp localWrites in a single batch transaction outside the multi-store transaction
+    if (pendingWrites.length > 0) {
+      await recordLocalWritesBulk(
+        pendingWrites.map((w) => ({
+          store: w.store,
+          key: w.key,
+          timestamp: now,
+        })),
+      );
+    }
+
+    notifyBoardChanged('local');
     setImportStatus('success');
     window.location.reload();
   };
@@ -327,7 +361,11 @@ export function DataBackupCard({
       await import('@/lib/convex/sync-snapshots').then(m => m.syncDailySnapshot());
       const now = new Date().toISOString();
       setLastSync(now);
-      localStorage.setItem('budgetbitch:lastSync', now);
+      try {
+        localStorage.setItem('budgetbitch:lastSync', now);
+      } catch {
+        // ignore
+      }
       setSyncStatus('success');
     } catch {
       setSyncStatus('error');

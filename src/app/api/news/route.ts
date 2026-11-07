@@ -35,6 +35,7 @@ function getActionableText(item: { title: string; category: string }): string | 
 // Cache for 6 hours
 let newsCache: NewsItem[] | null = null;
 let lastFetch = 0;
+let inFlightFetch: Promise<NewsItem[]> | null = null;
 const CACHE_TTL = 6 * 60 * 60 * 1000;
 
 async function fetchAllNews(): Promise<NewsItem[]> {
@@ -79,22 +80,27 @@ export async function GET(request: NextRequest) {
   // Use cache if valid
   if (newsCache && (now - lastFetch) < CACHE_TTL) {
     const filtered = newsCache.filter(item => item.locale === effectiveLocale);
-    return NextResponse.json({ items: filtered });
+    return NextResponse.json({ items: filtered.length > 0 ? filtered : newsCache });
   }
 
   try {
-    const allNews = await fetchAllNews();
+    if (!inFlightFetch) {
+      inFlightFetch = fetchAllNews().finally(() => {
+        inFlightFetch = null;
+      });
+    }
+    const allNews = await inFlightFetch;
     newsCache = allNews;
-    lastFetch = now;
+    lastFetch = Date.now();
 
     const filtered = allNews.filter(item => item.locale === effectiveLocale);
-    return NextResponse.json({ items: filtered });
+    return NextResponse.json({ items: filtered.length > 0 ? filtered : allNews });
   } catch (error) {
     console.error('Failed to fetch news:', error);
     // Return cached data even if stale on error
     if (newsCache) {
       const filtered = newsCache.filter(item => item.locale === effectiveLocale);
-      return NextResponse.json({ items: filtered, stale: true });
+      return NextResponse.json({ items: filtered.length > 0 ? filtered : newsCache, stale: true });
     }
     return NextResponse.json({ error: 'Failed to fetch news' }, { status: 500 });
   }

@@ -13,6 +13,7 @@ import {
   getLocalAccounts,
   getStashedAccount,
   adoptRemoteAccount,
+  adoptRemoteBoardMap,
   ensurePersonalAccount,
   hasStashedAccount,
 } from './accountStorage';
@@ -132,6 +133,28 @@ describe('account storage — swap model', () => {
     expect(stashed?.snapshot.expenses[0].id).toBe('fam-e');
     const meta = await getLocalAccounts();
     expect(meta.find((m) => m.accountId === 'acc-family')?.inviteCode).toBe('ABCDEF12');
+  });
+
+  it('adoptRemoteBoardMap converts keyed remote map into hydrated local stores and stashes snapshot', async () => {
+    const keyedMap = {
+      'expenses:exp-remote-1': {
+        value: makeExpense('exp-remote-1', 750),
+        updatedAt: 1000,
+      },
+      'budgets:food': {
+        value: { category: 'food' as const, monthlyLimit: 5000, alertAtPct: 80 },
+        updatedAt: 1000,
+      },
+    };
+    await adoptRemoteBoardMap(FAMILY_META, keyedMap);
+
+    expect(await getCurrentAccountId()).toBe('acc-family');
+    const expenses = await getExpenses();
+    expect(expenses.map((e) => e.id)).toEqual(['exp-remote-1']);
+
+    const stashed = await getStashedAccount('acc-family');
+    expect(stashed?.snapshot.expenses[0].id).toBe('exp-remote-1');
+    expect(stashed?.snapshot.budgets[0].category).toBe('food');
   });
 
   it('switchAccount is idempotent (no-op when target === current)', async () => {

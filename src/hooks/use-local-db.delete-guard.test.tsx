@@ -35,7 +35,8 @@ vi.mock('@/components/shared-board/shared-delete-guard-provider', () => ({
   useSharedDeleteGuardContext: () => null,
 }));
 
-import { useExpenses } from './use-local-db';
+import { useExpenses, useSavingsGoals, useDebtPayoff } from './use-local-db';
+import { addSavingsGoal, getAllSavingsGoals, addDebt, getAllDebts } from '@/lib/db/local-db';
 
 function makeExpense(id: string): ExpenseEntry {
   return {
@@ -91,7 +92,7 @@ describe('useExpenses().remove — delete guard regression', () => {
     expect(await getExpenses()).toHaveLength(1);
   });
 
-  it('falls back to a local delete when the consent request throws', async () => {
+  it('guards regression: keeps the row and surfaces error when the consent request throws (two-party delete invariant)', async () => {
     guardState.isShared = true;
     guardState.requestDelete = vi.fn().mockRejectedValue(new Error('Board not found'));
     await addExpense(makeExpense('e3'));
@@ -100,13 +101,49 @@ describe('useExpenses().remove — delete guard regression', () => {
     await waitFor(() => expect(result.current.expenses).toHaveLength(1));
 
     await act(async () => {
-      await result.current.remove('e3');
+      await expect(result.current.remove('e3')).rejects.toThrow('Board not found');
     });
 
     expect(guardState.requestDelete).toHaveBeenCalled();
-    // The critical assertion: a failed consent request must NOT swallow the
-    // delete. Before the fix this left the row in place with zero feedback.
-    expect(result.current.expenses).toHaveLength(0);
-    expect(await getExpenses()).toHaveLength(0);
+    // Two-party consent invariant: a failed server request must NOT unilaterally delete locally
+    expect(result.current.expenses).toHaveLength(1);
+    expect(await getExpenses()).toHaveLength(1);
+  });
+
+  it('routes savingsGoals and debts to two-party consent on a shared board', async () => {
+    guardState.isShared = true;
+    await addSavingsGoal({
+      id: 'sg-1',
+      name: 'Emergency Fund',
+      targetAmount: 50000,
+      currentAmount: 10000,
+      category: 'emergency',
+    });
+    await addDebt({
+      id: 'debt-1',
+      name: 'Credit Card',
+      balance: 15000,
+      apr: 18,
+      minimumPayment: 500,
+      type: 'credit_card',
+    });
+
+    const { result: sgResult } = renderHook(() => useSavingsGoals());
+    await waitFor(() => expect(sgResult.current.goals).toHaveLength(1));
+
+    await act(async () => {
+      await sgResult.current.remove('sg-1');
+    });
+    expect(guardState.requestDelete).toHaveBeenCalledWith('savingsGoals', 'sg-1');
+    expect(await getAllSavingsGoals()).toHaveLength(1);
+
+    const { result: debtResult } = renderHook(() => useDebtPayoff());
+    await waitFor(() => expect(debtResult.current.debts).toHaveLength(1));
+
+    await act(async () => {
+      await debtResult.current.remove('debt-1');
+    });
+    expect(guardState.requestDelete).toHaveBeenCalledWith('debts', 'debt-1');
+    expect(await getAllDebts()).toHaveLength(1);
   });
 });

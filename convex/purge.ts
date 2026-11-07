@@ -54,6 +54,8 @@ export interface PurgeCounts {
   pushSubscriptions: number;
   lineIdentities: number;
   profiles: number;
+  boardShards: number;
+  ledgerEntries: number;
 }
 
 function emptyCounts(): PurgeCounts {
@@ -70,6 +72,8 @@ function emptyCounts(): PurgeCounts {
     pushSubscriptions: 0,
     lineIdentities: 0,
     profiles: 0,
+    boardShards: 0,
+    ledgerEntries: 0,
   };
 }
 
@@ -129,6 +133,33 @@ async function destroyBoard(
     for (const row of batch) {
       await ctx.db.delete(row._id);
       counts.pendingDeletes += 1;
+    }
+    if (batch.length < 250) break;
+  }
+
+  // Batch delete boardShards
+  for (let shard = 0; shard < 16; shard++) {
+    const s = await ctx.db
+      .query("boardShards")
+      .withIndex("by_board_and_shard", (q) =>
+        q.eq("boardId", boardId).eq("shardIndex", shard),
+      )
+      .unique();
+    if (s) {
+      await ctx.db.delete(s._id);
+      counts.boardShards += 1;
+    }
+  }
+
+  // Batch delete ledgerEntries
+  while (true) {
+    const batch = await ctx.db
+      .query("ledgerEntries")
+      .withIndex("by_board", (q) => q.eq("boardId", boardId))
+      .take(250);
+    for (const row of batch) {
+      await ctx.db.delete(row._id);
+      counts.ledgerEntries += 1;
     }
     if (batch.length < 250) break;
   }
@@ -270,6 +301,32 @@ export const purgeMyAccountData = mutation({
       }
 
       if (!partnerStillLinked) {
+        // Purge sharded ledger rows for orphaned couple board
+        for (let shard = 0; shard < 16; shard++) {
+          const s = await ctx.db
+            .query("boardShards")
+            .withIndex("by_board_and_shard", (q) =>
+              q.eq("boardId", board.boardId).eq("shardIndex", shard),
+            )
+            .unique();
+          if (s) {
+            await ctx.db.delete(s._id);
+            counts.boardShards += 1;
+          }
+        }
+
+        while (true) {
+          const batch = await ctx.db
+            .query("ledgerEntries")
+            .withIndex("by_board", (q) => q.eq("boardId", board.boardId))
+            .take(250);
+          for (const row of batch) {
+            await ctx.db.delete(row._id);
+            counts.ledgerEntries += 1;
+          }
+          if (batch.length < 250) break;
+        }
+
         await ctx.db.delete(board._id);
         counts.sharedBoards += 1;
       }

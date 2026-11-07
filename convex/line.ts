@@ -15,6 +15,35 @@ import {
 
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+/** Check webhook event idempotency (read-only query). Returns true if already processed. */
+export const isWebhookEventProcessed = internalQuery({
+  args: { webhookEventId: v.string() },
+  handler: async (ctx, { webhookEventId }): Promise<boolean> => {
+    const existing = await ctx.db
+      .query("processedWebhooks")
+      .withIndex("by_webhookEventId", (q) => q.eq("webhookEventId", webhookEventId))
+      .unique();
+    return !!existing;
+  },
+});
+
+/** Record processed webhook event after successful ingestion. */
+export const recordWebhookEvent = internalMutation({
+  args: { webhookEventId: v.string() },
+  handler: async (ctx, { webhookEventId }) => {
+    const existing = await ctx.db
+      .query("processedWebhooks")
+      .withIndex("by_webhookEventId", (q) => q.eq("webhookEventId", webhookEventId))
+      .unique();
+    if (!existing) {
+      await ctx.db.insert("processedWebhooks", {
+        webhookEventId,
+        createdAt: Date.now(),
+      });
+    }
+  },
+});
+
 /** Check and record webhook event idempotency in a mutation transaction. Returns true if already processed. */
 export const checkAndRecordWebhookEvent = internalMutation({
   args: { webhookEventId: v.string() },
@@ -323,23 +352,35 @@ export const lineWebhook = httpAction(async (ctx, req) => {
     return new Response("ok", { status: 200 });
   }
 
-  // Extract webhook event ID for idempotency (from LINE's delivery metadata)
-  const webhookEventId = req.headers.get("x-line-delivery-id") ?? 
-    `fallback-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  // Extract webhook delivery / event IDs for deduplication
+  const headerDeliveryId = req.headers.get("x-line-delivery-id");
+  const payloadEventIds = events
+    .map((ev) => {
+      const e = ev as { webhookEventId?: string; message?: { id?: string } };
+      return e.webhookEventId ?? e.message?.id ?? "";
+    })
+    .filter(Boolean)
+    .join(",");
+
+  const webhookEventId =
+    headerDeliveryId || (payloadEventIds ? `msg:${payloadEventIds}` : null);
   
   // Check idempotency - if already processed, return 200 immediately
-  const alreadyProcessed = await ctx.runMutation(internal.line.checkAndRecordWebhookEvent, {
-    webhookEventId,
-  });
-  if (alreadyProcessed) {
-    clog("info", "line_webhook_deduplicated", { traceId, webhookEventId });
-    return new Response("ok", { status: 200 });
+  if (webhookEventId) {
+    const isAlreadyProcessed = await ctx.runQuery(internal.line.isWebhookEventProcessed, {
+      webhookEventId,
+    });
+    if (isAlreadyProcessed) {
+      clog("info", "line_webhook_deduplicated", { traceId, webhookEventId });
+      return new Response("ok", { status: 200 });
+    }
   }
 
   clogMetric("line_webhook_events", events.length, "count", { status_class: "received" });
   let imageMessages = 0;
   let ingested = 0;
   let contentFetchFailed = 0;
+  let parseFailed = 0;
 
   for (const event of events) {
     const e = event as {
@@ -399,8 +440,16 @@ export const lineWebhook = httpAction(async (ctx, req) => {
       });
       ingested++;
     } catch (err) {
+      parseFailed++;
       clogError("line_webhook_ingest_failed", err, { traceId, lineUserId });
     }
+  }
+
+  // Record idempotency commit ONLY if there were no upstream fetch/parse errors
+  if (webhookEventId && contentFetchFailed === 0 && parseFailed === 0) {
+    await ctx.runMutation(internal.line.recordWebhookEvent, {
+      webhookEventId,
+    });
   }
 
   clogMetric("line_webhook_image_messages", imageMessages, "count", { source: "line" });

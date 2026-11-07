@@ -15,7 +15,7 @@ import type {
   Debt,
 } from '@/lib/types/budget';
 import { notifyBoardChanged } from '@/lib/types/budget';
-
+export { notifyBoardChanged } from '@/lib/types/budget';
 export type { BoardSnapshot } from '@/lib/types/budget';
 
 export interface BudgetBITCHDB extends DBSchema {
@@ -273,6 +273,28 @@ export async function recordLocalWriteAt(store: string, key: string, ts: number)
   try {
     const db = await getDB();
     await db.put('localWrites', ts, writeKey(store, key));
+  } catch {
+    // Non-fatal
+  }
+}
+
+/**
+ * Record multiple local write timestamps in a single transaction to prevent
+ * transaction thrashing during bulk import or snapshot restore.
+ */
+export async function recordLocalWritesBulk(
+  entries: Array<{ store: string; key: string; timestamp?: number }>,
+): Promise<void> {
+  if (entries.length === 0) return;
+  try {
+    const db = await getDB();
+    if (!db.objectStoreNames.contains('localWrites')) return;
+    const now = Date.now();
+    const tx = db.transaction('localWrites', 'readwrite');
+    for (const e of entries) {
+      await tx.store.put(e.timestamp ?? now, writeKey(e.store, e.key));
+    }
+    await tx.done;
   } catch {
     // Non-fatal
   }

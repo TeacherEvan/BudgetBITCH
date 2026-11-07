@@ -212,4 +212,18 @@ describe('parseImport', () => {
     expect(row.source).toBe('import');
     expect(typeof row.amount).toBe('number');
   });
+
+  it('guards regression: preserves DD/MM/YYYY dates across the whole CSV when days > 12 are present', () => {
+    const csv = [
+      'date,merchant,amount',
+      '05/03/2026,Coffee,120',
+      '25/03/2026,Dinner,800',
+    ].join('\n');
+    const result = parseImport(csv);
+    expect(result.errors).toHaveLength(0);
+    expect(result.valid).toHaveLength(2);
+    // 05/03 must remain March 5, not flip to May 3
+    expect(result.valid[0].date).toBe('2026-03-05');
+    expect(result.valid[1].date).toBe('2026-03-25');
+  });
 });

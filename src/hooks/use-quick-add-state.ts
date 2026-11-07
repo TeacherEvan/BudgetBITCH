@@ -422,14 +422,13 @@ export function useQuickAddState(): QuickAddState {
           entrySource: entrySource === 'import' ? 'import' : 'manual',
         });
 
-        // Also update profile baseline monthly income
-        if (profile) {
-          const currentIncome = profile.answers?.income || 0;
+        // Seed profile baseline monthly income only if currently unset/0 (prevents cumulative drift on one-time bonuses)
+        if (profile && (!profile.answers?.income || profile.answers.income === 0)) {
           await saveProfile({
             ...profile,
             answers: {
               ...profile.answers,
-              income: currentIncome + amountVal,
+              income: amountVal,
             },
           });
         }

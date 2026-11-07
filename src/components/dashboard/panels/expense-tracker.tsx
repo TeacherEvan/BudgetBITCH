@@ -4,7 +4,7 @@
 import { useState, useMemo } from 'react';
 import { Plus, Trash2, Edit, FileSpreadsheet } from 'lucide-react';
 import { useExpenses, useBudgets } from '@/hooks/use-local-db';
-import { addExpense, generateId } from '@/lib/db/local-db';
+import { addExpensesBulk, generateId } from '@/lib/db/local-db';
 import { repeatExpense } from '@/lib/db/stores/expenses-store';
 import type { ExpenseEntry } from '@/lib/types/budget';
 import type { ParsedExpense } from '@/modules/budgeting/csv-import';
@@ -104,42 +104,48 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
   }, [expenses]);
 
   const handleImportRows = async (rows: ParsedExpense[]) => {
-    // Persist each parsed row as an ExpenseEntry with a generated id.
+    // Persist all parsed rows in a single atomic transaction.
     // Errors propagate to ImportCsvModal.handleConfirm, which reports them
     // instead of silently closing as if the import worked.
-    await Promise.all(
-      rows.map((row) =>
-        addExpense({
-          id: generateId(),
-          date: row.date,
-          category: row.category,
-          merchant: row.merchant,
-          amount: row.amount,
-          note: row.note,
-          source: 'import',
-        } as ExpenseEntry),
-      ),
-    );
+    const entries: ExpenseEntry[] = rows.map((row) => ({
+      id: generateId(),
+      date: row.date,
+      category: row.category,
+      merchant: row.merchant,
+      amount: row.amount,
+      note: row.note,
+      source: 'import',
+    } as ExpenseEntry));
+
+    await addExpensesBulk(entries);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const sortedExpenses = useMemo(() => {
+    return [...expenses].sort((a, b) => b.date.localeCompare(a.date));
+  }, [expenses]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.merchant || !formData.amount) return;
     
-    if (editingId) {
-      update({
-        ...formData,
-        amount: parseFloat(formData.amount),
-        id: editingId,
-      });
-    } else {
-      add({
-        ...formData,
-        amount: parseFloat(formData.amount),
-        source: formData.source,
-      });
+    try {
+      if (editingId) {
+        await update({
+          ...formData,
+          amount: parseFloat(formData.amount),
+          id: editingId,
+        });
+      } else {
+        await add({
+          ...formData,
+          amount: parseFloat(formData.amount),
+          source: formData.source,
+        });
+      }
+      resetForm();
+    } catch (err) {
+      console.error('Failed to save expense:', err);
     }
-    resetForm();
   };
 
   const handleEdit = (expense: Expense) => {
@@ -280,8 +286,7 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
           </div>
         ) : (
           <div className="space-y-2">
-            {expenses
-              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            {sortedExpenses
               .map(expense => {
                 const budget = categoryBudgets.get(expense.category);
                 const spent = categorySpending.get(expense.category) || 0;

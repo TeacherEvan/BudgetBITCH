@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 
-export type PendingStore = 'expenses' | 'incomes' | 'bills';
+export type PendingStore = 'expenses' | 'incomes' | 'bills' | 'savingsGoals' | 'debts';
 
 export interface PendingDelete {
   pendingId: string;

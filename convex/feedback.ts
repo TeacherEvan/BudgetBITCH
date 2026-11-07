@@ -41,15 +41,35 @@ export const report = mutation({
     locale: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Sanitize and enforce size boundaries
+    const message = args.message.slice(0, 4000);
+    const email = args.email ? args.email.slice(0, 320) : undefined;
+    const context = args.context ? args.context.slice(0, 2000) : undefined;
+    const userAgent = args.userAgent ? args.userAgent.slice(0, 512) : undefined;
+    const locale = args.locale ? args.locale.slice(0, 32) : undefined;
+    const actionLogs = args.actionLogs
+      ? args.actionLogs.slice(-50).map((l) => l.slice(0, 500))
+      : undefined;
+
+    // Rate-limit: maximum 20 reports created globally in the last 60 seconds
+    const oneMinuteAgo = Date.now() - 60_000;
+    const recent = await ctx.db
+      .query("feedbackReports")
+      .withIndex("by_createdAt", (q) => q.gte("createdAt", oneMinuteAgo))
+      .take(21);
+    if (recent.length >= 20) {
+      throw new Error("Rate limit exceeded. Please try again later.");
+    }
+
     // Persist for triage
     const reportId = await ctx.db.insert("feedbackReports", {
       type: args.type,
-      message: args.message,
-      email: args.email ?? undefined,
-      context: args.context ?? undefined,
-      actionLogs: args.actionLogs ?? undefined,
-      userAgent: args.userAgent ?? undefined,
-      locale: args.locale ?? undefined,
+      message,
+      email,
+      context,
+      actionLogs,
+      userAgent,
+      locale,
       createdAt: Date.now(),
     });
     return { reportId };

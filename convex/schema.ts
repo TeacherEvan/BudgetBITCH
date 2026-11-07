@@ -316,6 +316,7 @@ export default defineSchema({
   })
     .index("by_board_and_transaction", ["boardId", "transactionId"])
     .index("by_board_and_member", ["boardId", "memberId"])
+    .index("by_board", ["boardId"])
     .index("by_createdAt", ["createdAt"]),
 
   // Webhook idempotency for LINE receipts

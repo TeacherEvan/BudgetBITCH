@@ -129,7 +129,7 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
     const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
     const dueSoon = bills.filter(b => b.isActive).some(b => {
       const diff = (((b.dueDay - dayOfMonth) % daysInMonth) + daysInMonth) % daysInMonth;
-      return diff > 0 && diff <= 7;
+      return diff >= 0 && diff <= 7;
     });
     if (dueSoon) alertCount += 1;
   }
@@ -394,8 +394,8 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
               <CashFlowProjectionCard
                 locale={locale}
                 currency={resolvedCurrency}
-                currentCashBalance={35000}
-                monthlyIncome={profile?.answers?.income ?? 45000}
+                currentCashBalance={emergencyFund?.currentAmount ?? 0}
+                monthlyIncome={profile?.answers?.income ?? 0}
               />
             )}
             {excelTab === 'pivot' && (

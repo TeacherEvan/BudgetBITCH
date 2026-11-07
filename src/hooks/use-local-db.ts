@@ -147,14 +147,14 @@ export function useExpenses() {
     if (guard?.isShared) {
       // Two-party consent: raise a server-side request; the item stays until
       // the partner approves (delete executes server-side, then re-syncs down).
-      // If that request fails for ANY reason we must fall back to a local
-      // delete — otherwise the button is a silent no-op.
       try {
         await guard.requestDelete('expenses', id);
         notify('Delete sent to your partner for approval.', 'info');
         return;
       } catch (e) {
-        console.debug('Shared delete request failed, deleting locally:', e);
+        console.error('Shared delete request failed:', e);
+        notify('Failed to send delete request to partner.', 'error');
+        throw e;
       }
     }
     await deleteExpense(id);
@@ -216,7 +216,9 @@ export function useIncomes() {
         notify('Delete sent to your partner for approval.', 'info');
         return;
       } catch (e) {
-        console.debug('Shared delete request failed, deleting locally:', e);
+        console.error('Shared delete request failed:', e);
+        notify('Failed to send delete request to partner.', 'error');
+        throw e;
       }
     }
     await deleteIncome(id);
@@ -310,7 +312,9 @@ export function useBills() {
         notify('Delete sent to your partner for approval.', 'info');
         return;
       } catch (e) {
-        console.debug('Shared delete request failed, deleting locally:', e);
+        console.error('Shared delete request failed:', e);
+        notify('Failed to send delete request to partner.', 'error');
+        throw e;
       }
     }
     await deleteBill(id);
@@ -355,6 +359,18 @@ export function useSavingsGoals() {
   }, []);
 
   const remove = useCallback(async (id: string) => {
+    const guard = getActiveSharedDeleteGuard();
+    if (guard?.isShared) {
+      try {
+        await guard.requestDelete('savingsGoals', id);
+        notify('Delete sent to your partner for approval.', 'info');
+        return;
+      } catch (e) {
+        console.error('Shared delete request failed:', e);
+        notify('Failed to send delete request to partner.', 'error');
+        throw e;
+      }
+    }
     await deleteSavingsGoal(id);
     setGoals(prev => prev.filter(g => g.id !== id));
   }, []);
@@ -547,7 +563,9 @@ export function useSubscriptions() {
         notify('Delete sent to your partner for approval.', 'info');
         return;
       } catch (e) {
-        console.debug('Shared delete request failed, deleting locally:', e);
+        console.error('Shared delete request failed:', e);
+        notify('Failed to send delete request to partner.', 'error');
+        throw e;
       }
     }
     await deleteExpense(id);
@@ -650,6 +668,18 @@ export function useDebtPayoff() {
   }, []);
 
   const remove = useCallback(async (id: string) => {
+    const guard = getActiveSharedDeleteGuard();
+    if (guard?.isShared) {
+      try {
+        await guard.requestDelete('debts', id);
+        notify('Delete sent to your partner for approval.', 'info');
+        return;
+      } catch (e) {
+        console.error('Shared delete request failed:', e);
+        notify('Failed to send delete request to partner.', 'error');
+        throw e;
+      }
+    }
     await deleteDebt(id);
     setDebts(prev => prev.filter(d => d.id !== id));
   }, []);
@@ -665,9 +695,9 @@ export function useCashFlowForecast() {
   const load = useCallback(() => {
     let mounted = true;
     const loadForecast = async () => {
-      const [budgets] = await Promise.all([getAllBudgets()]);
+      const [budgets, profile] = await Promise.all([getAllBudgets(), getWizardProfile()]);
       
-      const monthlyIncome = budgets.find(b => b.category === 'savings')?.monthlyLimit || 50000;
+      const monthlyIncome = profile?.answers?.income ?? (budgets.find(b => b.category === 'savings')?.monthlyLimit || 0);
       const monthlyExpenses = budgets.reduce((sum, b) => sum + b.monthlyLimit, 0) - (budgets.find(b => b.category === 'savings')?.monthlyLimit || 0);
       const monthlyNet = monthlyIncome - monthlyExpenses;
 

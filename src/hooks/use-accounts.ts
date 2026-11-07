@@ -18,10 +18,9 @@ import { useConvexAuth } from "@convex-dev/auth/react";
 import { api } from "../../convex/_generated/api";
 import { PERSONAL_ACCOUNT_ID } from "@/lib/types/accounts";
 import type { LocalAccountMeta } from "@/lib/types/accounts";
-import type { BoardSnapshot } from "@/lib/types/budget";
 import {
   switchAccount as localSwitch,
-  adoptRemoteAccount,
+  adoptRemoteBoardMap,
   getLocalAccounts,
   saveLocalAccount,
   removeLocalAccount,
@@ -206,7 +205,7 @@ export function useAccounts(): UseAccounts {
             data: Record<string, { value: unknown; updatedAt: number }> | null;
           } | null;
           if (board?.data) {
-            await adoptRemoteAccount(meta, board.data as unknown as BoardSnapshot);
+            await adoptRemoteBoardMap(meta, board.data);
           } else {
             await localSwitch(accountId);
           }

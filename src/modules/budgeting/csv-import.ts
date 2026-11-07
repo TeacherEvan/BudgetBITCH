@@ -226,7 +226,7 @@ export function normalizeAmount(input: string): number | null {
  * - Day-first is applied when the middle/leading part exceeds 12.
  * Returns null when unparseable.
  */
-export function normalizeDate(input: string): string | null {
+export function normalizeDate(input: string, preferDayFirst = false): string | null {
   if (!input || typeof input !== 'string') return null;
   const raw = input.trim();
   if (raw === '') return null;
@@ -258,6 +258,10 @@ export function normalizeDate(input: string): string | null {
       month = nb;
     } else if (na > 12) {
       // a cannot be a month → a=day, b=month
+      day = na;
+      month = nb;
+    } else if (preferDayFirst) {
+      // Locked by column inference to DD/MM/YYYY
       day = na;
       month = nb;
     } else {
@@ -345,6 +349,21 @@ export function parseImport(csv: string): ImportResult {
   const dataRows = rows.slice(1);
   let total = 0;
 
+  // Infer preferDayFirst across the entire column if any row unambiguously has day > 12 as first part
+  let preferDayFirst = false;
+  for (const cells of dataRows) {
+    const rawDate = cells[columns.date]?.trim() ?? '';
+    const parts = rawDate.split(/[-/.\s]+/).map((p) => p.trim());
+    if (parts.length >= 3 && parts[2].length > 2) {
+      const na = Number(parts[0]);
+      const nb = Number(parts[1]);
+      if (na > 12 && nb <= 12) {
+        preferDayFirst = true;
+        break;
+      }
+    }
+  }
+
   dataRows.forEach((cells, idx) => {
     total += 1;
     const fileLine = idx + 2; // header is line 1
@@ -361,7 +380,7 @@ export function parseImport(csv: string): ImportResult {
     const categoryStr = columns.category !== undefined ? (cells[columns.category]?.trim() ?? '') : '';
     const note = columns.note !== undefined ? (cells[columns.note]?.trim() ?? '') : '';
 
-    const date = normalizeDate(dateStr);
+    const date = normalizeDate(dateStr, preferDayFirst);
     const amount = normalizeAmount(amountStr);
 
     if (!date) {

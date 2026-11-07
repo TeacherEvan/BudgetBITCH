@@ -264,4 +264,133 @@ describe("line webhook (Task 4)", () => {
 
     vi.unstubAllEnvs();
   });
+
+  it("does not commit idempotency on upstream 500 error, allowing retry to succeed, then deduplicates", async () => {
+    vi.stubEnv("LINE_CHANNEL_SECRET", "secret");
+    vi.stubEnv("LINE_CHANNEL_ACCESS_TOKEN", "token");
+    vi.stubEnv("GEMINI_API_KEY", "mock-gemini-key");
+
+    const t = newTest();
+    const userId = await t.run(async (ctx: any) =>
+      ctx.db.insert("users", { email: "retry-user@test.org" }),
+    );
+    await t.run(async (ctx: any) =>
+      ctx.db.insert("lineUsers", {
+        lineUserId: "Uretry",
+        userId,
+        accountId: undefined,
+        linkedAt: 1_700_000_000_000,
+      }),
+    );
+
+    const body = JSON.stringify({
+      events: [
+        {
+          type: "message",
+          message: { type: "image", id: "MSG-RETRY-1" },
+          source: { userId: "Uretry" },
+        },
+      ],
+    });
+    const sig = crypto
+      .createHmac("sha256", "secret")
+      .update(body)
+      .digest("base64");
+
+    const fakeImage = Buffer.from("fakebytes").toString("base64");
+    let callCount = 0;
+    let failFirstAttempt = true;
+
+    vi.stubGlobal("fetch", (async (url: any) => {
+      const u = String(url);
+      callCount++;
+      if (u.includes("api-data.line.me") && u.includes("content")) {
+        if (failFirstAttempt) {
+          // Upstream transient 500 error on first try
+          return new Response("LINE internal error", { status: 500 });
+        }
+        return new Response(Buffer.from(fakeImage, "base64"), {
+          status: 200,
+          headers: { "content-type": "image/jpeg" },
+        });
+      }
+      if (u.includes("generativelanguage.googleapis.com")) {
+        return new Response(
+          JSON.stringify({
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    {
+                      text: JSON.stringify({
+                        amount: 99.0,
+                        merchant: "Retry Cafe",
+                        category: "food",
+                        date: "2026-08-01",
+                      }),
+                    },
+                  ],
+                },
+              },
+            ],
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 200 });
+    }) as any);
+
+    // Delivery 1: upstream failure
+    const headers = {
+      "x-line-signature": sig,
+      "x-line-delivery-id": "DELIV-RETRY-123",
+    };
+    const res1 = await t.fetch("/line/webhook", {
+      method: "POST",
+      headers,
+      body,
+    });
+    expect(res1.status).toBe(200);
+
+    // Assert 0 receipts were ingested on failure
+    let receipts = await t.run(async (ctx: any) =>
+      ctx.db.query("receipts").collect(),
+    );
+    expect(receipts).toHaveLength(0);
+
+    // Delivery 2: retry after upstream recovers
+    failFirstAttempt = false;
+    const res2 = await t.fetch("/line/webhook", {
+      method: "POST",
+      headers,
+      body,
+    });
+    expect(res2.status).toBe(200);
+
+    // Assert receipt ingested on successful retry
+    receipts = await t.run(async (ctx: any) =>
+      ctx.db.query("receipts").collect(),
+    );
+    expect(receipts).toHaveLength(1);
+    expect(receipts[0].merchant).toBe("Retry Cafe");
+
+    // Delivery 3: exact duplicate delivery with same delivery ID
+    const countBeforeDup = callCount;
+    const res3 = await t.fetch("/line/webhook", {
+      method: "POST",
+      headers,
+      body,
+    });
+    expect(res3.status).toBe(200);
+
+    // Assert duplicate was suppressed (no new receipts, no additional upstream fetch calls)
+    receipts = await t.run(async (ctx: any) =>
+      ctx.db.query("receipts").collect(),
+    );
+    expect(receipts).toHaveLength(1);
+    expect(callCount).toBe(countBeforeDup);
+
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
 });

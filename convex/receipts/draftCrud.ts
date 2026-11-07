@@ -89,8 +89,11 @@ export const listReceipts = query({
     }
     queryBuilder = queryBuilder.order("desc");
 
-    // Fetch one extra to check if there are more
-    const receipts = await queryBuilder.take(limit + 1);
+    // Fetch a generous scan window (up to 200 items) so that in-memory
+    // filters on source / status / cursor do not prematurely truncate results
+    // when limit is small (e.g. limit: 1).
+    const scanWindow = Math.min(Math.max((limit + 1) * 10, 100), 200);
+    const receipts = await queryBuilder.take(scanWindow);
 
     // Apply optional server-side filters (source / status)
     let filtered = receipts;
@@ -112,9 +115,10 @@ export const listReceipts = query({
     // Check if there are more results
     let nextCursor: string | null = null;
     if (filtered.length > limit) {
-      filtered = filtered.slice(0, limit);
-      const last = filtered[filtered.length - 1];
+      const page = filtered.slice(0, limit);
+      const last = page[page.length - 1];
       nextCursor = String(last.parsedAt);
+      filtered = page;
     }
 
     return { receipts: filtered, nextCursor };

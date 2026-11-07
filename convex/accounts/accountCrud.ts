@@ -2,6 +2,7 @@
 import { v, ConvexError } from "convex/values";
 import { query, mutation } from "../_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import type { Id } from "../_generated/dataModel";
 import {
   UMBRELLA_KEYS,
   type UmbrellaKey,
@@ -109,6 +110,19 @@ export const listMyAccounts = query({
 
     const ownedIds = profile.accountIds ?? [];
 
+    // Helper cache to avoid redundant userProfiles lookups across multiple boards
+    const profileCache = new Map<string, string | null>();
+    const getProfileDisplayName = async (memberId: Id<"users">): Promise<string | null> => {
+      if (profileCache.has(memberId)) return profileCache.get(memberId)!;
+      const mp = await ctx.db
+        .query("userProfiles")
+        .withIndex("by_user", (q) => q.eq("userId", memberId))
+        .unique();
+      const name = mp?.displayName ?? null;
+      profileCache.set(memberId, name);
+      return name;
+    };
+
     const owned = (
       await Promise.all(
         ownedIds.map(async (accountId) => {
@@ -128,15 +142,12 @@ export const listMyAccounts = query({
           const members = board
             ? await getBoardMemberIds(ctx, board.boardId)
             : [];
-          // Fetch display names for all members
+          // Fetch display names for all members with caching
           const memberProfiles = await Promise.all(
-            members.map(async (memberId) => {
-              const mp = await ctx.db
-                .query("userProfiles")
-                .withIndex("by_user", (q) => q.eq("userId", memberId))
-                .unique();
-              return { userId: memberId, displayName: mp?.displayName ?? null };
-            }),
+            members.map(async (memberId) => ({
+              userId: memberId,
+              displayName: await getProfileDisplayName(memberId),
+            })),
           );
           const memberDisplayNames: Record<string, string> = {};
           for (const m of memberProfiles) {
@@ -181,13 +192,10 @@ export const listMyAccounts = query({
               .unique();
             const memberIds = await getBoardMemberIds(ctx, board.boardId);
             const memberProfiles = await Promise.all(
-              memberIds.map(async (memberId) => {
-                const mp = await ctx.db
-                  .query("userProfiles")
-                  .withIndex("by_user", (q) => q.eq("userId", memberId))
-                  .unique();
-                return { userId: memberId, displayName: mp?.displayName ?? null };
-              }),
+              memberIds.map(async (memberId) => ({
+                userId: memberId,
+                displayName: await getProfileDisplayName(memberId),
+              })),
             );
             const memberDisplayNames: Record<string, string> = {};
             for (const m of memberProfiles) {

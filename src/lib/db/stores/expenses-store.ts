@@ -18,6 +18,42 @@ export async function addExpense(expense: ExpenseEntry): Promise<void> {
   logUserAction(`Add expense ${expense.category} ${expense.amount} (${expense.merchant || 'n/a'})`);
 }
 
+/**
+ * Bulk add expenses in a single transaction, stamping localWrites in batch
+ * and emitting BOARD_CHANGED_EVENT once for the whole set.
+ */
+export async function addExpensesBulk(expenses: ExpenseEntry[]): Promise<void> {
+  if (expenses.length === 0) return;
+  const member = getCurrentMember() ?? 'Personal';
+  const today = new Date().toISOString().split('T')[0];
+  const now = Date.now();
+
+  const prepared = expenses.map((e) => ({
+    ...e,
+    createdByName: e.createdByName || member,
+    entryDate: e.entryDate || today,
+  }));
+
+  const db = await getDB();
+  const tx = db.transaction('expenses', 'readwrite');
+  for (const exp of prepared) {
+    await tx.store.put(exp);
+  }
+  await tx.done;
+
+  // Stamp localWrites in a separate batch transaction
+  if (db.objectStoreNames.contains('localWrites')) {
+    const lwTx = db.transaction('localWrites', 'readwrite');
+    for (const exp of prepared) {
+      await lwTx.store.put(now, `expenses:${exp.id}`);
+    }
+    await lwTx.done;
+  }
+
+  notifyBoardChanged('local');
+  logUserAction(`Add bulk expenses (${prepared.length} items)`);
+}
+
 export async function updateExpense(expense: ExpenseEntry): Promise<void> {
   if (!expense.createdByName) expense.createdByName = getCurrentMember() ?? 'Personal';
   const db = await getDB();

@@ -63,7 +63,7 @@ export function Bills({ locale = 'en' }: BillsProps) {
     reminderDaysBefore: 3,
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.amount) return;
 
@@ -74,12 +74,16 @@ export function Bills({ locale = 'en' }: BillsProps) {
       id: editingId || crypto.randomUUID(),
     };
 
-    if (editingId) {
-      update(bill);
-    } else {
-      add(bill);
+    try {
+      if (editingId) {
+        await update(bill);
+      } else {
+        await add(bill);
+      }
+      resetForm();
+    } catch (err) {
+      console.error('Failed to save bill:', err);
     }
-    resetForm();
   };
 
   const handleEdit = (bill: Bill) => {
@@ -113,15 +117,20 @@ export function Bills({ locale = 'en' }: BillsProps) {
   };
 
   const getDaysUntilDue = (dueDay: number) => {
-    const today = new Date();
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const currentMonth = today.getMonth();
     const currentYear = today.getFullYear();
-    const dueDate = new Date(currentYear, currentMonth, dueDay);
+    const daysInCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const clampedDueDay = Math.min(dueDay, daysInCurrentMonth);
+    let dueDate = new Date(currentYear, currentMonth, clampedDueDay);
     if (dueDate < today) {
-      dueDate.setMonth(currentMonth + 1);
+      const daysInNextMonth = new Date(currentYear, currentMonth + 2, 0).getDate();
+      const clampedNextDueDay = Math.min(dueDay, daysInNextMonth);
+      dueDate = new Date(currentYear, currentMonth + 1, clampedNextDueDay);
     }
     const diffTime = dueDate.getTime() - today.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return Math.round(diffTime / (1000 * 60 * 60 * 24));
   };
 
   const categoryOptions = useMemo(

@@ -333,3 +333,40 @@ test("purge is idempotent — a second call succeeds with zero counts", async ()
   expect(second.counts.profiles).toBe(0);
   expect(second.counts.accounts).toBe(0);
 });
+
+test("purge removes boardShards and ledgerEntries for owned accounts", async () => {
+  const alice = await seedUser("alice");
+  const created = await asUser(alice).mutation(api.accounts.createAccount, {
+    name: "Ledger Account",
+    umbrella: "family",
+  });
+
+  await t.run(async (ctx: any) => {
+    await ctx.db.insert("boardShards", {
+      boardId: created.boardId,
+      shardIndex: 3,
+      totalMinor: BigInt(5000),
+      updatedAt: Date.now(),
+    });
+    await ctx.db.insert("ledgerEntries", {
+      boardId: created.boardId,
+      transactionId: "tx-1",
+      memberId: alice,
+      amountMinor: BigInt(5000),
+      store: "expenses",
+      itemId: "e1",
+      createdAt: Date.now(),
+    });
+  });
+
+  const res = await asUser(alice).mutation(api.purge.purgeMyAccountData, {});
+  expect(res.counts.boardShards).toBe(1);
+  expect(res.counts.ledgerEntries).toBe(1);
+
+  const after = await t.run(async (ctx: any) => ({
+    shards: await ctx.db.query("boardShards").collect(),
+    ledger: await ctx.db.query("ledgerEntries").collect(),
+  }));
+  expect(after.shards).toHaveLength(0);
+  expect(after.ledger).toHaveLength(0);
+});

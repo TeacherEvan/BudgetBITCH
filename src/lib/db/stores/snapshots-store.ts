@@ -1,6 +1,6 @@
 import type { NetWorthSnapshot, BoardSnapshot } from '@/lib/types/budget';
 import { notifyBoardChanged } from '@/lib/types/budget';
-import { getDB, afterBoardMutation, getLocalWrite, recordLocalWriteAt } from '../local-db';
+import { getDB, afterBoardMutation, getLocalWrite, recordLocalWritesBulk } from '../local-db';
 
 // Net Worth Snapshots
 export async function saveNetWorthSnapshot(snapshot: NetWorthSnapshot): Promise<void> {
@@ -208,18 +208,33 @@ export async function applyRemoteBoard(map: Record<string, { value: unknown; upd
     : [...stores];
   if (activeStores.length === 0) return;
   const tx = db.transaction(activeStores, 'readwrite');
+  const appliedWrites: Array<{ store: string; key: string; updatedAt: number }> = [];
   for (const item of stage) {
     const localTs = localTsMap.get(`${item.store}:${item.explicitKey}`) ?? 0;
     if (item.updatedAt <= localTs) continue;
     if (item.store === 'wizardProfile' && item.explicitKey !== undefined) {
-      tx.objectStore(item.store).put(item.value as never, item.explicitKey as never);
+      await tx.objectStore(item.store).put(item.value as never, item.explicitKey as never);
     } else {
-      tx.objectStore(item.store).put(item.value as never);
+      await tx.objectStore(item.store).put(item.value as never);
     }
-    // Stamp the local-write clock with THIS record's true timestamp
-    // (not "now"), preserving the per-key merge on a later push.
-    await recordLocalWriteAt(item.store, String(item.explicitKey), item.updatedAt);
+    appliedWrites.push({
+      store: item.store,
+      key: String(item.explicitKey),
+      updatedAt: item.updatedAt,
+    });
   }
   await tx.done;
+
+  // Stamp the local-write clock with each record's true timestamp (not "now"),
+  // preserving the per-key merge on a later push, AFTER tx has successfully committed.
+  if (appliedWrites.length > 0) {
+    await recordLocalWritesBulk(
+      appliedWrites.map((w) => ({
+        store: w.store,
+        key: w.key,
+        timestamp: w.updatedAt,
+      })),
+    );
+  }
   notifyBoardChanged('remote');
 }

@@ -32,7 +32,11 @@ function readQueue(): QueuedPush[] {
 
 function writeQueue(items: QueuedPush[]) {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(BOARD_QUEUE_KEY, JSON.stringify(items));
+  try {
+    localStorage.setItem(BOARD_QUEUE_KEY, JSON.stringify(items));
+  } catch {
+    // localStorage quota or private mode protection
+  }
 }
 
 export interface UseSharedBoard {
@@ -134,6 +138,23 @@ export function useSharedBoard(): UseSharedBoard {
     if (!isActive || !board) return;
     if (board.updatedAt <= lastAppliedAt.current) return;
     if (applyingRemote.current) return;
+
+    // Honor "Reset all data": never re-inject a couple board the user just wiped.
+    let resetAt = 0;
+    try {
+      resetAt = Number(
+        typeof window !== 'undefined'
+          ? localStorage.getItem('bb:lastResetAt') || '0'
+          : '0',
+      );
+    } catch {
+      resetAt = 0;
+    }
+    if (resetAt > 0 && board.updatedAt <= resetAt) {
+      console.log('[SharedBoard] Skipping board pull: board predates last reset.');
+      lastAppliedAt.current = board.updatedAt;
+      return;
+    }
 
     const apply = async () => {
       applyingRemote.current = true;

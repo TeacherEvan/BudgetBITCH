@@ -187,6 +187,16 @@ test("listReceipts filters by source and status", async () => {
   expect(res.receipts[0].source).toBe("line");
   expect(res.receipts[0].status).toBe("draft");
 
+  // Guards regression: limit: 1 with filter must find the matching item even when
+  // newer non-matching items exist (pre-filter truncation bug).
+  const resLimit1 = await asUser(userId).query(api.receipts.listReceipts, {
+    source: "line",
+    status: "draft",
+    limit: 1,
+  });
+  expect(resLimit1.receipts.length).toBe(1);
+  expect(resLimit1.receipts[0].source).toBe("line");
+
   // No filter returns all four.
   const all = await asUser(userId).query(api.receipts.listReceipts, {});
   expect(all.receipts.length).toBe(4);

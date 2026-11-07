@@ -100,7 +100,7 @@ describe('useQuickAddState', () => {
     expect(result.current.isExpense).toBe(true);
   });
 
-  it('records an income and bumps the wizard profile monthly income', async () => {
+  it('guards regression: records a one-time income without inflating existing wizard profile baseline income', async () => {
     const { result } = renderHook(() => useQuickAddState());
     act(() => {
       result.current.setIsExpense(false);
@@ -111,9 +111,8 @@ describe('useQuickAddState', () => {
     });
     await waitFor(() => {
       expect(mockAddIncome).toHaveBeenCalledTimes(1);
-      expect(mockSaveProfile).toHaveBeenCalledWith(
-        expect.objectContaining({ answers: expect.objectContaining({ income: 52500 }) }),
-      );
+      // Profile baseline income (50000) was already set, so saveProfile is not called to prevent cumulative drift
+      expect(mockSaveProfile).not.toHaveBeenCalled();
     });
   });
 

@@ -187,7 +187,7 @@ describe('QuickAddPage', () => {
     });
   });
 
-  it('updates wizard profile income on save for income', async () => {
+  it('guards regression: records an income without inflating baseline wizard profile income', async () => {
     render(<QuickAddPage />);
     const toggleButton = screen.getByRole('button', { name: /expense \(-\)/i });
     
@@ -200,12 +200,9 @@ describe('QuickAddPage', () => {
     fireEvent.click(saveButton);
 
     await waitFor(() => {
-      expect(mockSaveProfile).toHaveBeenCalledTimes(1);
-      expect(mockSaveProfile).toHaveBeenCalledWith(expect.objectContaining({
-        answers: expect.objectContaining({
-          income: 52500,
-        }),
-      }));
+      expect(mockAddIncome).toHaveBeenCalledTimes(1);
+      // Profile baseline income (50000) was already set, so saveProfile is not called to prevent cumulative drift
+      expect(mockSaveProfile).not.toHaveBeenCalled();
       expect(screen.getByText('Income added successfully!')).toBeInTheDocument();
     });
   });

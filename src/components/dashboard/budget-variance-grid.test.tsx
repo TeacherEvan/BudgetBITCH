@@ -8,6 +8,9 @@ vi.mock('@/hooks/use-local-db', () => ({
   useExpenses: () => ({
     expenses: [],
   }),
+  useBudgets: () => ({
+    budgets: [],
+  }),
 }));
 
 describe('BudgetVarianceGrid', () => {
