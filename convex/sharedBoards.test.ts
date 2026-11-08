@@ -41,21 +41,21 @@ describe("pushBoard merge semantics", () => {
 
     // Alice pushes an expense.
     const aliceData = {
-      "expenses:e1": { id: "e1", merchant: "Grab", amount: 120, updatedAt: 1000 },
+      "expenses:e1": { value: { id: "e1", merchant: "Grab", amount: 120 }, updatedAt: 1000 },
     };
     await asUser(aliceId).mutation(api.sharedBoards.pushBoard, { boardId, data: aliceData, updatedAt: 1000 });
 
     // Bob pushes a DIFFERENT expense (later timestamp).
     const bobData = {
-      "expenses:e2": { id: "e2", merchant: "Netflix", amount: 429, updatedAt: 2000 },
+      "expenses:e2": { value: { id: "e2", merchant: "Netflix", amount: 429 }, updatedAt: 2000 },
     };
     await asUser(bobId).mutation(api.sharedBoards.pushBoard, { boardId, data: bobData, updatedAt: 2000 });
 
     const board = await asUser(aliceId).query(api.sharedBoards.getBoard, { boardId });
     const data = (board as any).data as Record<string, any>;
     expect(Object.keys(data).sort()).toEqual(["expenses:e1", "expenses:e2"]);
-    expect(data["expenses:e1"].merchant).toBe("Grab");
-    expect(data["expenses:e2"].merchant).toBe("Netflix");
+    expect(data["expenses:e1"].value.merchant).toBe("Grab");
+    expect(data["expenses:e2"].value.merchant).toBe("Netflix");
   });
 
   test("rejects stale pushes that don't get re-queued forever (applied:true even when older)", async () => {
@@ -65,21 +65,21 @@ describe("pushBoard merge semantics", () => {
 
     await asUser(aliceId).mutation(api.sharedBoards.pushBoard, {
       boardId,
-      data: { "expenses:e1": { id: "e1", merchant: "Grab", amount: 120, updatedAt: 5000 } },
+      data: { "expenses:e1": { value: { id: "e1", merchant: "Grab", amount: 120 }, updatedAt: 5000 } },
       updatedAt: 5000,
     });
     // Bob pushes an OLDER update after Alice. Must still apply the delta and NOT
     // loop forever — return applied:true so the client queue drains.
     const res = await asUser(bobId).mutation(api.sharedBoards.pushBoard, {
       boardId,
-      data: { "expenses:bob": { id: "bob", merchant: "Lotus", amount: 50, updatedAt: 1000 } },
+      data: { "expenses:bob": { value: { id: "bob", merchant: "Lotus", amount: 50 }, updatedAt: 1000 } },
       updatedAt: 1000,
     });
     expect((res as any).applied).toBe(true);
 
     const board = await asUser(aliceId).query(api.sharedBoards.getBoard, { boardId });
     const data = (board as any).data as Record<string, any>;
-    expect(data["expenses:bob"].merchant).toBe("Lotus");
+    expect(data["expenses:bob"].value.merchant).toBe("Lotus");
   });
 
   test("incoming record does not overwrite a newer same-key local record", async () => {
@@ -89,20 +89,83 @@ describe("pushBoard merge semantics", () => {
 
     await asUser(aliceId).mutation(api.sharedBoards.pushBoard, {
       boardId,
-      data: { "expenses:e1": { id: "e1", merchant: "Grab", amount: 999, updatedAt: 9000 } },
+      data: { "expenses:e1": { value: { id: "e1", merchant: "Grab", amount: 999 }, updatedAt: 9000 } },
       updatedAt: 9000,
     });
     // Bob pushes a STALE version of e1 (older timestamp).
     const res = await asUser(bobId).mutation(api.sharedBoards.pushBoard, {
       boardId,
-      data: { "expenses:e1": { id: "e1", merchant: "Grab", amount: 100, updatedAt: 1000 } },
+      data: { "expenses:e1": { value: { id: "e1", merchant: "Grab", amount: 100 }, updatedAt: 1000 } },
       updatedAt: 1000,
     });
     expect((res as any).applied).toBe(true);
 
     const board = await asUser(aliceId).query(api.sharedBoards.getBoard, { boardId });
     const data = (board as any).data as Record<string, any>;
-    expect(data["expenses:e1"].amount).toBe(999); // newer value preserved
+    expect(data["expenses:e1"].value.amount).toBe(999); // newer value preserved
+  });
+
+  test("future updatedAt is clamped to now + 60s", async () => {
+    const aliceId = await seedUser(t, "alice");
+    const bobId = await seedUser(t, "bob");
+    const boardId = await linkAndGetBoard(aliceId, bobId);
+
+    const futureTime = Date.now() + 86_400_000; // +1 day
+    const res = await asUser(aliceId).mutation(api.sharedBoards.pushBoard, {
+      boardId,
+      data: { "expenses:e1": { value: { id: "e1", merchant: "Grab", amount: 120 }, updatedAt: futureTime } },
+      updatedAt: futureTime,
+    });
+    expect((res as any).applied).toBe(true);
+    // The board's updatedAt should be clamped to ~now + 60s, not +1 day
+    expect((res as any).updatedAt).toBeLessThan(futureTime);
+    expect((res as any).updatedAt).toBeGreaterThan(Date.now());
+    // Per-record LWW timestamps are clamped too — otherwise a hostile
+    // +10y key would lock that key's merge forever even with a sane board clock.
+    const board = await asUser(aliceId).query(api.sharedBoards.getBoard, { boardId });
+    const data = (board as any).data as Record<string, any>;
+    expect(data["expenses:e1"].updatedAt).toBeLessThan(futureTime);
+    expect(data["expenses:e1"].updatedAt).toBeLessThanOrEqual((res as any).updatedAt);
+  });
+
+  test("malformed shape (missing value/updatedAt) is rejected", async () => {
+    const aliceId = await seedUser(t, "alice");
+    const bobId = await seedUser(t, "bob");
+    const boardId = await linkAndGetBoard(aliceId, bobId);
+
+    // Missing 'value' field
+    await expect(
+      asUser(aliceId).mutation(api.sharedBoards.pushBoard, {
+        boardId,
+        data: { "expenses:e1": { updatedAt: 1000 } } as any, // missing value
+        updatedAt: 1000,
+      }),
+    ).rejects.toThrow();
+
+    // Missing 'updatedAt' field
+    await expect(
+      asUser(aliceId).mutation(api.sharedBoards.pushBoard, {
+        boardId,
+        data: { "expenses:e1": { value: { id: "e1" } } } as any, // missing updatedAt
+        updatedAt: 1000,
+      }),
+    ).rejects.toThrow();
+  });
+
+  test("oversized payload (>512 KB) is rejected", async () => {
+    const aliceId = await seedUser(t, "alice");
+    const bobId = await seedUser(t, "bob");
+    const boardId = await linkAndGetBoard(aliceId, bobId);
+
+    // Create a payload > 512 KB
+    const largeValue = "x".repeat(600 * 1024); // ~600 KB string
+    await expect(
+      asUser(aliceId).mutation(api.sharedBoards.pushBoard, {
+        boardId,
+        data: { "expenses:large": { value: { data: largeValue }, updatedAt: Date.now() } },
+        updatedAt: Date.now(),
+      }),
+    ).rejects.toThrow(/512 KB/);
   });
 });
 

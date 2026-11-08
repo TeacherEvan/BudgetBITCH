@@ -50,11 +50,25 @@ export const proxyReceiptScan = action({
 
     // Generate HMAC token for app:<userId> identity delegation
     // Token format: "<userId>:<timestamp>:<hmac>"
+    // HMAC key is domain-separated via HMAC(syncSecret, "app-token")
     const timestamp = Date.now();
     const message = `${userId}:${timestamp}`;
-    const key = await crypto.subtle.importKey(
+    const secretKey = await crypto.subtle.importKey(
       "raw",
       new TextEncoder().encode(syncSecret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign", "verify"]
+    );
+    // Domain-separated key: HMAC(secret, "app-token") — use secret as key, "app-token" as message
+    const derivedKeyBytes = await crypto.subtle.sign(
+      "HMAC",
+      secretKey,
+      new TextEncoder().encode("app-token")
+    );
+    const key = await crypto.subtle.importKey(
+      "raw",
+      derivedKeyBytes,
       { name: "HMAC", hash: "SHA-256" },
       false,
       ["sign"]

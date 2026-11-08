@@ -166,4 +166,39 @@ describe('Receipt scraper backend API', () => {
     });
     expect(alias).toBeDefined();
   });
+
+  test('receipts.syncOfflineDraft is idempotent by clientDraftId (no duplicate on retry)', async () => {
+    const t = convexTest(schema, modules);
+    const userId = await t.run(async (ctx) => {
+      return await ctx.db.insert('users', { name: 'Dave' });
+    });
+    const authedT = t.withIdentity({ subject: userId });
+
+    const args = {
+      clientDraftId: 'draft-123',
+      payload: {
+        lines: [{ text: 'PICK N PAY 120.50', conf: 90, y: 10, words: [] }],
+        width: 300,
+        height: 400,
+        lang: 'eng',
+        engine: 'tesseract.js@6',
+        capturedAt: Date.now(),
+      },
+    };
+
+    const first = await authedT.mutation(api.receipts.syncOfflineDraft, args);
+    expect(first.alreadySynced).toBe(false);
+
+    const second = await authedT.mutation(api.receipts.syncOfflineDraft, args);
+    expect(second.alreadySynced).toBe(true);
+    expect(second.receiptId).toBe(first.receiptId);
+
+    const rows = await authedT.run(async (ctx) => {
+      return await ctx.db
+        .query('receipts')
+        .withIndex('by_user_and_clientDraftId', (q) => q.eq('userId', userId).eq('clientDraftId', 'draft-123'))
+        .collect();
+    });
+    expect(rows).toHaveLength(1);
+  });
 });

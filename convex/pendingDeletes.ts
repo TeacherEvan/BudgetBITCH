@@ -13,8 +13,10 @@
 
 import { v, ConvexError } from "convex/values";
 import { mutation, query, MutationCtx, QueryCtx } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { Doc, Id } from "./_generated/dataModel";
+import { notifyPartner } from "./lib/notify";
 
 type BoardMemberRef =
   | { kind: "couple"; board: Doc<"sharedBoards"> }
@@ -97,26 +99,6 @@ async function applyDeleteToBoard(
   }
 }
 
-// Internal notify helper (kept inline to avoid a node-action import cycle in tests).
-async function notifyPartner(
-  ctx: MutationCtx,
-  _boardId: string,
-  toUserId: Id<"users">,
-  title: string,
-  body: string,
-) {
-  // Best-effort push: fire-and-forget so a missing VAPID config never blocks the
-  // request. We call the internal push list + send via a scheduled action if
-  // available; here we simply record intent by invoking push._listForUser and
-  // dispatching. To avoid pulling web-push into a non-node mutation, the actual
-  // network send is done by the client-side subscription path; the server still
-  // persists the request which the partner polls.
-  void ctx;
-  void toUserId;
-  void title;
-  void body;
-}
-
 /** Request deletion of an item on a shared board. Creates a pending record. */
 export const requestItemDelete = mutation({
   args: {
@@ -150,7 +132,7 @@ export const requestItemDelete = mutation({
     const existing = batch.find(
       (d) => d.store === args.store && d.itemId === args.itemId,
     );
-    if (existing) return { pendingId: existing._id, alreadyPending: true };
+    if (existing) return { pendingId: existing._id, alreadyPending: true, notifyScheduledId: null as string | null };
 
     const otherId = otherMemberId(ref, userId);
     const pendingId = await ctx.db.insert("pendingDeletes", {
@@ -163,8 +145,9 @@ export const requestItemDelete = mutation({
       itemSnapshot: args.itemSnapshot,
     });
 
+    let notifyScheduledId: string | null = null;
     if (otherId) {
-      await notifyPartner(
+      notifyScheduledId = await notifyPartner(
         ctx,
         args.boardId,
         otherId,
@@ -172,7 +155,7 @@ export const requestItemDelete = mutation({
         `Your partner requested to delete a ${args.store} item. Approve or reject in Settings.`,
       );
     }
-    return { pendingId, alreadyPending: false };
+    return { pendingId, alreadyPending: false, notifyScheduledId };
   },
 });
 

@@ -5,7 +5,7 @@
 "use node";
 
 import { v } from "convex/values";
-import { action } from "./_generated/server";
+import { action, internalAction } from "./_generated/server";
 import type { DataModel } from "./_generated/dataModel";
 import type { DocumentByName } from "convex/server";
 import { internal } from "./_generated/api";
@@ -15,15 +15,14 @@ import webpush from "web-push";
 const VAPID_PUBLIC = process.env.VAPID_PUBLIC_KEY ?? "";
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY ?? "";
 
-export const sendReminder = action({
+// Internal action that takes userId explicitly - called by scheduler from pendingDeletes
+export const _sendToUser = internalAction({
   args: {
+    userId: v.id("users"),
     title: v.string(),
     body: v.string(),
   },
-  handler: async (ctx, { title, body }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated");
-
+  handler: async (ctx, { userId, title, body }): Promise<{ sent: number; total: number }> => {
     if (!VAPID_PUBLIC || !VAPID_PRIVATE) {
       console.warn("VAPID keys not configured; push notifications skipped.");
       return { sent: 0, total: 0 };
@@ -60,4 +59,20 @@ export const sendReminder = action({
     }
     return { sent, total: subs.length };
   },
+  returns: v.object({ sent: v.number(), total: v.number() }),
+});
+
+// Public action for client calls (uses auth)
+export const sendReminder = action({
+  args: {
+    title: v.string(),
+    body: v.string(),
+  },
+  handler: async (ctx, { title, body }): Promise<{ sent: number; total: number }> => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated");
+
+    return ctx.runAction(internal.pushSend._sendToUser, { userId, title, body });
+  },
+  returns: v.object({ sent: v.number(), total: v.number() }),
 });
