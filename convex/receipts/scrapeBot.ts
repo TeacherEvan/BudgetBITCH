@@ -6,10 +6,27 @@ import { scrape as scrapeEngine } from "../lib/receipt/engine";
 import { applyAnswers, generateQuestions } from "../lib/receipt/questions";
 import type { OcrPayload } from "../lib/receipt/types";
 
+// Shared payload validator (mirrors ingestSchema.ts caps)
+const ocrPayloadValidator = v.object({
+  lines: v.array(v.object({
+    text: v.string(),
+    conf: v.optional(v.number()),
+    y: v.optional(v.number()),
+    words: v.optional(v.array(v.any())),
+  })),
+  width: v.optional(v.number()),
+  height: v.optional(v.number()),
+  lang: v.optional(v.string()),
+  engine: v.optional(v.string()),
+  capturedAt: v.optional(v.number()),
+  countryHint: v.optional(v.union(v.string(), v.null())),
+  currencyHint: v.optional(v.union(v.string(), v.null())),
+});
+
 // Scraper Bot: Scrape receipt from OCR payload
 export const scrape = mutation({
   args: {
-    payload: v.any(),
+    payload: ocrPayloadValidator,
     accountId: v.optional(v.string()),
     clientDraftId: v.optional(v.string()),
   },
@@ -17,6 +34,20 @@ export const scrape = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new ConvexError("Authentication required");
+    }
+
+    // 5000 lines cap (mirroring ingestSchema.ts)
+    if (args.payload.lines.length < 1) {
+      throw new ConvexError("Payload must contain at least one line");
+    }
+    if (args.payload.lines.length > 5000) {
+      throw new ConvexError("Too many lines (max 5000)");
+    }
+
+    // 8 MB JSON ceiling (mirroring ingestReceipt)
+    const payloadBytes = new TextEncoder().encode(JSON.stringify(args.payload)).length;
+    if (payloadBytes > 8_000_000) {
+      throw new ConvexError("Payload too large (max 8MB)");
     }
 
     const payload = args.payload as OcrPayload;
@@ -159,7 +190,7 @@ export const confirm = mutation({
 export const syncOfflineDraft = mutation({
   args: {
     clientDraftId: v.string(),
-    payload: v.any(),
+    payload: ocrPayloadValidator,
     answers: v.optional(v.any()),
     confirmed: v.optional(v.boolean()),
   },
@@ -167,15 +198,18 @@ export const syncOfflineDraft = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new ConvexError("Authentication required");
 
-    const existing = await ctx.db
-      .query("receipts")
-      .withIndex("by_user_and_clientDraftId", (q) =>
-        q.eq("userId", userId).eq("clientDraftId", args.clientDraftId)
-      )
-      .first();
+    // 5000 lines cap (mirroring ingestSchema.ts)
+    if (args.payload.lines.length < 1) {
+      throw new ConvexError("Payload must contain at least one line");
+    }
+    if (args.payload.lines.length > 5000) {
+      throw new ConvexError("Too many lines (max 5000)");
+    }
 
-    if (existing) {
-      return { receiptId: existing._id, alreadySynced: true };
+    // 8 MB JSON ceiling (mirroring ingestReceipt)
+    const payloadBytes = new TextEncoder().encode(JSON.stringify(args.payload)).length;
+    if (payloadBytes > 8_000_000) {
+      throw new ConvexError("Payload too large (max 8MB)");
     }
 
     const payload = args.payload as OcrPayload;
