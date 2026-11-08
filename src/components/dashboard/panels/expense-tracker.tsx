@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useCurrency } from '@/hooks/use-currency';
 import { usePurchaseNotes } from '@/hooks/use-purchase-notes';
-import { hasTrustworthyLineItems } from '@/modules/budgeting/line-item-rollup';
+import { hasTrustworthyLineItems, rollupCategoryActuals } from '@/modules/budgeting/line-item-rollup';
 import { formatLocalCalendarDate } from '@/lib/utils/date';
 import type { ExpenseCategory } from '@/lib/types/budget';
 
@@ -94,14 +94,15 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
   );
 
   const categorySpending = useMemo(() => {
-    const map = new Map<ExpenseCategory, number>();
-    for (let i = 0; i < expenses.length; i++) {
-      const e = expenses[i];
-      if (e.amount > 0) {
-        map.set(e.category, (map.get(e.category) || 0) + e.amount);
-      }
-    }
-    return map;
+    const today = new Date().toISOString().split('T')[0];
+    const currentMonth = today.slice(0, 7);
+    const currentMonthExpenses = expenses.filter(
+      (e) => !e.date || e.date.startsWith(currentMonth),
+    );
+    const actuals = rollupCategoryActuals(currentMonthExpenses);
+    return new Map<ExpenseCategory, number>(
+      (Object.entries(actuals) as [ExpenseCategory, number][]).map(([cat, amt]) => [cat, amt]),
+    );
   }, [expenses]);
 
   const handleImportRows = async (rows: ParsedExpense[]) => {

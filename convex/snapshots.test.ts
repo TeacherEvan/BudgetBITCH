@@ -97,4 +97,73 @@ describe("upsertDailySnapshot idempotency", () => {
     const todaySnapshots = snapshots.filter((s: any) => s.date === today);
     expect(todaySnapshots.length).toBe(1);
   });
+
+  it("deleteAllUserSnapshots chunks across snapshots, receipts and aliases and continues via scheduler", async () => {
+    // Seed 550 dailySnapshots
+    for (let i = 0; i < 550; i++) {
+      await t.run(async (ctx: any) => {
+        await ctx.db.insert("dailySnapshots", {
+          userId,
+          accountId: "acc-test",
+          date: `2026-01-${String((i % 28) + 1).padStart(2, "0")}`,
+          wizardProfile: {},
+          totals: { income: 100, expenses: 50, savings: 50 },
+          createdAt: Date.now() + i,
+        });
+      });
+    }
+
+    // Seed 5 receipts
+    for (let i = 0; i < 5; i++) {
+      await t.run(async (ctx: any) => {
+        await ctx.db.insert("receipts", {
+          userId,
+          amount: 50 + i,
+          merchant: `Shop ${i}`,
+          category: "food",
+          imageMimeType: "image/jpeg",
+          imageSizeBytes: 512,
+          parsedAt: Date.now() + i,
+          geminiModel: "gemini-2.5-flash",
+        });
+      });
+    }
+
+    // Seed 5 merchantAliases
+    for (let i = 0; i < 5; i++) {
+      await t.run(async (ctx: any) => {
+        await ctx.db.insert("merchantAliases", {
+          userId,
+          normalised: `shop${i}`,
+          displayName: `Shop ${i}`,
+          category: "food",
+          hits: 1,
+          updatedAt: Date.now() + i,
+        });
+      });
+    }
+
+    // Execute deleteAllUserSnapshots - should delete first 500 snapshots and schedule continuation
+    const res = await asUser(userId).mutation(api.snapshots.deleteAllUserSnapshots, {});
+    expect(res.success).toBe(true);
+    expect(res.deletedSnapshots).toBe(500);
+    expect(res.continuation).toBe(true);
+
+    // Draining via scheduler continuation should delete remaining 50 snapshots, 5 receipts, and 5 aliases
+    await t.finishAllScheduledFunctions(() => {});
+
+    const remainingSnapshots = await t.run(async (ctx: any) =>
+      ctx.db.query("dailySnapshots").withIndex("by_user", (q: any) => q.eq("userId", userId)).collect(),
+    );
+    const remainingReceipts = await t.run(async (ctx: any) =>
+      ctx.db.query("receipts").withIndex("by_user", (q: any) => q.eq("userId", userId)).collect(),
+    );
+    const remainingAliases = await t.run(async (ctx: any) =>
+      ctx.db.query("merchantAliases").withIndex("by_user_and_normalised", (q: any) => q.eq("userId", userId)).collect(),
+    );
+
+    expect(remainingSnapshots).toHaveLength(0);
+    expect(remainingReceipts).toHaveLength(0);
+    expect(remainingAliases).toHaveLength(0);
+  });
 });

@@ -2,16 +2,14 @@ import type { NetWorthSnapshot, BoardSnapshot } from '@/lib/types/budget';
 import { notifyBoardChanged } from '@/lib/types/budget';
 import {
   getDB,
-  afterBoardMutation,
+  putWithStamp,
   recordLocalWritesBulk,
   getAllLocalWrites,
 } from '../local-db';
 
 // Net Worth Snapshots
 export async function saveNetWorthSnapshot(snapshot: NetWorthSnapshot): Promise<void> {
-  const db = await getDB();
-  await db.put('netWorthSnapshots', snapshot);
-  await afterBoardMutation('netWorthSnapshots', snapshot.date);
+  await putWithStamp('netWorthSnapshots', snapshot, snapshot.date);
 }
 
 export async function getLatestNetWorthSnapshot(): Promise<NetWorthSnapshot | undefined> {

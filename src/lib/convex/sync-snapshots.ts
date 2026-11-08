@@ -472,6 +472,7 @@ export async function restoreFromCloudSnapshot(
       : [...allStores];
 
     const now = Date.now();
+    const snapshotTs = (snapshot as { createdAt?: number }).createdAt;
     const pendingWrites: Array<{ store: string; key: string; timestamp: number }> = [];
 
     const wantLocalWrites = db.objectStoreNames.contains('localWrites');
@@ -482,6 +483,25 @@ export async function restoreFromCloudSnapshot(
       );
       for (const store of activeStores) {
         await tx.objectStore(store).clear();
+      }
+
+      if (wantLocalWrites) {
+        const lwStore = tx.objectStore('localWrites');
+        // Clear stale localWrites entries for restored stores before stamping restored keys
+        // so deleted pre-restore keys do not emit phantom LWW tombstones.
+        const syncedRestoreStores = new Set<string>([...allStores]);
+        let cursor = await lwStore.openCursor();
+        while (cursor) {
+          const keyStr = String(cursor.key);
+          const colonIdx = keyStr.indexOf(':');
+          if (colonIdx !== -1) {
+            const storeName = keyStr.slice(0, colonIdx);
+            if (syncedRestoreStores.has(storeName)) {
+              await cursor.delete();
+            }
+          }
+          cursor = await cursor.continue();
+        }
       }
 
       for (const store of allStores) {
@@ -496,8 +516,13 @@ export async function restoreFromCloudSnapshot(
               item && typeof item === 'object' &&
               !('id' in (item as Record<string, unknown>))
             ) {
+              const payloadTs = (item as Record<string, unknown>)?.updatedAt as number | undefined;
+              const hasPayloadTs = typeof payloadTs === 'number' && Number.isFinite(payloadTs) && payloadTs > 0;
+              const ts = hasPayloadTs
+                ? payloadTs
+                : Math.min(now, typeof snapshotTs === 'number' && Number.isFinite(snapshotTs) && snapshotTs > 0 ? snapshotTs : 1);
               await storeObj.put(item as never, 'current' as never);
-              pendingWrites.push({ store, key: 'current', timestamp: now });
+              pendingWrites.push({ store, key: 'current', timestamp: ts });
             } else {
               await storeObj.put(item as never);
               const rec = item as Record<string, unknown>;
@@ -507,14 +532,14 @@ export async function restoreFromCloudSnapshot(
                 store === 'criticalExpenseCommitments' ? (rec?.month as string) :
                 (rec?.id as string);
               if (key) {
-                // Preserve the payload's own updatedAt when present (board-map
-                // shape) instead of flattening everything to restore-time;
-                // the merge thereafter respects the original clock.
-                const payloadTs = rec?.updatedAt;
-                const ts =
-                  typeof payloadTs === 'number' && Number.isFinite(payloadTs)
-                    ? Math.max(now, payloadTs)
-                    : now;
+                // Preserve the snapshot/payload's own timestamp instead of
+                // Math.max(now, payloadTs) so restoring an older snapshot does
+                // not clobber newer partner edits on shared boards unless intended.
+                const payloadTs = rec?.updatedAt as number | undefined;
+                const hasPayloadTs = typeof payloadTs === 'number' && Number.isFinite(payloadTs) && payloadTs > 0;
+                const ts = hasPayloadTs
+                  ? payloadTs
+                  : Math.min(now, typeof snapshotTs === 'number' && Number.isFinite(snapshotTs) && snapshotTs > 0 ? snapshotTs : 1);
                 pendingWrites.push({ store, key: String(key), timestamp: ts });
               }
             }

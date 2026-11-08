@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
-import { USER_DATA_STORES, clearAllData, markResetTombstone, getDB, createLocalCheckpoint, recordLocalWritesBulk, notifyBoardChanged } from '@/lib/db/local-db';
+import { USER_DATA_STORES, clearAllData, markResetTombstone, getDB, createLocalCheckpoint, recordLocalWritesBulk, clearAllLocalWrites, notifyBoardChanged } from '@/lib/db/local-db';
 import { logUserAction } from '@/lib/utils/action-logger';
 import { createBackupPayload, parseAndValidateBackup, type BackupData } from '@/lib/db/backup-schema';
 import { encryptBackup, decryptBackup } from '@/lib/db/crypto-backup';
@@ -242,6 +242,8 @@ export function DataBackupCard({
   const executeDataImport = async (data: BackupData) => {
     // 1. Create a failsafe local checkpoint before modifying anything
     await createLocalCheckpoint('Pre-Import Backup');
+    // Clear localWrites before importing so deleted pre-import keys do not emit phantom LWW tombstones
+    await clearAllLocalWrites();
     const db = await getDB();
     const allStores = [...USER_DATA_STORES, 'settings'] as const;
     const tx = db.transaction(allStores, 'readwrite');

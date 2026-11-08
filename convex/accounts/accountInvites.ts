@@ -174,20 +174,26 @@ export const redeemInviteToken = mutation({
       throw new ConvexError("Invite link has already been used");
     }
 
-    const members = await ctx.db
-      .query("boardMembers")
-      .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
-      .take(MAX_MEMBERS);
-    if (members.length >= MAX_MEMBERS) {
-      throw new ConvexError(`An account can have at most ${MAX_MEMBERS} members`);
-    }
-
-    await ctx.db.insert("boardMembers", {
+    // Insert the boardMember first, then check if we exceeded the cap.
+    // If over cap, delete the just-inserted row and throw.
+    const memberRowId = await ctx.db.insert("boardMembers", {
       boardId: acc.boardId,
       userId,
       role: "member",
       joinedAt: Date.now(),
     });
+
+    // Re-check member count after insert (concurrent-safe)
+    const membersAfter = await ctx.db
+      .query("boardMembers")
+      .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
+      .take(MAX_MEMBERS + 1);
+    if (membersAfter.length > MAX_MEMBERS) {
+      // Over cap - roll back by deleting the row we just inserted
+      await ctx.db.delete(memberRowId);
+      throw new ConvexError(`An account can have at most ${MAX_MEMBERS} members`);
+    }
+
     const board = await ctx.db
       .query("accountBoards")
       .withIndex("by_boardId", (q) => q.eq("boardId", acc.boardId!))

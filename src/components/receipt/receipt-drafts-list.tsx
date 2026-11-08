@@ -1,10 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import type { Doc } from '../../../convex/_generated/dataModel';
-import { addExpense } from '@/lib/db/stores/expenses-store';
+import { addExpense, addExpensesBulk } from '@/lib/db/stores/expenses-store';
 import { generateId } from '@/lib/db/local-db';
 
 // Canonical category set (mirrors convex/receipts.ts VALID_CATEGORIES +
@@ -73,6 +73,7 @@ export function ReceiptDraftsList() {
   >({});
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const inFlightIdsRef = useRef<Set<string>>(new Set());
 
   const drafts = useMemo<DraftRow[]>(
     () => draftsResult?.receipts ?? EMPTY_DRAFTS,
@@ -136,6 +137,8 @@ export function ReceiptDraftsList() {
   };
 
   const handleSave = async (d: DraftRow) => {
+    if (inFlightIdsRef.current.has(d._id)) return;
+    inFlightIdsRef.current.add(d._id);
     setSaving(d._id);
     setError(null);
     try {
@@ -150,6 +153,20 @@ export function ReceiptDraftsList() {
         type: normalizeCategory(String(it.type || 'other')),
         amount: Number(it.amount) || 0,
       }));
+
+      // Confirm with the server FIRST before committing to local store
+      await confirm({
+        draftId: d._id,
+        overrides: {
+          amount,
+          merchant,
+          category,
+          date,
+          currency,
+          tax,
+          items: items.length > 0 ? items : undefined,
+        },
+      });
 
       // Itemized expenses: one Expense per line so they show in the Expenses
       // list and the CSV/Excel export. Fall back to the receipt total when the
@@ -177,30 +194,22 @@ export function ReceiptDraftsList() {
               },
             ];
 
-      for (const row of expenseRows) {
-        await addExpense(row);
+      if (expenseRows.length === 1) {
+        await addExpense(expenseRows[0]);
+      } else if (expenseRows.length > 1) {
+        await addExpensesBulk(expenseRows);
       }
-
-      await confirm({
-        draftId: d._id,
-        overrides: {
-          amount,
-          merchant,
-          category,
-          date,
-          currency,
-          tax,
-          items: items.length > 0 ? items : undefined,
-        },
-      });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save receipt');
     } finally {
+      inFlightIdsRef.current.delete(d._id);
       setSaving(null);
     }
   };
 
   const handleDiscard = async (d: DraftRow) => {
+    if (inFlightIdsRef.current.has(d._id)) return;
+    inFlightIdsRef.current.add(d._id);
     setSaving(d._id);
     setError(null);
     try {
@@ -208,6 +217,7 @@ export function ReceiptDraftsList() {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to discard receipt');
     } finally {
+      inFlightIdsRef.current.delete(d._id);
       setSaving(null);
     }
   };
@@ -242,6 +252,7 @@ export function ReceiptDraftsList() {
                   <input
                     type="number"
                     step="0.01"
+                    aria-label="Amount"
                     value={get(d, 'amount') ?? ''}
                     onChange={(e) => set(d, 'amount', e.target.value)}
                     className="mt-1 rounded-lg border border-white/10 bg-zinc-950 px-2 py-1.5 text-sm text-white outline-none focus:border-amber-400/50"
@@ -252,6 +263,7 @@ export function ReceiptDraftsList() {
                   Date
                   <input
                     type="date"
+                    aria-label="Date"
                     value={get(d, 'date') ?? ''}
                     onChange={(e) => set(d, 'date', e.target.value)}
                     className="mt-1 rounded-lg border border-white/10 bg-zinc-950 px-2 py-1.5 text-sm text-white outline-none focus:border-amber-400/50"
@@ -262,6 +274,7 @@ export function ReceiptDraftsList() {
                   Merchant
                   <input
                     type="text"
+                    aria-label="Merchant"
                     value={get(d, 'merchant') ?? ''}
                     onChange={(e) => set(d, 'merchant', e.target.value)}
                     className="mt-1 rounded-lg border border-white/10 bg-zinc-950 px-2 py-1.5 text-sm text-white outline-none focus:border-amber-400/50"
@@ -271,6 +284,7 @@ export function ReceiptDraftsList() {
                 <label className="col-span-2 flex flex-col text-[11px] text-white/50">
                   Category
                   <select
+                    aria-label="Category"
                     value={get(d, 'category') ?? 'other'}
                     onChange={(e) => set(d, 'category', e.target.value)}
                     className="mt-1 rounded-lg border border-white/10 bg-zinc-950 px-2 py-1.5 text-sm text-white outline-none focus:border-amber-400/50"

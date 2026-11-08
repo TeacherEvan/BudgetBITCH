@@ -44,20 +44,47 @@ export const recordWebhookEvent = internalMutation({
   },
 });
 
-/** Check and record webhook event idempotency in a mutation transaction. Returns true if already processed. */
+/** Check and record webhook event idempotency in a mutation transaction.
+ * Uses atomic insert-then-read with index order("asc") to guarantee exactly one winner
+ * under concurrent duplicate deliveries. Returns true if already processed. */
 export const checkAndRecordWebhookEvent = internalMutation({
   args: { webhookEventId: v.string() },
   handler: async (ctx, { webhookEventId }): Promise<boolean> => {
-    const existing = await ctx.db
-      .query("processedWebhooks")
-      .withIndex("by_webhookEventId", (q) => q.eq("webhookEventId", webhookEventId))
-      .unique();
-    if (existing) return true;
-    await ctx.db.insert("processedWebhooks", {
+    // INSERT: Insert our attempt record
+    const insertedId = await ctx.db.insert("processedWebhooks", {
       webhookEventId,
       createdAt: Date.now(),
     });
+
+    // READ: Find the earliest row for this webhookEventId
+    const first = await ctx.db
+      .query("processedWebhooks")
+      .withIndex("by_webhookEventId", (q) => q.eq("webhookEventId", webhookEventId))
+      .order("asc")
+      .first();
+
+    if (!first || first._id !== insertedId) {
+      // We lost the race: delete our inserted duplicate and declare already processed
+      await ctx.db.delete(insertedId);
+      return true;
+    }
+
+    // We won the race: claim is secured
     return false;
+  },
+});
+
+/** Release an idempotency claim row if processing failed transiently (allowing retries). */
+export const releaseWebhookEvent = internalMutation({
+  args: { webhookEventId: v.string() },
+  handler: async (ctx, { webhookEventId }) => {
+    const existing = await ctx.db
+      .query("processedWebhooks")
+      .withIndex("by_webhookEventId", (q) => q.eq("webhookEventId", webhookEventId))
+      .take(20);
+    for (const row of existing) {
+      await ctx.db.delete(row._id);
+    }
   },
 });
 
@@ -178,6 +205,7 @@ export const parseLineReceipt = internalAction({
     userId: v.id("users"),
     base64Image: v.string(),
     accountId: v.optional(v.string()),
+    clientDraftId: v.optional(v.string()),
   },
   handler: async (
     ctx,
@@ -269,7 +297,7 @@ export const parseLineReceipt = internalAction({
       const date = validateDate(parsed.date);
       const parsedAt = Date.now();
 
-      const receiptId = await ctx.runMutation(internal.receipts.saveReceipt, {
+      const receiptId = await ctx.runMutation(internal.receipts.saveReceiptIdempotent, {
         userId: args.userId,
         accountId: args.accountId,
         amount,
@@ -282,6 +310,7 @@ export const parseLineReceipt = internalAction({
         parsedAt,
         geminiModel: GEMINI_MODEL,
         source: "line",
+        clientDraftId: args.clientDraftId,
       });
 
       clog("info", "line_receipt_parsed", {
@@ -369,9 +398,9 @@ export const lineWebhook = httpAction(async (ctx, req) => {
       continue;
     }
 
-    // Per-message-id idempotency check BEFORE processing
+    // Upfront atomic claim: insert-then-read to prevent concurrent duplicate processing
     const messageEventId = `msg:${e.message.id}`;
-    const alreadyProcessed = await ctx.runQuery(internal.line.isWebhookEventProcessed, {
+    const alreadyProcessed = await ctx.runMutation(internal.line.checkAndRecordWebhookEvent, {
       webhookEventId: messageEventId,
     });
     if (alreadyProcessed) {
@@ -379,64 +408,71 @@ export const lineWebhook = httpAction(async (ctx, req) => {
       continue;
     }
 
-    imageMessages++;
-    const lineUserId = e.source?.userId;
-    if (!lineUserId) continue;
-
-    const mapping = (await ctx.runQuery(internal.line.getLineMapping, {
-      lineUserId,
-    })) as { userId: Id<"users">; accountId: string | null } | null;
-    if (!mapping) {
-      clog("warn", "line_webhook_skipped", { traceId, lineUserId, reason: "no_mapping" });
-      continue;
-    }
-    const userId = mapping.userId;
-
-    // Fetch the original image bytes from LINE's content API.
-    let base64Image: string | null = null;
-    if (accessToken) {
-      try {
-        const contentRes = await fetch(
-          `https://api-data.line.me/v2/bot/message/${e.message.id}/content`,
-          {
-            headers: { Authorization: `Bearer ${accessToken}` },
-            signal: AbortSignal.timeout(15_000),
-          },
-        );
-        if (contentRes.ok) {
-          const buf = Buffer.from(await contentRes.arrayBuffer());
-          const mime = contentRes.headers.get("content-type") ?? "image/jpeg";
-          base64Image = `data:${mime};base64,${buf.toString("base64")}`;
-        } else {
-          contentFetchFailed++;
-          clog("warn", "line_content_fetch_failed", {
-            traceId,
-            lineUserId,
-            status: String(contentRes.status),
-          });
-        }
-      } catch (err) {
-        contentFetchFailed++;
-        clogError("line_content_fetch_failed", err, { traceId, lineUserId });
-      }
-    }
-
-    if (!base64Image) continue;
-
+    let committed = false;
     try {
-      await ctx.runAction(internal.line.parseLineReceipt, {
-        userId,
-        base64Image,
-        accountId: mapping.accountId ?? undefined,
-      });
-      // Record idempotency only after successful ingestion
-      await ctx.runMutation(internal.line.recordWebhookEvent, {
-        webhookEventId: messageEventId,
-      });
-      ingested++;
-    } catch (err) {
-      parseFailed++;
-      clogError("line_webhook_ingest_failed", err, { traceId, lineUserId });
+      imageMessages++;
+      const lineUserId = e.source?.userId;
+      if (!lineUserId) continue;
+
+      const mapping = (await ctx.runQuery(internal.line.getLineMapping, {
+        lineUserId,
+      })) as { userId: Id<"users">; accountId: string | null } | null;
+      if (!mapping) {
+        clog("warn", "line_webhook_skipped", { traceId, lineUserId, reason: "no_mapping" });
+        continue;
+      }
+      const userId = mapping.userId;
+
+      // Fetch the original image bytes from LINE's content API.
+      let base64Image: string | null = null;
+      if (accessToken) {
+        try {
+          const contentRes = await fetch(
+            `https://api-data.line.me/v2/bot/message/${e.message.id}/content`,
+            {
+              headers: { Authorization: `Bearer ${accessToken}` },
+              signal: AbortSignal.timeout(15_000),
+            },
+          );
+          if (contentRes.ok) {
+            const buf = Buffer.from(await contentRes.arrayBuffer());
+            const mime = contentRes.headers.get("content-type") ?? "image/jpeg";
+            base64Image = `data:${mime};base64,${buf.toString("base64")}`;
+          } else {
+            contentFetchFailed++;
+            clog("warn", "line_content_fetch_failed", {
+              traceId,
+              lineUserId,
+              status: String(contentRes.status),
+            });
+          }
+        } catch (err) {
+          contentFetchFailed++;
+          clogError("line_content_fetch_failed", err, { traceId, lineUserId });
+        }
+      }
+
+      if (!base64Image) continue;
+
+      try {
+        await ctx.runAction(internal.line.parseLineReceipt, {
+          userId,
+          base64Image,
+          accountId: mapping.accountId ?? undefined,
+          clientDraftId: `line:${e.message.id}`,
+        });
+        committed = true;
+        ingested++;
+      } catch (err) {
+        parseFailed++;
+        clogError("line_webhook_ingest_failed", err, { traceId, lineUserId });
+      }
+    } finally {
+      if (!committed) {
+        await ctx.runMutation(internal.line.releaseWebhookEvent, {
+          webhookEventId: messageEventId,
+        });
+      }
     }
   }
 

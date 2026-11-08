@@ -7,6 +7,7 @@ const hoisted = vi.hoisted(() => ({
   confirmFn: vi.fn(async () => ({ success: true })),
   deleteFn: vi.fn(async () => ({ success: true })),
   addExpense: vi.fn(async () => {}),
+  addExpensesBulk: vi.fn(async () => {}),
   generateId: () => 'test-expense-id',
   queryResult: undefined as unknown,
   mutationCallCount: 0,
@@ -26,6 +27,7 @@ vi.mock('convex/react', () => ({
 
 vi.mock('@/lib/db/stores/expenses-store', () => ({
   addExpense: hoisted.addExpense,
+  addExpensesBulk: hoisted.addExpensesBulk,
 }));
 
 vi.mock('@/lib/db/local-db', () => ({
@@ -34,7 +36,7 @@ vi.mock('@/lib/db/local-db', () => ({
 
 import { ReceiptDraftsList } from './receipt-drafts-list';
 
-const { confirmFn, deleteFn, addExpense } = hoisted;
+const { confirmFn, deleteFn, addExpense, addExpensesBulk } = hoisted;
 
 const draft = {
   _id: 'receipt-1',
@@ -57,6 +59,7 @@ beforeEach(() => {
   hoisted.confirmFn.mockClear();
   hoisted.deleteFn.mockClear();
   hoisted.addExpense.mockClear();
+  hoisted.addExpensesBulk.mockClear();
   hoisted.queryResult = undefined;
   hoisted.mutationCallCount = 0;
 });
@@ -128,6 +131,48 @@ describe('ReceiptDraftsList', () => {
       expect(deleteFn).toHaveBeenCalledWith({ receiptId: 'receipt-1' });
       expect(addExpense).not.toHaveBeenCalled();
       expect(confirmFn).not.toHaveBeenCalled();
+    });
+  });
+
+  it('does not add expenses locally if server confirm fails', async () => {
+    hoisted.confirmFn.mockRejectedValueOnce(new Error('Network error'));
+    hoisted.queryResult = { receipts: [draft], nextCursor: null };
+    render(<ReceiptDraftsList />);
+
+    fireEvent.click(screen.getByText('Save expense'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Network error')).toBeInTheDocument();
+    });
+
+    expect(confirmFn).toHaveBeenCalledTimes(1);
+    expect(addExpense).not.toHaveBeenCalled();
+    expect(addExpensesBulk).not.toHaveBeenCalled();
+  });
+
+  it('blocks synchronous double-clicks via inFlightIdsRef', async () => {
+    // Make confirm slow so second click happens while first is in flight
+    let resolveConfirm: (value: { success: boolean }) => void;
+    hoisted.confirmFn.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveConfirm = resolve;
+        })
+    );
+    hoisted.queryResult = { receipts: [draft], nextCursor: null };
+    render(<ReceiptDraftsList />);
+
+    const saveButton = screen.getByText('Save expense');
+    fireEvent.click(saveButton);
+    fireEvent.click(saveButton);
+
+    expect(confirmFn).toHaveBeenCalledTimes(1);
+
+    // Resolve the promise
+    resolveConfirm!({ success: true });
+
+    await waitFor(() => {
+      expect(addExpense).toHaveBeenCalledTimes(1);
     });
   });
 });

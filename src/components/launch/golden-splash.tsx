@@ -22,14 +22,94 @@ export interface Particle {
   active?: boolean;
 }
 
+// Pre-rendered offscreen sprite caches for static radial gradients
+// to eliminate CanvasGradient allocations per particle per frame.
+let cachedDustCanvas: HTMLCanvasElement | null = null;
+let cachedCoinCanvas: HTMLCanvasElement | null = null;
+let cachedSparkleCanvas: HTMLCanvasElement | null = null;
+
+const SPRITE_SIZE = 64; // 64x64 canvas sprite with center at (32, 32), radius 32
+
+function getDustSprite(): HTMLCanvasElement | null {
+  if (typeof document === 'undefined') return null;
+  if (!cachedDustCanvas) {
+    const canvas = document.createElement('canvas');
+    canvas.width = SPRITE_SIZE;
+    canvas.height = SPRITE_SIZE;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    const center = SPRITE_SIZE / 2;
+    const grad = ctx.createRadialGradient(center, center, 0, center, center, center);
+    grad.addColorStop(0, 'rgba(245, 215, 66, 1)');
+    grad.addColorStop(1, 'rgba(201, 150, 12, 0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(center, center, center, 0, Math.PI * 2);
+    ctx.fill();
+    cachedDustCanvas = canvas;
+  }
+  return cachedDustCanvas;
+}
+
+function getCoinSprite(): HTMLCanvasElement | null {
+  if (typeof document === 'undefined') return null;
+  if (!cachedCoinCanvas) {
+    const canvas = document.createElement('canvas');
+    canvas.width = SPRITE_SIZE;
+    canvas.height = SPRITE_SIZE;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    const center = SPRITE_SIZE / 2;
+    const grad = ctx.createRadialGradient(center, center, 0, center, center, center);
+    grad.addColorStop(0, 'rgba(245, 215, 66, 1)');
+    grad.addColorStop(0.8, 'rgba(201, 150, 12, 1)');
+    grad.addColorStop(1, 'rgba(130, 90, 5, 1)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(center, center, center, 0, Math.PI * 2);
+    ctx.fill();
+    cachedCoinCanvas = canvas;
+  }
+  return cachedCoinCanvas;
+}
+
+function getSparkleSprite(): HTMLCanvasElement | null {
+  if (typeof document === 'undefined') return null;
+  if (!cachedSparkleCanvas) {
+    const canvas = document.createElement('canvas');
+    canvas.width = SPRITE_SIZE;
+    canvas.height = SPRITE_SIZE;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    const center = SPRITE_SIZE / 2;
+    const grad = ctx.createRadialGradient(center, center, 0, center, center, center);
+    grad.addColorStop(0, 'rgba(245, 215, 66, 0.4)');
+    grad.addColorStop(1, 'rgba(245, 215, 66, 0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(center, center, center, 0, Math.PI * 2);
+    ctx.fill();
+    cachedSparkleCanvas = canvas;
+  }
+  return cachedSparkleCanvas;
+}
+
 export function drawGoldDust(ctx: CanvasRenderingContext2D, p: Particle) {
-  const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
-  grad.addColorStop(0, `rgba(245, 215, 66, ${p.opacity})`);
-  grad.addColorStop(1, `rgba(201, 150, 12, 0)`);
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-  ctx.fill();
+  const sprite = getDustSprite();
+  if (sprite) {
+    ctx.save();
+    ctx.globalAlpha = p.opacity;
+    ctx.drawImage(sprite, p.x - p.size, p.y - p.size, p.size * 2, p.size * 2);
+    ctx.restore();
+  } else {
+    const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+    grad.addColorStop(0, `rgba(245, 215, 66, ${p.opacity})`);
+    grad.addColorStop(1, `rgba(201, 150, 12, 0)`);
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
 export function drawCoin(ctx: CanvasRenderingContext2D, p: Particle) {
@@ -39,15 +119,22 @@ export function drawCoin(ctx: CanvasRenderingContext2D, p: Particle) {
   const squish = Math.abs(Math.cos(p.rotation));
   ctx.scale(1, Math.max(0.1, squish));
   
-  const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, p.size);
-  grad.addColorStop(0, `rgba(245, 215, 66, ${p.opacity})`);
-  grad.addColorStop(0.8, `rgba(201, 150, 12, ${p.opacity})`);
-  grad.addColorStop(1, `rgba(130, 90, 5, ${p.opacity})`);
-  ctx.fillStyle = grad;
-  
-  ctx.beginPath();
-  ctx.arc(0, 0, p.size, 0, Math.PI * 2);
-  ctx.fill();
+  const sprite = getCoinSprite();
+  if (sprite) {
+    ctx.save();
+    ctx.globalAlpha = p.opacity;
+    ctx.drawImage(sprite, -p.size, -p.size, p.size * 2, p.size * 2);
+    ctx.restore();
+  } else {
+    const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, p.size);
+    grad.addColorStop(0, `rgba(245, 215, 66, ${p.opacity})`);
+    grad.addColorStop(0.8, `rgba(201, 150, 12, ${p.opacity})`);
+    grad.addColorStop(1, `rgba(130, 90, 5, ${p.opacity})`);
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(0, 0, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
   
   ctx.strokeStyle = `rgba(255, 255, 255, ${p.opacity * 0.5})`;
   ctx.lineWidth = 1;
@@ -69,13 +156,21 @@ export function drawSparkle(ctx: CanvasRenderingContext2D, p: Particle) {
   ctx.translate(p.x, p.y);
   ctx.rotate(p.rotation);
   
-  const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, p.size * 2);
-  grad.addColorStop(0, `rgba(245, 215, 66, ${p.opacity * 0.4})`);
-  grad.addColorStop(1, 'rgba(245, 215, 66, 0)');
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.arc(0, 0, p.size * 2, 0, Math.PI * 2);
-  ctx.fill();
+  const sprite = getSparkleSprite();
+  if (sprite) {
+    ctx.save();
+    ctx.globalAlpha = p.opacity;
+    ctx.drawImage(sprite, -p.size * 2, -p.size * 2, p.size * 4, p.size * 4);
+    ctx.restore();
+  } else {
+    const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, p.size * 2);
+    grad.addColorStop(0, `rgba(245, 215, 66, ${p.opacity * 0.4})`);
+    grad.addColorStop(1, 'rgba(245, 215, 66, 0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(0, 0, p.size * 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
   
   ctx.fillStyle = `rgba(255, 245, 215, ${p.opacity})`;
   ctx.beginPath();

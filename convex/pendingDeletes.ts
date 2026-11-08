@@ -269,8 +269,8 @@ export const listPendingDeletes = query({
       itemSnapshot: r.itemSnapshot,
       requestedBy: r.requestedBy,
       requestedAt: r.requestedAt,
-      // `canAct` = this viewer is the OTHER member (can approve/reject).
-      canAct: r.requestedBy !== userId,
+      // `canAct` = this viewer is the authorized approver (other member).
+      canAct: userId === otherMemberId(ref, r.requestedBy),
       isRequester: r.requestedBy === userId,
     }));
   },

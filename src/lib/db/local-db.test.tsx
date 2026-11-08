@@ -571,4 +571,66 @@ describe('applyRemoteBoard LWW conflict resolution', () => {
     expect(expenses[0].amount).toBe(100);
     expect(await getLocalWrite('expenses', 'exp-conflict-2')).toBe(3000);
   });
+
+  describe('transaction failure error propagation and event suppression', () => {
+    it('putWithStamp rejects and suppresses BOARD_CHANGED_EVENT when transaction fails', async () => {
+      const db = await getDB();
+      const orig = (db as unknown as { transaction: (...a: unknown[]) => unknown }).transaction.bind(db);
+      const handler = vi.fn();
+      window.addEventListener(BOARD_CHANGED_EVENT, handler);
+
+      (db as unknown as { transaction: (...a: unknown[]) => unknown }).transaction = () => {
+        throw new Error('QuotaExceededError: simulated disk full');
+      };
+
+      try {
+        await expect(
+          addExpense({
+            id: 'exp-fail-1',
+            date: '2026-08-01',
+            category: 'food',
+            merchant: 'Fail Bistro',
+            amount: 50,
+            source: 'manual',
+          }),
+        ).rejects.toThrow('QuotaExceededError: simulated disk full');
+
+        expect(handler).not.toHaveBeenCalled();
+      } finally {
+        (db as unknown as { transaction: unknown }).transaction = orig;
+        window.removeEventListener(BOARD_CHANGED_EVENT, handler);
+      }
+    });
+
+    it('putManyWithStamp rejects and suppresses BOARD_CHANGED_EVENT when transaction fails', async () => {
+      const db = await getDB();
+      const orig = (db as unknown as { transaction: (...a: unknown[]) => unknown }).transaction.bind(db);
+      const handler = vi.fn();
+      window.addEventListener(BOARD_CHANGED_EVENT, handler);
+
+      (db as unknown as { transaction: (...a: unknown[]) => unknown }).transaction = () => {
+        throw new Error('TransactionAbortedError: simulated abort');
+      };
+
+      try {
+        await expect(
+          addExpensesBulk([
+            {
+              id: 'exp-bulk-fail-1',
+              date: '2026-08-01',
+              category: 'food',
+              merchant: 'Bulk Fail',
+              amount: 25,
+              source: 'manual',
+            },
+          ]),
+        ).rejects.toThrow('TransactionAbortedError: simulated abort');
+
+        expect(handler).not.toHaveBeenCalled();
+      } finally {
+        (db as unknown as { transaction: unknown }).transaction = orig;
+        window.removeEventListener(BOARD_CHANGED_EVENT, handler);
+      }
+    });
+  });
 });

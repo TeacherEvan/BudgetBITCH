@@ -439,12 +439,14 @@ describe("line webhook per-message-id idempotency (Task 1)", () => {
     vi.stubGlobal("fetch", (async (url: any) => {
       const u = String(url);
       if (u.includes("api-data.line.me") && u.includes("content")) {
+        await new Promise((r) => setTimeout(r, 25));
         return new Response(Buffer.from(fakeImage, "base64"), {
           status: 200,
           headers: { "content-type": "image/jpeg" },
         });
       }
       if (u.includes("generativelanguage.googleapis.com")) {
+        await new Promise((r) => setTimeout(r, 25));
         geminiCallCount++;
         return new Response(
           JSON.stringify({

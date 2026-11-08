@@ -252,20 +252,91 @@ export const deleteAllUserSnapshots = mutation({
 export const deleteSnapshotsChunk = internalMutation({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    const batch = await ctx.db
+    let deleted = 0;
+    let hasMore = false;
+
+    // 1. dailySnapshots
+    const snapshotsBatch = await ctx.db
       .query("dailySnapshots")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .take(DELETE_CHUNK_SIZE);
-    for (const snap of batch) {
+    for (const snap of snapshotsBatch) {
       await ctx.db.delete(snap._id);
     }
-    if (batch.length === DELETE_CHUNK_SIZE) {
+    deleted += snapshotsBatch.length;
+    if (snapshotsBatch.length === DELETE_CHUNK_SIZE) {
+      hasMore = true;
+    }
+
+    // 2. receipts (if capacity in this chunk)
+    if (!hasMore) {
+      const remainingLimit = DELETE_CHUNK_SIZE - deleted;
+      if (remainingLimit > 0) {
+        const receiptsBatch = await ctx.db
+          .query("receipts")
+          .withIndex("by_user", (q) => q.eq("userId", args.userId))
+          .take(remainingLimit);
+        for (const rec of receiptsBatch) {
+          if (rec.imageStorageId) {
+            try {
+              await ctx.storage.delete(rec.imageStorageId);
+            } catch {
+              // Non-fatal if storage file already removed
+            }
+          }
+          await ctx.db.delete(rec._id);
+        }
+        deleted += receiptsBatch.length;
+        if (receiptsBatch.length === remainingLimit) {
+          hasMore = true;
+        }
+      }
+    }
+
+    // 3. merchantAliases (if capacity in this chunk)
+    if (!hasMore) {
+      const remainingLimit = DELETE_CHUNK_SIZE - deleted;
+      if (remainingLimit > 0) {
+        const aliasBatch = await ctx.db
+          .query("merchantAliases")
+          .withIndex("by_user_and_normalised", (q) => q.eq("userId", args.userId))
+          .take(remainingLimit);
+        for (const alias of aliasBatch) {
+          await ctx.db.delete(alias._id);
+        }
+        deleted += aliasBatch.length;
+        if (aliasBatch.length === remainingLimit) {
+          hasMore = true;
+        }
+      }
+    }
+
+    // Check if any rows remain across any of the three tables
+    if (!hasMore) {
+      const snapRemaining = await ctx.db
+        .query("dailySnapshots")
+        .withIndex("by_user", (q) => q.eq("userId", args.userId))
+        .take(1);
+      const recRemaining = await ctx.db
+        .query("receipts")
+        .withIndex("by_user", (q) => q.eq("userId", args.userId))
+        .take(1);
+      const aliasRemaining = await ctx.db
+        .query("merchantAliases")
+        .withIndex("by_user_and_normalised", (q) => q.eq("userId", args.userId))
+        .take(1);
+      if (snapRemaining.length > 0 || recRemaining.length > 0 || aliasRemaining.length > 0) {
+        hasMore = true;
+      }
+    }
+
+    if (hasMore) {
       await ctx.scheduler.runAfter(
         0,
         internal.snapshots.deleteSnapshotsChunk,
         { userId: args.userId },
       );
     }
-    return { deleted: batch.length, done: batch.length < DELETE_CHUNK_SIZE };
+    return { deleted, done: !hasMore };
   },
 });

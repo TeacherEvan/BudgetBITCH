@@ -173,6 +173,51 @@ describe("accountInvites edge cases", () => {
     );
     expect(memberRows.length).toBe(8); // MAX_MEMBERS = 8
   });
+
+  test("redeemInviteToken rolls back if board exceeds MAX_MEMBERS", async () => {
+    const aliceId = await seedUser(t, "alice");
+    const { accountId, boardId } = await createAccount(aliceId, "family", "Fam");
+
+    // Create 7 other users to fill up to MAX_MEMBERS (8)
+    for (let i = 0; i < 7; i++) {
+      const id = await seedUser(t, `member${i}`);
+      await makeProfile(id, `MEM${i}XXXX`.slice(0, 8));
+      await asUser(aliceId).mutation(api.accounts.inviteByCode, {
+        accountId,
+        code: `MEM${i}XXXX`.slice(0, 8),
+      });
+      const invites = await asUser(id).query(api.accounts.listInvites, {});
+      await asUser(id).mutation(api.accounts.acceptInvite, { inviteId: invites[0].inviteId });
+    }
+
+    // Now board has 8 members (owner + 7)
+    // Manually insert an invite token for the account
+    const token = "invite-token-test";
+    await t.run(async (ctx: any) => {
+      await ctx.db.insert("invites", {
+        boardId,
+        fromUserId: aliceId,
+        toUserId: undefined,
+        status: "pending",
+        createdAt: Date.now(),
+        accountId,
+        token,
+      });
+    });
+
+    const extraUser = await seedUser(t, "extra_redeem_user");
+    await expect(
+      asUser(extraUser).mutation(api.accounts.redeemInviteToken, { token }),
+    ).rejects.toThrow(/at most 8 members/);
+
+    const memberRows = await t.run(async (ctx: any) =>
+      ctx.db
+        .query("boardMembers")
+        .withIndex("by_board", (q: any) => q.eq("boardId", boardId))
+        .collect(),
+    );
+    expect(memberRows.length).toBe(8);
+  });
 });
 
 describe("pendingDeletes consent matrix", () => {
@@ -215,6 +260,19 @@ describe("pendingDeletes consent matrix", () => {
     await expect(
       asUser(carolId).mutation(api.pendingDeletes.approveItemDelete, { pendingId }),
     ).rejects.toThrow(/Only the other board member can approve/);
+
+    // Verify listPendingDeletes sets canAct accurately based on otherMemberId
+    const aliceView = await asUser(aliceId).query(api.pendingDeletes.listPendingDeletes, { boardId });
+    expect(aliceView[0].canAct).toBe(false);
+    expect(aliceView[0].isRequester).toBe(true);
+
+    const bobView = await asUser(bobId).query(api.pendingDeletes.listPendingDeletes, { boardId });
+    expect(bobView[0].canAct).toBe(true);
+    expect(bobView[0].isRequester).toBe(false);
+
+    const carolView = await asUser(carolId).query(api.pendingDeletes.listPendingDeletes, { boardId });
+    expect(carolView[0].canAct).toBe(false);
+    expect(carolView[0].isRequester).toBe(false);
 
     // Bob (the first other member) should be able to approve
     const res = await asUser(bobId).mutation(api.pendingDeletes.approveItemDelete, { pendingId });

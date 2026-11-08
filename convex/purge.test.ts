@@ -68,13 +68,31 @@ test("purge chunks large wipes (>500 rows) via scheduler continuation, profile l
     });
   }
   const res = await asUser(alice).mutation(api.purge.purgeMyAccountData, {});
-  // First chunk deletes up to 500 and reports continuation; the profile is
-  // intentionally deferred to the scheduled final chunk.
+  // First chunk deletes exactly 500 and reports continuation; the profile is
+  // intentionally deferred to the scheduled continuation.
   expect(res.success).toBe(true);
-  expect(res.counts.snapshots).toBeGreaterThanOrEqual(500);
+  expect(res.counts.snapshots).toBe(500);
   expect((res as any).continuation).toBe(true);
-  const remaining = await t.run(async (ctx: any) => ctx.db.query("dailySnapshots").collect());
-  expect(remaining.length).toBeGreaterThanOrEqual(0);
+  const remainingAfterFirst = await t.run(async (ctx: any) => ctx.db.query("dailySnapshots").collect());
+  expect(remainingAfterFirst.length).toBe(100);
+
+  // Profile must still exist because continuation was scheduled
+  const profileBeforeContinuation = await t.run(async (ctx: any) =>
+    ctx.db.query("userProfiles").withIndex("by_user", (q: any) => q.eq("userId", alice)).first(),
+  );
+  expect(profileBeforeContinuation).not.toBeNull();
+
+  // Run scheduled background functions to completion
+  await t.finishAllScheduledFunctions(() => {});
+
+  const remainingAfterDrained = await t.run(async (ctx: any) => ctx.db.query("dailySnapshots").collect());
+  expect(remainingAfterDrained.length).toBe(0);
+
+  // Profile must now be deleted after continuation drained all rows
+  const profileAfterDrained = await t.run(async (ctx: any) =>
+    ctx.db.query("userProfiles").withIndex("by_user", (q: any) => q.eq("userId", alice)).first(),
+  );
+  expect(profileAfterDrained).toBeNull();
 });
 
 test("purge deletes snapshots, receipts and merchant aliases", async () => {

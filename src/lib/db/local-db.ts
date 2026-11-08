@@ -384,45 +384,41 @@ export async function putWithStamp(
   value: unknown,
   key?: string,
 ): Promise<void> {
-  try {
-    const db = await getDB();
-    if (!db.objectStoreNames.contains(store)) return;
-    const wb = Date.now();
-    const targetStores = (
-      db.objectStoreNames.contains('localWrites')
-        ? [store, 'localWrites']
-        : [store]
-    ) as TxStores;
-    const tx = (db.transaction as (s: TxStores, m: 'readwrite') => unknown)(
-      targetStores,
-      'readwrite',
-    ) as {
-      objectStore: (name: DbStoreName) => {
-        put: (v: unknown, k?: string) => Promise<unknown>;
-        delete: (k: string) => Promise<void>;
-      };
-      done: Promise<void>;
+  const db = await getDB();
+  if (!db.objectStoreNames.contains(store)) return;
+  const wb = Date.now();
+  const targetStores = (
+    db.objectStoreNames.contains('localWrites')
+      ? [store, 'localWrites']
+      : [store]
+  ) as TxStores;
+  const tx = (db.transaction as (s: TxStores, m: 'readwrite') => unknown)(
+    targetStores,
+    'readwrite',
+  ) as {
+    objectStore: (name: DbStoreName) => {
+      put: (v: unknown, k?: string) => Promise<unknown>;
+      delete: (k: string) => Promise<void>;
     };
-    const objectStore = tx.objectStore(store);
-    const recordKey =
-      key ?? (value as Record<string, unknown> | null)?.id as string;
-    if (value === null) {
-      await objectStore.delete(recordKey);
-    } else if (store === 'wizardProfile' || store === 'settings') {
-      // No keyPath: out-of-line key required.
-      await objectStore.put(value, key ?? 'current');
-    } else {
-      // keyPath stores derive the key from the value; passing it throws.
-      await objectStore.put(value);
-    }
-    if (db.objectStoreNames.contains('localWrites')) {
-      await tx.objectStore('localWrites').put(wb, writeKey(store, recordKey));
-    }
-    await tx.done;
-    notifyBoardChanged('local', [store]);
-  } catch {
-    // Non-fatal (matches afterBoardMutation contract)
+    done: Promise<void>;
+  };
+  const objectStore = tx.objectStore(store);
+  const recordKey =
+    key ?? (value as Record<string, unknown> | null)?.id as string;
+  if (value === null) {
+    await objectStore.delete(recordKey);
+  } else if (store === 'wizardProfile' || store === 'settings') {
+    // No keyPath: out-of-line key required.
+    await objectStore.put(value, key ?? 'current');
+  } else {
+    // keyPath stores derive the key from the value; passing it throws.
+    await objectStore.put(value);
   }
+  if (db.objectStoreNames.contains('localWrites')) {
+    await tx.objectStore('localWrites').put(wb, writeKey(store, recordKey));
+  }
+  await tx.done;
+  notifyBoardChanged('local', [store]);
 }
 
 /**
@@ -434,39 +430,35 @@ export async function putManyWithStamp(
   keyOf: (v: Record<string, unknown>) => string,
 ): Promise<void> {
   if (values.length === 0) return;
-  try {
-    const db = await getDB();
-    if (!db.objectStoreNames.contains(store)) return;
-    const now = Date.now();
-    const targetStores = (
-      db.objectStoreNames.contains('localWrites')
-        ? [store, 'localWrites']
-        : [store]
-    ) as TxStores;
-    const tx = (db.transaction as (s: TxStores, m: 'readwrite') => unknown)(
-      targetStores,
-      'readwrite',
-    ) as {
-      objectStore: (name: DbStoreName) => {
-        put: (v: unknown, k?: string) => Promise<unknown>;
-      };
-      done: Promise<void>;
+  const db = await getDB();
+  if (!db.objectStoreNames.contains(store)) return;
+  const now = Date.now();
+  const targetStores = (
+    db.objectStoreNames.contains('localWrites')
+      ? [store, 'localWrites']
+      : [store]
+  ) as TxStores;
+  const tx = (db.transaction as (s: TxStores, m: 'readwrite') => unknown)(
+    targetStores,
+    'readwrite',
+  ) as {
+    objectStore: (name: DbStoreName) => {
+      put: (v: unknown, k?: string) => Promise<unknown>;
     };
-    const objectStore = tx.objectStore(store);
-    for (const v of values) {
-      await objectStore.put(v);
-      if (db.objectStoreNames.contains('localWrites')) {
-        await tx.objectStore('localWrites').put(
-          now,
-          writeKey(store, keyOf(v as Record<string, unknown>)),
-        );
-      }
+    done: Promise<void>;
+  };
+  const objectStore = tx.objectStore(store);
+  for (const v of values) {
+    await objectStore.put(v);
+    if (db.objectStoreNames.contains('localWrites')) {
+      await tx.objectStore('localWrites').put(
+        now,
+        writeKey(store, keyOf(v as Record<string, unknown>)),
+      );
     }
-    await tx.done;
-    notifyBoardChanged('local', [store]);
-  } catch {
-    // Non-fatal
   }
+  await tx.done;
+  notifyBoardChanged('local', [store]);
 }
 
 // Wizard Profile
