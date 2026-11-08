@@ -31,6 +31,7 @@ export async function getAuthUserId(ctx: AuthContext): Promise<string | null> {
   }
   if (!identity) return null;
 
-  // The subject is the user ID in Convex Auth
-  return identity.subject;
+  // In @convex-dev/auth, identity.subject can be formatted as `${userId}|${sessionId}`.
+  // Extract the user ID prefix to match @convex-dev/auth/server's getAuthUserId.
+  return identity.subject.split("|")[0];
 }

@@ -4,11 +4,12 @@ import { internal } from "./_generated/api";
 
 const crons = cronJobs();
 
-// Clean up expired idempotency records (> 7 days) once a day
-crons.daily(
+// Clean up expired idempotency records (> 24 hours) once a day
+crons.cron(
   "cleanup-processed-webhooks",
-  { hourUTC: 3, minuteUTC: 0 },
+  "0 3 * * *",
   internal.line.cleanupProcessedWebhooks,
+  {},
 );
 
 export default crons;

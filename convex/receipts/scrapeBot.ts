@@ -22,10 +22,14 @@ export const scrape = mutation({
     const payload = args.payload as OcrPayload;
     const result = scrapeEngine(payload);
 
-    const amount = typeof result.fields.total?.value === "number" ? result.fields.total.value : 0;
+    const rawTotal = typeof result.fields.total?.value === "number" ? result.fields.total.value : 0;
+    // scrapeEngine returns amounts in minor units (cents) — convert to major units
+    const amount = Math.round(rawTotal) / 100;
     const merchant = typeof result.fields.merchant?.value === "string" ? result.fields.merchant.value : "Unknown Merchant";
     const category = typeof result.fields.category?.value === "string" ? result.fields.category.value : "other";
     const date = typeof result.fields.date?.value === "string" ? result.fields.date.value : undefined;
+    const rawTax = typeof result.fields.tax?.value === "number" ? result.fields.tax.value : undefined;
+    const tax = rawTax !== undefined ? Math.round(rawTax) / 100 : undefined;
 
     const draftId = await ctx.db.insert("receipts", {
       userId,
@@ -43,7 +47,7 @@ export const scrape = mutation({
       confidence: result.confidence,
       evidence: result.evidence,
       ocrText: payload.lines?.map((l: any) => l.text).join("\n"),
-      tax: typeof result.fields.tax?.value === "number" ? result.fields.tax.value : undefined,
+      tax,
       currency: typeof result.fields.currency?.value === "string" ? result.fields.currency.value : undefined,
       questionsAsked: result.questions,
       status: "draft",
@@ -122,7 +126,7 @@ export const confirm = mutation({
       corrections: args.overrides,
     });
 
-    const merchantName = args.overrides?.merchant || draft.merchant;
+    const merchantName = (typeof args.overrides?.merchant === "string" ? args.overrides.merchant : draft.merchant) || "Unknown";
     const normalised = merchantName.toLowerCase().trim();
 
     const existingAlias = await ctx.db
@@ -186,7 +190,8 @@ export const syncOfflineDraft = mutation({
       confidence = folded.updatedConfidence;
     }
 
-    const amount = typeof fields.total?.value === "number" ? fields.total.value : 0;
+    const rawTotal = typeof fields.total?.value === "number" ? fields.total.value : 0;
+    const amount = Math.round(rawTotal) / 100;
     const merchant = typeof fields.merchant?.value === "string" ? fields.merchant.value : "Unknown Merchant";
     const category = typeof fields.category?.value === "string" ? fields.category.value : "other";
     const date = typeof fields.date?.value === "string" ? fields.date.value : undefined;
@@ -216,6 +221,9 @@ export const templateSnapshot = query({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      return { templates: [], aliases: [] };
+    }
 
     const templates = await ctx.db
       .query("receiptTemplates")

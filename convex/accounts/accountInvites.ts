@@ -191,6 +191,16 @@ export const redeemInviteToken = mutation({
     if (board && !board.members.includes(userId)) {
       await ctx.db.patch(board._id, { members: [...board.members, userId] });
     }
+
+    // Mirror to user profile so joinedBoardIds stays accurate across clients
+    const profile = await ensureProfileDoc(ctx, userId);
+    const joined = profile.joinedBoardIds ?? [];
+    if (!joined.includes(acc.boardId)) {
+      await ctx.db.patch(profile._id, {
+        joinedBoardIds: [...joined, acc.boardId],
+      });
+    }
+
     await ctx.db.patch(invite._id, { status: "accepted", toUserId: userId });
     return { accountId: acc.accountId, boardId: acc.boardId, alreadyMember: false };
   },
@@ -378,6 +388,10 @@ export const leaveAccount = mutation({
 export const resolveInviteCode = query({
   args: { code: v.string() },
   handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      return { exists: false, accountId: null, name: null };
+    }
     const code = args.code.trim().toUpperCase();
     const acc = await ctx.db
       .query("accounts")

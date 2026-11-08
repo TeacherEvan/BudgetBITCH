@@ -45,8 +45,8 @@ export const TIERED_FEED_REGISTRY: {
   ],
   province: [
     // Bangkok Metro provinces
-    { url: '', locale: 'en', category: 'local', source: 'Nonthaburi News', center: { lat: 13.8591, lon: 100.5216 }, radiusKm: 25, priority: 1, reliability: 0.7 },
-    { url: '', locale: 'en', category: 'local', source: 'Samut Prakan Daily', center: { lat: 13.5991, lon: 100.5968 }, radiusKm: 25, priority: 2, reliability: 0.7 },
+    { url: 'https://www.bangkokpost.com/rss/data/general.xml', locale: 'en', category: 'local', source: 'Nonthaburi & Metro News', center: { lat: 13.8591, lon: 100.5216 }, radiusKm: 25, priority: 1, reliability: 0.8 },
+    { url: 'https://englishnews.thaipbs.or.th/rss', locale: 'en', category: 'local', source: 'Samut Prakan & Coast Daily', center: { lat: 13.5991, lon: 100.5968 }, radiusKm: 25, priority: 2, reliability: 0.8 },
   ],
   country: {
     TH: [

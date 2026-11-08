@@ -15,6 +15,10 @@ export const DATA_OWNER_KEY = "bb:dataOwner";
 const PER_USER_LOCALSTORAGE_KEYS = [
   "bb:lastCloudSnapshotAt",
   "bb:lastResetAt",
+  "budgetbitch:accountBoardQueue",
+  "budgetbitch:boardQueue",
+  "bb:vicinityNewsCache",
+  "budgetbitch:lastSync",
 ];
 
 export type ClaimResult = "claimed" | "unchanged" | "switched";

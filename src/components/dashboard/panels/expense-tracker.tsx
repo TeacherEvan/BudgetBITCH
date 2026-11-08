@@ -323,7 +323,7 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
                               aria-expanded={itemsExpanded}
                               aria-label={'Toggle line items'}
                               data-testid={`toggle-line-items-${expense.id}`}
-                              className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/70 border border-white/10 hover:border-[rgba(201,150,12,0.4)] transition-colors"
+                              className="text-xs px-2.5 py-1 min-h-[24px] min-w-[24px] inline-flex items-center justify-center rounded-full bg-white/10 text-white/70 border border-white/10 hover:border-[rgba(201,150,12,0.4)] transition-colors"
                             >
                               🧾 {lineItems.length} {itemsExpanded ? '▴' : '▾'}
                             </button>
@@ -336,7 +336,7 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
                               type="button"
                               onClick={() => setNoteExpenseId(expense.id)}
                               aria-label={'Shared note'}
-                              className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${
+                              className={`text-xs px-2.5 py-1 min-h-[24px] min-w-[24px] inline-flex items-center justify-center rounded-full border transition-colors ${
                                 notes[expense.id]
                                   ? 'bg-amber-400/20 text-amber-400 border-amber-400/30'
                                   : 'bg-white/10 text-white/70 border-white/10 hover:border-[rgba(201,150,12,0.4)]'

@@ -32,7 +32,7 @@ function buildCsp(nonce: string): string {
     "img-src 'self' data: blob: https:",
     "font-src 'self'",
     "worker-src 'self'",
-    "connect-src 'self' https://*.convex.cloud wss://*.convex.cloud",
+    "connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://*.convex.site wss://*.convex.site https://api.frankfurter.dev",
     "object-src 'none'",
     "frame-ancestors 'self'",
     "base-uri 'self'",

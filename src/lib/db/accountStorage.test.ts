@@ -161,4 +161,34 @@ describe('account storage — swap model', () => {
     await switchAccount(PERSONAL_ACCOUNT_ID);
     expect(await getCurrentAccountId()).toBe(PERSONAL_ACCOUNT_ID);
   });
+
+  it('isolates localWrites per account so switching does not leak tombstone deletions across boards', async () => {
+    const { serializeBoardForSync } = await import('./stores/snapshots-store');
+
+    // Add an expense on personal board (records expenses:personal-1 in localWrites)
+    await addExpense(makeExpense('personal-1', 250));
+    const personalSyncBefore = await serializeBoardForSync();
+    expect(personalSyncBefore['expenses:personal-1']?.deleted).toBeUndefined();
+    expect(personalSyncBefore['expenses:personal-1']?.value).toBeTruthy();
+
+    // Adopt remote board map for Family Pot (has exp-fam-1, does NOT have personal-1)
+    await adoptRemoteBoardMap(FAMILY_META, {
+      'expenses:exp-fam-1': {
+        value: makeExpense('exp-fam-1', 900),
+        updatedAt: 5000,
+      },
+    });
+
+    // Family board sync payload must NOT contain a tombstone for personal-1
+    const familySync = await serializeBoardForSync();
+    expect(familySync['expenses:personal-1']).toBeUndefined();
+    expect(familySync['expenses:exp-fam-1']?.value).toBeTruthy();
+
+    // Switch back to personal board: personal-1 write timestamp should be restored
+    await switchAccount(PERSONAL_ACCOUNT_ID);
+    const personalSyncAfter = await serializeBoardForSync();
+    expect(personalSyncAfter['expenses:personal-1']?.value).toBeTruthy();
+    expect(personalSyncAfter['expenses:personal-1']?.updatedAt).toBeGreaterThan(0);
+    expect(personalSyncAfter['expenses:exp-fam-1']).toBeUndefined();
+  });
 });

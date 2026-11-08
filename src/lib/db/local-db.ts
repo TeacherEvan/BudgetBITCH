@@ -333,6 +333,19 @@ export async function getAllLocalWrites(): Promise<Map<string, number>> {
   return result;
 }
 
+/** Clear all local write timestamps (used when switching accounts). */
+export async function clearAllLocalWrites(): Promise<void> {
+  try {
+    const db = await getDB();
+    if (!db.objectStoreNames.contains('localWrites')) return;
+    const tx = db.transaction('localWrites', 'readwrite');
+    await tx.store.clear();
+    await tx.done;
+  } catch {
+    // Non-fatal
+  }
+}
+
 export async function afterBoardMutation(store: string, key: string): Promise<void> {
   await recordLocalWrite(store, key);
   notifyBoardChanged('local');

@@ -9,7 +9,6 @@ import { WizardShell } from '@/components/wizard/wizard-shell';
 import { resolveLocale } from '@/i18n/messages';
 import { ManifestoInterstitial } from '@/components/launch/manifesto-interstitial';
 import { useWizardProfile } from '@/hooks/use-local-db';
-import { useAccountSync } from '@/hooks/use-account-sync';
 import { initializeBudgetsFromWizard } from '@/lib/utils/budget-calculator';
 import { getWizardProfile, saveWizardProfile, saveCriticalExpenseCommitment } from '@/lib/db/local-db';
 import { logUserAction } from '@/lib/utils/action-logger';
@@ -72,8 +71,8 @@ export function DashboardClient({ wizardCompleted: initialWizardCompleted }: Das
     setShowManifesto(false);
   };
 
-  // Keep the active account's shared board in sync with Convex.
-  useAccountSync();
+  // Account sync is mounted globally in RootLayout via <AccountSyncMount />
+  // Avoid duplicate sync loops and dual timers.
 
   const handleLocaleChange = useCallback(
     (nextLocale: string) => {

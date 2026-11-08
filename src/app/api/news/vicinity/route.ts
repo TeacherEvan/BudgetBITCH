@@ -5,7 +5,7 @@ import type { NewsItem } from '@/lib/types/budget';
 
 export const dynamic = 'force-dynamic';
 
-const parser = new Parser();
+const parser = new Parser({ timeout: 5000 });
 
 function getActionableText(item: { title: string; category: string }): string | undefined {
   const lower = item.title.toLowerCase();
@@ -26,6 +26,7 @@ function getActionableText(item: { title: string; category: string }): string | 
 }
 
 async function fetchFeedItems(feed: VicinityFeedWithMeta): Promise<NewsItem[]> {
+  if (!feed.url || !feed.url.trim()) return [];
   try {
     const parsed = await parser.parseURL(feed.url);
     return parsed.items.map(parsedItem => {

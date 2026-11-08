@@ -37,11 +37,11 @@ const config: CapacitorConfig = {
   server: {
     // When unset, falls back to devServerUrl at config-load time below.
     url: prodServerUrl || devServerUrl,
-    cleartext: true, // allow http for local dev / LAN testing
+    cleartext: !prodServerUrl, // enforce HTTPS in production
   },
   android: {
-    // Keep the WebView from being killed under memory pressure on budget devices.
-    webContentsDebuggingEnabled: true,
+    // Enable WebView debugging only during local dev / emulator testing
+    webContentsDebuggingEnabled: !prodServerUrl,
   },
   ios: {
     contentInset: 'always',

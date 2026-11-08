@@ -154,6 +154,14 @@ export const deleteReceipt = mutation({
       throw new ConvexError("Receipt not found or access denied");
     }
 
+    if (receipt.imageStorageId) {
+      try {
+        await ctx.storage.delete(receipt.imageStorageId);
+      } catch (err) {
+        console.warn("Failed to delete receipt image storage:", err);
+      }
+    }
+
     await ctx.db.delete(args.receiptId);
     return { success: true };
   },

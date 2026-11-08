@@ -2,7 +2,7 @@ import { httpAction, internalAction, internalMutation, internalQuery, mutation }
 import { v, ConvexError } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
-import { getAuthUserId } from "./lib/auth";
+import { getAuthUserId } from "@convex-dev/auth/server";
 import { GEMINI_MODEL, geminiGenerateUrl } from "./lib/gemini";
 import { verifyLineSignature } from "./lib/line/verify";
 import { clog, clogError, clogMetric, genTraceId } from "./lib/log";
@@ -219,6 +219,7 @@ export const parseLineReceipt = internalAction({
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          signal: AbortSignal.timeout(25_000),
           body: JSON.stringify({
             contents: [
               {
@@ -410,7 +411,10 @@ export const lineWebhook = httpAction(async (ctx, req) => {
       try {
         const contentRes = await fetch(
           `https://api-data.line.me/v2/bot/message/${e.message.id}/content`,
-          { headers: { Authorization: `Bearer ${accessToken}` } },
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            signal: AbortSignal.timeout(15_000),
+          },
         );
         if (contentRes.ok) {
           const buf = Buffer.from(await contentRes.arrayBuffer());

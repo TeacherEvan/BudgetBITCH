@@ -35,13 +35,13 @@ relevant surface. Don't start in `src/components/**` before checking
 
 ## 2. Stack (verified against `package.json`)
 
-- Next.js 16.3.0 (App Router), React 18, TypeScript strict, path alias `@/*` → `src/*`
-- Convex 1.34.1 — auth (`@convex-dev/auth` Password provider), database, realtime, HTTP
+- Next.js 16.3.1 (App Router), React 19, TypeScript strict, path alias `@/*` → `src/*`
+- Convex 1.46+ — auth (`@convex-dev/auth` Password provider), database, realtime, HTTP
 - IndexedDB via `idb` for local-first data; `public/sw.js` service worker for PWA sync
-- next-intl 4.13.5 (cookie `bb-locale`), Tailwind CSS 4.3.3, framer-motion 12.43.0, recharts 3.10.1, zod 4.4.3
-- tesseract.js 6.0.1 (client OCR) + Gemini 2.5 Flash via `convex/receipts.ts` (server OCR)
-- web-push (VAPID), qrcode.react, lottie-react, @rive-app/canvas, rss-parser
-- Vitest 4.1.10 + React Testing Library (unit), Playwright 1.62.1 (E2E), ESLint 9.39.5 (flat config `eslint.config.cjs`)
+- next-intl 4.14.5 (cookie `bb-locale`), Tailwind CSS 4.3.3, framer-motion 13.4.0, recharts 3.8.1, zod 4.3.6
+- tesseract.js 7.0.0 (client OCR) + Gemini 2.5 Flash via `convex/receipts.ts` (server OCR)
+- web-push (VAPID), qrcode.react, lottie-react, rss-parser, Capacitor 8.5
+- Vitest 5.1.0 + React Testing Library (unit), Playwright 1.63.0 (E2E), ESLint 10.8.1 (flat config `eslint.config.cjs`)
 
 There is **no** Prisma, Postgres, Inngest, Clerk, or Sentry in this repo. Do not
 add them. The unwired `next-auth` scaffold (`src/auth.ts` + `src/app/api/auth/[...nextauth]`)

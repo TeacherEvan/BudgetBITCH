@@ -56,12 +56,13 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         async sendVerificationRequest({ identifier, url, token }: { identifier: string; url: string; token: string }) {
           // Host the reset link on the real app origin, not CONVEX_SITE_URL.
           const target = url.replace(/^https?:\/\/[^/]+/, appOrigin());
-          await fetch("https://api.resend.com/emails", {
+          const res = await fetch("https://api.resend.com/emails", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${process.env.RESEND_API_KEY ?? ""}`,
             },
+            signal: AbortSignal.timeout(10_000),
             body: JSON.stringify({
               from: resendFrom(),
               to: [identifier],
@@ -70,6 +71,11 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
               text: resetEmailText({ url: target, code: token }),
             }),
           });
+          if (!res.ok) {
+            const errText = await res.text().catch(() => "");
+            console.error("Resend password reset email failed:", res.status, errText);
+            throw new Error(`Failed to send password reset email (status ${res.status})`);
+          }
         },
       }),
     }),

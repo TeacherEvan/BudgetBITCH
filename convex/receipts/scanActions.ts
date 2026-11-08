@@ -63,12 +63,17 @@ export const proxyReceiptScan = action({
     const hmac = Buffer.from(signature).toString("hex");
     const appToken = `${userId}:${timestamp}:${hmac}`;
 
+    if (args.base64Image.length > 8_000_000) {
+      throw new ConvexError("Receipt image payload too large (max 8MB base64)");
+    }
+
     const res = await fetch(`${botUrl.replace(/\/$/, "")}/receipt/scan`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${syncSecret}`,
       },
+      signal: AbortSignal.timeout(25_000),
       body: JSON.stringify({
         base64Image: args.base64Image,
         userId,
@@ -154,6 +159,10 @@ Return a JSON object matching this schema exactly:
 }
 Do not include any formatting, markdown wrappers, or extra text. Output ONLY the raw JSON string.`;
 
+    if (args.base64Image.length > 8_000_000) {
+      throw new ConvexError("Receipt image payload too large (max 8MB base64)");
+    }
+
     try {
       const response = await fetch(
         geminiGenerateUrl(apiKey),
@@ -162,6 +171,7 @@ Do not include any formatting, markdown wrappers, or extra text. Output ONLY the
           headers: {
             "Content-Type": "application/json",
           },
+          signal: AbortSignal.timeout(25_000),
           body: JSON.stringify({
             contents: [
               {
@@ -270,8 +280,9 @@ export const parseMessage = action({
       );
     }
 
+    const safeMessage = args.messageText.slice(0, 4000);
     const prompt = `Analyze the financial notification email or SMS message text below:
-"${args.messageText}"
+"${safeMessage}"
 
 Extract:
 1. Total amount spent or received (as a positive number, do not include currency symbols).
@@ -298,6 +309,7 @@ Do not include any formatting, markdown wrappers, or extra text. Output ONLY the
           headers: {
             "Content-Type": "application/json",
           },
+          signal: AbortSignal.timeout(25_000),
           body: JSON.stringify({
             contents: [
               {

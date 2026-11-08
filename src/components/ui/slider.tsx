@@ -67,7 +67,7 @@ export const Slider = forwardRef<HTMLInputElement, SliderProps>(
             )}
           </div>
         )}
-        <div className="relative h-6" role="slider" aria-valuemin={min} aria-valuemax={max} aria-valuenow={currentValue} aria-disabled={disabled} tabIndex={disabled ? -1 : 0}>
+        <div className="relative h-6">
           <div 
             className="absolute top-1/2 left-0 right-0 h-1 -translate-y-1/2 bg-white/10 rounded-full overflow-hidden"
           >
@@ -89,7 +89,7 @@ export const Slider = forwardRef<HTMLInputElement, SliderProps>(
             onTouchStart={handleMouseDown}
             onTouchEnd={handleMouseUp}
             disabled={disabled}
-            className="absolute inset-0 w-full h-6 appearance-none bg-transparent cursor-pointer"
+            className="absolute inset-0 w-full h-6 appearance-none bg-transparent cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-strong)] rounded"
             aria-label={label}
             {...props}
           />

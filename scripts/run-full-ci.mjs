@@ -25,7 +25,7 @@ console.log('======================================================\n');
 
 if (!isCI && !hasConvexUrl) {
   console.log('ℹ️  Running in LOCAL mode (no NEXT_PUBLIC_CONVEX_URL set)');
-  console.log('   Gates 7-8 will be skipped (require CI/Convex env).\n');
+  console.log('   Gates 5, 9, 10, 12 will be skipped (require CI/Convex env).\n');
 }
 
 const startTime = Date.now();

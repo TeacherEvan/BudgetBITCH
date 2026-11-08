@@ -20,6 +20,9 @@ import {
   clearAllUserData,
   getDB,
   getWizardProfile,
+  getAllLocalWrites,
+  clearAllLocalWrites,
+  recordLocalWritesBulk,
 } from "./local-db";
 import {
   PERSONAL_ACCOUNT_ID,
@@ -38,6 +41,8 @@ export interface StashedAccount {
   // A full BoardSnapshot clone (the 8 shared stores).
   snapshot: BoardSnapshot;
   stashedAt: number;
+  // Scoped write timestamps for LWW sync so account switching does not leak tombstones
+  localWrites?: Record<string, number>;
 }
 
 async function db() {
@@ -105,11 +110,20 @@ export async function removeStashedAccount(accountId: string): Promise<void> {
  */
 export async function stashCurrentAccount(accountId: string): Promise<void> {
   const database = await db();
-  const snapshot = clone(await serializeBoard());
+  const [board, writesMap] = await Promise.all([
+    serializeBoard(),
+    getAllLocalWrites(),
+  ]);
+  const snapshot = clone(board);
+  const localWrites: Record<string, number> = {};
+  for (const [k, v] of writesMap.entries()) {
+    localWrites[k] = v;
+  }
   const stashed: StashedAccount = {
     accountId,
     snapshot,
     stashedAt: Date.now(),
+    localWrites,
   };
   await database.put(ACCOUNTS_DATA_STORE, stashed, accountId);
 }
@@ -122,9 +136,27 @@ export async function stashCurrentAccount(accountId: string): Promise<void> {
  */
 export async function restoreAccountToActive(
   snapshot: BoardSnapshot,
+  localWrites?: Record<string, number>,
 ): Promise<void> {
   await clearAllUserData();
+  await clearAllLocalWrites();
   await replaceBoardData(snapshot);
+  if (localWrites) {
+    const entries: Array<{ store: string; key: string; timestamp?: number }> = [];
+    for (const [compositeKey, ts] of Object.entries(localWrites)) {
+      const idx = compositeKey.indexOf(":");
+      if (idx !== -1) {
+        entries.push({
+          store: compositeKey.slice(0, idx),
+          key: compositeKey.slice(idx + 1),
+          timestamp: ts,
+        });
+      }
+    }
+    if (entries.length > 0) {
+      await recordLocalWritesBulk(entries);
+    }
+  }
 }
 
 export async function getStashedAccount(
@@ -158,7 +190,7 @@ export async function switchAccount(
 
   const stashed = await getStashedAccount(targetAccountId);
   if (stashed) {
-    await restoreAccountToActive(stashed.snapshot);
+    await restoreAccountToActive(stashed.snapshot, stashed.localWrites);
   } else if (targetAccountId === PERSONAL_ACCOUNT_ID) {
     // No personal stash yet (fresh local user): leave the 8 stores as-is.
     // The live personal data is already in them. Mark so we don't re-stash empty.
@@ -246,8 +278,16 @@ export async function adoptRemoteBoardMap(
     await stashCurrentAccount(current);
   }
   await clearAllUserData();
+  await clearAllLocalWrites();
   await applyRemoteBoard(remoteMap);
-  const hydratedSnapshot = await serializeBoard();
+  const [hydratedSnapshot, writesMap] = await Promise.all([
+    serializeBoard(),
+    getAllLocalWrites(),
+  ]);
+  const localWrites: Record<string, number> = {};
+  for (const [k, v] of writesMap.entries()) {
+    localWrites[k] = v;
+  }
   const database = await db();
   await database.put(
     ACCOUNTS_DATA_STORE,
@@ -255,6 +295,7 @@ export async function adoptRemoteBoardMap(
       accountId: meta.accountId,
       snapshot: clone(hydratedSnapshot),
       stashedAt: Date.now(),
+      localWrites,
     } as StashedAccount,
     meta.accountId,
   );

@@ -12,8 +12,6 @@ export const runtime = "nodejs";
 // The re-emitted JSON is queryable in Vercel/Next logs alongside Convex logs,
 // giving one correlated view of a request that crosses both runtimes.
 
-const Field = z.record(z.string(), z.unknown());
-
 const LogEvent = z.object({
   ts: z.string(),
   level: z.enum(["debug", "info", "warn", "error"]),
@@ -21,7 +19,7 @@ const LogEvent = z.object({
   service: z.string(),
   sessionId: z.string(),
   traceId: z.string().optional(),
-}).catchall(Field);
+}).catchall(z.unknown());
 
 const MetricEvent = z.object({
   ts: z.string(),

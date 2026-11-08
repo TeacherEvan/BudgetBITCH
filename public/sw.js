@@ -59,7 +59,8 @@ async function staleWhileRevalidate(request) {
   const cache = await caches.open(STATIC_ASSET_CACHE);
   const cachedResponse = await cache.match(request);
 
-  const networkPromise = fetch(request)
+  // Background fetch to update the cache
+  const updateCachePromise = fetch(request)
     .then((networkResponse) => {
       if (networkResponse.ok) {
         cache.put(request, networkResponse.clone());
@@ -68,9 +69,16 @@ async function staleWhileRevalidate(request) {
     })
     .catch(() => cachedResponse);
 
-  // Always prefer the network for hashed /_next/static chunks so a fresh
-  // deploy never serves a stale bundle behind a permanent cache name.
-  return (await networkPromise) ?? cachedResponse;
+  // If already in cache, return immediately (true stale-while-revalidate)
+  if (cachedResponse) {
+    return cachedResponse;
+  }
+
+  // Not in cache: await network with a 4s fallback timeout
+  return Promise.race([
+    updateCachePromise,
+    new Promise((resolve) => setTimeout(() => resolve(cachedResponse), 4000)),
+  ]);
 }
 
 async function networkFirst(request) {

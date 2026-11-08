@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { Cloud, CloudOff, RefreshCw, ChevronDown, Monitor, Smartphone, Users } from 'lucide-react';
+import { Cloud, CloudOff, RefreshCw, ChevronDown, Monitor, Users } from 'lucide-react';
 import { BOARD_CHANGED_EVENT } from '@/lib/types/budget';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
@@ -43,9 +43,6 @@ export function SyncStatusIndicator({ }: SyncStatusIndicatorProps) {
   };
 
   const currentDevice = getDeviceString();
-  const otherDevice = currentDevice.includes('iOS') || currentDevice.includes('Android')
-    ? 'Chrome on macOS (Laptop)'
-    : 'Safari on iOS (iPhone)';
 
   const checkStatus = async () => {
     if (typeof window === 'undefined') return;
@@ -240,18 +237,14 @@ export function SyncStatusIndicator({ }: SyncStatusIndicatorProps) {
               </div>
               <div className="flex items-center justify-between text-[11px]">
                 <span className="text-white/60 font-medium">{'Connected Devices'}</span>
-                <span className="text-amber-400 font-bold bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20 text-[9px] uppercase tracking-wider">
-                  {'2 Active Sessions'}
+                <span className="text-emerald-400 font-bold bg-emerald-400/10 px-1.5 py-0.5 rounded border border-emerald-400/20 text-[9px] uppercase tracking-wider">
+                  {'1 Active Session'}
                 </span>
               </div>
               <div className="text-[10px] space-y-1 pl-1 text-left">
                 <div className="flex items-center gap-1.5 text-zinc-400">
                   <Monitor className="h-3 w-3 text-emerald-400 shrink-0" />
                   <span className="truncate">{currentDevice} ({'This device'})</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-zinc-400">
-                  <Smartphone className="h-3 w-3 text-amber-400/70 shrink-0" />
-                  <span className="truncate">{otherDevice}</span>
                 </div>
               </div>
             </div>

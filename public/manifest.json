@@ -11,6 +11,12 @@
   "scope": "/",
   "icons": [
     {
+      "src": "/icons/app-icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
       "src": "/icons/icon-72x72.png",
       "sizes": "72x72",
       "type": "image/png",

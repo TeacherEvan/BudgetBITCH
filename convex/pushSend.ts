@@ -24,13 +24,16 @@ export const sendReminder = action({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Unauthenticated");
 
-    if (VAPID_PUBLIC && VAPID_PRIVATE) {
-      webpush.setVapidDetails(
-        "mailto:support@budget-boss.app",
-        VAPID_PUBLIC,
-        VAPID_PRIVATE,
-      );
+    if (!VAPID_PUBLIC || !VAPID_PRIVATE) {
+      console.warn("VAPID keys not configured; push notifications skipped.");
+      return { sent: 0, total: 0 };
     }
+
+    webpush.setVapidDetails(
+      "mailto:support@budget-boss.app",
+      VAPID_PUBLIC,
+      VAPID_PRIVATE,
+    );
 
     const subs: DocumentByName<DataModel, "pushSubscriptions">[] =
       await ctx.runQuery(internal.push._listForUser, { userId });

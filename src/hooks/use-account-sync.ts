@@ -70,7 +70,11 @@ function getQueue(): QueuedPush[] {
 
 function setQueue(q: QueuedPush[]): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(BOARD_QUEUE_KEY, JSON.stringify(q));
+  try {
+    localStorage.setItem(BOARD_QUEUE_KEY, JSON.stringify(q));
+  } catch (err) {
+    console.warn("Failed to save account board sync queue to localStorage:", err);
+  }
 }
 
 function isOnline(): boolean {

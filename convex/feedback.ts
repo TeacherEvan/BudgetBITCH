@@ -80,11 +80,12 @@ export const getRecent = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
     await assertAdmin(ctx);
+    const safeLimit = Math.min(Math.max(args.limit ?? 20, 1), 100);
     const rows = await ctx.db
       .query("feedbackReports")
       .withIndex("by_createdAt")
       .order("desc")
-      .take(args.limit ?? 20);
+      .take(safeLimit);
     return rows;
   },
 });
