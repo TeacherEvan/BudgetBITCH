@@ -13,13 +13,15 @@ export async function notifyPartner(
   toUserId: Id<"users">,
   title: string,
   body: string,
-) {
+): Promise<string> {
   // Schedule the push notification via the internal pushSend action.
   // Using runAfter(0, ...) for fire-and-forget semantics — a missing VAPID config
   // in pushSend will log a warning but won't block the delete request.
-  await ctx.scheduler.runAfter(0, internal.pushSend._sendToUser, {
+  // Returns the scheduler job id so mutations can surface proof of scheduling
+  // through their return value (mutation-level observability for tests).
+  return ctx.scheduler.runAfter(0, internal.pushSend._sendToUser, {
     userId: toUserId,
     title,
     body,
-  });
+  }) as Promise<string>;
 }

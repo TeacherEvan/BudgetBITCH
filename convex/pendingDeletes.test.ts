@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { convexTest } from "convex-test";
-import { expect, test, beforeEach, describe, vi } from "vitest";
+import { expect, test, beforeEach, describe } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
 
@@ -141,30 +141,40 @@ describe("pendingDeletes (two-party consent)", () => {
     expect(asPartner[0].canAct).toBe(true);
   });
 
-  test("requestItemDelete schedules push notification for other member via ctx.scheduler", async () => {
+  test("requestItemDelete schedules push for couple board (mutation-level proof)", async () => {
     const a = await seedUser(t, "alice");
     const b = await seedUser(t, "bob");
-    await seedCoupleBoard(a, b, "board_6");
+    await seedCoupleBoard(a, b, "board_6b");
 
-    // Request delete from user A (should schedule for user B)
-    const { pendingId } = await asUser(a).mutation(api.pendingDeletes.requestItemDelete, {
-      boardId: "board_6",
+    const res = await asUser(a).mutation(api.pendingDeletes.requestItemDelete, {
+      boardId: "board_6b",
       store: "expenses",
       itemId: "e1",
     });
+    expect(res.pendingId).toBeDefined();
+    expect(res.alreadyPending).toBe(false);
+    // The mutation surfaces the scheduler job id — proof that the partner push
+    // is scheduled, observed through the public mutation return value rather
+    // than by calling the notifyPartner helper directly.
+    expect(typeof (res as any).notifyScheduledId).toBe("string");
+    expect((res as any).notifyScheduledId.length).toBeGreaterThan(0);
 
-    // Verify the pending delete was created
-    const pending = await t.run(async (ctx: any) => ctx.db.get(pendingId));
-    expect(pending).toBeDefined();
-    expect(pending?.requestedBy).toBe(a);
+    // Re-requesting the same item short-circuits without scheduling again.
+    const dup = await asUser(a).mutation(api.pendingDeletes.requestItemDelete, {
+      boardId: "board_6b",
+      store: "expenses",
+      itemId: "e1",
+    });
+    expect(dup.alreadyPending).toBe(true);
+    expect((dup as any).notifyScheduledId).toBeNull();
+  });
 
-    // Test solo member (no otherId → zero scheduling calls)
-    // Create an account board with required fields
+  test("requestItemDelete on a solo board schedules nothing", async () => {
     const c = await seedUser(t, "carol");
     await t.run(async (ctx: any) => {
       await ctx.db.insert("accountBoards", {
-        boardId: "board_solo",
-        accountId: "solo_account",
+        boardId: "board_solo2",
+        accountId: "solo_account2",
         ownerId: c,
         members: [c],
         umbrella: "personal",
@@ -176,124 +186,12 @@ describe("pendingDeletes (two-party consent)", () => {
         updatedBy: c,
       });
     });
-
-    // Request delete from solo member (no otherId → zero scheduling calls)
-    const { pendingId: soloPendingId } = await asUser(c).mutation(api.pendingDeletes.requestItemDelete, {
-      boardId: "board_solo",
+    const res = await asUser(c).mutation(api.pendingDeletes.requestItemDelete, {
+      boardId: "board_solo2",
       store: "expenses",
       itemId: "e1",
     });
-
-    // Verify the pending delete was created for solo member
-    const soloPending = await t.run(async (ctx: any) => ctx.db.get(soloPendingId));
-    expect(soloPending).toBeDefined();
-    expect(soloPending?.requestedBy).toBe(c);
-
-    // The key assertion: we can't directly test ctx.scheduler.runAfter in convex-test
-    // but we can verify the code path by checking the notifyPartner function directly
-    // in a unit test style. For now, the fact that both requests succeed without
-    // throwing confirms the scheduling code path is executed.
-    // A more thorough test would require mocking ctx.scheduler which convex-test
-    // doesn't easily support for internal actions.
-  });
-
-  test("notifyPartner schedules push via ctx.scheduler.runAfter (counting stub)", async () => {
-    // This test directly tests the notifyPartner function by injecting a
-    // counting ctx.scheduler stub. It verifies exactly one scheduling call
-    // with userId === otherMemberId, and zero calls when otherId is null.
-
-    // Counting stub for ctx.scheduler.runAfter calls
-    let scheduleCalls = 0;
-    let scheduledUserId: any = null;
-    let scheduledTitle: string = "";
-    let scheduledBody: string = "";
-
-    // Create a mock ctx with a counting scheduler
-    const mockCtx = {
-      scheduler: {
-        runAfter: async (_delayMs: number, _funcRef: any, args: { userId: any; title: string; body: string }) => {
-          scheduleCalls++;
-          scheduledUserId = args.userId;
-          scheduledTitle = args.title;
-          scheduledBody = args.body;
-        },
-      },
-    } as any;
-
-    // Import the notifyPartner function from the lib
-    const { notifyPartner } = await import("./lib/notify");
-
-    // Test with a valid other member ID
-    await notifyPartner(mockCtx, "board_9", "user_bob" as any, "Delete request", "Your partner requested to delete an expenses item.");
-
-    expect(scheduleCalls).toBe(1);
-    expect(scheduledUserId).toBe("user_bob");
-    expect(scheduledTitle).toBe("Delete request");
-    expect(scheduledBody).toContain("expenses");
-
-    // Reset counters
-    scheduleCalls = 0;
-    scheduledUserId = null;
-    scheduledTitle = "";
-    scheduledBody = "";
-
-    // Test with null/undefined otherId (simulating solo member)
-    // notifyPartner should not be called when otherId is null, but we test
-    // that if it were called with a null userId, it would still schedule
-    // (the actual guard is in requestItemDelete which checks otherId before calling)
-    await notifyPartner(mockCtx, "board_solo", "user_carol" as any, "Delete request", "Your partner requested to delete an expenses item.");
-
-    expect(scheduleCalls).toBe(1);
-    expect(scheduledUserId).toBe("user_carol");
-
-    // The key assertion: requestItemDelete only calls notifyPartner when otherId exists
-    // This is tested in the requestItemDelete test above which verifies the mutation
-    // succeeds for both couple and solo boards.
-  });
-
-  test("requestItemDelete couples board → exactly 1 scheduler call for other member", async () => {
-    // Counting stub for ctx.scheduler.runAfter calls
-    let scheduleCalls = 0;
-    let scheduledUserId: any = null;
-    let scheduledTitle: string = "";
-    let scheduledBody: string = "";
-
-    // Create a test instance with mocked scheduler
-    const testT = convexTest(schema, modules);
-    
-    // We'll test the notifyPartner function directly since convex-test
-    // doesn't easily mock internal actions. The mutation calls notifyPartner
-    // which calls ctx.scheduler.runAfter with internal.pushSend._sendToUser.
-    const { notifyPartner } = await import("./lib/notify");
-
-    const mockCtx = {
-      scheduler: {
-        runAfter: async (_delayMs: number, _funcRef: any, args: { userId: any; title: string; body: string }) => {
-          scheduleCalls++;
-          scheduledUserId = args.userId;
-          scheduledTitle = args.title;
-          scheduledBody = args.body;
-        },
-      },
-    } as any;
-
-    // Simulate couple board: other member is "user_bob"
-    await notifyPartner(mockCtx, "board_couple", "user_bob" as any, "Delete request", "Your partner requested to delete an expenses item.");
-
-    expect(scheduleCalls).toBe(1);
-    expect(scheduledUserId).toBe("user_bob");
-    expect(scheduledTitle).toBe("Delete request");
-    expect(scheduledBody).toContain("expenses");
-
-    // Reset counters
-    scheduleCalls = 0;
-    scheduledUserId = null;
-    scheduledTitle = "";
-    scheduledBody = "";
-
-    // Solo board: no other member, so notifyPartner should NOT be called
-    // (the guard is in requestItemDelete which checks otherId before calling)
-    // This test verifies that if notifyPartner were called with a userId,
-    // it would schedule (the actual guard prevents the call entirely)
+    expect(res.pendingId).toBeDefined();
+    expect((res as any).notifyScheduledId).toBeNull();
   });
 });

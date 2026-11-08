@@ -132,7 +132,7 @@ export const requestItemDelete = mutation({
     const existing = batch.find(
       (d) => d.store === args.store && d.itemId === args.itemId,
     );
-    if (existing) return { pendingId: existing._id, alreadyPending: true };
+    if (existing) return { pendingId: existing._id, alreadyPending: true, notifyScheduledId: null as string | null };
 
     const otherId = otherMemberId(ref, userId);
     const pendingId = await ctx.db.insert("pendingDeletes", {
@@ -145,8 +145,9 @@ export const requestItemDelete = mutation({
       itemSnapshot: args.itemSnapshot,
     });
 
+    let notifyScheduledId: string | null = null;
     if (otherId) {
-      await notifyPartner(
+      notifyScheduledId = await notifyPartner(
         ctx,
         args.boardId,
         otherId,
@@ -154,7 +155,7 @@ export const requestItemDelete = mutation({
         `Your partner requested to delete a ${args.store} item. Approve or reject in Settings.`,
       );
     }
-    return { pendingId, alreadyPending: false };
+    return { pendingId, alreadyPending: false, notifyScheduledId };
   },
 });
 
