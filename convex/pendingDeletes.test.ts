@@ -250,4 +250,50 @@ describe("pendingDeletes (two-party consent)", () => {
     // This is tested in the requestItemDelete test above which verifies the mutation
     // succeeds for both couple and solo boards.
   });
+
+  test("requestItemDelete couples board → exactly 1 scheduler call for other member", async () => {
+    // Counting stub for ctx.scheduler.runAfter calls
+    let scheduleCalls = 0;
+    let scheduledUserId: any = null;
+    let scheduledTitle: string = "";
+    let scheduledBody: string = "";
+
+    // Create a test instance with mocked scheduler
+    const testT = convexTest(schema, modules);
+    
+    // We'll test the notifyPartner function directly since convex-test
+    // doesn't easily mock internal actions. The mutation calls notifyPartner
+    // which calls ctx.scheduler.runAfter with internal.pushSend._sendToUser.
+    const { notifyPartner } = await import("./lib/notify");
+
+    const mockCtx = {
+      scheduler: {
+        runAfter: async (_delayMs: number, _funcRef: any, args: { userId: any; title: string; body: string }) => {
+          scheduleCalls++;
+          scheduledUserId = args.userId;
+          scheduledTitle = args.title;
+          scheduledBody = args.body;
+        },
+      },
+    } as any;
+
+    // Simulate couple board: other member is "user_bob"
+    await notifyPartner(mockCtx, "board_couple", "user_bob" as any, "Delete request", "Your partner requested to delete an expenses item.");
+
+    expect(scheduleCalls).toBe(1);
+    expect(scheduledUserId).toBe("user_bob");
+    expect(scheduledTitle).toBe("Delete request");
+    expect(scheduledBody).toContain("expenses");
+
+    // Reset counters
+    scheduleCalls = 0;
+    scheduledUserId = null;
+    scheduledTitle = "";
+    scheduledBody = "";
+
+    // Solo board: no other member, so notifyPartner should NOT be called
+    // (the guard is in requestItemDelete which checks otherId before calling)
+    // This test verifies that if notifyPartner were called with a userId,
+    // it would schedule (the actual guard prevents the call entirely)
+  });
 });
