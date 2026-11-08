@@ -120,6 +120,12 @@ describe("pushBoard merge semantics", () => {
     // The board's updatedAt should be clamped to ~now + 60s, not +1 day
     expect((res as any).updatedAt).toBeLessThan(futureTime);
     expect((res as any).updatedAt).toBeGreaterThan(Date.now());
+    // Per-record LWW timestamps are clamped too — otherwise a hostile
+    // +10y key would lock that key's merge forever even with a sane board clock.
+    const board = await asUser(aliceId).query(api.sharedBoards.getBoard, { boardId });
+    const data = (board as any).data as Record<string, any>;
+    expect(data["expenses:e1"].updatedAt).toBeLessThan(futureTime);
+    expect(data["expenses:e1"].updatedAt).toBeLessThanOrEqual((res as any).updatedAt);
   });
 
   test("malformed shape (missing value/updatedAt) is rejected", async () => {

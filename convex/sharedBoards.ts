@@ -253,9 +253,20 @@ export const pushBoard = mutation({
       }
     }
 
-    // Clamp client timestamp to now + 60s to prevent clock skew attacks
+    // Clamp client timestamps to now + 60s to prevent clock skew attacks.
+    // Both the board-level clock and each per-record updatedAt drive LWW
+    // (mergeRecords resolves by rec.updatedAt), so every incoming record is
+    // clamped — otherwise a hostile +10y key would lock that key forever.
     const now = Date.now();
-    const effectiveUpdatedAt = Math.min(args.updatedAt, now + 60_000);
+    const clockCeiling = now + 60_000;
+    const effectiveUpdatedAt = Math.min(args.updatedAt, clockCeiling);
+    const incoming: Record<string, StoredRecord> = {};
+    for (const [key, rec] of Object.entries(args.data)) {
+      incoming[key] = {
+        ...rec,
+        updatedAt: Math.min(rec.updatedAt, clockCeiling),
+      };
+    }
 
     // 512 KB budget for the incoming data (Convex document limit is 1 MB)
     const dataSize = new TextEncoder().encode(JSON.stringify(args.data)).length;
@@ -263,7 +274,6 @@ export const pushBoard = mutation({
       throw new ConvexError("Push payload exceeds 512 KB limit");
     }
 
-    const incoming = args.data as Record<string, StoredRecord>;
     const { merged, changed } = mergeRecords(
       board.data as Record<string, StoredRecord> | null,
       incoming,
