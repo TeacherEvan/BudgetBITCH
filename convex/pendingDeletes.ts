@@ -198,6 +198,13 @@ export const approveItemDelete = mutation({
       throw new ConvexError("You cannot approve your own delete request");
     }
 
+    // Only the OTHER member (the one who must approve) can approve.
+    // For a 2-person board, this is exactly the other member.
+    const otherId = otherMemberId(ref, pending.requestedBy);
+    if (otherId !== userId) {
+      throw new ConvexError("Only the other board member can approve this request");
+    }
+
     await applyDeleteToBoard(ctx, ref, pending.store, pending.itemId, userId);
     await ctx.db.patch(args.pendingId, { status: "approved" });
     return { approved: true };
@@ -221,9 +228,14 @@ export const rejectItemDelete = mutation({
     if (!ref) throw new ConvexError("Board not found");
     if (!isMember(ref, userId)) throw new ConvexError("Not a member of this board");
 
-    // Either the other member rejects, or the requester cancels. The requester
-    // approving their own is forbidden (handled in approve); here the requester
-    // cancelling is allowed.
+    // Either the other member rejects, or the requester cancels.
+    const otherId = otherMemberId(ref, pending.requestedBy);
+    const isRequester = pending.requestedBy === userId;
+    const isOtherMember = otherId === userId;
+    if (!isRequester && !isOtherMember) {
+      throw new ConvexError("Only the requester or the other board member can reject this request");
+    }
+
     await ctx.db.patch(args.pendingId, { status: "rejected" });
     return { rejected: true };
   },

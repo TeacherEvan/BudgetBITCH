@@ -245,17 +245,28 @@ export const acceptInvite = mutation({
       .withIndex("by_boardId", (q) => q.eq("boardId", invite.boardId))
       .unique();
     if (!board) throw new ConvexError("Board not found");
-    if (board.members.length >= MAX_MEMBERS) {
-      throw new ConvexError(`An account can have at most ${MAX_MEMBERS} members`);
-    }
 
-    await ctx.db.patch(invite._id, { status: "accepted" });
-    await ctx.db.insert("boardMembers", {
+    // Insert the boardMember first, then check if we exceeded the cap.
+    // If over cap, delete the just-inserted row and throw.
+    const memberRowId = await ctx.db.insert("boardMembers", {
       boardId: invite.boardId,
       userId,
       role: "member",
       joinedAt: Date.now(),
     });
+
+    // Re-check member count after insert (concurrent-safe)
+    const membersAfter = await ctx.db
+      .query("boardMembers")
+      .withIndex("by_board", (q) => q.eq("boardId", invite.boardId))
+      .take(MAX_MEMBERS + 1);
+    if (membersAfter.length > MAX_MEMBERS) {
+      // Over cap - roll back by deleting the row we just inserted
+      await ctx.db.delete(memberRowId);
+      throw new ConvexError(`An account can have at most ${MAX_MEMBERS} members`);
+    }
+
+    await ctx.db.patch(invite._id, { status: "accepted" });
     await ctx.db.patch(board._id, {
       members: Array.from(new Set([...board.members, userId])),
     });
@@ -280,6 +291,9 @@ export const declineInvite = mutation({
     if (!invite) throw new ConvexError("Invite not found");
     if (invite.toUserId !== userId) {
       throw new ConvexError("Not your invite");
+    }
+    if (invite.status !== "pending") {
+      throw new ConvexError("Invite already handled");
     }
     await ctx.db.patch(invite._id, { status: "declined" });
     return { success: true };
