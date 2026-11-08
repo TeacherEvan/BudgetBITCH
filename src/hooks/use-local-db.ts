@@ -1,7 +1,7 @@
 // hooks/use-local-db.ts
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { 
   WizardProfile, 
   ExpenseEntry, 
@@ -85,6 +85,18 @@ export function useDatabaseListener(callback: () => void, relevantStores?: reado
   }, [callback, relevantStores]);
 }
 
+/**
+ * Request-sequence guard: bump the counter per load; responses whose seq no
+ * longer matches are stale and dropped (replaces per-hook mounted flags, which
+ * leaked on event-triggered loads). No hook signature changes.
+ */
+export function useRequestSeq() {
+  return useRef(0);
+}
+
+/** Standard return addendum: surface load failures instead of fake `loading:false`. */
+export type LoadState = { loading: boolean; error: Error | null };
+
 const WIZARD_PROFILE_STORES = ['wizardProfile'] as const;
 const EXPENSES_STORES = ['expenses'] as const;
 const INCOMES_STORES = ['incomes'] as const;
@@ -100,22 +112,25 @@ const FORECAST_STORES = ['budgets', 'wizardProfile'] as const;
 export function useWizardProfile() {
   const [profile, setProfile] = useState<WizardProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const reqSeq = useRequestSeq();
 
   const load = useCallback(() => {
-    let mounted = true;
+    const mySeq = ++reqSeq.current;
     getWizardProfile().then(p => {
-      if (mounted) {
-        setProfile(p || null);
-        setLoading(false);
-      }
-    }).catch(() => {
-      if (mounted) setLoading(false);
+      if (reqSeq.current !== mySeq) return; // stale response — drop
+      setProfile(p || null);
+      setError(null);
+      setLoading(false);
+    }).catch((e: unknown) => {
+      if (reqSeq.current !== mySeq) return;
+      setError(e instanceof Error ? e : new Error(String(e)));
+      setLoading(false);
     });
-    return () => { mounted = false; };
-  }, []);
+  }, [reqSeq]);
 
   useEffect(() => {
-    return load();
+    load();
   }, [load]);
 
   useDatabaseListener(load, WIZARD_PROFILE_STORES);
@@ -130,29 +145,32 @@ export function useWizardProfile() {
     setProfile(null);
   }, []);
 
-  return { profile, loading, save, clear };
+  return { profile, loading, error, save, clear };
 }
 
 // Expenses
 export function useExpenses() {
   const [expenses, setExpenses] = useState<ExpenseEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const reqSeq = useRequestSeq();
 
   const load = useCallback(() => {
-    let mounted = true;
+    const mySeq = ++reqSeq.current;
     getExpenses().then(e => {
-      if (mounted) {
-        setExpenses([...e].sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0)));
-        setLoading(false);
-      }
-    }).catch(() => {
-      if (mounted) setLoading(false);
+      if (reqSeq.current !== mySeq) return;
+      setExpenses([...e].sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0)));
+      setError(null);
+      setLoading(false);
+    }).catch((e: unknown) => {
+      if (reqSeq.current !== mySeq) return;
+      setError(e instanceof Error ? e : new Error(String(e)));
+      setLoading(false);
     });
-    return () => { mounted = false; };
-  }, []);
+  }, [reqSeq]);
 
   useEffect(() => {
-    return load();
+    load();
   }, [load]);
 
   useDatabaseListener(load, EXPENSES_STORES);
@@ -192,29 +210,32 @@ export function useExpenses() {
     return getExpensesByCategory(category);
   }, []);
 
-  return { expenses, loading, add, update, remove, getByCategory };
+  return { expenses, loading, error, add, update, remove, getByCategory };
 }
 
 // Incomes
 export function useIncomes() {
   const [incomes, setIncomes] = useState<IncomeEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const reqSeq = useRequestSeq();
 
   const load = useCallback(() => {
-    let mounted = true;
+    const mySeq = ++reqSeq.current;
     getIncomes().then(inc => {
-      if (mounted) {
-        setIncomes([...inc].sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0)));
-        setLoading(false);
-      }
-    }).catch(() => {
-      if (mounted) setLoading(false);
+      if (reqSeq.current !== mySeq) return;
+      setIncomes([...inc].sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0)));
+      setError(null);
+      setLoading(false);
+    }).catch((e: unknown) => {
+      if (reqSeq.current !== mySeq) return;
+      setError(e instanceof Error ? e : new Error(String(e)));
+      setLoading(false);
     });
-    return () => { mounted = false; };
-  }, []);
+  }, [reqSeq]);
 
   useEffect(() => {
-    return load();
+    load();
   }, [load]);
 
   useDatabaseListener(load, INCOMES_STORES);
@@ -252,29 +273,32 @@ export function useIncomes() {
     setIncomes(prev => prev.filter(i => i.id !== id));
   }, []);
 
-  return { incomes, loading, add, update, remove };
+  return { incomes, loading, error, add, update, remove };
 }
 
 // Budgets
 export function useBudgets() {
   const [budgets, setBudgets] = useState<BudgetCategory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const reqSeq = useRequestSeq();
 
   const load = useCallback(() => {
-    let mounted = true;
+    const mySeq = ++reqSeq.current;
     getAllBudgets().then(b => {
-      if (mounted) {
-        setBudgets(b);
-        setLoading(false);
-      }
-    }).catch(() => {
-      if (mounted) setLoading(false);
+      if (reqSeq.current !== mySeq) return;
+      setBudgets(b);
+      setError(null);
+      setLoading(false);
+    }).catch((e: unknown) => {
+      if (reqSeq.current !== mySeq) return;
+      setError(e instanceof Error ? e : new Error(String(e)));
+      setLoading(false);
     });
-    return () => { mounted = false; };
-  }, []);
+  }, [reqSeq]);
 
   useEffect(() => {
-    return load();
+    load();
   }, [load]);
 
   useDatabaseListener(load, BUDGETS_STORES);
@@ -294,29 +318,32 @@ export function useBudgets() {
     return getBudgetCategory(category);
   }, []);
 
-  return { budgets, loading, save, get };
+  return { budgets, loading, error, save, get };
 }
 
 // Bills
 export function useBills() {
   const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const reqSeq = useRequestSeq();
 
   const load = useCallback(() => {
-    let mounted = true;
+    const mySeq = ++reqSeq.current;
     getAllBills().then(b => {
-      if (mounted) {
-        setBills(b);
-        setLoading(false);
-      }
-    }).catch(() => {
-      if (mounted) setLoading(false);
+      if (reqSeq.current !== mySeq) return;
+      setBills(b);
+      setError(null);
+      setLoading(false);
+    }).catch((e: unknown) => {
+      if (reqSeq.current !== mySeq) return;
+      setError(e instanceof Error ? e : new Error(String(e)));
+      setLoading(false);
     });
-    return () => { mounted = false; };
-  }, []);
+  }, [reqSeq]);
 
   useEffect(() => {
-    return load();
+    load();
   }, [load]);
 
   useDatabaseListener(load, BILLS_STORES);
@@ -348,29 +375,32 @@ export function useBills() {
     setBills(prev => prev.filter(b => b.id !== id));
   }, []);
 
-  return { bills, loading, add, update, remove };
+  return { bills, loading, error, add, update, remove };
 }
 
 // Savings Goals
 export function useSavingsGoals() {
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const reqSeq = useRequestSeq();
 
   const load = useCallback(() => {
-    let mounted = true;
+    const mySeq = ++reqSeq.current;
     getAllSavingsGoals().then(g => {
-      if (mounted) {
-        setGoals(g);
-        setLoading(false);
-      }
-    }).catch(() => {
-      if (mounted) setLoading(false);
+      if (reqSeq.current !== mySeq) return;
+      setGoals(g);
+      setError(null);
+      setLoading(false);
+    }).catch((e: unknown) => {
+      if (reqSeq.current !== mySeq) return;
+      setError(e instanceof Error ? e : new Error(String(e)));
+      setLoading(false);
     });
-    return () => { mounted = false; };
-  }, []);
+  }, [reqSeq]);
 
   useEffect(() => {
-    return load();
+    load();
   }, [load]);
 
   useDatabaseListener(load, SAVINGS_GOALS_STORES);
@@ -402,31 +432,34 @@ export function useSavingsGoals() {
     setGoals(prev => prev.filter(g => g.id !== id));
   }, []);
 
-  return { goals, loading, add, update, remove };
+  return { goals, loading, error, add, update, remove };
 }
 
 // Critical Expense Commitments
 export function useCriticalExpenseCommitment(month?: string) {
   const [commitment, setCommitment] = useState<CriticalExpenseCommitment | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const reqSeq = useRequestSeq();
 
   const targetMonth = month || new Date().toISOString().slice(0, 7);
 
   const load = useCallback(() => {
-    let mounted = true;
+    const mySeq = ++reqSeq.current;
     getCriticalExpenseCommitment(targetMonth).then(c => {
-      if (mounted) {
-        setCommitment(c ?? null);
-        setLoading(false);
-      }
-    }).catch(() => {
-      if (mounted) setLoading(false);
+      if (reqSeq.current !== mySeq) return;
+      setCommitment(c ?? null);
+      setError(null);
+      setLoading(false);
+    }).catch((e: unknown) => {
+      if (reqSeq.current !== mySeq) return;
+      setError(e instanceof Error ? e : new Error(String(e)));
+      setLoading(false);
     });
-    return () => { mounted = false; };
-  }, [targetMonth]);
+  }, [targetMonth, reqSeq]);
 
   useEffect(() => {
-    return load();
+    load();
   }, [load]);
 
   useDatabaseListener(load, COMMITMENTS_STORES);
@@ -436,29 +469,32 @@ export function useCriticalExpenseCommitment(month?: string) {
     setCommitment(newCommitment);
   }, []);
 
-  return { commitment, loading, save };
+  return { commitment, loading, error, save };
 }
 
 // Net Worth
 export function useNetWorth() {
   const [snapshot, setSnapshot] = useState<NetWorthSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const reqSeq = useRequestSeq();
 
   const load = useCallback(() => {
-    let mounted = true;
+    const mySeq = ++reqSeq.current;
     getLatestNetWorthSnapshot().then(s => {
-      if (mounted) {
-        setSnapshot(s ?? null);
-        setLoading(false);
-      }
-    }).catch(() => {
-      if (mounted) setLoading(false);
+      if (reqSeq.current !== mySeq) return;
+      setSnapshot(s ?? null);
+      setError(null);
+      setLoading(false);
+    }).catch((e: unknown) => {
+      if (reqSeq.current !== mySeq) return;
+      setError(e instanceof Error ? e : new Error(String(e)));
+      setLoading(false);
     });
-    return () => { mounted = false; };
-  }, []);
+  }, [reqSeq]);
 
   useEffect(() => {
-    return load();
+    load();
   }, [load]);
 
   useDatabaseListener(load, NET_WORTH_STORES);
@@ -531,9 +567,10 @@ export function useNetWorth() {
   const totalLiabilities = snapshot?.liabilities.reduce((sum, l) => sum + l.value, 0) || 0;
   const netWorth = totalAssets - totalLiabilities;
 
-  return { 
-    snapshot, 
-    loading, 
+  return {
+    snapshot,
+    loading,
+    error,
     addAsset, 
     updateAsset, 
     removeAsset, 
@@ -550,23 +587,29 @@ export function useNetWorth() {
 export function useSubscriptions() {
   const [subscriptions, setSubscriptions] = useState<ExpenseEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const reqSeq = useRequestSeq();
 
   const load = useCallback(() => {
-    let mounted = true;
-    const loadSubscriptions = async () => {
-      const allExpenses = await getExpenses();
-      const subs = allExpenses.filter(e => e.category === 'subscriptions' && e.isRecurring);
-      if (mounted) {
+    const mySeq = ++reqSeq.current;
+    (async () => {
+      try {
+        const allExpenses = await getExpenses();
+        if (reqSeq.current !== mySeq) return;
+        const subs = allExpenses.filter(e => e.category === 'subscriptions' && e.isRecurring);
         setSubscriptions(subs);
+        setError(null);
+        setLoading(false);
+      } catch (e) {
+        if (reqSeq.current !== mySeq) return;
+        setError(e instanceof Error ? e : new Error(String(e)));
         setLoading(false);
       }
-    };
-    loadSubscriptions();
-    return () => { mounted = false; };
-  }, []);
+    })();
+  }, [reqSeq]);
 
   useEffect(() => {
-    return load();
+    load();
   }, [load]);
 
   useDatabaseListener(load, EXPENSES_STORES);
@@ -599,34 +642,40 @@ export function useSubscriptions() {
     setSubscriptions(prev => prev.filter(s => s.id !== id));
   }, []);
 
-  return { subscriptions, loading, add, update, remove };
+  return { subscriptions, loading, error, add, update, remove };
 }
 
 // Emergency Fund
 export function useEmergencyFund() {
   const [fund, setFund] = useState<{ targetAmount: number; currentAmount: number }>({ targetAmount: 0, currentAmount: 0 });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const reqSeq = useRequestSeq();
 
   const load = useCallback(() => {
-    let mounted = true;
-    const loadFund = async () => {
-      const goals = await getAllSavingsGoals();
-      const emergencyGoal = goals.find(g => g.category === 'emergency');
-      if (mounted) {
+    const mySeq = ++reqSeq.current;
+    (async () => {
+      try {
+        const goals = await getAllSavingsGoals();
+        if (reqSeq.current !== mySeq) return;
+        const emergencyGoal = goals.find(g => g.category === 'emergency');
         if (emergencyGoal) {
           setFund({ targetAmount: emergencyGoal.targetAmount, currentAmount: emergencyGoal.currentAmount });
         } else {
           setFund({ targetAmount: 50000, currentAmount: 0 });
         }
+        setError(null);
+        setLoading(false);
+      } catch (e) {
+        if (reqSeq.current !== mySeq) return;
+        setError(e instanceof Error ? e : new Error(String(e)));
         setLoading(false);
       }
-    };
-    loadFund();
-    return () => { mounted = false; };
-  }, []);
+    })();
+  }, [reqSeq]);
 
   useEffect(() => {
-    return load();
+    load();
   }, [load]);
 
   useDatabaseListener(load, SAVINGS_GOALS_STORES);
@@ -657,29 +706,32 @@ export function useEmergencyFund() {
     }
   }, []);
 
-  return { fund, loading, update };
+  return { fund, loading, error, update };
 }
 
 // Debt Payoff
 export function useDebtPayoff() {
   const [debts, setDebts] = useState<Debt[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const reqSeq = useRequestSeq();
 
   const load = useCallback(() => {
-    let mounted = true;
+    const mySeq = ++reqSeq.current;
     getAllDebts().then(d => {
-      if (mounted) {
-        setDebts(d);
-        setLoading(false);
-      }
-    }).catch(() => {
-      if (mounted) setLoading(false);
+      if (reqSeq.current !== mySeq) return;
+      setDebts(d);
+      setError(null);
+      setLoading(false);
+    }).catch((e: unknown) => {
+      if (reqSeq.current !== mySeq) return;
+      setError(e instanceof Error ? e : new Error(String(e)));
+      setLoading(false);
     });
-    return () => { mounted = false; };
-  }, []);
+  }, [reqSeq]);
 
   useEffect(() => {
-    return load();
+    load();
   }, [load]);
 
   useDatabaseListener(load, DEBTS_STORES);
@@ -711,41 +763,45 @@ export function useDebtPayoff() {
     setDebts(prev => prev.filter(d => d.id !== id));
   }, []);
 
-  return { debts, loading, add, update, remove };
+  return { debts, loading, error, add, update, remove };
 }
 
 // Cash Flow Forecast
 export function useCashFlowForecast() {
   const [forecast, setForecast] = useState<{ thirtyDays: number; sixtyDays: number; ninetyDays: number }>({ thirtyDays: 0, sixtyDays: 0, ninetyDays: 0 });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const reqSeq = useRequestSeq();
 
   const load = useCallback(() => {
-    let mounted = true;
-    const loadForecast = async () => {
-      const [budgets, profile] = await Promise.all([getAllBudgets(), getWizardProfile()]);
-      
-      const monthlyIncome = profile?.answers?.income ?? (budgets.find(b => b.category === 'savings')?.monthlyLimit || 0);
-      const monthlyExpenses = budgets.reduce((sum, b) => sum + b.monthlyLimit, 0) - (budgets.find(b => b.category === 'savings')?.monthlyLimit || 0);
-      const monthlyNet = monthlyIncome - monthlyExpenses;
-
-      if (mounted) {
-        setForecast({ 
-          thirtyDays: monthlyNet, 
-          sixtyDays: monthlyNet * 2, 
-          ninetyDays: monthlyNet * 3 
+    const mySeq = ++reqSeq.current;
+    (async () => {
+      try {
+        const [budgets, profile] = await Promise.all([getAllBudgets(), getWizardProfile()]);
+        const monthlyIncome = profile?.answers?.income ?? (budgets.find(b => b.category === 'savings')?.monthlyLimit || 0);
+        const monthlyExpenses = budgets.reduce((sum, b) => sum + b.monthlyLimit, 0) - (budgets.find(b => b.category === 'savings')?.monthlyLimit || 0);
+        const monthlyNet = monthlyIncome - monthlyExpenses;
+        if (reqSeq.current !== mySeq) return;
+        setForecast({
+          thirtyDays: monthlyNet,
+          sixtyDays: monthlyNet * 2,
+          ninetyDays: monthlyNet * 3,
         });
+        setError(null);
+        setLoading(false);
+      } catch (e) {
+        if (reqSeq.current !== mySeq) return;
+        setError(e instanceof Error ? e : new Error(String(e)));
         setLoading(false);
       }
-    };
-    loadForecast();
-    return () => { mounted = false; };
-  }, []);
+    })();
+  }, [reqSeq]);
 
   useEffect(() => {
-    return load();
+    load();
   }, [load]);
 
   useDatabaseListener(load, FORECAST_STORES);
 
-  return { forecast, loading };
+  return { forecast, loading, error };
 }

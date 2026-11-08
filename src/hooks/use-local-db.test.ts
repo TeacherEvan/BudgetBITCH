@@ -157,6 +157,34 @@ describe('use-local-db hooks', () => {
     expect(result.current.commitment).toBeNull();
   });
 
+  it('failed load exposes error field (not loading:false on stale data)', async () => {
+    const { getAllBudgets } = await import('@/lib/db/local-db');
+    vi.mocked(getAllBudgets).mockRejectedValueOnce(new Error('IDB offline'));
+    const { result } = renderHook(() => useBudgets());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.error?.message).toBe('IDB offline');
+    expect(result.current.budgets).toEqual([]);
+  });
+
+  it('slow first load cannot overwrite a fresher event load (request-seq guard)', async () => {
+    const { getAllBudgets } = await import('@/lib/db/local-db');
+    const { BOARD_CHANGED_EVENT } = await import('@/lib/types/budget');
+    // First call slow; second call (event reload) resolves fast with fresh data.
+    vi.mocked(getAllBudgets)
+      .mockImplementationOnce(
+        () => new Promise((res) => setTimeout(() => res([{ category: 'stale', monthlyLimit: 1, alertAtPct: 80 }]), 60)),
+      )
+      .mockResolvedValueOnce([{ category: 'fresh', monthlyLimit: 2, alertAtPct: 80 }]);
+    const { result } = renderHook(() => useBudgets());
+    // Fresh event load starts before the slow one resolves.
+    await act(async () => {
+      window.dispatchEvent(new Event(BOARD_CHANGED_EVENT));
+      await new Promise((r) => setTimeout(r, 90));
+    });
+    await waitFor(() => expect(result.current.budgets[0]?.category).toBe('fresh'));
+    expect(result.current.error).toBeNull();
+  });
+
   it('useBudgets updates reactively when BOARD_CHANGED_EVENT is dispatched', async () => {
     const { getAllBudgets } = await import('@/lib/db/local-db');
     const { BOARD_CHANGED_EVENT } = await import('@/lib/types/budget');
