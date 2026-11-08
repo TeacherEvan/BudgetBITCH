@@ -10,6 +10,47 @@ export interface StoredRecord {
   deleted?: boolean;
 }
 
+/** Stores whose keys `store:itemId` are allowed on the wire. */
+export const VALID_BOARD_STORES = [
+  "expenses",
+  "incomes",
+  "budgets",
+  "bills",
+  "savingsGoals",
+  "netWorthSnapshots",
+  "debts",
+  "criticalExpenseCommitments",
+] as const;
+
+/**
+ * Validate an incoming board-map payload. Rejects unknown key prefixes,
+ * malformed `store:itemId` shapes, and non-finite/negative timestamps
+ * (Infinity/NaN poison comparisons and never evict). Returns the list of
+ * invalid entries; an empty list means the payload is clean.
+ */
+export function validateBoardPayload(
+  incoming: Record<string, StoredRecord>,
+): string[] {
+  const invalid: string[] = [];
+  for (const [key, rec] of Object.entries(incoming)) {
+    const colon = key.indexOf(":");
+    if (colon <= 0 || colon === key.length - 1) {
+      invalid.push(key);
+      continue;
+    }
+    const store = key.slice(0, colon);
+    if (!(VALID_BOARD_STORES as readonly string[]).includes(store)) {
+      invalid.push(key);
+      continue;
+    }
+    const ts = rec?.updatedAt;
+    if (typeof ts !== "number" || !Number.isFinite(ts) || ts < 0) {
+      invalid.push(key);
+    }
+  }
+  return invalid;
+}
+
 /**
  * Tombstones (`deleted: true`) are retained for 30 days so offline devices can
  * observe deletions before the tombstone is garbage-collected from the board map.
@@ -29,9 +70,17 @@ export function mergeRecords(
   incoming: Record<string, StoredRecord>,
   now: number = Date.now(),
 ): { merged: Record<string, StoredRecord>; changed: boolean } {
+  // Reject malformed/poisoned entries outright: they must never enter the
+  // board map (Infinity/NaN break LWW comparisons and tombstone eviction).
+  const invalid = validateBoardPayload(incoming);
+  const cleanIncoming: Record<string, StoredRecord> = {};
+  for (const [k, v] of Object.entries(incoming)) {
+    if (!invalid.includes(k)) cleanIncoming[k] = v;
+  }
+
   const base: Record<string, StoredRecord> = { ...(existing ?? {}) };
   let changed = false;
-  for (const [key, rec] of Object.entries(incoming)) {
+  for (const [key, rec] of Object.entries(cleanIncoming)) {
     const prev = base[key];
     // Incoming wins when newer; ties keep the incoming value (deterministic).
     if (!prev || rec.updatedAt >= prev.updatedAt) {

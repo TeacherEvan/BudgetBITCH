@@ -3,7 +3,11 @@ import { v, ConvexError } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { Id } from "./_generated/dataModel";
-import { mergeRecords, StoredRecord } from "./boardMerge";
+import {
+  mergeRecords,
+  StoredRecord,
+  validateBoardPayload,
+} from "./boardMerge";
 // Single profile factory (accounts shape wins) — see accounts/helpers.ts.
 import { ensureProfileDoc } from "./accounts/helpers";
 
@@ -205,6 +209,12 @@ export const pushBoard = mutation({
     }
 
     const incoming = (args.data ?? {}) as Record<string, StoredRecord>;
+    const invalid = validateBoardPayload(incoming);
+    if (invalid.length > 0) {
+      throw new ConvexError(
+        `Invalid payload: ${invalid.length} malformed key(s), e.g. ${invalid[0]}`,
+      );
+    }
     const { merged, changed } = mergeRecords(
       board.data as Record<string, StoredRecord> | null,
       incoming,

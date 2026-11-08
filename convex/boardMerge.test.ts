@@ -1,5 +1,40 @@
 import { describe, it, expect } from "vitest";
-import { mergeRecords, TOMBSTONE_TTL_MS, type StoredRecord } from "./boardMerge";
+import {
+  mergeRecords,
+  validateBoardPayload,
+  TOMBSTONE_TTL_MS,
+  type StoredRecord,
+} from "./boardMerge";
+
+describe("validateBoardPayload (Task 11)", () => {
+  it("rejects unknown prefixes, malformed keys, Infinity/NaN/negative timestamps", () => {
+    const bad = validateBoardPayload({
+      "garbage:key": { value: 1, updatedAt: 100 },
+      "expenses:ok": { value: 1, updatedAt: 100 },
+      "no-colon": { value: 1, updatedAt: 100 },
+      "expenses:inf": { value: 1, updatedAt: Infinity },
+      "expenses:nan": { value: 1, updatedAt: NaN },
+      "expenses:neg": { value: 1, updatedAt: -5 },
+      ":empty": { value: 1, updatedAt: 100 },
+    });
+    expect(bad).toContain("garbage:key");
+    expect(bad).toContain("no-colon");
+    expect(bad).toContain("expenses:inf");
+    expect(bad).toContain("expenses:nan");
+    expect(bad).toContain("expenses:neg");
+    expect(bad).toContain(":empty");
+    expect(bad).not.toContain("expenses:ok");
+  });
+
+  it("mergeRecords drops poisoned entries instead of storing them", () => {
+    const { merged } = mergeRecords({}, {
+      "expenses:ok": { value: { amount: 10 }, updatedAt: 100 },
+      "expenses:inf": { value: { amount: 99 }, updatedAt: Infinity },
+      "garbage:x": { value: { amount: 99 }, updatedAt: 100 },
+    });
+    expect(Object.keys(merged)).toEqual(["expenses:ok"]);
+  });
+});
 
 describe("mergeRecords (LWW + 30-day tombstone compaction)", () => {
   const NOW = 1_750_000_000_000;

@@ -3,7 +3,11 @@ import { v, ConvexError } from "convex/values";
 import { query, mutation, action } from "../_generated/server";
 import { api } from "../_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { mergeRecords, StoredRecord } from "../boardMerge";
+import {
+  mergeRecords,
+  StoredRecord,
+  validateBoardPayload,
+} from "../boardMerge";
 import {
   retrieveAccount,
   modifyAccountCredentials,
@@ -77,6 +81,13 @@ export const pushAccountBoard = mutation({
     }
 
     const incoming = (args.data ?? {}) as Record<string, StoredRecord>;
+    const invalid = validateBoardPayload(incoming);
+    if (invalid.length > 0) {
+      return {
+        success: false,
+        reason: `Invalid payload: ${invalid.length} malformed key(s), e.g. ${invalid[0]}`,
+      };
+    }
     const { merged, changed } = mergeRecords(
       board.data as Record<string, StoredRecord> | null,
       incoming,
