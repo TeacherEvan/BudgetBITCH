@@ -39,33 +39,3 @@ export const PANEL_ORDER: PanelKey[] = [
   'debt', 
   'forecast'
 ];
-
-export type ExcelTab = 'standard' | 'variance' | 'cashflow' | 'pivot' | 'perspective';
-
-export const EXCEL_TABS: { key: ExcelTab; label: string; icon: string; color: string; bg: string }[] = [
-  { key: 'standard', label: 'Standard Dashboard', icon: '📊', color: 'text-black', bg: 'bg-amber-400' },
-  { key: 'perspective', label: 'The Bigger Picture', icon: '🔭', color: 'text-black', bg: 'bg-gradient-to-r from-amber-400 to-yellow-500' },
-  { key: 'variance', label: 'Excel Variance Grid', icon: '✨', color: 'text-black', bg: 'bg-emerald-400' },
-  { key: 'cashflow', label: '30D Cash Flow', icon: '📅', color: 'text-black', bg: 'bg-amber-400' },
-  { key: 'pivot', label: '50/30/20 Matrix', icon: '🧩', color: 'text-black', bg: 'bg-cyan-400' },
-];
-
-export const createPanelConfigs = (
-  locale: string,
-  onSetup?: () => void
-) => {
-  // Lazy import to avoid circular deps
-  return {
-    daily_budget: { id: 'daily_budget', title: 'Daily Budget', component: 'DailyDisposableHero', props: { locale, onSetup } },
-    spending: { id: 'spending', title: 'Spending', component: 'SpendingPanel', props: {} },
-    inflow: { id: 'inflow', title: 'Income Inflow', component: 'IncomeInflowPanel', props: {} },
-    budgetAlerts: { id: 'budgetAlerts', title: 'Budget Alerts', component: 'BudgetAlerts', props: {} },
-    bills: { id: 'bills', title: 'Bills', component: 'Bills', props: {} },
-    goals: { id: 'goals', title: 'Goals', component: 'SavingsGoals', props: {} },
-    netWorth: { id: 'netWorth', title: 'Net Worth', component: 'NetWorth', props: {} },
-    subscriptions: { id: 'subscriptions', title: 'Subscriptions', component: 'Subscriptions', props: {} },
-    emergency: { id: 'emergency', title: 'Emergency', component: 'EmergencyFund', props: {} },
-    debt: { id: 'debt', title: 'Debt', component: 'DebtPayoff', props: {} },
-    forecast: { id: 'forecast', title: 'Forecast', component: 'CashFlowForecast', props: {} },
-  };
-};
