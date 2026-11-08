@@ -233,13 +233,26 @@ async function postIngest(body: unknown, token = "test-sync-secret") {
   });
 }
 
-/** Generate a valid HMAC token for app:<userId> testing. */
+/** Generate a valid HMAC token for app:<userId> testing (with domain separation). */
 async function generateAppToken(userId: string, syncSecret: string, timestamp?: number): Promise<string> {
   const ts = timestamp ?? Date.now();
   const message = `${userId}:${ts}`;
-  const key = await crypto.subtle.importKey(
+  const secretKey = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(syncSecret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign", "verify"]
+  );
+  // Domain-separated key: HMAC(secret, "app-token") — matches ingest.ts
+  const derivedKeyBytes = await crypto.subtle.sign(
+    "HMAC",
+    secretKey,
+    new TextEncoder().encode("app-token")
+  );
+  const key = await crypto.subtle.importKey(
+    "raw",
+    derivedKeyBytes,
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"]
