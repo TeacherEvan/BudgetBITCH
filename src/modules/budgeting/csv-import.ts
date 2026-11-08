@@ -187,17 +187,20 @@ export function detectColumns(headers: string[]): ColumnMap {
 }
 
 /**
- * Parses a localized currency string into a positive number.
+ * Parses a localized currency string into a signed number.
  * Strips currency symbols, thousands separators, and whitespace.
- * Parentheses are treated as positive magnitude (expense convention).
+ * Parentheses denote negative amounts (accounting convention for refunds).
+ * Explicit leading minus sign is preserved.
  * Returns null when no numeric value can be found.
  */
 export function normalizeAmount(input: string): number | null {
   if (!input || typeof input !== 'string') return null;
   let s = input.trim();
   if (s === '') return null;
-  // Parentheses denote magnitude (accounting negatives) → strip, keep value.
+  // Parentheses denote negative (accounting convention for refunds).
   const hadParens = /^\(.*\)$/.test(s);
+  // Leading minus sign denotes negative.
+  const hadLeadingMinus = s.startsWith('-');
   s = s.replace(/[()]/g, '');
   // Keep digits, separators, and the decimal point only.
   s = s.replace(/[^0-9.,-]/g, '');
@@ -218,8 +221,9 @@ export function normalizeAmount(input: string): number | null {
   }
   const value = Number(s);
   if (!Number.isFinite(value)) return null;
-  const abs = Math.abs(value);
-  return hadParens ? abs : abs;
+  // Apply sign: parentheses or leading minus make it negative.
+  const isNegative = hadParens || hadLeadingMinus;
+  return isNegative ? -Math.abs(value) : Math.abs(value);
 }
 
 /**
@@ -277,9 +281,13 @@ export function normalizeDate(input: string, preferDayFirst = false): string | n
   }
 
   // Last resort: native Date parse (e.g. "Jan 5 2026").
+  // Use local date components to avoid UTC day-shift in negative-offset timezones.
   const native = new Date(raw);
   if (!Number.isNaN(native.getTime())) {
-    return native.toISOString().slice(0, 10);
+    const year = native.getFullYear();
+    const month = native.getMonth() + 1; // 0-based
+    const day = native.getDate();
+    return toIso(year, month, day);
   }
 
   return null;

@@ -91,13 +91,31 @@ describe('normalizeAmount', () => {
     expect(normalizeAmount('$1,234.56')).toBe(1234.56);
   });
 
-  it('handles parenthesis as negative and returns absolute value for expenses', () => {
-    expect(normalizeAmount('(123.45)')).toBe(123.45);
+  it('guards regression: parentheses now denote negative (refund) amounts', () => {
+    // Fix: commit <hash> - parentheses and explicit minus now preserve negative sign
+    // for refunds; downstream sums handle signed amounts, UI renders magnitudes.
+    expect(normalizeAmount('(123.45)')).toBe(-123.45);
   });
 
   it('returns null for empty or non-numeric input', () => {
     expect(normalizeAmount('')).toBeNull();
     expect(normalizeAmount('abc')).toBeNull();
+  });
+
+  it('preserves negative sign for parenthesized refund amounts', () => {
+    // Refunds in parentheses should be negative (downstream sums handle signed amounts)
+    expect(normalizeAmount('(50.00)')).toBe(-50.00);
+  });
+
+  it('preserves negative sign for explicit negative amounts', () => {
+    // Explicit negative amounts should stay negative
+    expect(normalizeAmount('-50.00')).toBe(-50.00);
+    expect(normalizeAmount('-1,234.56')).toBe(-1234.56);
+  });
+
+  it('keeps positive amounts positive', () => {
+    expect(normalizeAmount('50.00')).toBe(50.00);
+    expect(normalizeAmount('1,234.56')).toBe(1234.56);
   });
 });
 
@@ -125,6 +143,14 @@ describe('normalizeDate', () => {
   it('returns null for unparseable dates', () => {
     expect(normalizeDate('not-a-date')).toBeNull();
     expect(normalizeDate('')).toBeNull();
+  });
+
+  it('parses date-only string in negative-offset TZ without UTC shift', () => {
+    // "Jan 5 2026" should stay 2026-01-05, not shift to 2026-01-04 in TZ like America/New_York
+    // This test relies on the test environment TZ being set to America/New_York
+    expect(normalizeDate('Jan 5 2026')).toBe('2026-01-05');
+    expect(normalizeDate('Jan 1 2026')).toBe('2026-01-01');
+    expect(normalizeDate('Dec 31 2026')).toBe('2026-12-31');
   });
 });
 
@@ -236,5 +262,18 @@ describe('parseImport', () => {
     // 05/03 must remain March 5, not flip to May 3
     expect(result.valid[0].date).toBe('2026-03-05');
     expect(result.valid[1].date).toBe('2026-03-25');
+  });
+
+  it('imports refunds as negative amounts', () => {
+    const csv = [
+      'date,merchant,amount',
+      '2026-01-01,Store Refund,(50.00)',
+      '2026-01-02,Another Refund,-25.00',
+    ].join('\n');
+    const result = parseImport(csv);
+    expect(result.errors).toHaveLength(0);
+    expect(result.valid).toHaveLength(2);
+    expect(result.valid[0].amount).toBe(-50.00);
+    expect(result.valid[1].amount).toBe(-25.00);
   });
 });
