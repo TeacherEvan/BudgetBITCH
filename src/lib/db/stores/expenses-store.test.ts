@@ -19,6 +19,13 @@ vi.mock('../local-db', () => ({
     },
   }),
   afterBoardMutation: async () => {},
+  putWithStamp: async (_store: string, value: unknown, key?: string) => {
+    if (value === null) store.delete(key!);
+    else store.set((value as ExpenseEntry).id, value as ExpenseEntry);
+  },
+  putManyWithStamp: async (_store: string, values: unknown[]) => {
+    for (const v of values) store.set((v as ExpenseEntry).id, v as ExpenseEntry);
+  },
   generateId: () => `gen_${Math.random().toString(36).slice(2)}`,
 }));
 

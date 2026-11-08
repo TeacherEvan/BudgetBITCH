@@ -351,11 +351,127 @@ export async function afterBoardMutation(store: string, key: string): Promise<vo
   notifyBoardChanged('local', [store]);
 }
 
+/**
+ * Atomically write a record and its localWrites stamp in ONE cross-store
+ * transaction, so a crash can never leave data without its timestamp (or
+ * vice-versa). `value: null` deletes the record instead of putting it.
+ * `key` is required only for out-of-line stores (wizardProfile etc) or
+ * deletes; keyPath stores derive it from the value.
+ */
+type DbStoreName =
+  | 'wizardProfile'
+  | 'expenses'
+  | 'incomes'
+  | 'budgets'
+  | 'bills'
+  | 'savingsGoals'
+  | 'netWorthSnapshots'
+  | 'debts'
+  | 'criticalExpenseCommitments'
+  | 'newsCache'
+  | 'locationCache'
+  | 'settings'
+  | 'accountsData'
+  | 'localAccounts'
+  | 'bbMeta'
+  | 'localWrites'
+  | 'receiptDrafts'
+  | 'syncQueue';
+type TxStores = DbStoreName[];
+
+export async function putWithStamp(
+  store: DbStoreName,
+  value: unknown,
+  key?: string,
+): Promise<void> {
+  try {
+    const db = await getDB();
+    if (!db.objectStoreNames.contains(store)) return;
+    const wb = Date.now();
+    const targetStores = (
+      db.objectStoreNames.contains('localWrites')
+        ? [store, 'localWrites']
+        : [store]
+    ) as TxStores;
+    const tx = (db.transaction as (s: TxStores, m: 'readwrite') => unknown)(
+      targetStores,
+      'readwrite',
+    ) as {
+      objectStore: (name: DbStoreName) => {
+        put: (v: unknown, k?: string) => Promise<unknown>;
+        delete: (k: string) => Promise<void>;
+      };
+      done: Promise<void>;
+    };
+    const objectStore = tx.objectStore(store);
+    const recordKey =
+      key ?? (value as Record<string, unknown> | null)?.id as string;
+    if (value === null) {
+      await objectStore.delete(recordKey);
+    } else if (store === 'wizardProfile' || store === 'settings') {
+      // No keyPath: out-of-line key required.
+      await objectStore.put(value, key ?? 'current');
+    } else {
+      // keyPath stores derive the key from the value; passing it throws.
+      await objectStore.put(value);
+    }
+    if (db.objectStoreNames.contains('localWrites')) {
+      await tx.objectStore('localWrites').put(wb, writeKey(store, recordKey));
+    }
+    await tx.done;
+    notifyBoardChanged('local', [store]);
+  } catch {
+    // Non-fatal (matches afterBoardMutation contract)
+  }
+}
+
+/**
+ * Bulk atomic write: many records of one store + all their stamps, one tx.
+ */
+export async function putManyWithStamp(
+  store: DbStoreName,
+  values: unknown[],
+  keyOf: (v: Record<string, unknown>) => string,
+): Promise<void> {
+  if (values.length === 0) return;
+  try {
+    const db = await getDB();
+    if (!db.objectStoreNames.contains(store)) return;
+    const now = Date.now();
+    const targetStores = (
+      db.objectStoreNames.contains('localWrites')
+        ? [store, 'localWrites']
+        : [store]
+    ) as TxStores;
+    const tx = (db.transaction as (s: TxStores, m: 'readwrite') => unknown)(
+      targetStores,
+      'readwrite',
+    ) as {
+      objectStore: (name: DbStoreName) => {
+        put: (v: unknown, k?: string) => Promise<unknown>;
+      };
+      done: Promise<void>;
+    };
+    const objectStore = tx.objectStore(store);
+    for (const v of values) {
+      await objectStore.put(v);
+      if (db.objectStoreNames.contains('localWrites')) {
+        await tx.objectStore('localWrites').put(
+          now,
+          writeKey(store, keyOf(v as Record<string, unknown>)),
+        );
+      }
+    }
+    await tx.done;
+    notifyBoardChanged('local', [store]);
+  } catch {
+    // Non-fatal
+  }
+}
+
 // Wizard Profile
 export async function saveWizardProfile(profile: WizardProfile): Promise<void> {
-  const db = await getDB();
-  await db.put('wizardProfile', profile, 'current');
-  await afterBoardMutation('wizardProfile', 'current');
+  await putWithStamp('wizardProfile', profile, 'current');
 }
 
 export async function getWizardProfile(): Promise<WizardProfile | undefined> {
@@ -370,9 +486,7 @@ export async function clearWizardProfile(): Promise<void> {
 
 // Budgets
 export async function saveBudgetCategory(budget: BudgetCategory): Promise<void> {
-  const db = await getDB();
-  await db.put('budgets', budget);
-  await afterBoardMutation('budgets', budget.category);
+  await putWithStamp('budgets', budget, budget.category);
 }
 
 export async function getBudgetCategory(category: ExpenseCategory): Promise<BudgetCategory | undefined> {
@@ -387,21 +501,15 @@ export async function getAllBudgets(): Promise<BudgetCategory[]> {
 
 // Bills
 export async function addBill(bill: Bill): Promise<void> {
-  const db = await getDB();
-  await db.add('bills', bill);
-  await afterBoardMutation('bills', bill.id);
+  await putWithStamp('bills', bill);
 }
 
 export async function updateBill(bill: Bill): Promise<void> {
-  const db = await getDB();
-  await db.put('bills', bill);
-  await afterBoardMutation('bills', bill.id);
+  await putWithStamp('bills', bill);
 }
 
 export async function deleteBill(id: string): Promise<void> {
-  const db = await getDB();
-  await db.delete('bills', id);
-  await afterBoardMutation('bills', id);
+  await putWithStamp('bills', null, id);
 }
 
 export async function getAllBills(): Promise<Bill[]> {
@@ -411,21 +519,15 @@ export async function getAllBills(): Promise<Bill[]> {
 
 // Savings Goals
 export async function addSavingsGoal(goal: SavingsGoal): Promise<void> {
-  const db = await getDB();
-  await db.add('savingsGoals', goal);
-  await afterBoardMutation('savingsGoals', goal.id);
+  await putWithStamp('savingsGoals', goal);
 }
 
 export async function updateSavingsGoal(goal: SavingsGoal): Promise<void> {
-  const db = await getDB();
-  await db.put('savingsGoals', goal);
-  await afterBoardMutation('savingsGoals', goal.id);
+  await putWithStamp('savingsGoals', goal);
 }
 
 export async function deleteSavingsGoal(id: string): Promise<void> {
-  const db = await getDB();
-  await db.delete('savingsGoals', id);
-  await afterBoardMutation('savingsGoals', id);
+  await putWithStamp('savingsGoals', null, id);
 }
 
 export async function getAllSavingsGoals(): Promise<SavingsGoal[]> {
@@ -435,21 +537,15 @@ export async function getAllSavingsGoals(): Promise<SavingsGoal[]> {
 
 // Debts
 export async function addDebt(debt: Debt): Promise<void> {
-  const db = await getDB();
-  await db.add('debts', debt);
-  await afterBoardMutation('debts', debt.id);
+  await putWithStamp('debts', debt);
 }
 
 export async function updateDebt(debt: Debt): Promise<void> {
-  const db = await getDB();
-  await db.put('debts', debt);
-  await afterBoardMutation('debts', debt.id);
+  await putWithStamp('debts', debt);
 }
 
 export async function deleteDebt(id: string): Promise<void> {
-  const db = await getDB();
-  await db.delete('debts', id);
-  await afterBoardMutation('debts', id);
+  await putWithStamp('debts', null, id);
 }
 
 export async function getAllDebts(): Promise<Debt[]> {

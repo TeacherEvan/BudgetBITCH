@@ -11,7 +11,6 @@ import {
   getDB,
   USER_DATA_STORES,
   RESET_TOMBSTONE_KEY,
-  recordLocalWritesBulk,
   notifyBoardChanged,
 } from '@/lib/db/local-db';
 import { calculateNetWorthBaseline } from '@/lib/utils/budget-calculator';
@@ -475,8 +474,12 @@ export async function restoreFromCloudSnapshot(
     const now = Date.now();
     const pendingWrites: Array<{ store: string; key: string; timestamp: number }> = [];
 
+    const wantLocalWrites = db.objectStoreNames.contains('localWrites');
     if (activeStores.length > 0) {
-      const tx = db.transaction([...activeStores], 'readwrite');
+      const tx = db.transaction(
+        wantLocalWrites ? [...activeStores, 'localWrites'] : [...activeStores],
+        'readwrite',
+      );
       for (const store of activeStores) {
         await tx.objectStore(store).clear();
       }
@@ -504,17 +507,29 @@ export async function restoreFromCloudSnapshot(
                 store === 'criticalExpenseCommitments' ? (rec?.month as string) :
                 (rec?.id as string);
               if (key) {
-                pendingWrites.push({ store, key: String(key), timestamp: now });
+                // Preserve the payload's own updatedAt when present (board-map
+                // shape) instead of flattening everything to restore-time;
+                // the merge thereafter respects the original clock.
+                const payloadTs = rec?.updatedAt;
+                const ts =
+                  typeof payloadTs === 'number' && Number.isFinite(payloadTs)
+                    ? Math.max(now, payloadTs)
+                    : now;
+                pendingWrites.push({ store, key: String(key), timestamp: ts });
               }
             }
           }
         }
       }
+      // Write the localWrites stamps INSIDE the same transaction so the
+      // restore is one atomic unit (data + timestamps together).
+      if (wantLocalWrites && pendingWrites.length > 0) {
+        const lwStore = tx.objectStore('localWrites');
+        for (const w of pendingWrites) {
+          await lwStore.put(w.timestamp, `${w.store}:${w.key}`);
+        }
+      }
       await tx.done;
-    }
-
-    if (pendingWrites.length > 0) {
-      await recordLocalWritesBulk(pendingWrites);
     }
     notifyBoardChanged('local');
     console.log('[Sync] Database restored successfully from cloud snapshot');

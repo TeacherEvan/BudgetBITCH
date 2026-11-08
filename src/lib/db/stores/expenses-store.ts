@@ -1,6 +1,5 @@
 import type { ExpenseEntry, ExpenseCategory, CriticalExpenseCommitment } from '@/lib/types/budget';
-import { notifyBoardChanged } from '@/lib/types/budget';
-import { getDB, afterBoardMutation, generateId } from '../local-db';
+import { getDB, putWithStamp, putManyWithStamp, generateId } from '../local-db';
 import { logUserAction } from '@/lib/utils/action-logger';
 import { getCurrentMember } from '../current-member';
 
@@ -12,9 +11,7 @@ export async function addExpense(expense: ExpenseEntry): Promise<void> {
   // Stamp the date of entry (distinct from `date`, the purchase date on the
   // receipt). `??=`-style: a caller-provided value (sync/replay) is preserved.
   if (!expense.entryDate) expense.entryDate = new Date().toISOString().split('T')[0];
-  const db = await getDB();
-  await db.add('expenses', expense);
-  await afterBoardMutation('expenses', expense.id);
+  await putWithStamp('expenses', expense);
   logUserAction(`Add expense ${expense.category} ${expense.amount} (${expense.merchant || 'n/a'})`);
 }
 
@@ -26,7 +23,6 @@ export async function addExpensesBulk(expenses: ExpenseEntry[]): Promise<void> {
   if (expenses.length === 0) return;
   const member = getCurrentMember() ?? 'Personal';
   const today = new Date().toISOString().split('T')[0];
-  const now = Date.now();
 
   const prepared = expenses.map((e) => ({
     ...e,
@@ -34,38 +30,21 @@ export async function addExpensesBulk(expenses: ExpenseEntry[]): Promise<void> {
     entryDate: e.entryDate || today,
   }));
 
-  const db = await getDB();
-  const tx = db.transaction('expenses', 'readwrite');
-  for (const exp of prepared) {
-    await tx.store.put(exp);
-  }
-  await tx.done;
+  // Single atomic transaction: data + stamps together.
+  // (putManyWithStamp already emits BOARD_CHANGED_EVENT once.)
+  await putManyWithStamp('expenses', prepared, (v) => String(v.id));
 
-  // Stamp localWrites in a separate batch transaction
-  if (db.objectStoreNames.contains('localWrites')) {
-    const lwTx = db.transaction('localWrites', 'readwrite');
-    for (const exp of prepared) {
-      await lwTx.store.put(now, `expenses:${exp.id}`);
-    }
-    await lwTx.done;
-  }
-
-  notifyBoardChanged('local', ['expenses']);
   logUserAction(`Add bulk expenses (${prepared.length} items)`);
 }
 
 export async function updateExpense(expense: ExpenseEntry): Promise<void> {
   if (!expense.createdByName) expense.createdByName = getCurrentMember() ?? 'Personal';
-  const db = await getDB();
-  await db.put('expenses', expense);
-  await afterBoardMutation('expenses', expense.id);
+  await putWithStamp('expenses', expense);
   logUserAction(`Update expense ${expense.category} ${expense.amount} (${expense.merchant || 'n/a'})`);
 }
 
 export async function deleteExpense(id: string): Promise<void> {
-  const db = await getDB();
-  await db.delete('expenses', id);
-  await afterBoardMutation('expenses', id);
+  await putWithStamp('expenses', null, id);
   logUserAction(`Delete expense ${id}`);
 }
 
@@ -114,9 +93,7 @@ export async function repeatExpense(id: string): Promise<ExpenseEntry | null> {
 
 // Critical Expense Commitments
 export async function saveCriticalExpenseCommitment(commitment: CriticalExpenseCommitment): Promise<void> {
-  const db = await getDB();
-  await db.put('criticalExpenseCommitments', commitment);
-  await afterBoardMutation('criticalExpenseCommitments', commitment.month);
+  await putWithStamp('criticalExpenseCommitments', commitment, commitment.month);
 }
 
 export async function getCriticalExpenseCommitment(month: string): Promise<CriticalExpenseCommitment | undefined> {
@@ -125,7 +102,5 @@ export async function getCriticalExpenseCommitment(month: string): Promise<Criti
 }
 
 export async function deleteCriticalExpenseCommitment(month: string): Promise<void> {
-  const db = await getDB();
-  await db.delete('criticalExpenseCommitments', month);
-  await afterBoardMutation('criticalExpenseCommitments', month);
+  await putWithStamp('criticalExpenseCommitments', null, month);
 }

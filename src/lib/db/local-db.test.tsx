@@ -2,6 +2,7 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  getDB,
   serializeBoard,
   replaceBoardData,
   saveWizardProfile,
@@ -506,6 +507,32 @@ describe('applyRemoteBoard LWW conflict resolution', () => {
     expect(expenses[0].merchant).toBe('Remote Supermarket');
     expect(expenses[0].amount).toBe(45);
     expect(await getLocalWrite('expenses', 'exp-conflict-1')).toBe(2000);
+  });
+
+  it('each board mutation uses exactly one transaction (data + localWrites atomic)', async () => {
+    const db = await getDB();
+    const orig = (db as unknown as { transaction: (...a: unknown[]) => unknown }).transaction.bind(db);
+    let txCount = 0;
+    (db as unknown as { transaction: (...a: unknown[]) => unknown }).transaction = (...a: unknown[]) => {
+      txCount += 1;
+      return orig(...a);
+    };
+    try {
+      await addExpense({
+        id: 'exp-tx-1',
+        date: '2026-08-01',
+        category: 'food',
+        merchant: 'Tx Test',
+        amount: 10,
+        source: 'manual',
+      });
+      expect(txCount).toBe(1);
+      // data + stamp both present
+      expect(await getExpenses()).toHaveLength(1);
+      expect(await getLocalWrite('expenses', 'exp-tx-1')).toBeGreaterThan(0);
+    } finally {
+      (db as unknown as { transaction: unknown }).transaction = orig;
+    }
   });
 
   it('rejects remote record when remote updatedAt is less than or equal to localTs', async () => {

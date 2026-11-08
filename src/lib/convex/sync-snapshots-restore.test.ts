@@ -8,6 +8,7 @@ import {
   clearAllData,
   getWizardProfile,
   getDB,
+  getLocalWrite,
 } from '@/lib/db/local-db';
 import {
   setCurrentAccountId,
@@ -136,6 +137,28 @@ describe('restoreFromCloudSnapshot (Fix B + C)', () => {
     expect(ok).toBe(false);
     const db = await getDB();
     expect(await db.count('expenses')).toBe(0);
+  });
+
+  it('restore preserves newer remote updatedAt instead of flattening to now', async () => {
+    const remoteTs = Date.now() + 60_000;
+    const snapshot = {
+      fullBackupData: {
+        wizardProfile: [],
+        expenses: [
+          { id: 'exp-newer', date: '2026-07-01', category: 'food', amount: 42, source: 'manual', updatedAt: remoteTs },
+        ],
+        incomes: [],
+        budgets: [],
+        bills: [],
+        savingsGoals: [],
+        netWorthSnapshots: [],
+        debts: [],
+        criticalExpenseCommitments: [],
+      },
+    };
+    const ok = await restoreFromCloudSnapshot(snapshot);
+    expect(ok).toBe(true);
+    expect(await getLocalWrite('expenses', 'exp-newer')).toBe(remoteTs);
   });
 
   it('manual restore with force:true overrides the tombstone (explicit user choice)', async () => {
