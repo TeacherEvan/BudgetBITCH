@@ -452,6 +452,26 @@ describe("authz + deletion", () => {
     expect(a?.memberDisplayNames?.[bobId]).toBe("bob");
     expect(b?.memberDisplayNames?.[bobId]).toBe("bob");
   });
+
+  test("resolveShareCode fails closed on duplicate share codes (no Server Error)", async () => {
+    const aliceId = await seedUser(t, "alice");
+    const bobId = await seedUser(t, "bob");
+    const carolId = await seedUser(t, "carol");
+    // Two different users share the same code (wild duplicates).
+    await makeProfile(bobId, "SHARED01");
+    await makeProfile(carolId, "SHARED01");
+    await expect(
+      asUser(aliceId).query(api.sharedBoards.resolveShareCode, { code: "SHARED01" }),
+    ).rejects.toThrow(/ambiguous/);
+    // inviteByCode surfaces the same failure instead of an opaque error.
+    const { accountId: accId } = await createAccount(aliceId, "family", "Fam");
+    await expect(
+      asUser(aliceId).mutation(api.accounts.inviteByCode, {
+        accountId: accId,
+        code: "SHARED01",
+      }),
+    ).rejects.toThrow(/ambiguous/);
+  });
 });
 
 describe("invite token (QR / link)", () => {

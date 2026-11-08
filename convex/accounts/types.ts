@@ -25,4 +25,5 @@ export interface AccountSummary {
   boardId: string;
   memberCount: number;
   inviteCode: string | null;
+  memberDisplayNames?: Record<string, string>;
 }

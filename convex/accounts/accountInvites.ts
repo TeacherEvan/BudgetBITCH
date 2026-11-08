@@ -43,10 +43,14 @@ export const inviteByCode = mutation({
     }
 
     const code = args.code.trim().toUpperCase();
-    const invitee = await ctx.db
+    const inviteeMatches = await ctx.db
       .query("userProfiles")
       .withIndex("by_shareCode", (q) => q.eq("shareCode", code))
-      .unique();
+      .take(2);
+    if (inviteeMatches.length > 1) {
+      throw new ConvexError("Share code ambiguous — contact support");
+    }
+    const invitee = inviteeMatches[0] ?? null;
     if (!invitee) throw new ConvexError("Share code not found");
     if (invitee.userId === userId) {
       throw new ConvexError("Cannot invite yourself");

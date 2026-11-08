@@ -1,50 +1,16 @@
 // convex/sharedBoards.ts
 import { v, ConvexError } from "convex/values";
-import { query, mutation, MutationCtx } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { Doc, Id } from "./_generated/dataModel";
+import { Id } from "./_generated/dataModel";
 import { mergeRecords, StoredRecord } from "./boardMerge";
+// Single profile factory (accounts shape wins) — see accounts/helpers.ts.
+import { ensureProfileDoc } from "./accounts/helpers";
 
-const SHARE_CODE_LEN = 8;
 export type { StoredRecord };
 
-const SHARE_CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
-
-function generateShareCode(): string {
-  // Short, human-shareable, uppercase CSPRNG token. Collision handled by caller retry.
-  const bytes = new Uint8Array(SHARE_CODE_LEN);
-  crypto.getRandomValues(bytes);
-  let code = "";
-  for (let i = 0; i < SHARE_CODE_LEN; i++) {
-    code += SHARE_CODE_ALPHABET[bytes[i] % SHARE_CODE_ALPHABET.length];
-  }
-  return code;
-}
-
-async function ensureProfileDoc(
-  ctx: MutationCtx,
-  userId: Id<"users">,
-): Promise<Doc<"userProfiles">> {
-  const existing = await ctx.db
-    .query("userProfiles")
-    .withIndex("by_user", (q) => q.eq("userId", userId))
-    .first();
-  if (existing) return existing;
-
-  // Create with a unique shareCode (retry on collision).
-  for (let attempt = 0; attempt < 10; attempt++) {
-    const shareCode = generateShareCode();
-    try {
-      const id = await ctx.db.insert("userProfiles", { userId, shareCode });
-      const created = await ctx.db.get(id);
-      if (created) return created;
-    } catch {
-      // Unique index collision on shareCode — try again.
-      continue;
-    }
-  }
-  throw new ConvexError("Failed to allocate a unique share code");
-}
+// NOTE: by_shareCode is not a unique index — duplicates may exist in the wild.
+// Lookups use `.take(2)` below and fail closed instead of `.unique()`.
 
 /** Create the caller's sharing profile (with a shareCode) if it doesn't exist yet. */
 export const ensureProfile = mutation({
@@ -112,10 +78,12 @@ export const resolveShareCode = query({
     if (!userId) throw new ConvexError("Authentication required");
 
     const code = args.code.trim().toUpperCase();
-    const partner = await ctx.db
+    const matches = await ctx.db
       .query("userProfiles")
       .withIndex("by_shareCode", (q) => q.eq("shareCode", code))
-      .unique();
+      .take(2);
+    if (matches.length > 1) throw new ConvexError("Share code ambiguous — contact support");
+    const partner = matches[0] ?? null;
 
     if (!partner) return { exists: false, displayName: null };
     if (partner.userId === userId) return { exists: false, displayName: null };
@@ -131,10 +99,12 @@ export const linkByCode = mutation({
     if (!userId) throw new ConvexError("Authentication required");
 
     const code = args.code.trim().toUpperCase();
-    const partner = await ctx.db
+    const matches = await ctx.db
       .query("userProfiles")
       .withIndex("by_shareCode", (q) => q.eq("shareCode", code))
-      .unique();
+      .take(2);
+    if (matches.length > 1) throw new ConvexError("Share code ambiguous — contact support");
+    const partner = matches[0] ?? null;
 
     if (!partner) throw new ConvexError("Share code not found");
     if (partner.userId === userId) throw new ConvexError("Cannot link to yourself");
