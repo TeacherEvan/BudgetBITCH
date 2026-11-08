@@ -7,6 +7,8 @@ import { Id } from "./_generated/dataModel";
 /**
  * Upserts a daily snapshot of the user's budget data.
  * Called daily via Service Worker to backup local data to Convex.
+ * Uses insert-then-read pattern with by_user_and_date index for idempotency.
+ * Attempts insert, then reads to detect conflicts. If conflict, updates the winner (first insert).
  */
 export const upsertDailySnapshot = mutation({
   args: {
@@ -40,39 +42,62 @@ export const upsertDailySnapshot = mutation({
     const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
     const createdAt = Date.now();
 
-    // Check if snapshot already exists for today
-    const existing = await ctx.db
+    // INSERT: Attempt to insert the snapshot
+    const insertedId = await ctx.db.insert("dailySnapshots", {
+      userId,
+      accountId: args.accountId,
+      date: today,
+      wizardProfile: args.wizardProfile,
+      totals: args.totals,
+      criticalExpenseCommitment: args.criticalExpenseCommitment,
+      fullBackupData: args.fullBackupData,
+      storeCounts: args.storeCounts,
+      createdAt,
+    });
+
+    // READ: Use the index to find the first (oldest) snapshot for this user+date
+    // The index by_user_and_date includes _creationTime as the last column,
+    // so ordering by "asc" gives us the oldest (winner of the race).
+    const firstSnapshot = await ctx.db
       .query("dailySnapshots")
-      .withIndex("by_user_and_date", (q) => q.eq("userId", userId).eq("date", today))
+      .withIndex("by_user_and_date", (q) =>
+        q.eq("userId", userId).eq("date", today)
+      )
+      .order("asc") // Oldest first (by _creationTime)
       .first();
 
-    if (existing) {
-      // Update existing snapshot
-      await ctx.db.patch(existing._id, {
-        accountId: args.accountId,
-        wizardProfile: args.wizardProfile,
-        totals: args.totals,
-        criticalExpenseCommitment: args.criticalExpenseCommitment,
-        fullBackupData: args.fullBackupData,
-        storeCounts: args.storeCounts,
-        createdAt,
-      });
-      return { success: true, updated: true, date: today };
-    } else {
-      // Insert new snapshot
-      await ctx.db.insert("dailySnapshots", {
-        userId,
-        accountId: args.accountId,
-        date: today,
-        wizardProfile: args.wizardProfile,
-        totals: args.totals,
-        criticalExpenseCommitment: args.criticalExpenseCommitment,
-        fullBackupData: args.fullBackupData,
-        storeCounts: args.storeCounts,
-        createdAt,
-      });
-      return { success: true, created: true, date: today };
+    if (!firstSnapshot) {
+      // Should not happen since we just inserted, but handle gracefully
+      return { success: true, created: true, date: today, snapshotId: insertedId };
     }
+
+    // If we won the race (our insert is the first/oldest), update it with latest data and return created
+    if (firstSnapshot._id === insertedId) {
+      // Ensure the winner has the latest data (in case args differ between concurrent calls)
+      await ctx.db.patch(insertedId, {
+        accountId: args.accountId,
+        wizardProfile: args.wizardProfile,
+        totals: args.totals,
+        criticalExpenseCommitment: args.criticalExpenseCommitment,
+        fullBackupData: args.fullBackupData,
+        storeCounts: args.storeCounts,
+        createdAt,
+      });
+      return { success: true, created: true, date: today, snapshotId: insertedId };
+    }
+
+    // We lost the race: delete our insert and update the winner with latest data
+    await ctx.db.delete(insertedId);
+    await ctx.db.patch(firstSnapshot._id, {
+      accountId: args.accountId,
+      wizardProfile: args.wizardProfile,
+      totals: args.totals,
+      criticalExpenseCommitment: args.criticalExpenseCommitment,
+      fullBackupData: args.fullBackupData,
+      storeCounts: args.storeCounts,
+      createdAt,
+    });
+    return { success: true, updated: true, date: today, snapshotId: firstSnapshot._id };
   },
 });
 

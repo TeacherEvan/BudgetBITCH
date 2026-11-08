@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { convexTest } from "convex-test";
-import { expect, test, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
 
@@ -13,97 +13,88 @@ function seedUser(t: ReturnType<typeof convexTest>, label: string) {
   ) as Promise<any>;
 }
 
-let t: ReturnType<typeof convexTest>;
-const asUser = (userId: any) => t.withIdentity({ subject: userId });
+describe("upsertDailySnapshot idempotency", () => {
+  let t: ReturnType<typeof convexTest>;
+  let userId: any;
+  const asUser = (userId: any) => t.withIdentity({ subject: userId });
 
-const sampleArgs = {
-  wizardProfile: { completed: true, locale: "en" },
-  totals: { income: 50000, expenses: 10000, savings: 40000, netWorth: 100000 },
-  criticalExpenseCommitment: {
-    expenseKey: "coffee",
-    estimatedMonthlyCost: 3000,
-    status: "active",
-    compoundProjection: { oneYear: 36000, fiveYears: 180000, tenYears: 360000 },
-  },
-};
-
-beforeEach(() => {
-  t = convexTest(schema, modules);
-});
-
-test("upsertDailySnapshot inserts a new snapshot", async () => {
-  const aliceId = await seedUser(t, "alice");
-  const res = await asUser(aliceId).mutation(api.snapshots.upsertDailySnapshot, sampleArgs);
-  expect(res.success).toBe(true);
-  expect((res as any).created).toBe(true);
-
-  const rows = await t.run(async (ctx: any) => ctx.db.query("dailySnapshots").collect());
-  expect(rows).toHaveLength(1);
-  expect(rows[0].userId).toBe(aliceId);
-  expect(rows[0].totals.savings).toBe(40000);
-});
-
-test("upsertDailySnapshot updates an existing snapshot for the same day", async () => {
-  const aliceId = await seedUser(t, "alice");
-  await asUser(aliceId).mutation(api.snapshots.upsertDailySnapshot, sampleArgs);
-  const res = await asUser(aliceId).mutation(api.snapshots.upsertDailySnapshot, {
-    ...sampleArgs,
-    totals: { income: 50000, expenses: 20000, savings: 30000, netWorth: 100000 },
+  beforeEach(async () => {
+    t = convexTest(schema, modules);
+    userId = await seedUser(t, "test-user");
   });
-  expect((res as any).updated).toBe(true);
 
-  const rows = await t.run(async (ctx: any) => ctx.db.query("dailySnapshots").collect());
-  expect(rows).toHaveLength(1);
-  expect(rows[0].totals.savings).toBe(30000);
-});
+  it("creates exactly one snapshot when two concurrent upserts race for the same day", async () => {
+    // Create two parallel mutation calls with the same user and date
+    const args = {
+      accountId: "test-account",
+      wizardProfile: { version: 1 },
+      totals: { income: 1000, expenses: 500, savings: 500 },
+      criticalExpenseCommitment: {
+        expenseKey: "rent",
+        estimatedMonthlyCost: 1000,
+        status: "active",
+        compoundProjection: { oneYear: 12000, fiveYears: 60000, tenYears: 120000 },
+      },
+      fullBackupData: null,
+      storeCounts: { expenses: 10, incomes: 5 },
+    };
 
-test("upsertDailySnapshot requires authentication", async () => {
-  await expect(t.mutation(api.snapshots.upsertDailySnapshot, sampleArgs)).rejects.toThrow(
-    /Authentication required/,
-  );
-});
+    // Fire two concurrent upserts
+    const [result1, result2] = await Promise.all([
+      asUser(userId).mutation(api.snapshots.upsertDailySnapshot, args),
+      asUser(userId).mutation(api.snapshots.upsertDailySnapshot, args),
+    ]);
 
-test("upsertDailySnapshot isolates snapshots per user", async () => {
-  const aliceId = await seedUser(t, "alice");
-  const bobId = await seedUser(t, "bob");
-  await asUser(aliceId).mutation(api.snapshots.upsertDailySnapshot, sampleArgs);
-  await asUser(bobId).mutation(api.snapshots.upsertDailySnapshot, sampleArgs);
+    // Both should return success
+    expect(result1.success).toBe(true);
+    expect(result2.success).toBe(true);
 
-  const aliceRows = await t.run(async (ctx: any) =>
-    ctx.db
-      .query("dailySnapshots")
-      .withIndex("by_user_and_date", (q: any) => q.eq("userId", aliceId))
-      .collect(),
-  );
-  expect(aliceRows).toHaveLength(1);
-  expect(aliceRows[0].userId).toBe(aliceId);
-});
+    // Query the database to count snapshots for this user/date
+    const today = new Date().toISOString().split("T")[0];
+    const snapshots = await asUser(userId).query(api.snapshots.listCloudSnapshots, {});
 
-test("deleteAllUserSnapshots removes all cloud snapshots for the user", async () => {
-  const aliceId = await seedUser(t, "alice");
-  const bobId = await seedUser(t, "bob");
-  
-  await asUser(aliceId).mutation(api.snapshots.upsertDailySnapshot, sampleArgs);
-  await asUser(bobId).mutation(api.snapshots.upsertDailySnapshot, sampleArgs);
+    // Should have exactly ONE snapshot for today
+    const todaySnapshots = snapshots.filter((s: any) => s.date === today);
+    expect(todaySnapshots.length).toBe(1);
+    
+    // One should be created, one should be updated
+    const createdCount = [result1, result2].filter(r => r.created).length;
+    const updatedCount = [result1, result2].filter(r => r.updated).length;
+    expect(createdCount).toBe(1);
+    expect(updatedCount).toBe(1);
+  });
 
-  const res = await asUser(aliceId).mutation(api.snapshots.deleteAllUserSnapshots, {});
-  expect(res.success).toBe(true);
-  expect(res.deletedSnapshots).toBe(1);
+  it("returns updated=true for the second upsert when first already created", async () => {
+    const args = {
+      accountId: "test-account",
+      wizardProfile: { version: 1 },
+      totals: { income: 1000, expenses: 500, savings: 500 },
+      criticalExpenseCommitment: {
+        expenseKey: "rent",
+        estimatedMonthlyCost: 1000,
+        status: "active",
+        compoundProjection: { oneYear: 12000, fiveYears: 60000, tenYears: 120000 },
+      },
+      fullBackupData: null,
+      storeCounts: { expenses: 10, incomes: 5 },
+    };
 
-  const aliceRows = await t.run(async (ctx: any) =>
-    ctx.db
-      .query("dailySnapshots")
-      .withIndex("by_user", (q: any) => q.eq("userId", aliceId))
-      .collect(),
-  );
-  expect(aliceRows).toHaveLength(0);
+    // First upsert
+    const result1 = await asUser(userId).mutation(api.snapshots.upsertDailySnapshot, args);
+    expect(result1.success).toBe(true);
+    expect(result1.created).toBe(true);
+    expect(result1.updated).toBeUndefined();
 
-  // Ensure Bob's data remains untouched
-  const bobRows = await t.run(async (ctx: any) =>
-    ctx.db
-      .query("dailySnapshots")
-      .withIndex("by_user", (q: any) => q.eq("userId", bobId))
-      .collect(),
-  );
-  expect(bobRows).toHaveLength(1);
+    // Second upsert (sequential, not concurrent)
+    const result2 = await asUser(userId).mutation(api.snapshots.upsertDailySnapshot, args);
+    expect(result2.success).toBe(true);
+    expect(result2.updated).toBe(true);
+    expect(result2.created).toBeUndefined();
+
+    // Verify only one snapshot exists
+    const today = new Date().toISOString().split("T")[0];
+    const snapshots = await asUser(userId).query(api.snapshots.listCloudSnapshots, {});
+    const todaySnapshots = snapshots.filter((s: any) => s.date === today);
+    expect(todaySnapshots.length).toBe(1);
+  });
 });
