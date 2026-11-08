@@ -1,8 +1,11 @@
 // convex/snapshots.ts
 import { v, ConvexError } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, internalMutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { Id } from "./_generated/dataModel";
+
+const DELETE_CHUNK_SIZE = 500;
 
 /**
  * Upserts a daily snapshot of the user's budget data.
@@ -172,18 +175,30 @@ export const deleteAllUserSnapshots = mutation({
       return { success: false, deletedSnapshots: 0, deletedReceipts: 0 };
     }
 
-    // 1. Delete daily snapshots in batches
+    // 1. Delete daily snapshots in batches (≤500 per chunk)
     let deletedSnapshots = 0;
+    let snapshotsMore = false;
     while (true) {
       const batch = await ctx.db
         .query("dailySnapshots")
         .withIndex("by_user", (q) => q.eq("userId", userId))
-        .take(500);
+        .take(DELETE_CHUNK_SIZE);
       for (const snap of batch) {
         await ctx.db.delete(snap._id);
       }
       deletedSnapshots += batch.length;
-      if (batch.length < 500) break;
+      if (batch.length < DELETE_CHUNK_SIZE) break;
+      // One chunk done and rows remain — continue in a fresh transaction.
+      snapshotsMore = true;
+      break;
+    }
+    if (snapshotsMore) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.snapshots.deleteSnapshotsChunk,
+        { userId },
+      );
+      return { success: true, deletedSnapshots, continuation: true };
     }
 
     // 2. Delete receipts in batches
@@ -227,5 +242,30 @@ export const deleteAllUserSnapshots = mutation({
       deletedReceipts,
       deletedAliases,
     };
+  },
+});
+
+/**
+ * Continuation chunk for `deleteAllUserSnapshots`: deletes the remaining
+ * daily snapshots (≤500), then re-schedules itself while rows remain.
+ */
+export const deleteSnapshotsChunk = internalMutation({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const batch = await ctx.db
+      .query("dailySnapshots")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .take(DELETE_CHUNK_SIZE);
+    for (const snap of batch) {
+      await ctx.db.delete(snap._id);
+    }
+    if (batch.length === DELETE_CHUNK_SIZE) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.snapshots.deleteSnapshotsChunk,
+        { userId: args.userId },
+      );
+    }
+    return { deleted: batch.length, done: batch.length < DELETE_CHUNK_SIZE };
   },
 });

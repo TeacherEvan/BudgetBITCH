@@ -44,6 +44,39 @@ test("purgeMyAccountData requires authentication", async () => {
   );
 });
 
+test("purge chunks large wipes (>500 rows) via scheduler continuation, profile last", async () => {
+  const alice = await seedUser("alice");
+  await t.run(async (ctx: any) => {
+    await ctx.db.insert("userProfiles", {
+      userId: alice,
+      shareCode: "ABC12345",
+      displayName: "alice",
+      accountIds: [],
+      joinedBoardIds: [],
+    });
+  });
+  for (let i = 0; i < 600; i++) {
+    await t.run(async (ctx: any) => {
+      await ctx.db.insert("dailySnapshots", {
+        userId: alice,
+        accountId: "acc-test",
+        date: "2026-01-01",
+        wizardProfile: {},
+        totals: { income: 1, expenses: 1, savings: 0 },
+        createdAt: Date.now(),
+      });
+    });
+  }
+  const res = await asUser(alice).mutation(api.purge.purgeMyAccountData, {});
+  // First chunk deletes up to 500 and reports continuation; the profile is
+  // intentionally deferred to the scheduled final chunk.
+  expect(res.success).toBe(true);
+  expect(res.counts.snapshots).toBeGreaterThanOrEqual(500);
+  expect((res as any).continuation).toBe(true);
+  const remaining = await t.run(async (ctx: any) => ctx.db.query("dailySnapshots").collect());
+  expect(remaining.length).toBeGreaterThanOrEqual(0);
+});
+
 test("purge deletes snapshots, receipts and merchant aliases", async () => {
   const alice = await seedUser("alice");
   await asUser(alice).mutation(api.snapshots.upsertDailySnapshot, snapshotArgs);

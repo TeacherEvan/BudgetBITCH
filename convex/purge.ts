@@ -36,8 +36,9 @@
 //                                   to it, otherwise left for the partner (same
 //                                   semantics as sharedBoards.unlink).
 
-import { ConvexError } from "convex/values";
-import { mutation, MutationCtx } from "./_generated/server";
+import { ConvexError, v } from "convex/values";
+import { mutation, internalMutation, MutationCtx } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { Id, Doc } from "./_generated/dataModel";
 
@@ -415,6 +416,31 @@ export const purgeMyAccountData = mutation({
       if (batch.length < 250) break;
     }
 
+    // ---- 7b. Scheduler continuation for large accounts ----------------------
+    // If cumulative deletes already exceed one chunk, offload the profile
+    // stage (which is always last) to a fresh scheduler transaction so the
+    // wipe cannot hit execution limits and half-delete.
+    const totalDeleted =
+      counts.snapshots +
+      counts.receipts +
+      counts.merchantAliases +
+      counts.accounts +
+      counts.accountBoards +
+      counts.sharedBoards +
+      counts.boardMemberships +
+      counts.invites +
+      counts.pendingDeletes +
+      counts.pushSubscriptions +
+      counts.lineIdentities +
+      counts.boardShards +
+      counts.ledgerEntries;
+    if (totalDeleted > 500) {
+      await ctx.scheduler.runAfter(0, internal.purge.purgeProfileFinal, {
+        userId,
+      });
+      return { success: true, counts, continuation: true };
+    }
+
     // ---- 8. The private sharing profile itself -----------------------------
     // Deleted last: earlier steps read it to resolve boards. Dropping it also
     // retires the user's shareCode so nobody can link to the purged account.
@@ -431,5 +457,29 @@ export const purgeMyAccountData = mutation({
     }
 
     return { success: true, counts };
+  },
+});
+
+/**
+ * Continuation: deletes the user's profile doc in a fresh transaction.
+ * Scheduled by `purgeMyAccountData` when the wipe is large (execution-limit
+ * avoidance). Runs last so membership resolution above never loses the profile.
+ */
+export const purgeProfileFinal = internalMutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args): Promise<{ success: boolean; profiles: number }> => {
+    let profiles = 0;
+    while (true) {
+      const batch = await ctx.db
+        .query("userProfiles")
+        .withIndex("by_user", (q) => q.eq("userId", args.userId))
+        .take(500);
+      for (const row of batch) {
+        await ctx.db.delete(row._id);
+        profiles += 1;
+      }
+      if (batch.length < 500) break;
+    }
+    return { success: true, profiles };
   },
 });
