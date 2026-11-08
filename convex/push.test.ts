@@ -55,6 +55,24 @@ describe("push:subscribe", () => {
       }),
     ).rejects.toThrow();
   });
+
+  test("rejects malformed subscription (missing keys)", async () => {
+    const aliceId = await seedUser(t, "alice");
+    await expect(
+      asUser(aliceId).mutation(api.push.subscribe, {
+        subscription: { endpoint: "x" } as any, // missing keys
+      }),
+    ).rejects.toThrow();
+  });
+
+  test("rejects malformed subscription (missing endpoint)", async () => {
+    const aliceId = await seedUser(t, "alice");
+    await expect(
+      asUser(aliceId).mutation(api.push.subscribe, {
+        subscription: { keys: { p256dh: "p", auth: "a" } } as any, // missing endpoint
+      }),
+    ).rejects.toThrow();
+  });
 });
 
 describe("push:unsubscribe", () => {

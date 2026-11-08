@@ -218,12 +218,31 @@ export const getBoard = query({
 export const pushBoard = mutation({
   args: {
     boardId: v.string(),
-    data: v.any(),
+    // Each key maps to a StoredRecord: { value, updatedAt, deleted? }
+    data: v.record(v.string(), v.object({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      value: v.any(),
+      updatedAt: v.number(),
+      deleted: v.optional(v.boolean()),
+    })),
+    // Client's timestamp for the whole push (used for board-level updatedAt).
+    // Clamped to now + 60s to prevent future-dated pushes from clock skew.
     updatedAt: v.number(),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new ConvexError("Authentication required");
+
+    // Manual validation for record values (v.record may not enforce in test env)
+    const data = args.data as Record<string, { value: unknown; updatedAt: unknown; deleted?: boolean }>;
+    for (const [key, rec] of Object.entries(data ?? {})) {
+      if (rec.value === undefined || rec.updatedAt === undefined) {
+        throw new ConvexError(`Invalid record for key ${key}: missing value or updatedAt`);
+      }
+      if (typeof rec.updatedAt !== "number") {
+        throw new ConvexError(`Invalid record for key ${key}: updatedAt must be a number`);
+      }
+    }
 
     const board = await ctx.db
       .query("sharedBoards")
@@ -234,7 +253,17 @@ export const pushBoard = mutation({
       throw new ConvexError("Not a member of this board");
     }
 
-    const incoming = (args.data ?? {}) as Record<string, StoredRecord>;
+    // Clamp client timestamp to now + 60s to prevent clock skew attacks
+    const now = Date.now();
+    const effectiveUpdatedAt = Math.min(args.updatedAt, now + 60_000);
+
+    // 512 KB budget for the incoming data (Convex document limit is 1 MB)
+    const dataSize = new TextEncoder().encode(JSON.stringify(args.data)).length;
+    if (dataSize > 512 * 1024) {
+      throw new ConvexError("Push payload exceeds 512 KB limit");
+    }
+
+    const incoming = args.data as Record<string, StoredRecord>;
     const { merged, changed } = mergeRecords(
       board.data as Record<string, StoredRecord> | null,
       incoming,
@@ -244,7 +273,7 @@ export const pushBoard = mutation({
     // Even when unchanged we return applied:true so the client queue drains
     // (a stale push must not be re-queued forever).
     const newUpdatedAt = changed
-      ? Math.max(board.updatedAt, args.updatedAt + 1)
+      ? Math.max(board.updatedAt, effectiveUpdatedAt + 1)
       : board.updatedAt;
 
     await ctx.db.patch(board._id, {
