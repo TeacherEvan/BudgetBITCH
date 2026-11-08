@@ -33,6 +33,70 @@ export const saveReceipt = internalMutation({
   },
 });
 
+// Internal mutation: idempotent save receipt using insert-then-read pattern
+// Uses the by_user_and_clientDraftId index as the claim.
+// Attempts insert, then reads to detect conflicts. If conflict, returns the winner (first insert).
+export const saveReceiptIdempotent = internalMutation({
+  args: {
+    userId: v.id("users"),
+    accountId: v.optional(v.string()),
+    amount: v.number(),
+    merchant: v.string(),
+    category: v.string(),
+    date: v.optional(v.string()),
+    rawGeminiResponse: v.optional(v.string()),
+    imageMimeType: v.string(),
+    imageSizeBytes: v.number(),
+    parsedAt: v.number(),
+    geminiModel: v.string(),
+    source: v.optional(v.string()), // "app" (default) | "line"
+    clientDraftId: v.optional(v.string()),
+    engine: v.optional(v.string()),
+    confidence: v.optional(v.any()),
+    evidence: v.optional(v.any()),
+    ocrText: v.optional(v.string()),
+    tax: v.optional(v.number()),
+    currency: v.optional(v.string()),
+    questionsAsked: v.optional(v.any()),
+    status: v.optional(v.string()),
+    lineItems: v.optional(v.any()),
+  },
+  handler: async (ctx, args) => {
+    const { clientDraftId, ...rest } = args;
+    
+    // If no clientDraftId provided, just do a regular insert (no idempotency)
+    if (!clientDraftId) {
+      return await ctx.db.insert("receipts", args);
+    }
+
+    // INSERT: Attempt to insert the draft
+    const insertedId = await ctx.db.insert("receipts", args);
+
+    // READ: Use the index to find the first (oldest) draft for this user+clientDraftId
+    const firstDraft = await ctx.db
+      .query("receipts")
+      .withIndex("by_user_and_clientDraftId", (q) =>
+        q.eq("userId", args.userId).eq("clientDraftId", clientDraftId)
+      )
+      .order("asc") // Oldest first (by _creationTime, which is the last index column)
+      .first();
+
+    if (!firstDraft) {
+      // Should not happen since we just inserted, but handle gracefully
+      return insertedId;
+    }
+
+    // If we won the race (our insert is the first/oldest), return our ID
+    if (firstDraft._id === insertedId) {
+      return insertedId;
+    }
+
+    // We lost the race: delete our insert and return the winner's ID
+    await ctx.db.delete(insertedId);
+    return firstDraft._id;
+  },
+});
+
 // Internal query: get receipt by clientDraftId for a specific user (for tenant-safe idempotency)
 export const getReceiptByClientDraftId = internalQuery({
   args: { userId: v.id("users"), clientDraftId: v.string() },

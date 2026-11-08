@@ -140,38 +140,6 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
 
   const resolvedSource = requestSource ?? "line";
 
-  // Check idempotency - look for existing draft for THIS user with this clientDraftId
-  const existing = await ctx.runQuery(internal.receipts.getReceiptByClientDraftId, {
-    userId,
-    clientDraftId: idempotencyKey,
-  });
-
-  if (existing) {
-    // Return existing draft
-    const result = existing as any;
-    const existingFields = result.fields ?? {
-      total: typeof result.amount === "number" ? { value: result.amount, conf: 1 } : null,
-      merchant: result.merchant ? { value: result.merchant, conf: 1 } : null,
-      category: result.category ? { value: result.category, conf: 1 } : null,
-      date: result.date ? { value: result.date, conf: 1 } : null,
-      tax: typeof result.tax === "number" ? { value: result.tax, conf: 1 } : null,
-      currency: result.currency ? { value: result.currency, conf: 1 } : null,
-    };
-    return new Response(JSON.stringify({
-      success: true,
-      draftId: existing._id,
-      alreadySynced: true,
-      fields: existingFields,
-      confidence: result.confidence,
-      questions: result.questionsAsked,
-      lineItems: result.lineItems ?? [],
-      source: resolvedSource,
-    }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
   // Run the scraper engine (validated payload is structurally an OcrPayload)
   const scraped = scrapeEngine(payload as OcrPayload);
 
@@ -196,8 +164,9 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
     tax: scraped.fields.tax && tax !== undefined ? { ...scraped.fields.tax, value: tax } : null,
   };
 
-  // Insert draft receipt via internal mutation
-  const draftId = await ctx.runMutation(internal.receipts.saveReceipt, {
+  // Insert draft receipt via idempotent internal mutation (insert-then-read pattern)
+  // Uses the by_user_and_clientDraftId index as the claim to prevent duplicate drafts
+  const draftId = await ctx.runMutation(internal.receipts.saveReceiptIdempotent, {
     userId,
     accountId,
     amount,
@@ -221,9 +190,18 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
     lineItems,
   });
 
+  // Check if this was a duplicate by querying the draft
+  const draft = await ctx.runQuery(internal.receipts.getReceiptByClientDraftId, {
+    userId,
+    clientDraftId: idempotencyKey,
+  });
+
+  const isDuplicate = draft && draft._id !== draftId;
+
   return new Response(JSON.stringify({
     success: true,
-    draftId,
+    draftId: draft?._id ?? draftId,
+    alreadySynced: isDuplicate,
     fields: normalizedFields,
     confidence: scraped.confidence,
     evidence: scraped.evidence,
