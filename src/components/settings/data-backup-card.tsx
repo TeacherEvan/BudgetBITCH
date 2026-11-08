@@ -219,6 +219,7 @@ export function DataBackupCard({
         payload.data = encrypted.ciphertext;
         payload.cryptoSalt = encrypted.salt;
         payload.cryptoIv = encrypted.iv;
+        payload.cryptoIterations = encrypted.iterations;
         payload.isEncrypted = true;
       }
 
@@ -323,7 +324,11 @@ export function DataBackupCard({
   };
 
   const handleDecryptAndImport = async () => {
-    if (!pendingFileString || !importPassword) return;
+    if (!pendingFileString || !importPassword) {
+      setImportErrorMessage('Password required to decrypt backup');
+      setImportStatus('error');
+      return;
+    }
     setImportStatus('idle');
     setImportErrorMessage('');
     try {
@@ -332,7 +337,8 @@ export function DataBackupCard({
         rawPayload.data,
         importPassword,
         rawPayload.cryptoSalt,
-        rawPayload.cryptoIv
+        rawPayload.cryptoIv,
+        rawPayload.cryptoIterations
       );
 
       // Reconstruct payload as unencrypted and validate

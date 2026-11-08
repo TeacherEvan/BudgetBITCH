@@ -1,9 +1,20 @@
 // lib/db/crypto-backup.ts
 
+/** PBKDF2 iterations for NEW backups (OWASP-recommended 600k). */
+export const PBKDF2_ITERATIONS = 600_000;
+/** Iterations used by pre-fix backups — decrypt must stay compatible. */
+export const LEGACY_ITERATIONS = 100_000;
+/** Minimum salt length accepted on decrypt. */
+export const MIN_SALT_BYTES = 16;
+
 /**
  * Derives an AES-GCM key from a password string and salt using PBKDF2.
  */
-async function deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey> {
+async function deriveKey(
+  password: string,
+  salt: Uint8Array,
+  iterations: number,
+): Promise<CryptoKey> {
   const enc = new TextEncoder();
   const passwordKey = await window.crypto.subtle.importKey(
     'raw',
@@ -17,7 +28,7 @@ async function deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey>
     {
       name: 'PBKDF2',
       salt: salt as unknown as BufferSource,
-      iterations: 100000,
+      iterations,
       hash: 'SHA-256',
     },
     passwordKey,
@@ -47,16 +58,19 @@ function uint8ToBase64(bytes: Uint8Array): string {
 export async function encryptBackup(
   plaintext: string,
   password: string
-): Promise<{ ciphertext: string; salt: string; iv: string }> {
+): Promise<{ ciphertext: string; salt: string; iv: string; iterations: number }> {
   if (typeof window === 'undefined' || !window.crypto) {
     throw new Error('Web Crypto API is not available');
   }
+  if (!password || password.length === 0) {
+    throw new Error('Password required for encryption');
+  }
 
   const enc = new TextEncoder();
-  const salt = window.crypto.getRandomValues(new Uint8Array(16));
+  const salt = window.crypto.getRandomValues(new Uint8Array(32));
   const iv = window.crypto.getRandomValues(new Uint8Array(12));
-  
-  const key = await deriveKey(password, salt);
+
+  const key = await deriveKey(password, salt, PBKDF2_ITERATIONS);
   const encryptedBuffer = await window.crypto.subtle.encrypt(
     { name: 'AES-GCM', iv },
     key,
@@ -67,6 +81,7 @@ export async function encryptBackup(
     ciphertext: uint8ToBase64(new Uint8Array(encryptedBuffer)),
     salt: uint8ToBase64(salt),
     iv: uint8ToBase64(iv),
+    iterations: PBKDF2_ITERATIONS,
   };
 }
 
@@ -78,17 +93,25 @@ export async function decryptBackup(
   ciphertext: string,
   password: string,
   saltBase64: string,
-  ivBase64: string
+  ivBase64: string,
+  iterations: number = LEGACY_ITERATIONS
 ): Promise<string> {
   if (typeof window === 'undefined' || !window.crypto) {
     throw new Error('Web Crypto API is not available');
   }
+  if (!password || password.length === 0) {
+    throw new Error('Password required for decryption');
+  }
 
   const salt = Uint8Array.from(atob(saltBase64), (c) => c.charCodeAt(0));
+  if (salt.length < MIN_SALT_BYTES) {
+    throw new Error(`Invalid salt length: ${salt.length} < ${MIN_SALT_BYTES} bytes`);
+  }
   const iv = Uint8Array.from(atob(ivBase64), (c) => c.charCodeAt(0));
   const encryptedData = Uint8Array.from(atob(ciphertext), (c) => c.charCodeAt(0));
 
-  const key = await deriveKey(password, salt);
+  // Backward compatible: old backups have no iterations field → 100k default.
+  const key = await deriveKey(password, salt, iterations);
   const decryptedBuffer = await window.crypto.subtle.decrypt(
     { name: 'AES-GCM', iv },
     key,

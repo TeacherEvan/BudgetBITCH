@@ -100,7 +100,9 @@ export function usePriorityAlerts(_locale?: string): PriorityAlert[] {
     const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
     const dueSoon = bills.find(b => {
       if (!b.isActive) return false;
-      const diff = (((b.dueDay - dayOfMonth) % daysInMonth) + daysInMonth) % daysInMonth;
+      // Clamp dueDay to month length so "31st" doesn't roll into next month.
+      const clampedDueDay = Math.min(b.dueDay, daysInMonth);
+      const diff = (((clampedDueDay - dayOfMonth) % daysInMonth) + daysInMonth) % daysInMonth;
       return diff > 0 && diff <= 7;
     });
     if (dueSoon) {

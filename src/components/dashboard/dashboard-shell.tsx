@@ -128,7 +128,8 @@ export function DashboardShell({ locale, onLocaleChange, onSetup }: DashboardShe
     const dayOfMonth = today.getDate();
     const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
     const dueSoon = bills.filter(b => b.isActive).some(b => {
-      const diff = (((b.dueDay - dayOfMonth) % daysInMonth) + daysInMonth) % daysInMonth;
+      const clampedDueDay = Math.min(b.dueDay, daysInMonth);
+      const diff = (((clampedDueDay - dayOfMonth) % daysInMonth) + daysInMonth) % daysInMonth;
       return diff >= 0 && diff <= 7;
     });
     if (dueSoon) alertCount += 1;
