@@ -353,30 +353,6 @@ export const lineWebhook = httpAction(async (ctx, req) => {
     return new Response("ok", { status: 200 });
   }
 
-  // Extract webhook delivery / event IDs for deduplication
-  const headerDeliveryId = req.headers.get("x-line-delivery-id");
-  const payloadEventIds = events
-    .map((ev) => {
-      const e = ev as { webhookEventId?: string; message?: { id?: string } };
-      return e.webhookEventId ?? e.message?.id ?? "";
-    })
-    .filter(Boolean)
-    .join(",");
-
-  const webhookEventId =
-    headerDeliveryId || (payloadEventIds ? `msg:${payloadEventIds}` : null);
-  
-  // Check idempotency - if already processed, return 200 immediately
-  if (webhookEventId) {
-    const isAlreadyProcessed = await ctx.runQuery(internal.line.isWebhookEventProcessed, {
-      webhookEventId,
-    });
-    if (isAlreadyProcessed) {
-      clog("info", "line_webhook_deduplicated", { traceId, webhookEventId });
-      return new Response("ok", { status: 200 });
-    }
-  }
-
   clogMetric("line_webhook_events", events.length, "count", { status_class: "received" });
   let imageMessages = 0;
   let ingested = 0;
@@ -392,6 +368,17 @@ export const lineWebhook = httpAction(async (ctx, req) => {
     if (e.type !== "message" || e.message?.type !== "image" || !e.message.id) {
       continue;
     }
+
+    // Per-message-id idempotency check BEFORE processing
+    const messageEventId = `msg:${e.message.id}`;
+    const alreadyProcessed = await ctx.runQuery(internal.line.isWebhookEventProcessed, {
+      webhookEventId: messageEventId,
+    });
+    if (alreadyProcessed) {
+      clog("info", "line_webhook_deduplicated", { traceId, webhookEventId: messageEventId });
+      continue;
+    }
+
     imageMessages++;
     const lineUserId = e.source?.userId;
     if (!lineUserId) continue;
@@ -442,18 +429,15 @@ export const lineWebhook = httpAction(async (ctx, req) => {
         base64Image,
         accountId: mapping.accountId ?? undefined,
       });
+      // Record idempotency only after successful ingestion
+      await ctx.runMutation(internal.line.recordWebhookEvent, {
+        webhookEventId: messageEventId,
+      });
       ingested++;
     } catch (err) {
       parseFailed++;
       clogError("line_webhook_ingest_failed", err, { traceId, lineUserId });
     }
-  }
-
-  // Record idempotency commit ONLY if there were no upstream fetch/parse errors
-  if (webhookEventId && contentFetchFailed === 0 && parseFailed === 0) {
-    await ctx.runMutation(internal.line.recordWebhookEvent, {
-      webhookEventId,
-    });
   }
 
   clogMetric("line_webhook_image_messages", imageMessages, "count", { source: "line" });
