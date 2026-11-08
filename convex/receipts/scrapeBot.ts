@@ -198,6 +198,19 @@ export const syncOfflineDraft = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new ConvexError("Authentication required");
 
+    // Idempotent by clientDraftId: a retry (offline queue flush) must not
+    // create a duplicate draft. Checked before engine work so a replay
+    // short-circuits even if the payload would now exceed caps.
+    const existing = await ctx.db
+      .query("receipts")
+      .withIndex("by_user_and_clientDraftId", (q) =>
+        q.eq("userId", userId).eq("clientDraftId", args.clientDraftId)
+      )
+      .first();
+    if (existing) {
+      return { receiptId: existing._id, alreadySynced: true };
+    }
+
     // 5000 lines cap (mirroring ingestSchema.ts)
     if (args.payload.lines.length < 1) {
       throw new ConvexError("Payload must contain at least one line");
