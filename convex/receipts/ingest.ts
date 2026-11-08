@@ -124,10 +124,32 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
     });
   }
 
-  // Parse + validate body (zod-hardened; see ingestSchema.ts)
+  // Read as text first so oversized bodies are rejected before JSON.parse
+  // (a 100 MB body would otherwise be fully materialized and parsed).
+  let rawText: string;
+  try {
+    rawText = await req.text();
+  } catch {
+    return new Response(JSON.stringify({ success: false, error: "Invalid JSON" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  if (new TextEncoder().encode(rawText).length > 8_500_000) {
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: "Invalid request body",
+        details: [{ path: "payload", message: "Payload too large (max 8MB)" }],
+      }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
   let rawBody: unknown;
   try {
-    rawBody = await req.json();
+    rawBody = rawText ? JSON.parse(rawText) : null;
+    if (rawBody === null && rawText.trim() !== "null") throw new Error("empty");
   } catch {
     return new Response(JSON.stringify({ success: false, error: "Invalid JSON" }), {
       status: 400,
