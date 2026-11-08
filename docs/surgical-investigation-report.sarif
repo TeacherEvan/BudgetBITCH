@@ -1,0 +1,113 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Surgical-Investigation",
+          "version": "2.0.0",
+          "rules": [
+            {
+              "id": "SEC-001",
+              "name": "BrokenAuthUserIdResolution",
+              "shortDescription": { "text": "Broken user ID extraction from identity.subject in Convex Auth" },
+              "defaultConfiguration": { "level": "error" }
+            },
+            {
+              "id": "SYNC-001",
+              "name": "CrossAccountTombstonePoisoning",
+              "shortDescription": { "text": "Unscoped local write timestamps cause false LWW deletions across budgeting accounts" },
+              "defaultConfiguration": { "level": "error" }
+            },
+            {
+              "id": "DATA-001",
+              "name": "MinorUnitReceiptInflation",
+              "shortDescription": { "text": "Receipt total stored in minor units directly causing 100x value inflation" },
+              "defaultConfiguration": { "level": "error" }
+            },
+            {
+              "id": "CI-001",
+              "name": "SecurityAuditGateBypass",
+              "shortDescription": { "text": "CI npm audit retry loop exits 0 due to trailing sleep command" },
+              "defaultConfiguration": { "level": "warning" }
+            },
+            {
+              "id": "A11Y-001",
+              "name": "FocusRingWidthZero",
+              "shortDescription": { "text": "WCAG 2.2 SC 2.4.7 focus indicator missing width utility in Tailwind input/select" },
+              "defaultConfiguration": { "level": "warning" }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SEC-001",
+          "level": "error",
+          "message": { "text": "getAuthUserId in convex/lib/auth.ts returns composite identity.subject (user|session) breaking lineUsers schema validation" },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "convex/line.ts" },
+                "region": { "startLine": 105, "endLine": 110 }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SYNC-001",
+          "level": "error",
+          "message": { "text": "localWrites timestamps in IndexedDB are not scoped per account, causing switchAccount to inject deletion tombstones into target board" },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "src/lib/db/stores/snapshots-store.ts" },
+                "region": { "startLine": 158, "endLine": 175 }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DATA-001",
+          "level": "error",
+          "message": { "text": "scrape and syncOfflineDraft in scrapeBot.ts store scrapeEngine total.value (minor units) without dividing by 100" },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "convex/receipts/scrapeBot.ts" },
+                "region": { "startLine": 25, "endLine": 35 }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "CI-001",
+          "level": "warning",
+          "message": { "text": "Security audit retry loop in .github/workflows/ci.yml swallows non-zero npm audit exit status" },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": ".github/workflows/ci.yml" },
+                "region": { "startLine": 346, "endLine": 352 }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "A11Y-001",
+          "level": "warning",
+          "message": { "text": "Input and Select components use outline-none with focus:ring-[color] but omit focus:ring-2, rendering a 0px focus ring" },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "src/components/ui/input.tsx" },
+                "region": { "startLine": 27, "endLine": 30 }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

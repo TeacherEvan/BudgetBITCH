@@ -1,0 +1,34 @@
+architecture-beta
+    accTitle: Budget Boss Backend Architecture
+    accDescr: Topology of Convex Backend services, Next.js server route handlers, external APIs, and client sync bridges.
+
+    group client(cloud)["Client Runtime (PWA / Mobile)"]
+        service browser(internet)["Browser / PWA (Next.js 16 Client)"] in client
+        service idb(disk)["IndexedDB (8 stores + localWrites)"] in client
+        service sw(server)["Service Worker (public/sw.js)"] in client
+
+    group edge(cloud)["Edge & API Routing (Vercel)"]
+        service proxy(server)["Next.js Route Handlers (/api/*)"] in edge
+        service static(disk)["Vercel CDN & Asset Cache"] in edge
+
+    group convex(cloud)["Convex Cloud Deployment (steady-ox-280)"]
+        service cAuth(server)["Convex Auth (@convex-dev/auth)"] in convex
+        service cDb(disk)["Convex Document Database (14 tables)"] in convex
+        service cActions(server)["Convex Actions (V8 & Node runtime)"] in convex
+        service cCrons(server)["Convex Crons (crons.ts)"] in convex
+
+    group external(cloud)["External Integration Partners"]
+        service gemini(server)["Google Gemini 2.5 Flash Vision"] in external
+        service hf(server)["TeacherBOY HF Space (FastAPI bot)"] in external
+        service line(server)["LINE Messaging & Content API"] in external
+        service resend(server)["Resend Transactional Email"] in external
+        service rss(server)["Regional Finance RSS Feeds"] in external
+
+    browser:R -- L:idb
+    browser:T -- B:proxy
+    browser:R -- L:cDb
+    proxy:T -- B:rss
+    cActions:R -- L:gemini
+    cActions:B -- T:hf
+    line:B -- T:proxy
+    cActions:B -- T:resend

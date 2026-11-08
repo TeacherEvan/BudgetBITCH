@@ -1,0 +1,26 @@
+flowchart LR
+    accTitle: Research Findings & Risk Radar
+    accDescr: Visual matrix of discovered vulnerabilities, integration defects, and architectural bottlenecks ranked by CVSS v4.0, EPSS, and operational severity.
+
+    subgraph Critical["P0: Critical Security & Data Loss Risks"]
+        C1["Broken getAuthUserId in convex/line.ts\nidentity.subject returns user|session\nSchema validation rejects linkLineAccount"]
+        C2["localWrites Tombstone Poisoning\nCross-account write timestamps not isolated\nEmits false LWW deletes across accounts"]
+    end
+
+    subgraph High["P1: High Impact Operational Defects"]
+        H1["100x Receipt Amount Inflation\nscrapeBot stores minor units directly without /100"]
+        H2["Unprotected External AI & Bot Fetches\nNo AbortSignal.timeout on Gemini, HF, LINE"]
+        H3["Unauthenticated Invite Code Enumeration\nresolveInviteCode has zero auth verification"]
+        H4["Broken Telemetry Zod Catchall\n.catchall(Field) rejects primitive extra fields"]
+        H5["Silent CI Security Audit Bypass\nRetry loop ends with sleep 10 exiting 0"]
+    end
+
+    subgraph Medium["P2: Medium Performance & Standards Gaps"]
+        M1["Eager Dashboard Panel Bundling\nAll 11 panels and Lottie JSONs statically imported"]
+        M2["WCAG 2.2 SC 2.4.7 Focus Visibility\nInput & Select have 0px focus rings (outline-none)"]
+        M3["Off-screen Sheet Focus Leak\nHidden mobile sheet elements in tab order"]
+        M4["Capacitor Production Debugging\ncleartext & webContentsDebuggingEnabled hardcoded"]
+    end
+
+    Critical --> High
+    High --> Medium

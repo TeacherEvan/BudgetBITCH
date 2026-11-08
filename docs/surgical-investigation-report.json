@@ -1,0 +1,55 @@
+{
+  "project": "Budget Boss (BudgetBITCH)",
+  "timestamp": "2026-11-08T11:53:00Z",
+  "mode": "investigator-escalated",
+  "strategy": "full-sweep",
+  "scores": {
+    "overallQualityScore": 75.8,
+    "potentialQualityScore": 96.1,
+    "breakdown": {
+      "integrationPractices": { "current": 70, "potential": 96 },
+      "securityAndAuthz": { "current": 74, "potential": 97 },
+      "dependenciesAndHygiene": { "current": 75, "potential": 96 },
+      "performanceAndOptimality": { "current": 78, "potential": 94 },
+      "accessibilityWcag22": { "current": 76, "potential": 95 },
+      "testingAndCiGates": { "current": 88, "potential": 99 }
+    }
+  },
+  "mission": {
+    "stated": "Cinematic, privacy-first budgeting PWA built on Next.js 16, Convex, and local-first IndexedDB sync with receipt scanning and couple board sharing.",
+    "actual": "High-velocity hybrid Next.js 16 App Router + Convex + IndexedDB system with offline PWA features and Capacitor mobile support.",
+    "gap": "Stated docs cite React 18 / ESLint 9 / Vitest 4 whereas codebase has migrated to React 19.2.8 / ESLint 10.8 / Vitest 5.0. Stated un-routed NextAuth scaffold is partially removed but leaves @auth/core in manifests. Cross-account LWW timestamp sharing introduces a silent tombstone poisoning vector."
+  },
+  "dependencies": [
+    { "name": "convex", "version": "1.46.0", "latest": "1.49.0", "status": "outdated", "tier": 1 },
+    { "name": "react", "version": "19.2.8", "latest": "19.3.1", "status": "stable", "tier": 1 },
+    { "name": "next", "version": "16.3.1", "latest": "16.3.1", "status": "current", "tier": 1 },
+    { "name": "minimatch", "version": "9.0.5", "latest": "11.0.1", "status": "moderate-cve-override-needed", "tier": 2 }
+  ],
+  "recommendations": [
+    {
+      "id": "REC-001",
+      "priority": "high",
+      "title": "Bulk Expense Export & Tax Deduction Endpoint",
+      "endpoint": "POST /api/v1/export/tax-summary",
+      "effort": "2 days",
+      "source": "[Tier 1: Next.js Route Handlers & Zod 4]"
+    },
+    {
+      "id": "REC-002",
+      "priority": "medium",
+      "title": "Real-time Multi-Board Presence & Live Sync Outline",
+      "endpoint": "@convex-dev/presence component integration",
+      "effort": "3 days",
+      "source": "[Tier 1: Convex Component Ecosystem]"
+    },
+    {
+      "id": "REC-003",
+      "priority": "high",
+      "title": "Client-Side OCR Adaptive Precompression Pipeline",
+      "endpoint": "src/lib/receipt/preprocess.ts",
+      "effort": "1 day",
+      "source": "[Tier 2: Tesseract.js / Canvas Image Compression Standards]"
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+flowchart TD
+    accTitle: Budget Boss Frontend Architecture & Sync Topology
+    accDescr: Data flow between Next.js React 19 UI components, Zustand/React hooks, local-first IndexedDB stores, and background sync engines.
+
+    subgraph UI["Presentation Layer (React 19 Server/Client Components)"]
+        RootGate["Root Gate (src/app/page.tsx)"]
+        DashShell["Dashboard Shell (Bento Grid)"]
+        QuickAdd["Quick Add PWA Widget (/quick-add)"]
+        SettingsView["Settings & Diagnostics Modal"]
+    end
+
+    subgraph StateAndHooks["State & Sync Orchestration Hooks"]
+        useLocalDb["useLocalDb (IndexedDB Reactive State)"]
+        useAccountSync["useAccountSync (LWW Board Sync)"]
+        useReceiptScan["useReceiptScan (OCR & Parser Engine)"]
+        useSharedBoard["useSharedBoard (Couple Sync)"]
+    end
+
+    subgraph LocalStorage["Local-First Storage Engine"]
+        IDBStores[("IndexedDB: 8 User Stores\nexpenses, incomes, budgets, bills...")]
+        LocalWritesStore[("IndexedDB: localWrites Store\nPer-key LWW Timestamps")]
+        AccountsData[("IndexedDB: accountsData Store\nStashed Board Snapshots")]
+        SyncQueueStore[("IndexedDB: syncQueue Store\nOffline Cloud Uploads")]
+    end
+
+    subgraph NetworkWorkers["Background Sync & Networking"]
+        SW["Service Worker (public/sw.js)"]
+        ConvexWS["Convex WebSocket Realtime Sync"]
+    end
+
+    RootGate --> DashShell
+    DashShell --> useLocalDb
+    DashShell --> useAccountSync
+    QuickAdd --> useReceiptScan
+    SettingsView --> useLocalDb
+
+    useLocalDb <--> IDBStores
+    useLocalDb --> LocalWritesStore
+    useAccountSync --> LocalWritesStore
+    useAccountSync <--> AccountsData
+    useAccountSync <--> ConvexWS
+    useReceiptScan <--> IDBStores
+
+    IDBStores --> SyncQueueStore
+    SyncQueueStore --> SW
+    SW --> ConvexWS

@@ -1,0 +1,40 @@
+flowchart TD
+    accTitle: Budget Boss Full Project Topology
+    accDescr: End-to-end architecture encompassing mobile apps, PWA clients, CDN, Convex cloud backend, AI services, and external financial pipelines.
+
+    subgraph MobileAndPWA["Client Layer"]
+        CapacitorApp["Capacitor Native App (Android / iOS)"]
+        PWABrowser["PWA Mobile & Desktop Web"]
+    end
+
+    subgraph EdgeLayer["Edge / Routing Layer (Vercel)"]
+        EdgeCDN["Vercel Global Edge Network (CSP, COOP, HSTS)"]
+        NextProxy["Next.js Server Handlers\n/api/news, /api/telemetry, /api/legal"]
+    end
+
+    subgraph BackendLayer["Convex Cloud Platform (steady-ox-280)"]
+        AuthSystem["Convex Auth (Password + Resend Email)"]
+        DatabaseEngine["Convex Realtime Database (14 tables)"]
+        JobScheduler["Convex Crons & Workflows"]
+        ActionCluster["V8 & Node.js Action Cluster"]
+    end
+
+    subgraph ExternalEcosystem["External Services & APIs"]
+        GeminiVision["Gemini 2.5 Flash Vision API"]
+        TeacherBot["TeacherBOY HuggingFace Space"]
+        LinePlatform["LINE Messaging Platform Webhooks"]
+        Frankfurter["Frankfurter Currency Rates API"]
+        RSSFeeds["Regional Financial RSS Providers"]
+    end
+
+    MobileAndPWA --> EdgeCDN
+    EdgeCDN --> NextProxy
+    MobileAndPWA <--> DatabaseEngine
+    MobileAndPWA --> AuthSystem
+
+    NextProxy --> RSSFeeds
+    ActionCluster --> GeminiVision
+    ActionCluster --> TeacherBot
+    LinePlatform --> ActionCluster
+    NextProxy --> Frankfurter
+    JobScheduler --> DatabaseEngine
