@@ -148,6 +148,41 @@ export function useQuickAddState(): QuickAddState {
   const [scannedTax, setScannedTax] = useState('');
   const [scannedLineItems, setScannedLineItems] = useState<ReceiptLineItem[] | undefined>(undefined);
 
+  // Dirty guards: track which scanned fields the user has edited so the
+  // bot-draft effect never clobbers them on realtime ticks.
+  const dirtyFields = useRef<Set<string>>(new Set());
+  const isSaving = useRef(false);
+
+  // Wrapper setters that mark fields as dirty when user edits them
+  const setScannedAmountDirty = (v: string) => {
+    dirtyFields.current.add('scannedAmount');
+    setScannedAmount(v);
+  };
+  const setScannedMerchantDirty = (v: string) => {
+    dirtyFields.current.add('scannedMerchant');
+    setScannedMerchant(v);
+  };
+  const setScannedCategoryDirty = (v: ExpenseCategory) => {
+    dirtyFields.current.add('scannedCategory');
+    setScannedCategory(v);
+  };
+  const setScannedDateDirty = (v: string) => {
+    dirtyFields.current.add('scannedDate');
+    setScannedDate(v);
+  };
+  const setScannedTaxDirty = (v: string) => {
+    dirtyFields.current.add('scannedTax');
+    setScannedTax(v);
+  };
+  const setScannedLineItemsDirty = (v: ReceiptLineItem[] | undefined) => {
+    dirtyFields.current.add('scannedLineItems');
+    setScannedLineItems(v);
+  };
+  const setInputTextDirty = (v: string) => {
+    dirtyFields.current.add('inputText');
+    setInputText(v);
+  };
+
   // Permission & SMS Modal States
   const [showPermModal, setShowPermModal] = useState(false);
   const [showSmsModal, setShowSmsModal] = useState(false);
@@ -200,10 +235,20 @@ export function useQuickAddState(): QuickAddState {
       // Receipt engine already returns a valid category; use it directly for the
       // scanned review select (don't run the SMS mapCategory, which can emit
       // values like 'phone_internet' that aren't in the select list).
-      setScannedAmount(amtVal > 0 ? String(amtVal) : '');
-      setScannedMerchant(merchVal);
-      setScannedCategory((catVal as ExpenseCategory) ?? 'other');
-      setScannedDate(dateVal);
+      // Dirty guard: only populate if user hasn't edited the field
+      const isDirty = dirtyFields.current;
+      if (!isDirty.has('scannedAmount')) {
+        setScannedAmount(amtVal > 0 ? String(amtVal) : '');
+      }
+      if (!isDirty.has('scannedMerchant')) {
+        setScannedMerchant(merchVal);
+      }
+      if (!isDirty.has('scannedCategory')) {
+        setScannedCategory((catVal as ExpenseCategory) ?? 'other');
+      }
+      if (!isDirty.has('scannedDate')) {
+        setScannedDate(dateVal);
+      }
 
       // Carry the engine's itemization into the review card. The bot-ingest
       // path below does the same; without this a CAMERA scan silently lost its
@@ -219,12 +264,16 @@ export function useQuickAddState(): QuickAddState {
           ? { unitPrice: Math.round((Number(li.unitPrice) || 0) * 100) / 100 }
           : {}),
       }));
-      setScannedLineItems(mappedItems.length > 0 ? mappedItems : undefined);
+      if (!isDirty.has('scannedLineItems')) {
+        setScannedLineItems(mappedItems.length > 0 ? mappedItems : undefined);
+      }
 
       // Pre-fill the combined amount+merchant input so the user can still edit
       // the free-text field if they prefer that path.
       const prefill = [amtVal > 0 ? String(amtVal) : '', merchVal].filter(Boolean).join(' ').trim();
-      setInputText(prefill);
+      if (!isDirty.has('inputText')) {
+        setInputText(prefill);
+      }
 
       if (amtVal > 0 || merchVal) {
         setToast({
@@ -246,6 +295,7 @@ export function useQuickAddState(): QuickAddState {
   // writes drafts to Convex; load the latest pending one and fill the scanned
   // review fields so the scraped amount/merchant are visible and editable.
   // Skips if the user scanned a receipt in this session (local `draft` wins).
+  // Dirty guard: never overwrite fields the user has edited.
   useEffect(() => {
     if (draft) return; // session scan takes precedence
     const bot = botDrafts?.receipts?.[0];
@@ -253,39 +303,68 @@ export function useQuickAddState(): QuickAddState {
       if (botDraftId) setBotDraftId(null);
       return;
     }
-    setIsExpense(true);
-    setEntrySource('receipt');
-    setBotDraftId(bot._id as Id<'receipts'>);
-    setScannedAmount(bot.amount ? String(bot.amount) : '');
-    setScannedMerchant(String(bot.merchant ?? ''));
-    setScannedCategory((bot.category as ExpenseCategory) ?? 'other');
-    setScannedLineItems(
-      Array.isArray(bot.lineItems)
-        ? (bot.lineItems as Array<{ description?: string; amount?: number }>).map((li) => ({
-            description: String(li.description ?? ''),
-            amount: Math.round((Number(li.amount) || 0) * 100) / 100,
-            category: mapCategory(li.description),
-          }))
-        : undefined,
-    );
-    setScannedDate(
-      bot.date
-        ? String(bot.date)
-        : new Date(bot._creationTime ?? Date.now()).toISOString().split('T')[0],
-    );
-    if (bot.amount) {
+
+    // Only set botDraftId if it's a new draft (different _id)
+    if (botDraftId !== bot._id) {
+      setBotDraftId(bot._id as Id<'receipts'>);
+    }
+
+    // Populate fields only if user hasn't edited them (dirty guard)
+    const isDirty = dirtyFields.current;
+
+    if (!isDirty.has('scannedAmount')) {
+      setScannedAmount(bot.amount ? String(bot.amount) : '');
+    }
+    if (!isDirty.has('scannedMerchant')) {
+      setScannedMerchant(String(bot.merchant ?? ''));
+    }
+    if (!isDirty.has('scannedCategory')) {
+      setScannedCategory((bot.category as ExpenseCategory) ?? 'other');
+    }
+    if (!isDirty.has('scannedLineItems')) {
+      setScannedLineItems(
+        Array.isArray(bot.lineItems)
+          ? (bot.lineItems as Array<{ description?: string; amount?: number }>).map((li) => ({
+              description: String(li.description ?? ''),
+              amount: Math.round((Number(li.amount) || 0) * 100) / 100,
+              category: mapCategory(li.description),
+            }))
+          : undefined,
+      );
+    }
+    if (!isDirty.has('scannedDate')) {
+      setScannedDate(
+        bot.date
+          ? String(bot.date)
+          : new Date(bot._creationTime ?? Date.now()).toISOString().split('T')[0],
+      );
+    }
+    if (bot.amount && !isDirty.has('inputText')) {
       setInputText(`${bot.amount} ${bot.merchant ?? ''}`.trim());
     }
-  }, [draft, botDrafts, botDraftId]);
+
+    setIsExpense(true);
+    setEntrySource('receipt');
+    // Intentionally omit botDraftId: it is derived from bot._id inside,
+    // and adding it would re-trigger the effect on every realtime tick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft, botDrafts]);
 
   // Persist the reviewed receipt fields. We fill the shared form state and reuse
   // the manual Save path so there is exactly one write into the expense store.
+  // FIX: confirm-then-local-add with re-entry guard to prevent duplicate writes
+  // on double-click or retry-after-failure.
   const handleSaveScannedReceipt = async () => {
     const amtVal = parseFloat(scannedAmount);
     if (!Number.isFinite(amtVal) || amtVal <= 0) {
       setToast({ show: true, message: 'Please enter a valid amount', type: 'error' });
       return;
     }
+    
+    // Re-entry guard: prevent double-save on rapid clicks
+    if (isSaving.current) return;
+    isSaving.current = true;
+    
     try {
       setLoading(true);
       const date = scannedDate || new Date().toISOString().split('T')[0];
@@ -293,33 +372,50 @@ export function useQuickAddState(): QuickAddState {
       // Only persist an itemization that reconciles with the reviewed total —
       // a half-parsed item set would misreport per-category spend downstream.
       const trustedItems = reconcileLineItems(scannedLineItems, roundedAmount);
-      await addExpense({
-        amount: roundedAmount,
-        merchant: scannedMerchant.trim() || 'Photo Receipt',
-        category: scannedCategory,
-        date,
-        source: 'receipt',
-        note: 'Scanned receipt photo',
-        lineItems: trustedItems,
-        tax: scannedTax ? parseFloat(scannedTax) || undefined : undefined,
-      });
+      
+      // FIX: Confirm bot draft FIRST, then add local expense
+      // This ensures atomicity: if confirm fails, we don't create a local expense
+      // that would become a duplicate on retry.
       if (botDraftId) {
         // Confirm the bot-ingested Convex draft (idempotent; flips status to
         // confirmed and stores the reviewed overrides).
         await confirmBotDraft({
           draftId: botDraftId,
           overrides: {
-            amount: Math.round(amtVal * 100) / 100,
+            amount: roundedAmount,
             merchant: scannedMerchant.trim() || 'Photo Receipt',
             category: scannedCategory,
             date,
           },
         });
+        // Only add local expense AFTER successful confirm
+        await addExpense({
+          amount: roundedAmount,
+          merchant: scannedMerchant.trim() || 'Photo Receipt',
+          category: scannedCategory,
+          date,
+          source: 'receipt',
+          note: 'Scanned receipt photo',
+          lineItems: trustedItems,
+          tax: scannedTax ? parseFloat(scannedTax) || undefined : undefined,
+        });
         setBotDraftId(null);
       } else {
-        // Session scan path: reuse the hook's confirm (skips the duplicate add).
+        // Session scan path: confirm first, then local add (skipLocalAdd
+        // means confirmDraft will not write the local expense itself).
         await confirmDraft(undefined, { skipLocalAdd: true });
+        await addExpense({
+          amount: roundedAmount,
+          merchant: scannedMerchant.trim() || 'Photo Receipt',
+          category: scannedCategory,
+          date,
+          source: 'receipt',
+          note: 'Scanned receipt photo',
+          lineItems: trustedItems,
+          tax: scannedTax ? parseFloat(scannedTax) || undefined : undefined,
+        });
       }
+      
       setToast({
         show: true,
         message: `📸 Saved receipt: ${amtVal} @ ${scannedMerchant || 'Photo Receipt'}`,
@@ -333,6 +429,8 @@ export function useQuickAddState(): QuickAddState {
       setInputText('');
       setDetectedCategory('other');
       setEntrySource('manual');
+      // Clear dirty fields on successful save
+      dirtyFields.current.clear();
     } catch (err) {
       console.error('Failed to save scanned receipt:', err);
       setToast({
@@ -340,17 +438,21 @@ export function useQuickAddState(): QuickAddState {
         message: `Failed to save: ${err instanceof Error ? err.message : String(err)}`,
         type: 'error',
       });
+      // On confirm failure, botDraftId is preserved so user can retry
     } finally {
       setLoading(false);
+      isSaving.current = false;
     }
   };
 
   // Update one editable line item in the scanned receipt review card.
+  // Marks line items dirty so realtime bot/session drafts can't clobber edits.
   const updateScannedLineItem = (
     idx: number,
     field: 'description' | 'amount' | 'qty',
     value: string | number | undefined,
   ) => {
+    dirtyFields.current.add('scannedLineItems');
     setScannedLineItems((prev) => prev?.map((item, i) => (i === idx ? { ...item, [field]: value } : item)));
   };
 
@@ -723,24 +825,24 @@ export function useQuickAddState(): QuickAddState {
     isExpense,
     setIsExpense,
     inputText,
-    setInputText,
+    setInputText: setInputTextDirty,
     loading,
     detectedCategory,
     setDetectedCategory,
     entrySource,
     setEntrySource,
     scannedAmount,
-    setScannedAmount,
+    setScannedAmount: setScannedAmountDirty,
     scannedMerchant,
-    setScannedMerchant,
+    setScannedMerchant: setScannedMerchantDirty,
     scannedCategory,
-    setScannedCategory,
+    setScannedCategory: setScannedCategoryDirty,
     scannedDate,
-    setScannedDate,
+    setScannedDate: setScannedDateDirty,
     scannedTax,
-    setScannedTax,
+    setScannedTax: setScannedTaxDirty,
     scannedLineItems,
-    setScannedLineItems,
+    setScannedLineItems: setScannedLineItemsDirty,
     repeatCandidate,
     incomeCategory,
     setIncomeCategory,

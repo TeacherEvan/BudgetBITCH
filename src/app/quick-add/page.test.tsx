@@ -95,11 +95,27 @@ vi.mock('next-intl', () => ({
 
 // Mock Convex
 const mockProxyScan = vi.fn();
-const mockConvexMutation = vi.fn();
+const mockConfirmBotDraft = vi.fn();
+
+// Mock botDrafts query - we control this per test
+let mockBotDraftsValue: { receipts: Array<{
+  _id: string;
+  _creationTime: number;
+  amount: number;
+  merchant: string;
+  category: string;
+  date?: string;
+  lineItems?: Array<{ description?: string; amount?: number }>;
+}> } | undefined = { receipts: [] };
+
 vi.mock('convex/react', () => ({
   useAction: () => mockProxyScan,
-  useMutation: () => mockConvexMutation,
-  useQuery: () => undefined,
+  // api.* refs are objects (not strings), so route the single useMutation
+  // call in this component tree (confirmBotDraft) to the confirm mock.
+  useMutation: () => mockConfirmBotDraft,
+  // The only useQuery in this tree (useReceiptScan is itself mocked) is
+  // the bot-draft list, so always return the controllable value.
+  useQuery: () => mockBotDraftsValue,
   ConvexReactClient: vi.fn(),
 }));
 
@@ -134,6 +150,7 @@ describe('QuickAddPage', () => {
     localStorage.clear();
     mockDraft = null;
     mockExpenses = [];
+    mockBotDraftsValue = { receipts: [] };
   });
 
   it('renders quick add components correctly', () => {
@@ -302,6 +319,11 @@ describe('QuickAddPage', () => {
     };
 
     render(<QuickAddPage />);
+
+    // Wait for the scanned receipt card to appear
+    await waitFor(() => {
+      expect(screen.getByTestId('scanned-receipt-card')).toBeInTheDocument();
+    });
 
     const saveBtn = await screen.findByTestId('save-scanned-receipt-btn');
     fireEvent.click(saveBtn);
@@ -559,5 +581,103 @@ describe('QuickAddPage', () => {
         { description: 'movie ticket', amount: 50, category: 'entertainment' },
       ]);
     });
+  });
+
+  // ============================================
+  // NEW TESTS FOR TASK 6: Bot-draft race fixes
+  // ============================================
+
+  it('edit-then-realtime-update preserves user edits to scanned fields (dirty guard)', async () => {
+    // Set up a bot draft from LINE/TeacherBOY
+    mockBotDraftsValue = {
+      receipts: [{
+        _id: 'bot-draft-1',
+        _creationTime: Date.now(),
+        amount: 250,
+        merchant: 'Original Merchant',
+        category: 'food',
+        date: '2026-11-08',
+        lineItems: [],
+      }]
+    };
+
+    const { rerender } = render(<QuickAddPage />);
+
+    // Wait for bot draft to populate fields
+    await waitFor(() => {
+      expect(screen.getByTestId('scanned-receipt-card')).toBeInTheDocument();
+    });
+
+    const amountInput = (await screen.findByTestId('scanned-amount-input')) as HTMLInputElement;
+    const merchantInput = (await screen.findByTestId('scanned-merchant-input')) as HTMLInputElement;
+
+    // User edits the scanned fields
+    fireEvent.change(amountInput, { target: { value: '99.99' } });
+    fireEvent.change(merchantInput, { target: { value: 'User Edited Merchant' } });
+
+    // Simulate a realtime update (botDrafts query returns new data with same _id)
+    mockBotDraftsValue = {
+      receipts: [{
+        _id: 'bot-draft-1',
+        _creationTime: Date.now() + 1000, // newer timestamp
+        amount: 300,
+        merchant: 'Updated Bot Merchant',
+        category: 'transport',
+        date: '2026-11-08',
+        lineItems: [],
+      }]
+    };
+
+    // Re-render to pick up the updated bot draft data
+    // The hook should NOT overwrite user's edits because they're dirty
+    rerender(<QuickAddPage />);
+
+    await waitFor(() => {
+      // The user's edited values should persist
+      expect(amountInput.value).toBe('99.99');
+      expect(merchantInput.value).toBe('User Edited Merchant');
+    });
+  });
+
+  it('double-click Save writes once (confirm-then-local-add with re-entry guard)', async () => {
+    // Set up a bot draft
+    mockBotDraftsValue = {
+      receipts: [{
+        _id: 'bot-draft-2',
+        _creationTime: Date.now(),
+        amount: 150,
+        merchant: 'Double Click Test',
+        category: 'food',
+        date: '2026-11-08',
+        lineItems: [],
+      }]
+    };
+
+    render(<QuickAddPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('scanned-receipt-card')).toBeInTheDocument();
+    });
+
+    const saveBtn = screen.getByTestId('save-scanned-receipt-btn');
+    
+    // Double-click the save button rapidly
+    fireEvent.click(saveBtn);
+    fireEvent.click(saveBtn);
+
+    // Wait for all async operations to complete
+    await waitFor(() => {
+      // addExpense should be called exactly ONCE
+      expect(mockAddExpense).toHaveBeenCalledTimes(1);
+    });
+
+    // confirmBotDraft should also be called exactly ONCE
+    await waitFor(() => {
+      expect(mockConfirmBotDraft).toHaveBeenCalledTimes(1);
+    });
+
+    // Verify the order: confirmBotDraft should complete before addExpense
+    // Actually the fix is confirm-then-local-add, so confirmBotDraft should be called first
+    // But due to async, we check the call counts
   });
 });
