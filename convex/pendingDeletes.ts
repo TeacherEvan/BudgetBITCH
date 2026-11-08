@@ -13,8 +13,10 @@
 
 import { v, ConvexError } from "convex/values";
 import { mutation, query, MutationCtx, QueryCtx } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { Doc, Id } from "./_generated/dataModel";
+import { notifyPartner } from "./lib/notify";
 
 type BoardMemberRef =
   | { kind: "couple"; board: Doc<"sharedBoards"> }
@@ -95,26 +97,6 @@ async function applyDeleteToBoard(
       updatedBy: byUserId,
     });
   }
-}
-
-// Internal notify helper (kept inline to avoid a node-action import cycle in tests).
-async function notifyPartner(
-  ctx: MutationCtx,
-  _boardId: string,
-  toUserId: Id<"users">,
-  title: string,
-  body: string,
-) {
-  // Best-effort push: fire-and-forget so a missing VAPID config never blocks the
-  // request. We call the internal push list + send via a scheduled action if
-  // available; here we simply record intent by invoking push._listForUser and
-  // dispatching. To avoid pulling web-push into a non-node mutation, the actual
-  // network send is done by the client-side subscription path; the server still
-  // persists the request which the partner polls.
-  void ctx;
-  void toUserId;
-  void title;
-  void body;
 }
 
 /** Request deletion of an item on a shared board. Creates a pending record. */
