@@ -233,6 +233,15 @@ export const pushBoard = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new ConvexError("Authentication required");
 
+    const board = await ctx.db
+      .query("sharedBoards")
+      .withIndex("by_boardId", (q) => q.eq("boardId", args.boardId))
+      .unique();
+    if (!board) throw new ConvexError("Board not found");
+    if (board.memberA !== userId && board.memberB !== userId) {
+      throw new ConvexError("Not a member of this board");
+    }
+
     // Manual validation for record values (v.record may not enforce in test env)
     const data = args.data as Record<string, { value: unknown; updatedAt: unknown; deleted?: boolean }>;
     for (const [key, rec] of Object.entries(data ?? {})) {
@@ -242,15 +251,6 @@ export const pushBoard = mutation({
       if (typeof rec.updatedAt !== "number") {
         throw new ConvexError(`Invalid record for key ${key}: updatedAt must be a number`);
       }
-    }
-
-    const board = await ctx.db
-      .query("sharedBoards")
-      .withIndex("by_boardId", (q) => q.eq("boardId", args.boardId))
-      .unique();
-    if (!board) throw new ConvexError("Board not found");
-    if (board.memberA !== userId && board.memberB !== userId) {
-      throw new ConvexError("Not a member of this board");
     }
 
     // Clamp client timestamp to now + 60s to prevent clock skew attacks
