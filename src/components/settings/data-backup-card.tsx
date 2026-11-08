@@ -219,7 +219,7 @@ export function DataBackupCard({
         payload.data = encrypted.ciphertext;
         payload.cryptoSalt = encrypted.salt;
         payload.cryptoIv = encrypted.iv;
-        payload.cryptoIterations = encrypted.iterations;
+        (payload as Record<string, unknown>).cryptoIterations = encrypted.iterations;
         payload.isEncrypted = true;
       }
 

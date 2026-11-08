@@ -184,7 +184,9 @@ async function destroyBoard(
  */
 export const purgeMyAccountData = mutation({
   args: {},
-  handler: async (ctx): Promise<{ success: boolean; counts: PurgeCounts }> => {
+  handler: async (
+    ctx,
+  ): Promise<{ success: boolean; counts: PurgeCounts; continuation?: boolean }> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new ConvexError("Authentication required");

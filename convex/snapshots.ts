@@ -250,7 +250,7 @@ export const deleteAllUserSnapshots = mutation({
  * daily snapshots (≤500), then re-schedules itself while rows remain.
  */
 export const deleteSnapshotsChunk = internalMutation({
-  args: { userId: v.string() },
+  args: { userId: v.id("users") },
   handler: async (ctx, args) => {
     const batch = await ctx.db
       .query("dailySnapshots")

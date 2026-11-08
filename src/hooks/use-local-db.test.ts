@@ -172,16 +172,16 @@ describe('use-local-db hooks', () => {
     // First call slow; second call (event reload) resolves fast with fresh data.
     vi.mocked(getAllBudgets)
       .mockImplementationOnce(
-        () => new Promise((res) => setTimeout(() => res([{ category: 'stale', monthlyLimit: 1, alertAtPct: 80 }]), 60)),
+        () => new Promise((res) => setTimeout(() => res([{ category: 'other', monthlyLimit: 1, alertAtPct: 80 }]), 60)),
       )
-      .mockResolvedValueOnce([{ category: 'fresh', monthlyLimit: 2, alertAtPct: 80 }]);
+      .mockResolvedValueOnce([{ category: 'food', monthlyLimit: 2, alertAtPct: 80 }]);
     const { result } = renderHook(() => useBudgets());
     // Fresh event load starts before the slow one resolves.
     await act(async () => {
       window.dispatchEvent(new Event(BOARD_CHANGED_EVENT));
       await new Promise((r) => setTimeout(r, 90));
     });
-    await waitFor(() => expect(result.current.budgets[0]?.category).toBe('fresh'));
+    await waitFor(() => expect(result.current.budgets[0]?.category).toBe('food'));
     expect(result.current.error).toBeNull();
   });
 
