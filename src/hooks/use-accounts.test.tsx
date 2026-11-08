@@ -181,4 +181,15 @@ describe('useAccounts', () => {
     expect(joinMeta).toBeDefined();
     expect(joinMeta?.boardId).toBe('board-join');
   });
+
+  it('renders personal board even when Convex server query is undefined (offline/local mode)', async () => {
+    // Simulate Convex not yet resolved / skipped: ready must still flip true
+    // after local hydration so /accounts never hangs on "Loading…".
+    listMyAccounts.mockReturnValue(undefined);
+    let api!: ReturnType<typeof useAccounts>;
+    render(<HookProbe onReady={(a) => (api = a)} />);
+    await waitFor(() => expect(api?.ready).toBe(true));
+    await waitFor(() => expect(api?.accounts.length).toBeGreaterThan(0));
+    expect(api.accounts.map((a) => a.accountId)).toContain('personal');
+  });
 });

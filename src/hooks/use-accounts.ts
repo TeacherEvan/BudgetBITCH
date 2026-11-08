@@ -103,28 +103,74 @@ export function useAccounts(): UseAccounts {
   const refresh = useCallback(() => setNonce((n) => n + 1), []);
 
   // Hydrate local listing + current selection (seeds personal if absent).
+  // Seeds `accounts` from localStorage IMMEDIATELY so /accounts renders the
+  // personal board without waiting for Convex. The server merge below enriches
+  // it once `listMyAccounts` resolves — decoupling `ready` from the network
+  // prevents the page from hanging on "Loading…" forever when Convex is
+  // slow, unreachable, or the user is in local/offline mode.
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [local, current] = await Promise.all([
-        getLocalAccounts(),
-        getCurrentAccountId(),
-      ]);
-      if (cancelled) return;
-      setCurrentAccountId(current);
-      const hasPersonal = local.find((a) => a.accountId === PERSONAL_ACCOUNT_ID);
-      if (!hasPersonal) {
-        const personal: LocalAccountMeta = {
+      try {
+        const [local, current] = await Promise.all([
+          getLocalAccounts(),
+          getCurrentAccountId(),
+        ]);
+        if (cancelled) return;
+        setCurrentAccountId(current);
+        const hasPersonal = local.find((a) => a.accountId === PERSONAL_ACCOUNT_ID);
+        if (!hasPersonal) {
+          const personal: LocalAccountMeta = {
+            accountId: PERSONAL_ACCOUNT_ID,
+            umbrella: "personal",
+            name: "Personal",
+            boardId: null,
+            inviteCode: null,
+            role: "owner",
+          };
+          await saveLocalAccount({ ...personal, hasLocalData: true });
+          local.push(personal);
+        }
+        // Seed AccountsView immediately from local cache. Only fill when empty
+        // so a later server-merge isn't overwritten by a stale local read.
+        setAccounts((prev) => {
+          if (prev.length > 0) return prev;
+          const mapped: AccountView[] = local.map((l) => ({
+            ...l,
+            hasLocalData: l.hasLocalData ?? true,
+            memberCount: 1,
+          }));
+          if (mapped.length === 0) {
+            return [{
+              accountId: PERSONAL_ACCOUNT_ID,
+              umbrella: "personal",
+              name: "Personal",
+              boardId: null,
+              inviteCode: null,
+              role: "owner",
+              hasLocalData: true,
+              memberCount: 1,
+            }];
+          }
+          return mapped;
+        });
+      } catch (err) {
+        if (cancelled) return;
+        console.error("[useAccounts] local hydration failed:", err);
+        // Fallback to personal board so the UI is never blank.
+        setAccounts((prev) => prev.length > 0 ? prev : [{
           accountId: PERSONAL_ACCOUNT_ID,
           umbrella: "personal",
           name: "Personal",
           boardId: null,
           inviteCode: null,
           role: "owner",
-        };
-        await saveLocalAccount({ ...personal, hasLocalData: true });
+          hasLocalData: true,
+          memberCount: 1,
+        }]);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      setLoading(false);
     })();
     return () => {
       cancelled = true;
@@ -134,60 +180,70 @@ export function useAccounts(): UseAccounts {
 
   // Merge server accounts into the local listing view.
   useEffect(() => {
-    // useQuery returns `undefined` ("skip") or `null` (still loading) before
+    // useQuery returns `undefined` ("skip"/loading) or `null` (loading) before
     // data resolves — neither is iterable. Guard both so the effect degrades
-    // gracefully instead of throwing an unhandled rejection.
+    // gracefully instead of throwing an unhandled rejection. Returning early
+    // keeps the locally-hydrated list visible; a Convex failure surfaces as a
+    // stale-but-usable list instead of a blank page.
     if (server === undefined || server === null) return;
+    let cancelled = false;
     (async () => {
-      const local = await getLocalAccounts();
-      if (!local.find((a) => a.accountId === PERSONAL_ACCOUNT_ID)) {
-        const personal: LocalAccountMeta = {
-          accountId: PERSONAL_ACCOUNT_ID,
-          umbrella: "personal",
-          name: "Personal",
-          boardId: null,
-          inviteCode: null,
-          role: "owner",
-        };
-        await saveLocalAccount({ ...personal, hasLocalData: true });
-        local.push(personal);
-      }
-      const merged: AccountView[] = [];
-      const seen = new Set<string>();
-      for (const s of server as ServerAccount[]) {
-        seen.add(s.accountId);
-        const existing = local.find((l) => l.accountId === s.accountId);
-        const serverMeta: LocalAccountMeta = {
-          accountId: s.accountId,
-          umbrella: s.umbrella as LocalAccountMeta["umbrella"],
-          name: s.name,
-          boardId: s.boardId,
-          inviteCode: s.inviteCode ?? null,
-          role: s.role,
-          hasLocalData: existing?.hasLocalData ?? s.role === "member",
-        };
-        if (!existing || existing.boardId !== s.boardId || existing.name !== s.name || existing.role !== s.role) {
-          await saveLocalAccount(serverMeta);
+      try {
+        const local = await getLocalAccounts();
+        if (!local.find((a) => a.accountId === PERSONAL_ACCOUNT_ID)) {
+          const personal: LocalAccountMeta = {
+            accountId: PERSONAL_ACCOUNT_ID,
+            umbrella: "personal",
+            name: "Personal",
+            boardId: null,
+            inviteCode: null,
+            role: "owner",
+          };
+          await saveLocalAccount({ ...personal, hasLocalData: true });
+          local.push(personal);
         }
-        merged.push({
-          ...serverMeta,
-          hasLocalData: existing?.hasLocalData ?? s.role === "member",
-          memberCount: s.memberCount ?? 1,
-          isLegacyCouple: s.umbrella === "couple" && !existing,
-          displayName: s.displayName,
-          memberDisplayNames: s.memberDisplayNames,
-        });
+        const merged: AccountView[] = [];
+        const seen = new Set<string>();
+        for (const s of server as ServerAccount[]) {
+          seen.add(s.accountId);
+          const existing = local.find((l) => l.accountId === s.accountId);
+          const serverMeta: LocalAccountMeta = {
+            accountId: s.accountId,
+            umbrella: s.umbrella as LocalAccountMeta["umbrella"],
+            name: s.name,
+            boardId: s.boardId,
+            inviteCode: s.inviteCode ?? null,
+            role: s.role,
+            hasLocalData: existing?.hasLocalData ?? s.role === "member",
+          };
+          if (!existing || existing.boardId !== s.boardId || existing.name !== s.name || existing.role !== s.role) {
+            await saveLocalAccount(serverMeta);
+          }
+          merged.push({
+            ...serverMeta,
+            hasLocalData: existing?.hasLocalData ?? s.role === "member",
+            memberCount: s.memberCount ?? 1,
+            isLegacyCouple: s.umbrella === "couple" && !existing,
+            displayName: s.displayName,
+            memberDisplayNames: s.memberDisplayNames,
+          });
+        }
+        const personal = local.find((l) => l.accountId === PERSONAL_ACCOUNT_ID);
+        if (personal && !seen.has(PERSONAL_ACCOUNT_ID)) {
+          merged.push({
+            ...personal,
+            hasLocalData: personal.hasLocalData ?? true,
+            memberCount: 1,
+          });
+        }
+        if (!cancelled) setAccounts(merged);
+      } catch (err) {
+        if (!cancelled) console.error("[useAccounts] server merge failed:", err);
       }
-      const personal = local.find((l) => l.accountId === PERSONAL_ACCOUNT_ID);
-      if (personal && !seen.has(PERSONAL_ACCOUNT_ID)) {
-        merged.push({
-          ...personal,
-          hasLocalData: personal.hasLocalData ?? true,
-          memberCount: 1,
-        });
-      }
-      setAccounts(merged);
     })();
+    return () => {
+      cancelled = true;
+    };
      
   }, [server, nonce]);
 
@@ -349,7 +405,11 @@ export function useAccounts(): UseAccounts {
     accounts,
     currentAccountId,
     loading,
-    ready: !loading && server !== undefined,
+    // `ready` now means "local hydration done" — not "Convex replied".
+    // Gating on `server !== undefined` left /accounts stuck on "Loading…"
+    // forever when Convex was slow or the user was offline/local-mode.
+    // The server merge still enriches `accounts` when it arrives.
+    ready: !loading,
     createAccount,
     createInviteToken,
     redeemInviteToken,
