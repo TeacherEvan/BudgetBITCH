@@ -131,6 +131,7 @@ export function useReceiptScan() {
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         setError(msg);
+        throw err;
       } finally {
         setIsScanning(false);
       }

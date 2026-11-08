@@ -12,10 +12,28 @@ import { useInboxPermission } from '@/hooks/use-inbox-permission';
 import { parseSMS, getBestCandidate } from '@/lib/sms-parser';
 import { repeatExpense } from '@/lib/db/stores/expenses-store';
 import { parseManualEntry, findRepeatCandidate } from '@/lib/quick-add/parse-entry';
+import { preprocessReceiptImage } from '@/lib/receipt/image-preprocessor';
+import { playSuccessChime } from '@/lib/audio/sound-fx';
 import { mapCategory, reconcileLineItems } from '@/lib/receipt/map-category';
 import type { ExpenseCategory, IncomeCategory, ReceiptLineItem } from '@/lib/types/budget';
 import type { VerifiedSmsData } from '@/components/quick-add/sms-paste-modal';
 import { useTranslations } from 'next-intl';
+import { useHaptic } from '@/hooks/use-haptic';
+
+export type ScanStage =
+  | 'idle'
+  | 'optimizing'
+  | 'ai-vision'
+  | 'fallback-gemini'
+  | 'client-ocr'
+  | 'complete';
+
+export type FieldConfidence = 'high' | 'review';
+export type ScanConfidenceMap = {
+  amount: FieldConfidence;
+  merchant: FieldConfidence;
+  date: FieldConfidence;
+};
 
 export type QuickAddToast = {
   show: boolean;
@@ -50,9 +68,14 @@ export type QuickAddState = {
   setScannedDate: (v: string) => void;
   scannedTax: string;
   setScannedTax: (v: string) => void;
+  scannedCurrency: string;
+  setScannedCurrency: (v: string) => void;
   scannedLineItems: ReceiptLineItem[] | undefined;
   setScannedLineItems: (v: ReceiptLineItem[] | undefined) => void;
   repeatCandidate: ReturnType<typeof findRepeatCandidate> | undefined;
+  scanStage: ScanStage;
+  scanPreviewUrl: string | null;
+  scanConfidence: ScanConfidenceMap;
 
   // Income category
   incomeCategory: IncomeCategory;
@@ -79,12 +102,15 @@ export type QuickAddState = {
   // Actions
   triggerCamera: () => void;
   handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
+  handleCapturedFrame?: (blob: Blob) => Promise<void>;
   handleSaveScannedReceipt: () => Promise<void>;
   updateScannedLineItem: (
     idx: number,
     field: 'description' | 'amount' | 'qty',
     value: string | number | undefined,
   ) => void;
+  addScannedLineItem: () => void;
+  removeScannedLineItem: (idx: number) => void;
   handleRepeatPurchase: () => Promise<void>;
   handleSave: () => Promise<void>;
   handleScrapeSms: (overrideText?: string) => Promise<void>;
@@ -96,6 +122,7 @@ export type QuickAddState = {
   // Receipt verify sheet
   answerQuestion: ReturnType<typeof useReceiptScan>['answerQuestion'];
   confirmDraft: ReturnType<typeof useReceiptScan>['confirmDraft'];
+  profile: ReturnType<typeof useWizardProfile>['profile'];
   draft: ReturnType<typeof useReceiptScan>['draft'];
 };
 
@@ -107,7 +134,7 @@ export type QuickAddState = {
  * Behavior is preserved bit-for-bit; the 17 colocated page tests pin it.
  */
 export function useQuickAddState(): QuickAddState {
-  const t = useTranslations('QuickAdd');
+  const t = useTranslations('quickAdd');
   // Single useExpenses hook subscription feeds both addExpense and existingExpenses
   const { expenses: existingExpenses, add: addExpense } = useExpenses();
   const { add: addIncome } = useIncomes();
@@ -120,6 +147,7 @@ export function useQuickAddState(): QuickAddState {
   // handled at the call sites below rather than by conditionally invoking hooks.
   const parseMessageAction = useAction(api.receipts.parseMessage);
   const proxyReceiptScan = useAction(api.receipts.proxyReceiptScan);
+  const parseReceiptAction = useAction(api.receipts.parseReceipt);
 
   // Load the pending bot-ingested (LINE / TeacherBOY) receipt draft so the
   // scraped amount/merchant surface on Quick Add without hunting the dashboard.
@@ -131,6 +159,10 @@ export function useQuickAddState(): QuickAddState {
   });
   const confirmBotDraft = useMutation(api.receipts.confirm);
   const [botDraftId, setBotDraftId] = useState<Id<'receipts'> | null>(null);
+
+  const haptic = useHaptic();
+  const [scanStage, setScanStage] = useState<ScanStage>('idle');
+  const [scanPreviewUrl, setScanPreviewUrl] = useState<string | null>(null);
 
   // UI States
   const [isExpense, setIsExpense] = useState(true);
@@ -146,6 +178,7 @@ export function useQuickAddState(): QuickAddState {
   const [scannedCategory, setScannedCategory] = useState<ExpenseCategory>('other');
   const [scannedDate, setScannedDate] = useState('');
   const [scannedTax, setScannedTax] = useState('');
+  const [scannedCurrency, setScannedCurrency] = useState('');
   const [scannedLineItems, setScannedLineItems] = useState<ReceiptLineItem[] | undefined>(undefined);
 
   // Dirty guards: track which scanned fields the user has edited so the
@@ -173,6 +206,10 @@ export function useQuickAddState(): QuickAddState {
   const setScannedTaxDirty = (v: string) => {
     dirtyFields.current.add('scannedTax');
     setScannedTax(v);
+  };
+  const setScannedCurrencyDirty = (v: string) => {
+    dirtyFields.current.add('scannedCurrency');
+    setScannedCurrency(v);
   };
   const setScannedLineItemsDirty = (v: ReceiptLineItem[] | undefined) => {
     dirtyFields.current.add('scannedLineItems');
@@ -248,6 +285,9 @@ export function useQuickAddState(): QuickAddState {
       }
       if (!isDirty.has('scannedDate')) {
         setScannedDate(dateVal);
+      }
+      if (!isDirty.has('scannedCurrency')) {
+        setScannedCurrency(String(draft.fields.currency?.value ?? ''));
       }
 
       // Carry the engine's itemization into the review card. The bot-ingest
@@ -339,6 +379,9 @@ export function useQuickAddState(): QuickAddState {
           : new Date(bot._creationTime ?? Date.now()).toISOString().split('T')[0],
       );
     }
+    if (!isDirty.has('scannedCurrency')) {
+      setScannedCurrency(String(bot.currency ?? ''));
+    }
     if (bot.amount && !isDirty.has('inputText')) {
       setInputText(`${bot.amount} ${bot.merchant ?? ''}`.trim());
     }
@@ -421,10 +464,15 @@ export function useQuickAddState(): QuickAddState {
         message: `📸 Saved receipt: ${amtVal} @ ${scannedMerchant || 'Photo Receipt'}`,
         type: 'success',
       });
+      setScanStage('idle');
+      setScanPreviewUrl(null);
+      haptic.trigger('success');
+      playSuccessChime();
       setScannedAmount('');
       setScannedMerchant('');
       setScannedDate('');
       setScannedTax('');
+      setScannedCurrency('');
       setScannedLineItems(undefined);
       setInputText('');
       setDetectedCategory('other');
@@ -433,6 +481,7 @@ export function useQuickAddState(): QuickAddState {
       dirtyFields.current.clear();
     } catch (err) {
       console.error('Failed to save scanned receipt:', err);
+      haptic.trigger('error');
       setToast({
         show: true,
         message: `Failed to save: ${err instanceof Error ? err.message : String(err)}`,
@@ -455,6 +504,34 @@ export function useQuickAddState(): QuickAddState {
     dirtyFields.current.add('scannedLineItems');
     setScannedLineItems((prev) => prev?.map((item, i) => (i === idx ? { ...item, [field]: value } : item)));
   };
+
+  const addScannedLineItem = () => {
+    dirtyFields.current.add('scannedLineItems');
+    haptic.trigger('selection');
+    setScannedLineItems((prev) => [
+      ...(prev ?? []),
+      { description: '', amount: 0, category: scannedCategory, qty: 1 },
+    ]);
+  };
+
+  const removeScannedLineItem = (idx: number) => {
+    dirtyFields.current.add('scannedLineItems');
+    haptic.trigger('light');
+    setScannedLineItems((prev) => {
+      if (!prev) return undefined;
+      const next = prev.filter((_, i) => i !== idx);
+      return next.length > 0 ? next : undefined;
+    });
+  };
+
+  const scanConfidence = useMemo<ScanConfidenceMap>(() => {
+    const amtNum = parseFloat(scannedAmount);
+    return {
+      amount: Number.isFinite(amtNum) && amtNum > 0 ? 'high' : 'review',
+      merchant: scannedMerchant.trim().length >= 2 ? 'high' : 'review',
+      date: /^\d{4}-\d{2}-\d{2}$/.test(scannedDate.trim()) ? 'high' : 'review',
+    };
+  }, [scannedAmount, scannedMerchant, scannedDate]);
 
   // Repeat Purchase "+" on the review card: the most recent prior expense
   // with the same merchant (case-insensitive) as the scanned receipt.
@@ -512,6 +589,8 @@ export function useQuickAddState(): QuickAddState {
           lineItems: entrySource === 'receipt' ? scannedLineItems : undefined,
         });
         setToast({ show: true, message: t('successAdded'), type: 'success' });
+        haptic.trigger('success');
+        playSuccessChime();
       } else {
         // Record Income Log
         await addIncome({
@@ -558,25 +637,39 @@ export function useQuickAddState(): QuickAddState {
     fileInputRef.current?.click();
   };
 
-  // Process captured receipt image
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      setToast({ show: true, message: 'Please select a valid image file.', type: 'error' });
-      return;
-    }
-
+  // Process raw receipt image blob (shared between file picker and camera frame grab)
+  const processReceiptBlob = async (blob: Blob) => {
+    haptic.trigger('light');
+    setScanStage('optimizing');
     setLoading(true);
     setToast({ show: true, message: 'Scanning & scraping receipt photo...', type: 'success' });
+
+    let workingBlob = blob;
+    let previewUrl = '';
+
+    // Apply adaptive contrast & dimension clamping preprocessor (max 1600px)
+    try {
+      const preprocessed = await preprocessReceiptImage(blob, {
+        maxDimension: 1600,
+        enhanceContrast: true,
+      });
+      workingBlob = preprocessed.processedBlob;
+      previewUrl = preprocessed.previewUrl;
+      setScanPreviewUrl(previewUrl);
+    } catch (prepErr) {
+      console.warn('Preprocessing failed, falling back to original blob:', prepErr);
+      previewUrl = typeof URL !== 'undefined' && URL.createObjectURL ? URL.createObjectURL(blob) : '';
+      setScanPreviewUrl(previewUrl);
+    }
 
     const reader = new FileReader();
     reader.onerror = () => {
       setLoading(false);
+      setScanStage('idle');
+      haptic.trigger('error');
       setToast({
         show: true,
-        message: 'Failed to read image file. Please try again or enter manually.',
+        message: 'Failed to read image data. Please try again or enter manually.',
         type: 'error',
       });
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -585,11 +678,12 @@ export function useQuickAddState(): QuickAddState {
     reader.onload = async () => {
       const dataUrl = reader.result as string;
 
-      // First attempt: send the photo to the TeacherBOY HuggingFace bot via the
+      // Tier 1: send the photo to the TeacherBOY HuggingFace bot via the
       // Convex proxy (Gemini vision scrape). The proxy keeps CONVEX_SYNC_SECRET
       // server-side and the user is derived from the Convex Auth session.
       if (proxyReceiptScan && typeof navigator !== 'undefined' && navigator.onLine) {
         try {
+          setScanStage('ai-vision');
           const res = await proxyReceiptScan({
             base64Image: dataUrl,
             idempotencyKey: `app_${crypto.randomUUID()}`,
@@ -600,13 +694,15 @@ export function useQuickAddState(): QuickAddState {
           if (res && fields) {
             setIsExpense(true);
             setEntrySource('receipt');
-            setScannedAmount(String((fields.total?.value as number) ?? ''));
+            const parsedTotal = (fields.total?.value as number) ?? '';
+            setScannedAmount(String(parsedTotal));
             setScannedMerchant(String((fields.merchant?.value as string) ?? ''));
             setScannedCategory(mapCategory(String((fields.category?.value as string) ?? 'other')));
             setScannedDate(
               fields.date?.value != null ? String(fields.date.value) : new Date().toISOString().split('T')[0],
             );
             setScannedTax(fields.tax?.value != null ? String(fields.tax.value) : '');
+            setScannedCurrency(fields.currency?.value != null ? String(fields.currency.value) : '');
 
             const items = Array.isArray((res as unknown as { lineItems?: unknown }).lineItems)
               ? (res as unknown as { lineItems: Array<{ description?: string; amount?: number; qty?: number; unit_price?: number }> })
@@ -635,24 +731,77 @@ export function useQuickAddState(): QuickAddState {
               message: `📸 Scanned: ${String((fields.merchant?.value as string) ?? 'Receipt')} — review & save`,
               type: 'success',
             });
+            setScanStage('complete');
+            haptic.trigger('success');
             setLoading(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
             return;
           }
         } catch (botErr) {
-          console.warn('HF bot scan failed, falling back to client OCR:', botErr);
+          console.warn('HF bot scan failed, attempting Tier 2 direct Gemini parseReceipt:', botErr);
         }
       }
 
-      // Fallback: Client-side OCR + Pattern Scraper Engine
+      // Tier 2: Direct Gemini 2.5 Flash parseReceipt fallback (if bot is unconfigured/asleep)
+      if (parseReceiptAction && typeof navigator !== 'undefined' && navigator.onLine) {
+        try {
+          setScanStage('fallback-gemini');
+          const directRes = await parseReceiptAction({ base64Image: dataUrl });
+          if (directRes) {
+            setIsExpense(true);
+            setEntrySource('receipt');
+            const totalAmt = directRes.amount > 0 ? String(directRes.amount) : '';
+            setScannedAmount(totalAmt);
+            setScannedMerchant(directRes.merchant || '');
+            setScannedCategory(mapCategory(directRes.category || 'other'));
+            setScannedDate(directRes.date || new Date().toISOString().split('T')[0]);
+            setScannedTax('');
+            setScannedCurrency((directRes as { currency?: string }).currency || '');
+
+            const rawItems = Array.isArray(directRes.lineItems) ? directRes.lineItems : [];
+            const mappedItems: ReceiptLineItem[] = rawItems.map((li) => ({
+              description: String(li.description ?? ''),
+              amount: Math.round((Number(li.amount) || 0) * 100) / 100,
+              category: mapCategory(li.description),
+            }));
+            setScannedLineItems(mappedItems.length > 0 ? mappedItems : undefined);
+
+            const prefill = [totalAmt, directRes.merchant].filter(Boolean).join(' ').trim();
+            setInputText(prefill);
+
+            setToast({
+              show: true,
+              message: `📸 Scanned: ${directRes.merchant || 'Receipt'} — review & save`,
+              type: 'success',
+            });
+            setScanStage('complete');
+            haptic.trigger('success');
+            setLoading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+          }
+        } catch (geminiErr) {
+          console.warn('Direct Gemini parseReceipt failed, falling back to Tier 3 client OCR:', geminiErr);
+        }
+      }
+
+      // Tier 3 Fallback: Client-side OCR + Pattern Scraper Engine
       const img = new Image();
-      const url = URL.createObjectURL(file);
+      const objectUrl = URL.createObjectURL(workingBlob);
       img.onload = async () => {
         try {
+          setScanStage('client-ocr');
           await scanImage(img, profile?.locale?.includes('TH') ? 'TH' : profile?.locale?.includes('ZA') ? 'ZA' : undefined);
+          setIsExpense(true);
           setEntrySource('receipt');
+          setScanStage('complete');
+          haptic.trigger('success');
         } catch (err) {
           console.error('Receipt scanning failed:', err);
+          setIsExpense(true);
+          setEntrySource('receipt');
+          setScanStage('idle');
+          haptic.trigger('error');
           setToast({
             show: true,
             message:
@@ -662,13 +811,15 @@ export function useQuickAddState(): QuickAddState {
           });
         } finally {
           setLoading(false);
-          URL.revokeObjectURL(url);
+          URL.revokeObjectURL(objectUrl);
           if (fileInputRef.current) fileInputRef.current.value = '';
         }
       };
       img.onerror = () => {
         setLoading(false);
-        URL.revokeObjectURL(url);
+        setScanStage('idle');
+        haptic.trigger('error');
+        URL.revokeObjectURL(objectUrl);
         if (fileInputRef.current) fileInputRef.current.value = '';
         setToast({
           show: true,
@@ -676,10 +827,29 @@ export function useQuickAddState(): QuickAddState {
           type: 'error',
         });
       };
-      img.src = url;
+      img.src = objectUrl;
     };
 
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(workingBlob);
+  };
+
+  // Process captured receipt image from file input
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      haptic.trigger('error');
+      setToast({ show: true, message: 'Please select a valid image file.', type: 'error' });
+      return;
+    }
+
+    await processReceiptBlob(file);
+  };
+
+  // Process frame snapshot from live camera viewfinder
+  const handleCapturedFrame = async (blob: Blob) => {
+    await processReceiptBlob(blob);
   };
 
   // Extract fields from pasted or selected SMS/Email text via Gemini AI + parseSMS fallback
@@ -841,9 +1011,14 @@ export function useQuickAddState(): QuickAddState {
     setScannedDate: setScannedDateDirty,
     scannedTax,
     setScannedTax: setScannedTaxDirty,
+    scannedCurrency,
+    setScannedCurrency: setScannedCurrencyDirty,
     scannedLineItems,
     setScannedLineItems: setScannedLineItemsDirty,
     repeatCandidate,
+    scanStage,
+    scanPreviewUrl,
+    scanConfidence,
     incomeCategory,
     setIncomeCategory,
     showPermModal,
@@ -862,8 +1037,11 @@ export function useQuickAddState(): QuickAddState {
     sampleNotifications,
     triggerCamera,
     handleFileChange,
+    handleCapturedFrame,
     handleSaveScannedReceipt,
     updateScannedLineItem,
+    addScannedLineItem,
+    removeScannedLineItem,
     handleRepeatPurchase,
     handleSave,
     handleScrapeSms,
@@ -874,5 +1052,6 @@ export function useQuickAddState(): QuickAddState {
     answerQuestion,
     confirmDraft,
     draft,
+    profile,
   };
 }

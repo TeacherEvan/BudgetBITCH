@@ -105,7 +105,8 @@ let mockBotDraftsValue: { receipts: Array<{
   merchant: string;
   category: string;
   date?: string;
-  lineItems?: Array<{ description?: string; amount?: number }>;
+  currency?: string;
+  lineItems?: Array<{ description?: string; amount?: number; qty?: number }>;
 }> } | undefined = { receipts: [] };
 
 vi.mock('convex/react', () => ({
@@ -679,5 +680,154 @@ describe('QuickAddPage', () => {
     // Verify the order: confirmBotDraft should complete before addExpense
     // Actually the fix is confirm-then-local-add, so confirmBotDraft should be called first
     // But due to async, we check the call counts
+  });
+
+  // ============================================
+  // TIER-1 CRAFT ELEVATION TESTS (OBJ-008)
+  // ============================================
+
+  it('renders semantic confidence pips (high vs review) on ScannedReceiptCard fields', async () => {
+    mockBotDraftsValue = {
+      receipts: [
+        {
+          _id: 'bot-draft-pips',
+          _creationTime: Date.now(),
+          amount: 88.5,
+          merchant: 'Target Store',
+          category: 'food',
+          date: '2026-11-08',
+          lineItems: [],
+        },
+      ],
+    };
+
+    render(<QuickAddPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('scanned-receipt-card')).toBeInTheDocument();
+    });
+
+    const amountPip = screen.getByTestId('confidence-pip-amount');
+    const merchantPip = screen.getByTestId('confidence-pip-merchant');
+    const datePip = screen.getByTestId('confidence-pip-date');
+
+    // All 3 fields have valid values -> High confidence
+    expect(amountPip.className).toContain('bg-[#40C87A]');
+    expect(merchantPip.className).toContain('bg-[#40C87A]');
+    expect(datePip.className).toContain('bg-[#40C87A]');
+
+    // Clear merchant to trigger 'review' confidence pip
+    const merchantInput = screen.getByTestId('scanned-merchant-input');
+    fireEvent.change(merchantInput, { target: { value: '' } });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('confidence-pip-merchant').className).toContain('bg-[#E8A020]');
+    });
+  });
+
+  it('displays Reconciled vs Unreconciled line-item subtotal telemetry badge', async () => {
+    mockBotDraftsValue = {
+      receipts: [
+        {
+          _id: 'bot-draft-recon',
+          _creationTime: Date.now(),
+          amount: 100,
+          merchant: 'Whole Foods',
+          category: 'food',
+          date: '2026-11-08',
+          lineItems: [
+            { description: 'Item 1', amount: 60, qty: 1 },
+            { description: 'Item 2', amount: 40, qty: 1 },
+          ],
+        },
+      ],
+    };
+
+    render(<QuickAddPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('line-items-reconciliation-badge')).toBeInTheDocument();
+    });
+
+    // Sum is 100 == total 100 -> Reconciled
+    expect(screen.getByTestId('line-items-reconciliation-badge').textContent).toContain('Reconciled (100.00)');
+
+    // Edit item 1 to make it unreconciled
+    const amountItem0 = screen.getByTestId('scanned-line-item-amount-0');
+    fireEvent.change(amountItem0, { target: { value: '20' } });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('line-items-reconciliation-badge').textContent).toContain('Items 60.00 / 100.00');
+    });
+  });
+
+  it('allows adding and removing individual line items in the receipt review slip', async () => {
+    mockBotDraftsValue = {
+      receipts: [
+        {
+          _id: 'bot-draft-crud',
+          _creationTime: Date.now(),
+          amount: 50,
+          merchant: 'Cafe',
+          category: 'food',
+          date: '2026-11-08',
+          lineItems: [{ description: 'Coffee', amount: 5, qty: 1 }],
+        },
+      ],
+    };
+
+    render(<QuickAddPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('scanned-line-item-desc-0')).toBeInTheDocument();
+    });
+
+    // Add a new line item
+    const addBtn = screen.getByTestId('add-line-item-btn');
+    fireEvent.click(addBtn);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('scanned-line-item-desc-1')).toBeInTheDocument();
+    });
+
+    // Remove the first line item
+    const removeBtn0 = screen.getByTestId('remove-line-item-btn-0');
+    expect(screen.getByTestId('receipt-item-delete-btn-0')).toBeInTheDocument();
+    fireEvent.click(removeBtn0);
+
+    await waitFor(() => {
+      // Index 1 shifted to index 0, so there's only 1 item left
+      expect(screen.queryByTestId('scanned-line-item-desc-1')).not.toBeInTheDocument();
+      expect(screen.getByTestId('scanned-line-item-desc-0')).toBeInTheDocument();
+    });
+  });
+
+  it('renders dual-currency badge when receipt currency differs from board currency', async () => {
+    mockBotDraftsValue = {
+      receipts: [
+        {
+          _id: 'bot-draft-fx',
+          _creationTime: Date.now(),
+          amount: 200,
+          merchant: 'Duty Free Tokyo',
+          category: 'food',
+          date: '2026-11-08',
+          currency: 'EUR',
+          lineItems: [],
+        },
+      ],
+    };
+
+    render(<QuickAddPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('scanned-receipt-card')).toBeInTheDocument();
+    });
+
+    // Board defaults to USD in fallback; EUR differs from USD
+    const fxBadge = screen.getByTestId('scanned-receipt-currency-fx-badge');
+    expect(fxBadge).toBeInTheDocument();
+    expect(fxBadge.textContent).toContain('EUR');
+    expect(fxBadge.textContent).toContain('USD');
   });
 });

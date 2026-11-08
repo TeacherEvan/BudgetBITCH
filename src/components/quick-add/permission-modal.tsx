@@ -17,28 +17,32 @@ export function PermissionModal({
   onDeny: () => void;
   onGrant: () => void;
 }) {
-  const t = useTranslations('QuickAdd');
+  const t = useTranslations('quickAdd');
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+      role="dialog"
+      aria-modal="true"
+    >
       <div
-        className="w-full max-w-sm bg-neutral-900 border border-sky-400/30 rounded-3xl p-6 shadow-2xl space-y-4"
+        className="w-full max-w-sm bg-[var(--surface-layer-2)] border border-sky-400/30 rounded-3xl p-6 shadow-[var(--specular-top-elevated),var(--shadow-card)] space-y-4"
         data-testid="inbox-perm-modal"
       >
         <div className="flex items-center gap-3 text-sky-400">
           <div className="p-2.5 rounded-2xl bg-sky-400/10 border border-sky-400/20">
             <ShieldCheck className="w-6 h-6" />
           </div>
-          <h3 className="text-sm font-bold text-white leading-tight">{t('permTitle')}</h3>
+          <h3 className="text-sm font-bold text-[var(--text-1)] leading-tight">{t('permTitle')}</h3>
         </div>
-        <p className="text-xs text-white/70 leading-relaxed">{t('permDesc')}</p>
-        <label className="flex items-center gap-2.5 text-xs text-white/80 cursor-pointer pt-2 select-none">
+        <p className="text-xs text-[var(--text-2)] leading-relaxed">{t('permDesc')}</p>
+        <label className="flex items-center gap-2.5 text-xs text-[var(--text-2)] cursor-pointer pt-2 select-none min-h-[44px]">
           <input
             type="checkbox"
             checked={rememberCheck}
             onChange={(e) => onRememberChange(e.target.checked)}
-            className="w-4 h-4 rounded border-white/20 bg-white/10 text-sky-500 focus:ring-0 cursor-pointer"
+            className="w-4 h-4 rounded border-[var(--border-neutral)] bg-[var(--surface-layer-3)] text-sky-500 focus:ring-0 cursor-pointer"
             data-testid="remember-perm-checkbox"
           />
           <span>{t('rememberChoice')}</span>
@@ -46,7 +50,7 @@ export function PermissionModal({
         <div className="flex gap-2 pt-2">
           <Button
             variant="secondary"
-            className="flex-1 py-2.5 rounded-xl text-xs"
+            className="flex-1 py-2.5 min-h-[44px] rounded-xl text-xs"
             onClick={onDeny}
             data-testid="deny-perm-btn"
           >
@@ -54,7 +58,7 @@ export function PermissionModal({
           </Button>
           <Button
             variant="primary"
-            className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-sky-400 hover:bg-sky-300 text-slate-950"
+            className="flex-1 py-2.5 min-h-[44px] rounded-xl text-xs font-bold bg-sky-400 hover:bg-sky-300 text-slate-950"
             onClick={onGrant}
             data-testid="grant-perm-btn"
           >

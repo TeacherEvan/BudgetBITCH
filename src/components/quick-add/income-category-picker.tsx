@@ -11,21 +11,21 @@ export function IncomeCategoryPicker({
 }) {
   return (
     <div className="mb-6 space-y-1.5">
-      <label className="text-[10px] uppercase font-bold text-white/50 tracking-wider">
+      <label className="text-[10px] uppercase font-bold text-[var(--text-muted)] tracking-wider">
         {'Income Category'}
       </label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value as IncomeCategory)}
-        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-2xl text-sm focus:outline-none focus:border-emerald-500/50 text-white outline-none"
+        className="w-full min-h-[44px] px-4 py-3 bg-[var(--surface-layer-3)] border border-[var(--border-neutral)] rounded-2xl text-sm focus:outline-none focus:border-emerald-500/50 text-[var(--text-1)] outline-none shadow-[var(--specular-top-subtle)]"
       >
-        <option value="salary" className="bg-[#0a0a0a]">💵 {'Salary'}</option>
-        <option value="freelance" className="bg-[#0a0a0a]">💻 {'Freelance'}</option>
-        <option value="business" className="bg-[#0a0a0a]">🏢 {'Business'}</option>
-        <option value="investments" className="bg-[#0a0a0a]">📈 {'Investments'}</option>
-        <option value="gift" className="bg-[#0a0a0a]">🎁 {'Gift'}</option>
-        <option value="refund" className="bg-[#0a0a0a]">🔄 {'Refund'}</option>
-        <option value="other" className="bg-[#0a0a0a]">✨ {'Other'}</option>
+        <option value="salary" className="bg-[#110D01] text-[var(--text-1)]">💵 {'Salary'}</option>
+        <option value="freelance" className="bg-[#110D01] text-[var(--text-1)]">💻 {'Freelance'}</option>
+        <option value="business" className="bg-[#110D01] text-[var(--text-1)]">🏢 {'Business'}</option>
+        <option value="investments" className="bg-[#110D01] text-[var(--text-1)]">📈 {'Investments'}</option>
+        <option value="gift" className="bg-[#110D01] text-[var(--text-1)]">🎁 {'Gift'}</option>
+        <option value="refund" className="bg-[#110D01] text-[var(--text-1)]">🔄 {'Refund'}</option>
+        <option value="other" className="bg-[#110D01] text-[var(--text-1)]">✨ {'Other'}</option>
       </select>
     </div>
   );

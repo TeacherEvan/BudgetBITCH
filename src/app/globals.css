@@ -779,3 +779,31 @@ table th {
     animation-iteration-count: infinite !important;
   }
 }
+
+/* ===== RECEIPT SCANNER LASER & THERMAL SLIP UTILITIES ===== */
+@keyframes bb-scanline {
+  0% {
+    transform: translate3d(0, 0%, 0);
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(0, 320%, 0);
+    opacity: 0.35;
+  }
+}
+
+.bb-scanline-beam {
+  animation: bb-scanline 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bb-scanline-beam {
+    animation: none !important;
+    transform: translate3d(0, 150%, 0) !important;
+    opacity: 0.85 !important;
+  }
+}
+

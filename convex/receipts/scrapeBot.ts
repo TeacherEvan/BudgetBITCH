@@ -55,12 +55,23 @@ export const scrape = mutation({
 
     const rawTotal = typeof result.fields.total?.value === "number" ? result.fields.total.value : 0;
     // scrapeEngine returns amounts in minor units (cents) — convert to major units
-    const amount = Math.round(rawTotal) / 100;
+    const amount = rawTotal > 0 ? Math.round(rawTotal) / 100 : 0;
     const merchant = typeof result.fields.merchant?.value === "string" ? result.fields.merchant.value : "Unknown Merchant";
     const category = typeof result.fields.category?.value === "string" ? result.fields.category.value : "other";
     const date = typeof result.fields.date?.value === "string" ? result.fields.date.value : undefined;
     const rawTax = typeof result.fields.tax?.value === "number" ? result.fields.tax.value : undefined;
     const tax = rawTax !== undefined ? Math.round(rawTax) / 100 : undefined;
+    const lineItems = ((result.lineItems ?? result.items) ?? []).map((it) => ({
+      ...it,
+      amount: Math.round(it.amount) / 100,
+      ...(typeof it.unitPrice === "number" ? { unitPrice: Math.round(it.unitPrice) / 100 } : {}),
+    }));
+
+    const normalizedFields = {
+      ...result.fields,
+      total: result.fields.total ? { ...result.fields.total, value: amount } : null,
+      tax: result.fields.tax && tax !== undefined ? { ...result.fields.tax, value: tax } : null,
+    };
 
     const draftId = await ctx.db.insert("receipts", {
       userId,
@@ -78,6 +89,7 @@ export const scrape = mutation({
       confidence: result.confidence,
       evidence: result.evidence,
       ocrText: payload.lines?.map((l: any) => l.text).join("\n"),
+      lineItems,
       tax,
       currency: typeof result.fields.currency?.value === "string" ? result.fields.currency.value : undefined,
       questionsAsked: result.questions,
@@ -86,10 +98,11 @@ export const scrape = mutation({
 
     return {
       draftId,
-      fields: result.fields,
+      fields: normalizedFields,
       confidence: result.confidence,
       evidence: result.evidence,
       questions: result.questions,
+      lineItems,
     };
   },
 });
@@ -115,7 +128,9 @@ export const answer = mutation({
     const folded = applyAnswers(currentFields, currentConfidence, args.answers);
     const questions = generateQuestions(folded.updatedFields, folded.updatedConfidence);
 
-    const amount = typeof folded.updatedFields.total?.value === "number" ? folded.updatedFields.total.value : draft.amount;
+    const rawAmount = typeof folded.updatedFields.total?.value === "number" ? folded.updatedFields.total.value : draft.amount;
+    // Ensure amount in major units
+    const amount = rawAmount;
     const merchant = typeof folded.updatedFields.merchant?.value === "string" ? folded.updatedFields.merchant.value : draft.merchant;
     const category = typeof folded.updatedFields.category?.value === "string" ? folded.updatedFields.category.value : draft.category;
     const date = typeof folded.updatedFields.date?.value === "string" ? folded.updatedFields.date.value : draft.date;

@@ -12,10 +12,14 @@ export function Toast({
   if (!toast.show) return null;
 
   return (
-    <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-down">
+    <div
+      className="fixed top-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-down"
+      role="status"
+      aria-live="polite"
+    >
       <div
         className={`
-          px-4 py-3 rounded-2xl flex items-center gap-2.5 shadow-2xl backdrop-blur-xl border text-sm max-w-xs font-medium
+          px-4 py-3 rounded-2xl flex items-center gap-2.5 shadow-[var(--specular-top-elevated),var(--shadow-card)] backdrop-blur-md border text-sm max-w-xs font-medium tabular-nums
           ${toast.type === 'success'
             ? 'bg-emerald-950/90 border-emerald-500/30 text-emerald-300'
             : 'bg-rose-950/90 border-rose-500/30 text-rose-300'
@@ -23,7 +27,7 @@ export function Toast({
         `}
       >
         {loadingLabel && toast.message === loadingLabel ? (
-          <Loader2 className="w-4 h-4 animate-spin text-amber-400 flex-shrink-0" />
+          <Loader2 className="w-4 h-4 animate-spin text-[var(--gold-bright)] flex-shrink-0" />
         ) : toast.type === 'success' ? (
           <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
         ) : (

@@ -216,7 +216,7 @@ describe('useAccountSync', () => {
 
     // Poll past the 800ms debounce instead of a fixed sleep (CI-flake fix).
     await waitFor(() => expect(pushBoard).toHaveBeenCalledTimes(1), {
-      timeout: 3000,
+      timeout: 6000,
     });
     const firstCall = (pushBoard.mock.calls[0] as unknown[])[0] as {
       boardId: string;

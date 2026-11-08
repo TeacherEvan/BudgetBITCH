@@ -23,7 +23,7 @@ function buildCsp(nonce: string): string {
     // nonce covers Next's inline RSC/hydration scripts; 'self' keeps
     // 'self'-hosted external scripts (service worker /sw.js, Next bundles)
     // working. No 'strict-dynamic' (it would override 'self' and block /sw.js).
-    `script-src 'self' 'nonce-${nonce}'${isDev ? " 'unsafe-eval'" : ''}`,
+    `script-src 'self' 'nonce-${nonce}'${isDev ? " 'unsafe-eval'" : " 'wasm-unsafe-eval'"}`,
     // Inline <style> (CSS keyframes in components like GoldenSplash) cannot be
     // auto-nonced by Next, so 'unsafe-inline' is required for style-src.
     // This matches the original next.config.mjs policy and keeps XSS risk low
@@ -31,8 +31,8 @@ function buildCsp(nonce: string): string {
     `style-src 'self' 'unsafe-inline'`,
     "img-src 'self' data: blob: https:",
     "font-src 'self'",
-    "worker-src 'self'",
-    "connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://*.convex.site wss://*.convex.site https://api.frankfurter.dev",
+    "worker-src 'self' blob:",
+    "connect-src 'self' blob: data: https://cdn.jsdelivr.net https://*.convex.cloud wss://*.convex.cloud https://*.convex.site wss://*.convex.site https://api.frankfurter.dev",
     "object-src 'none'",
     "frame-ancestors 'self'",
     "base-uri 'self'",

@@ -61,7 +61,9 @@ async function getWorker(
     await cachedWorker.worker.terminate();
     cachedWorker = null;
   }
-  const worker = (await makeWorker(lang, 1, {
+
+  const workerOptions = {
+    workerBlobURL: false,
     workerPath: '/tesseract/worker.min.js',
     corePath: '/tesseract/',
     langPath: '/tesseract/lang',
@@ -71,9 +73,22 @@ async function getWorker(
         logger(m);
       }
     },
-  })) as TesseractWorker;
-  cachedWorker = { lang, worker };
-  return worker;
+  };
+
+  try {
+    const worker = (await makeWorker(lang, 1, workerOptions)) as TesseractWorker;
+    cachedWorker = { lang, worker };
+    return worker;
+  } catch {
+    // If local asset loading (e.g. invalid local stub lang file) fails, fallback to CDN
+    const cdnOptions = {
+      ...workerOptions,
+      langPath: 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng/4.0.0_best_int',
+    };
+    const worker = (await makeWorker(lang, 1, cdnOptions)) as TesseractWorker;
+    cachedWorker = { lang, worker };
+    return worker;
+  }
 }
 
 export async function runOcrScan(
