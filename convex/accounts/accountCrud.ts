@@ -110,48 +110,85 @@ export const listMyAccounts = query({
 
     const ownedIds = profile.accountIds ?? [];
 
-    // Helper cache to avoid redundant userProfiles lookups across multiple boards
-    const profileCache = new Map<string, string | null>();
-    const getProfileDisplayName = async (memberId: Id<"users">): Promise<string | null> => {
-      if (profileCache.has(memberId)) return profileCache.get(memberId)!;
-      const mp = await ctx.db
-        .query("userProfiles")
-        .withIndex("by_user", (q) => q.eq("userId", memberId))
+    // One query for ALL owned accounts (by_owner index) — no per-account
+    // `accounts` fetch. Dedupe by accountId since the profile list can repeat.
+    const ownedAccs = await ctx.db
+      .query("accounts")
+      .withIndex("by_owner", (q) => q.eq("ownerId", userId))
+      .take(MAX_OWNED_ACCOUNTS + 16);
+    const ownedAccById = new Map<string, (typeof ownedAccs)[number]>();
+    for (const acc of ownedAccs) {
+      if (ownedIds.includes(acc.accountId) && !ownedAccById.has(acc.accountId)) {
+        ownedAccById.set(acc.accountId, acc);
+      }
+    }
+
+    // Board lookup cache: each accountBoard is fetched at most once.
+    // (Explicit `await ... | null` type — typeof self-reference is circular.)
+    const boardCache = new Map<
+      string,
+      { boardId: string; accountId: string; umbrella: string; name: string } | null
+    >();
+    async function getBoardByIdOnce(
+      boardId: string,
+    ): Promise<{ boardId: string; accountId: string; umbrella: string; name: string } | null> {
+      if (boardCache.has(boardId)) return boardCache.get(boardId) ?? null;
+      const board = await ctx.db
+        .query("accountBoards")
+        .withIndex("by_boardId", (q) => q.eq("boardId", boardId))
         .unique();
-      const name = mp?.displayName ?? null;
-      profileCache.set(memberId, name);
-      return name;
-    };
+      boardCache.set(boardId, board);
+      return board;
+    }
+
+    // Member-ids cache: each board's members are fetched at most once.
+    const memberIdsCache = new Map<string, Id<"users">[]>();
+    async function getMemberIdsOnce(boardId: string) {
+      if (memberIdsCache.has(boardId)) return memberIdsCache.get(boardId)!;
+      const ids = await getBoardMemberIds(ctx, boardId);
+      memberIdsCache.set(boardId, ids);
+      return ids;
+    }
+
+    // Hoisted display-name lookup: one userProfiles query per UNIQUE member
+    // across every board, resolved in a single Promise.all batch BEFORE
+    // building the account list (no per-account profile fan-out).
+    const allMemberIds = new Set<Id<"users">>();
+    for (const acc of ownedAccById.values()) {
+      if (!acc.boardId) continue;
+      const ids = await getMemberIdsOnce(acc.boardId);
+      for (const id of ids) allMemberIds.add(id);
+    }
+    const joinedBoardRows = await ctx.db
+      .query("boardMembers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .take(50);
+    for (const r of joinedBoardRows) {
+      if (r.role === "owner") continue;
+      const ids = await getMemberIdsOnce(r.boardId);
+      for (const id of ids) allMemberIds.add(id);
+    }
+    const profileEntries = await Promise.all(
+      Array.from(allMemberIds).map(async (memberId) => {
+        const mp = await ctx.db
+          .query("userProfiles")
+          .withIndex("by_user", (q) => q.eq("userId", memberId))
+          .unique();
+        return [memberId, mp?.displayName ?? null] as const;
+      }),
+    );
+    const profileCache = new Map<Id<"users">, string | null>(profileEntries);
 
     const owned = (
       await Promise.all(
-        ownedIds.map(async (accountId) => {
-          const acc = await ctx.db
-            .query("accounts")
-            .withIndex("by_accountId", (q) =>
-              q.eq("accountId", accountId),
-            )
-            .unique();
-          if (!acc || !acc.boardId) return null;
-          const board = await ctx.db
-            .query("accountBoards")
-            .withIndex("by_boardId", (q) =>
-              q.eq("boardId", acc.boardId!),
-            )
-            .unique();
-          const members = board
-            ? await getBoardMemberIds(ctx, board.boardId)
-            : [];
-          // Fetch display names for all members with caching
-          const memberProfiles = await Promise.all(
-            members.map(async (memberId) => ({
-              userId: memberId,
-              displayName: await getProfileDisplayName(memberId),
-            })),
-          );
+        Array.from(ownedAccById.values()).map(async (acc) => {
+          if (!acc.boardId) return null;
+          const board = await getBoardByIdOnce(acc.boardId);
+          const members = board ? await getMemberIdsOnce(board.boardId) : [];
           const memberDisplayNames: Record<string, string> = {};
-          for (const m of memberProfiles) {
-            if (m.displayName) memberDisplayNames[m.userId] = m.displayName;
+          for (const memberId of members) {
+            const displayName = profileCache.get(memberId);
+            if (displayName) memberDisplayNames[memberId] = displayName;
           }
           return {
             accountId: acc.accountId,
@@ -167,22 +204,13 @@ export const listMyAccounts = query({
       )
     ).filter((x): x is NonNullable<typeof x> => x !== null);
 
-    // Invited (joined) boards.
-    const joinedBoardRows = await ctx.db
-      .query("boardMembers")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .take(50);
+    // Invited (joined) boards — reuses hoisted caches above.
     const joined = (
       await Promise.all(
         joinedBoardRows
           .filter((r) => r.role !== "owner")
           .map(async (r) => {
-            const board = await ctx.db
-              .query("accountBoards")
-              .withIndex("by_boardId", (q) =>
-                q.eq("boardId", r.boardId),
-              )
-              .unique();
+            const board = await getBoardByIdOnce(r.boardId);
             if (!board) return null;
             const acc = await ctx.db
               .query("accounts")
@@ -190,16 +218,11 @@ export const listMyAccounts = query({
                 q.eq("accountId", board.accountId),
               )
               .unique();
-            const memberIds = await getBoardMemberIds(ctx, board.boardId);
-            const memberProfiles = await Promise.all(
-              memberIds.map(async (memberId) => ({
-                userId: memberId,
-                displayName: await getProfileDisplayName(memberId),
-              })),
-            );
+            const memberIds = await getMemberIdsOnce(board.boardId);
             const memberDisplayNames: Record<string, string> = {};
-            for (const m of memberProfiles) {
-              if (m.displayName) memberDisplayNames[m.userId] = m.displayName;
+            for (const memberId of memberIds) {
+              const displayName = profileCache.get(memberId);
+              if (displayName) memberDisplayNames[memberId] = displayName;
             }
             return {
               accountId: board.accountId,
@@ -207,7 +230,7 @@ export const listMyAccounts = query({
               name: board.name,
               role: "member" as const,
               boardId: board.boardId,
-              memberCount: memberProfiles.length,
+              memberCount: memberIds.length,
               inviteCode: acc?.inviteCode ?? null,
               memberDisplayNames,
             };

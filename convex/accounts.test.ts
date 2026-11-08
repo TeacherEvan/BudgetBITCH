@@ -397,6 +397,61 @@ describe("authz + deletion", () => {
     expect(couple).toBeTruthy();
     expect(couple!.boardId).toBe(boardId);
   });
+
+  test("listMyAccounts resolves display names for a member shared across owned accounts (hoisted cache)", async () => {
+    const aliceId = await seedUser(t, "alice");
+    const bobId = await seedUser(t, "bob");
+    await makeProfile(aliceId, "ALICE123", { displayName: "alice" });
+    await makeProfile(bobId, "BOB12345", { displayName: "bob" });
+    // Alice owns two accounts; Bob is a boardMember on both. The hoisted
+    // profile lookup must resolve Bob's display name once and surface it
+    // on both account summaries.
+    for (const [accountId, boardId] of [["acc-a", "board-a"], ["acc-b", "board-b"]] as const) {
+      await t.run(async (ctx: any) => {
+        await ctx.db.insert("accounts", {
+          accountId,
+          ownerId: aliceId,
+          umbrella: "family",
+          name: accountId,
+          inviteCode: `CODE-${accountId}`,
+          createdAt: Date.now(),
+          boardId,
+        });
+        await ctx.db.insert("accountBoards", {
+          boardId,
+          accountId,
+          ownerId: aliceId,
+          members: [aliceId, bobId],
+          umbrella: "family",
+          name: accountId,
+          data: null,
+          updatedAt: Date.now(),
+          updatedBy: aliceId,
+        });
+        for (const [uid, role] of [[aliceId, "owner"], [bobId, "member"]] as const) {
+          await ctx.db.insert("boardMembers", {
+            boardId,
+            userId: uid,
+            role,
+            joinedAt: Date.now(),
+          });
+        }
+      });
+    }
+    // Include both accounts on Alice's profile.
+    await t.run(async (ctx: any) => {
+      const mp = await ctx.db
+        .query("userProfiles")
+        .withIndex("by_user", (q: any) => q.eq("userId", aliceId))
+        .unique();
+      await ctx.db.patch(mp._id, { accountIds: ["acc-a", "acc-b"] });
+    });
+    const listed = await asUser(aliceId).query(api.accounts.listMyAccounts, {});
+    const a = listed.find((x: any) => x.accountId === "acc-a");
+    const b = listed.find((x: any) => x.accountId === "acc-b");
+    expect(a?.memberDisplayNames?.[bobId]).toBe("bob");
+    expect(b?.memberDisplayNames?.[bobId]).toBe("bob");
+  });
 });
 
 describe("invite token (QR / link)", () => {
