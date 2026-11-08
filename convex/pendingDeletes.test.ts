@@ -140,4 +140,58 @@ describe("pendingDeletes (two-party consent)", () => {
     expect(asPartner[0].isRequester).toBe(false);
     expect(asPartner[0].canAct).toBe(true);
   });
+
+  test("requestItemDelete schedules push for couple board (mutation-level proof)", async () => {
+    const a = await seedUser(t, "alice");
+    const b = await seedUser(t, "bob");
+    await seedCoupleBoard(a, b, "board_6b");
+
+    const res = await asUser(a).mutation(api.pendingDeletes.requestItemDelete, {
+      boardId: "board_6b",
+      store: "expenses",
+      itemId: "e1",
+    });
+    expect(res.pendingId).toBeDefined();
+    expect(res.alreadyPending).toBe(false);
+    // The mutation surfaces the scheduler job id — proof that the partner push
+    // is scheduled, observed through the public mutation return value rather
+    // than by calling the notifyPartner helper directly.
+    expect(typeof (res as any).notifyScheduledId).toBe("string");
+    expect((res as any).notifyScheduledId.length).toBeGreaterThan(0);
+
+    // Re-requesting the same item short-circuits without scheduling again.
+    const dup = await asUser(a).mutation(api.pendingDeletes.requestItemDelete, {
+      boardId: "board_6b",
+      store: "expenses",
+      itemId: "e1",
+    });
+    expect(dup.alreadyPending).toBe(true);
+    expect((dup as any).notifyScheduledId).toBeNull();
+  });
+
+  test("requestItemDelete on a solo board schedules nothing", async () => {
+    const c = await seedUser(t, "carol");
+    await t.run(async (ctx: any) => {
+      await ctx.db.insert("accountBoards", {
+        boardId: "board_solo2",
+        accountId: "solo_account2",
+        ownerId: c,
+        members: [c],
+        umbrella: "personal",
+        name: "Solo Board",
+        data: {
+          "expenses:e1": { value: { id: "e1", category: "food", amount: 50 }, updatedAt: 1000 },
+        },
+        updatedAt: 1000,
+        updatedBy: c,
+      });
+    });
+    const res = await asUser(c).mutation(api.pendingDeletes.requestItemDelete, {
+      boardId: "board_solo2",
+      store: "expenses",
+      itemId: "e1",
+    });
+    expect(res.pendingId).toBeDefined();
+    expect((res as any).notifyScheduledId).toBeNull();
+  });
 });

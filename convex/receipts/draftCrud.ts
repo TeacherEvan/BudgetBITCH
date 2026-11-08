@@ -121,7 +121,7 @@ export const getUserForIngest = internalQuery({
   },
 });
 
-// Query: List receipts for user (paginated, newest first)
+// Query: List receipts for user (paginated, newest first) - index-safe windowed pagination
 export const listReceipts = query({
   args: {
     accountId: v.optional(v.string()),
@@ -132,60 +132,136 @@ export const listReceipts = query({
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) return { receipts: [], nextCursor: null };
+    if (!userId) return { receipts: [], nextCursor: null, truncated: false };
 
     const limit = Math.min(args.limit || 20, 50);
 
-    // When no accountId is supplied, list across all the user's receipts
-    // (bot-ingested drafts often have no accountId). Use the by_user index;
-    // otherwise scope to the specific account via by_user_and_account.
-    let queryBuilder;
-    if (args.accountId) {
-      queryBuilder = ctx.db
-        .query("receipts")
-        .withIndex("by_user_and_account", (q) =>
-          q.eq("userId", userId).eq("accountId", args.accountId as string)
-        );
-    } else {
-      queryBuilder = ctx.db
-        .query("receipts")
-        .withIndex("by_user", (q) => q.eq("userId", userId));
-    }
-    queryBuilder = queryBuilder.order("desc");
+    // Helper to build the base query
+    const buildBaseQuery = () => {
+      if (args.accountId) {
+        return ctx.db
+          .query("receipts")
+          .withIndex("by_user_and_account", (q) =>
+            q.eq("userId", userId).eq("accountId", args.accountId as string)
+          );
+      } else {
+        return ctx.db
+          .query("receipts")
+          .withIndex("by_user", (q) => q.eq("userId", userId));
+      }
+    };
 
-    // Fetch a generous scan window (up to 200 items) so that in-memory
-    // filters on source / status / cursor do not prematurely truncate results
-    // when limit is small (e.g. limit: 1).
-    const scanWindow = Math.min(Math.max((limit + 1) * 10, 100), 200);
-    const receipts = await queryBuilder.take(scanWindow);
-
-    // Apply optional server-side filters (source / status)
-    let filtered = receipts;
-    if (args.source !== undefined) {
-      filtered = filtered.filter((r) => (r.source ?? "app") === args.source);
-    }
-    if (args.status !== undefined) {
-      filtered = filtered.filter((r) => (r.status ?? "draft") === args.status);
-    }
-
-    // Filter by cursor if provided
+    // Parse the external cursor (based on parsedAt)
+    let externalCursorTime: number | undefined;
     if (args.cursor) {
-      const cursorTime = parseInt(args.cursor);
-      if (!isNaN(cursorTime)) {
-        filtered = filtered.filter((r) => r.parsedAt < cursorTime);
+      const parsed = parseInt(args.cursor);
+      if (!isNaN(parsed)) {
+        externalCursorTime = parsed;
       }
     }
 
-    // Check if there are more results
-    let nextCursor: string | null = null;
-    if (filtered.length > limit) {
-      const page = filtered.slice(0, limit);
-      const last = page[page.length - 1];
-      nextCursor = String(last.parsedAt);
-      filtered = page;
+    // Index-safe windowed pagination:
+    // - Use growing take() windows: take(min(scanned + pageSize, maxScan))
+    // - Track seen _creationTime in a JS Set to avoid duplicates
+    // - Apply source/status/parsedAt filters in JS (no .filter() on query)
+    // - Stop when we have enough results OR hit maxScan
+    // - If maxScan hit and more results exist, return truncated=true
+    const pageSize = 50;
+    const maxTotalScan = 1000;
+    const results: any[] = [];
+    const seenCreationTimes = new Set<number>();
+    let totalScanned = 0;
+    let truncated = false;
+
+    let iteration = 0;
+    while (results.length < limit && totalScanned < maxTotalScan) {
+      iteration++;
+      // Growing take window: take(scanned + pageSize) but capped at maxTotalScan
+      const takeCount = Math.min(totalScanned + pageSize, maxTotalScan);
+      const pageQuery = buildBaseQuery().order("desc");
+      const page = await pageQuery.take(takeCount);
+      
+      if (page.length === 0) {
+        break; // No more results
+      }
+
+      // Apply filters in-memory (JS-side predicates only)
+      let newUniqueItems = 0;
+      let newResults = 0;
+      for (const receipt of page) {
+        // Skip duplicates (same _creationTime)
+        if (seenCreationTimes.has(receipt._creationTime)) {
+          continue;
+        }
+        seenCreationTimes.add(receipt._creationTime);
+        newUniqueItems++;
+        totalScanned++;
+
+        // External cursor filter (parsedAt)
+        if (externalCursorTime !== undefined && receipt.parsedAt >= externalCursorTime) {
+          continue;
+        }
+        // Source filter
+        if (args.source !== undefined && (receipt.source ?? "app") !== args.source) {
+          continue;
+        }
+        // Status filter
+        if (args.status !== undefined && (receipt.status ?? "draft") !== args.status) {
+          continue;
+        }
+
+        results.push(receipt);
+        newResults++;
+        if (results.length >= limit) {
+          break;
+        }
+      }
+
+      // If we got no new unique items (all items in page were already seen), we've reached the end
+      if (newUniqueItems === 0) {
+        break;
+      }
+      
+      // If we scanned the full takeCount and it equals maxTotalScan, we hit the limit
+      if (takeCount >= maxTotalScan) {
+        break;
+      }
     }
 
-    return { receipts: filtered, nextCursor };
+    // Check for truncation: if we hit maxScan and there might be more results
+    if (totalScanned >= maxTotalScan && results.length === limit) {
+      truncated = true;
+    }
+
+    // Determine nextCursor (external cursor based on parsedAt)
+    let nextCursor: string | null = null;
+    if (results.length === limit && !truncated) {
+      const lastMatched = results[results.length - 1];
+      // Check if there are more matching results beyond the last one we returned
+      const checkTake = Math.min(pageSize, maxTotalScan - totalScanned);
+      if (checkTake > 0) {
+        const checkQuery = buildBaseQuery().order("desc");
+        const checkPage = await checkQuery.take(checkTake);
+        let hasMore = false;
+        for (const receipt of checkPage) {
+          if (seenCreationTimes.has(receipt._creationTime)) {
+            continue;
+          }
+          const matchesSource = args.source === undefined || (receipt.source ?? "app") === args.source;
+          const matchesStatus = args.status === undefined || (receipt.status ?? "draft") === args.status;
+          const matchesCursor = externalCursorTime === undefined || receipt.parsedAt < externalCursorTime;
+          if (matchesSource && matchesStatus && matchesCursor) {
+            hasMore = true;
+            break;
+          }
+        }
+        if (hasMore) {
+          nextCursor = String(lastMatched.parsedAt);
+        }
+      }
+    }
+
+    return { receipts: results, nextCursor, ...(truncated ? { truncated } : {}) };
   },
 });
 

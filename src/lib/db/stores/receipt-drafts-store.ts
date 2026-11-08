@@ -1,8 +1,24 @@
 import { getDB } from '../local-db';
 
+export type OcrPayload = {
+  lines: Array<{
+    text: string;
+    conf?: number;
+    y?: number;
+    words?: unknown[];
+  }>;
+  width?: number;
+  height?: number;
+  lang?: string;
+  engine?: string;
+  capturedAt?: number;
+  countryHint?: string | null;
+  currencyHint?: string | null;
+};
+
 export type OfflineReceiptDraft = {
   clientDraftId: string;
-  payload: unknown;
+  payload: OcrPayload;
   result: unknown;
   answers?: Record<string, string>;
   confirmed?: boolean;
@@ -16,12 +32,14 @@ export async function saveOfflineDraft(draft: OfflineReceiptDraft): Promise<void
 
 export async function getOfflineDraft(clientDraftId: string): Promise<OfflineReceiptDraft | undefined> {
   const db = await getDB();
-  return db.get('receiptDrafts', clientDraftId);
+  const draft = await db.get('receiptDrafts', clientDraftId);
+  return draft as OfflineReceiptDraft | undefined;
 }
 
 export async function getAllOfflineDrafts(): Promise<OfflineReceiptDraft[]> {
   const db = await getDB();
-  return db.getAll('receiptDrafts');
+  const drafts = await db.getAll('receiptDrafts');
+  return drafts as OfflineReceiptDraft[];
 }
 
 export async function updateOfflineDraft(

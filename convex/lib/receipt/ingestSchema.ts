@@ -28,7 +28,8 @@ export const ingestRequestBodySchema = z.object({
           words: z.array(z.any()).optional(),
         }),
       )
-      .min(1, "payload.lines must contain at least one line"),
+      .min(1, "payload.lines must contain at least one line")
+      .max(5000, "Too many lines (max 5000)"),
     width: z.number().optional(),
     height: z.number().optional(),
     lang: z.string().optional(),

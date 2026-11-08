@@ -11,6 +11,7 @@ import {
   getOfflineDraft,
   saveOfflineDraft,
   updateOfflineDraft,
+  type OfflineReceiptDraft,
 } from '../lib/db/stores/receipt-drafts-store';
 import { addExpense } from '../lib/db/stores/expenses-store';
 import { generateId } from '../lib/db/local-db';
@@ -42,7 +43,7 @@ export function useReceiptScan() {
         try {
           const syncArgs = {
             clientDraftId: queuedDraft.clientDraftId,
-            payload: queuedDraft.payload,
+            payload: queuedDraft.payload as OfflineReceiptDraft['payload'],
             ...(queuedDraft.answers ? { answers: queuedDraft.answers } : {}),
             ...(queuedDraft.confirmed !== undefined ? { confirmed: queuedDraft.confirmed } : {}),
           };
