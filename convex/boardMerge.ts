@@ -70,12 +70,17 @@ export function mergeRecords(
   incoming: Record<string, StoredRecord>,
   now: number = Date.now(),
 ): { merged: Record<string, StoredRecord>; changed: boolean } {
-  // Reject malformed/poisoned entries outright: they must never enter the
-  // board map (Infinity/NaN break LWW comparisons and tombstone eviction).
-  const invalid = validateBoardPayload(incoming);
+  // Reject non-finite/negative timestamps here: Infinity/NaN poison LWW
+  // comparisons and tombstone eviction and must never enter the board map.
+  // Key-shape/unknown-prefix strictness is enforced at the push mutations
+  // (pushBoard/pushAccountBoard) — internal callers use meta keys like
+  // `__purchaseNotes__` that are deliberately not `store:itemId`.
   const cleanIncoming: Record<string, StoredRecord> = {};
   for (const [k, v] of Object.entries(incoming)) {
-    if (!invalid.includes(k)) cleanIncoming[k] = v;
+    const ts = v?.updatedAt;
+    if (typeof ts === "number" && Number.isFinite(ts) && ts >= 0) {
+      cleanIncoming[k] = v;
+    }
   }
 
   const base: Record<string, StoredRecord> = { ...(existing ?? {}) };

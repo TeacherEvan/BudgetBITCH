@@ -26,13 +26,14 @@ describe("validateBoardPayload (Task 11)", () => {
     expect(bad).not.toContain("expenses:ok");
   });
 
-  it("mergeRecords drops poisoned entries instead of storing them", () => {
+  it("mergeRecords drops non-finite-timestamp entries but keeps internal meta keys", () => {
     const { merged } = mergeRecords({}, {
       "expenses:ok": { value: { amount: 10 }, updatedAt: 100 },
       "expenses:inf": { value: { amount: 99 }, updatedAt: Infinity },
-      "garbage:x": { value: { amount: 99 }, updatedAt: 100 },
+      "expenses:nan": { value: { amount: 99 }, updatedAt: NaN },
+      "__purchaseNotes__": { value: { exp_1: { note: "hi" } }, updatedAt: 100 },
     });
-    expect(Object.keys(merged)).toEqual(["expenses:ok"]);
+    expect(Object.keys(merged).sort()).toEqual(["__purchaseNotes__", "expenses:ok"]);
   });
 });
 
