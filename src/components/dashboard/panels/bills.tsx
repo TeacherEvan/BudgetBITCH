@@ -12,6 +12,7 @@ import { useCurrency } from '@/hooks/use-currency';
 import { format } from 'date-fns';
 import type { ExpenseCategory } from '@/lib/types/budget';
 import { cn } from '@/lib/utils/cn';
+import { getDaysUntilDue } from '@/lib/utils/date';
 
 interface Bill {
   id: string;
@@ -114,23 +115,6 @@ export function Bills({ locale = 'en' }: BillsProps) {
       isActive: true,
       reminderDaysBefore: 3,
     });
-  };
-
-  const getDaysUntilDue = (dueDay: number) => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const currentMonth = today.getMonth();
-    const currentYear = today.getFullYear();
-    const daysInCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-    const clampedDueDay = Math.min(dueDay, daysInCurrentMonth);
-    let dueDate = new Date(currentYear, currentMonth, clampedDueDay);
-    if (dueDate < today) {
-      const daysInNextMonth = new Date(currentYear, currentMonth + 2, 0).getDate();
-      const clampedNextDueDay = Math.min(dueDay, daysInNextMonth);
-      dueDate = new Date(currentYear, currentMonth + 1, clampedNextDueDay);
-    }
-    const diffTime = dueDate.getTime() - today.getTime();
-    return Math.round(diffTime / (1000 * 60 * 60 * 24));
   };
 
   const categoryOptions = useMemo(

@@ -74,11 +74,9 @@ async function staleWhileRevalidate(request) {
     return cachedResponse;
   }
 
-  // Not in cache: await network with a 4s fallback timeout
-  return Promise.race([
-    updateCachePromise,
-    new Promise((resolve) => setTimeout(() => resolve(cachedResponse), 4000)),
-  ]);
+  // Not in cache: await network response directly (do not resolve undefined on timeout,
+  // which causes event.respondWith(undefined) to throw a network error).
+  return updateCachePromise;
 }
 
 async function networkFirst(request) {
@@ -185,7 +183,7 @@ self.addEventListener("periodicsync", (event) => {
 // --- Web Push (VAPID) ----------------------------------------------------
 // Pushes are encrypted end-to-end; the SW only decrypts + displays them.
 self.addEventListener("push", (event) => {
-  let payload = { title: "Budget-BOSS", body: "You have an update." };
+  let payload = { title: "Budget Boss", body: "You have an update." };
   try {
     if (event.data) {
       const data = event.data.json();

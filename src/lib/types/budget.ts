@@ -247,7 +247,16 @@ export const BOARD_CHANGED_EVENT = 'budgetbitch:localBoardChanged';
 
 export type BoardChangedSource = 'local' | 'remote' | 'switch';
 
-export function notifyBoardChanged(source: BoardChangedSource = 'local'): void {
+export interface BoardChangedDetail {
+  source: BoardChangedSource;
+  stores?: string[];
+}
+
+export function notifyBoardChanged(
+  source: BoardChangedSource = 'local',
+  stores?: string[],
+): void {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT, { detail: { source } }));
+  const detail: BoardChangedDetail = stores ? { source, stores } : { source };
+  window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT, { detail }));
 }

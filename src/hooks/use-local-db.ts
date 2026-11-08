@@ -53,21 +53,48 @@ import {
   getCriticalExpenseCommitment,
   generateId,
 } from '@/lib/db/local-db';
-import { BOARD_CHANGED_EVENT } from '@/lib/types/budget';
+import { BOARD_CHANGED_EVENT, type BoardChangedDetail } from '@/lib/types/budget';
 import { getActiveSharedDeleteGuard } from '@/components/shared-board/shared-delete-guard-provider';
 import { notify } from '@/lib/ui/notice';
 
 /**
  * Helper hook to register a window event listener that re-fetches local DB state
  * whenever the local board data changes (e.g. from partner sync pulls or account switches).
+ * When `relevantStores` is specified, local mutations that only touch unrelated stores
+ * are ignored to avoid redundant IndexedDB read amplification across all mounted hooks.
  */
-export function useDatabaseListener(callback: () => void) {
+export function useDatabaseListener(callback: () => void, relevantStores?: readonly string[]) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    window.addEventListener(BOARD_CHANGED_EVENT, callback);
-    return () => window.removeEventListener(BOARD_CHANGED_EVENT, callback);
-  }, [callback]);
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<BoardChangedDetail | undefined>).detail;
+      if (
+        relevantStores &&
+        relevantStores.length > 0 &&
+        detail?.source === 'local' &&
+        Array.isArray(detail.stores) &&
+        detail.stores.length > 0 &&
+        !detail.stores.some((s) => relevantStores.includes(s))
+      ) {
+        return;
+      }
+      callback();
+    };
+    window.addEventListener(BOARD_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(BOARD_CHANGED_EVENT, handler);
+  }, [callback, relevantStores]);
 }
+
+const WIZARD_PROFILE_STORES = ['wizardProfile'] as const;
+const EXPENSES_STORES = ['expenses'] as const;
+const INCOMES_STORES = ['incomes'] as const;
+const BUDGETS_STORES = ['budgets'] as const;
+const BILLS_STORES = ['bills'] as const;
+const SAVINGS_GOALS_STORES = ['savingsGoals'] as const;
+const COMMITMENTS_STORES = ['criticalExpenseCommitments'] as const;
+const NET_WORTH_STORES = ['netWorthSnapshots'] as const;
+const DEBTS_STORES = ['debts'] as const;
+const FORECAST_STORES = ['budgets', 'wizardProfile'] as const;
 
 // Wizard Profile
 export function useWizardProfile() {
@@ -91,7 +118,7 @@ export function useWizardProfile() {
     return load();
   }, [load]);
 
-  useDatabaseListener(load);
+  useDatabaseListener(load, WIZARD_PROFILE_STORES);
 
   const save = useCallback(async (newProfile: WizardProfile) => {
     await saveWizardProfile(newProfile);
@@ -128,7 +155,7 @@ export function useExpenses() {
     return load();
   }, [load]);
 
-  useDatabaseListener(load);
+  useDatabaseListener(load, EXPENSES_STORES);
 
   const add = useCallback(async (expense: Omit<ExpenseEntry, 'id'>) => {
     const newExpense = { ...expense, id: generateId() };
@@ -190,7 +217,7 @@ export function useIncomes() {
     return load();
   }, [load]);
 
-  useDatabaseListener(load);
+  useDatabaseListener(load, INCOMES_STORES);
 
   const add = useCallback(async (income: Omit<IncomeEntry, 'id' | 'createdAt'>) => {
     const newIncome = {
@@ -250,7 +277,7 @@ export function useBudgets() {
     return load();
   }, [load]);
 
-  useDatabaseListener(load);
+  useDatabaseListener(load, BUDGETS_STORES);
 
   const save = useCallback(async (budget: BudgetCategory) => {
     await saveBudgetCategory(budget);
@@ -292,7 +319,7 @@ export function useBills() {
     return load();
   }, [load]);
 
-  useDatabaseListener(load);
+  useDatabaseListener(load, BILLS_STORES);
 
   const add = useCallback(async (bill: Bill) => {
     await addBill(bill);
@@ -346,7 +373,7 @@ export function useSavingsGoals() {
     return load();
   }, [load]);
 
-  useDatabaseListener(load);
+  useDatabaseListener(load, SAVINGS_GOALS_STORES);
 
   const add = useCallback(async (goal: SavingsGoal) => {
     await addSavingsGoal(goal);
@@ -402,7 +429,7 @@ export function useCriticalExpenseCommitment(month?: string) {
     return load();
   }, [load]);
 
-  useDatabaseListener(load);
+  useDatabaseListener(load, COMMITMENTS_STORES);
 
   const save = useCallback(async (newCommitment: CriticalExpenseCommitment) => {
     await saveCriticalExpenseCommitment(newCommitment);
@@ -434,7 +461,7 @@ export function useNetWorth() {
     return load();
   }, [load]);
 
-  useDatabaseListener(load);
+  useDatabaseListener(load, NET_WORTH_STORES);
 
   /**
    * A new user has NO net-worth snapshot yet, so every `if (!snapshot) return;`
@@ -542,7 +569,7 @@ export function useSubscriptions() {
     return load();
   }, [load]);
 
-  useDatabaseListener(load);
+  useDatabaseListener(load, EXPENSES_STORES);
 
   const add = useCallback(async (sub: Omit<ExpenseEntry, 'id'>) => {
     const newSub = { ...sub, id: generateId(), category: 'subscriptions' as const, isRecurring: true };
@@ -602,7 +629,7 @@ export function useEmergencyFund() {
     return load();
   }, [load]);
 
-  useDatabaseListener(load);
+  useDatabaseListener(load, SAVINGS_GOALS_STORES);
 
   const update = useCallback(async (updates: { targetAmount?: number; currentAmount?: number }) => {
     const goals = await getAllSavingsGoals();
@@ -655,7 +682,7 @@ export function useDebtPayoff() {
     return load();
   }, [load]);
 
-  useDatabaseListener(load);
+  useDatabaseListener(load, DEBTS_STORES);
 
   const add = useCallback(async (debt: Debt) => {
     await addDebt(debt);
@@ -718,7 +745,7 @@ export function useCashFlowForecast() {
     return load();
   }, [load]);
 
-  useDatabaseListener(load);
+  useDatabaseListener(load, FORECAST_STORES);
 
   return { forecast, loading };
 }

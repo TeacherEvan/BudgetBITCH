@@ -17,6 +17,7 @@ import { Card } from '@/components/ui/card';
 import { useCurrency } from '@/hooks/use-currency';
 import { usePurchaseNotes } from '@/hooks/use-purchase-notes';
 import { hasTrustworthyLineItems } from '@/modules/budgeting/line-item-rollup';
+import { formatLocalCalendarDate } from '@/lib/utils/date';
 import type { ExpenseCategory } from '@/lib/types/budget';
 
 interface Expense {
@@ -347,7 +348,7 @@ export function ExpenseTracker({ locale = 'en' }: ExpenseTrackerProps) {
                           )}
                         </div>
                         <p className="text-xs text-white/50 mt-0.5 truncate">
-                          {new Date(expense.date).toLocaleDateString('en-US')} • {formatCurrency(expense.amount, locale)}
+                          {formatLocalCalendarDate(expense.date, locale)} • {formatCurrency(expense.amount, locale)}
                           {expense.note && ` • ${expense.note}`}
                           {notes[expense.id] && ` • 📝 ${notes[expense.id].note}`}
                           {expense.entryDate && expense.entryDate !== expense.date && (

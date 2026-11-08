@@ -250,11 +250,7 @@ export async function applyRemoteBoard(
         await tx.objectStore(item.store).delete(item.explicitKey as never);
       }
     } else {
-      if (item.store === 'wizardProfile' && item.explicitKey !== undefined) {
-        await tx.objectStore(item.store).put(item.value as never, item.explicitKey as never);
-      } else {
-        await tx.objectStore(item.store).put(item.value as never);
-      }
+      await tx.objectStore(item.store).put(item.value as never);
     }
 
     appliedWrites.push({

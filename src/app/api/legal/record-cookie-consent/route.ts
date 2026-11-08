@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
   const authToken = token || undefined;
   try {
     const client = getConvexHttpClient({ auth: authToken });
+    const relaySecret = process.env.CONVEX_SYNC_SECRET;
     const { id } = await client.mutation(api.legal.recordCookieConsent, {
       accepted,
       optionalAccepted,
@@ -51,6 +52,7 @@ export async function POST(req: NextRequest) {
       userAgent: userAgent ?? undefined,
       // Server-resolved: not client-supplied, so it cannot be spoofed.
       ipAddress: clientIp(req),
+      ...(relaySecret ? { relaySecret } : {}),
     });
     return NextResponse.json({ id });
   } catch (error) {

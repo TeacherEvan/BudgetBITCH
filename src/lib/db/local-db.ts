@@ -348,7 +348,7 @@ export async function clearAllLocalWrites(): Promise<void> {
 
 export async function afterBoardMutation(store: string, key: string): Promise<void> {
   await recordLocalWrite(store, key);
-  notifyBoardChanged('local');
+  notifyBoardChanged('local', [store]);
 }
 
 // Wizard Profile

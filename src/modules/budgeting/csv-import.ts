@@ -47,7 +47,10 @@ const KNOWN_CATEGORIES: ReadonlySet<ExpenseCategory> = new Set<ExpenseCategory>(
  * embedded newlines, and CRLF. Returns an array of row arrays (no header
  * stripping — callers decide which row is the header).
  */
-export function parseCsv(input: string): string[][] {
+export function parseCsv(rawInput: string): string[][] {
+  // Strip UTF-8 BOM (\uFEFF) emitted by Excel and Thai banking CSV exports so
+  // the first header column is not corrupted (`\uFEFFdate` / `\uFEFFวันที่`).
+  const input = rawInput.charCodeAt(0) === 0xfeff ? rawInput.slice(1) : rawInput;
   const rows: string[][] = [];
   let row: string[] = [];
   let field = '';
@@ -174,7 +177,7 @@ const THAI_HEADERS: Record<string, ColumnKey> = {
 export function detectColumns(headers: string[]): ColumnMap {
   const map: ColumnMap = {};
   headers.forEach((raw, idx) => {
-    const key = raw.trim().toLowerCase();
+    const key = raw.replace(/^\uFEFF/, '').trim().toLowerCase();
     const resolved = ENGLISH_HEADERS[key] ?? THAI_HEADERS[key];
     if (resolved && map[resolved] === undefined) {
       map[resolved] = idx;

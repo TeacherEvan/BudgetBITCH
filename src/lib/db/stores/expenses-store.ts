@@ -50,7 +50,7 @@ export async function addExpensesBulk(expenses: ExpenseEntry[]): Promise<void> {
     await lwTx.done;
   }
 
-  notifyBoardChanged('local');
+  notifyBoardChanged('local', ['expenses']);
   logUserAction(`Add bulk expenses (${prepared.length} items)`);
 }
 

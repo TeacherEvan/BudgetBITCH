@@ -187,22 +187,35 @@ function byteLength(obj: unknown): number {
   return new TextEncoder().encode(JSON.stringify(obj)).length;
 }
 
-function capBackup(fullBackupData: Record<string, unknown[]>): Record<string, unknown[]> {
+export function capBackup(
+  fullBackupData: Record<string, unknown[]>,
+  maxBytes: number = MAX_BACKUP_BYTES
+): Record<string, unknown[]> {
   const size = byteLength(fullBackupData);
-  if (size <= MAX_BACKUP_BYTES) return fullBackupData;
+  if (size <= maxBytes) return fullBackupData;
 
   console.warn(
-    `[Sync] Full backup is ${(size / 1024).toFixed(0)}KB (cap ${MAX_BACKUP_BYTES / 1024}KB); trimming oldest records per store.`
+    `[Sync] Full backup is ${(size / 1024).toFixed(0)}KB (cap ${maxBytes / 1024}KB); trimming oldest records per store.`
   );
   const capped: Record<string, unknown[]> = { ...fullBackupData };
   let current = size;
   // Progressively keep only the most recent half of the largest store.
-  while (current > MAX_BACKUP_BYTES) {
+  while (current > maxBytes) {
     const stores = Object.keys(capped).filter((k) => Array.isArray(capped[k]) && capped[k].length > 1);
     if (stores.length === 0) break;
     const largest = stores.reduce((a, b) => (capped[a].length >= capped[b].length ? a : b));
     const arr = capped[largest];
-    capped[largest] = arr.slice(Math.ceil(arr.length / 2));
+    if (!Array.isArray(arr) || arr.length <= 1) break;
+    // Sort chronologically by date/createdAt/month before slicing so recent expenses are never discarded
+    const sorted = [...arr].sort((a, b) => {
+      const recA = a as { date?: string; entryDate?: string; createdAt?: string; month?: string };
+      const recB = b as { date?: string; entryDate?: string; createdAt?: string; month?: string };
+      const keyA = recA.date ?? recA.entryDate ?? recA.createdAt ?? recA.month ?? '';
+      const keyB = recB.date ?? recB.entryDate ?? recB.createdAt ?? recB.month ?? '';
+      return String(keyA).localeCompare(String(keyB));
+    });
+    // Keep the chronologically newest half
+    capped[largest] = sorted.slice(Math.ceil(sorted.length / 2));
     current = byteLength(capped);
   }
   return capped;

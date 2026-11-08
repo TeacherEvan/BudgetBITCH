@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { convexTest } from "convex-test";
-import { expect, test, beforeEach } from "vitest";
+import { expect, test, beforeEach, vi } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
 
@@ -96,5 +96,36 @@ test("recordCookieConsent stores a server-supplied IP when provided", async () =
   );
   expect(rows[0].ipAddress).toBe("203.0.113.7");
   expect(rows[0].userAgent).toBe("vitest-agent");
+});
+
+test("strips client-spoofed ipAddress when CONVEX_SYNC_SECRET is set and relaySecret is missing or invalid", async () => {
+  vi.stubEnv("CONVEX_SYNC_SECRET", "trusted-server-relay-secret");
+  try {
+    const aliceId = await seedUser(t, "alice");
+    // Direct client call trying to spoof ipAddress without relaySecret
+    await asUser(aliceId).mutation(api.legal.recordAgreement, {
+      termsVersion: "2026-07-19",
+      privacyVersion: "2026-07-19",
+      ipAddress: "198.51.100.99",
+      userAgent: "spoofed-client",
+    });
+    // Server relay call with valid relaySecret
+    await asUser(aliceId).mutation(api.legal.recordAgreement, {
+      termsVersion: "2026-07-19",
+      privacyVersion: "2026-07-19",
+      ipAddress: "203.0.113.7",
+      userAgent: "trusted-relay",
+      relaySecret: "trusted-server-relay-secret",
+    });
+
+    const rows = await t.run(async (ctx: any) =>
+      ctx.db.query("legalAgreements").collect(),
+    );
+    expect(rows).toHaveLength(2);
+    expect(rows[0].ipAddress).toBeUndefined();
+    expect(rows[1].ipAddress).toBe("203.0.113.7");
+  } finally {
+    vi.unstubAllEnvs();
+  }
 });
 

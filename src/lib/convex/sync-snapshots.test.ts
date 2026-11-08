@@ -60,7 +60,7 @@ vi.mock('@/lib/db/accountStorage', () => ({
   getCurrentAccountId: vi.fn().mockResolvedValue('personal'),
 }));
 
-import { gatherSnapshotData, syncDailySnapshot, flushOfflineQueue } from './sync-snapshots';
+import { gatherSnapshotData, syncDailySnapshot, flushOfflineQueue, capBackup } from './sync-snapshots';
 
 const mocked = vi.mocked(localDb);
 
@@ -234,5 +234,28 @@ describe('flushOfflineQueue (no item-skip on partial failure)', () => {
     await flushOfflineQueue();
 
     expect(syncQueueStore).toHaveLength(3);
+  });
+});
+
+describe('capBackup (chronological retention)', () => {
+  it('retains chronologically newest records instead of UUID-sorted tail when trimming', () => {
+    // Simulate IndexedDB primary-key (UUID) ordering where recent dates have smaller UUID prefixes ('000...')
+    // and old dates have larger UUID prefixes ('fff...').
+    const expenses = [
+      { id: '0001-recent', date: '2026-08-20', amount: 150, merchant: 'Recent A' },
+      { id: '0002-recent', date: '2026-08-21', amount: 250, merchant: 'Recent B' },
+      { id: 'fffe-old', date: '2025-01-01', amount: 50, merchant: 'Old A' },
+      { id: 'ffff-old', date: '2025-01-02', amount: 75, merchant: 'Old B' },
+    ];
+    const fullBackup = { expenses };
+    // Force a single halving pass by setting maxBytes slightly below full payload size
+    const fullSize = new TextEncoder().encode(JSON.stringify(fullBackup)).length;
+    const capped = capBackup(fullBackup, fullSize - 10);
+
+    expect(capped.expenses).toHaveLength(2);
+    expect(capped.expenses).toEqual([
+      { id: '0001-recent', date: '2026-08-20', amount: 150, merchant: 'Recent A' },
+      { id: '0002-recent', date: '2026-08-21', amount: 250, merchant: 'Recent B' },
+    ]);
   });
 });

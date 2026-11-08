@@ -28,6 +28,19 @@ async function deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey>
 }
 
 /**
+ * Converts a Uint8Array to a Base64 string in chunks to prevent
+ * RangeError: Maximum call stack size exceeded when spreading large arrays.
+ */
+function uint8ToBase64(bytes: Uint8Array): string {
+  const CHUNK_SIZE = 0x8000; // 32KB
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK_SIZE));
+  }
+  return btoa(binary);
+}
+
+/**
  * Encrypts a plaintext string using AES-256-GCM with PBKDF2 key derivation.
  * Returns Base64 strings for ciphertext, salt, and IV.
  */
@@ -51,9 +64,9 @@ export async function encryptBackup(
   );
 
   return {
-    ciphertext: btoa(String.fromCharCode(...new Uint8Array(encryptedBuffer))),
-    salt: btoa(String.fromCharCode(...salt)),
-    iv: btoa(String.fromCharCode(...iv)),
+    ciphertext: uint8ToBase64(new Uint8Array(encryptedBuffer)),
+    salt: uint8ToBase64(salt),
+    iv: uint8ToBase64(iv),
   };
 }
 

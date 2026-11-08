@@ -1,0 +1,51 @@
+import { describe, it, expect } from "vitest";
+import { mergeRecords, TOMBSTONE_TTL_MS, type StoredRecord } from "./boardMerge";
+
+describe("mergeRecords (LWW + 30-day tombstone compaction)", () => {
+  const NOW = 1_750_000_000_000;
+
+  it("keeps newer incoming records and ignores older incoming records", () => {
+    const existing: Record<string, StoredRecord> = {
+      "expenses:1": { value: { amount: 100 }, updatedAt: NOW - 5000 },
+      "expenses:2": { value: { amount: 200 }, updatedAt: NOW - 1000 },
+    };
+    const incoming: Record<string, StoredRecord> = {
+      "expenses:1": { value: { amount: 150 }, updatedAt: NOW - 2000 }, // newer -> wins
+      "expenses:2": { value: { amount: 180 }, updatedAt: NOW - 3000 }, // older -> ignored
+    };
+
+    const { merged, changed } = mergeRecords(existing, incoming, NOW);
+    expect(changed).toBe(true);
+    expect(merged["expenses:1"].value).toEqual({ amount: 150 });
+    expect(merged["expenses:2"].value).toEqual({ amount: 200 });
+  });
+
+  it("retains tombstones younger than 30 days so offline peers observe deletions", () => {
+    const recentDeleteTs = NOW - 7 * 24 * 60 * 60 * 1000; // 7 days ago
+    const existing: Record<string, StoredRecord> = {
+      "expenses:deleted-recent": { value: null, updatedAt: recentDeleteTs, deleted: true },
+    };
+
+    const { merged, changed } = mergeRecords(existing, {}, NOW);
+    expect(changed).toBe(false);
+    expect(merged["expenses:deleted-recent"]).toBeDefined();
+    expect(merged["expenses:deleted-recent"].deleted).toBe(true);
+  });
+
+  it("evicts expired tombstones older than 30 days while keeping live records of any age", () => {
+    const expiredDeleteTs = NOW - TOMBSTONE_TTL_MS - 1000; // 30 days + 1s ago
+    const oldLiveTs = NOW - 365 * 24 * 60 * 60 * 1000; // 1 year old live record
+    const existing: Record<string, StoredRecord> = {
+      "expenses:deleted-old": { value: null, updatedAt: expiredDeleteTs, deleted: true },
+      "expenses:live-old": { value: { amount: 500 }, updatedAt: oldLiveTs },
+    };
+
+    const { merged, changed } = mergeRecords(existing, {}, NOW);
+    expect(changed).toBe(true);
+    expect(merged["expenses:deleted-old"]).toBeUndefined();
+    expect(merged["expenses:live-old"]).toEqual({
+      value: { amount: 500 },
+      updatedAt: oldLiveTs,
+    });
+  });
+});

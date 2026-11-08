@@ -1,7 +1,8 @@
 // src/hooks/use-local-db.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
-import { useBudgets, useBills, useSavingsGoals, useNetWorth, useSubscriptions, useEmergencyFund, useDebtPayoff, useCashFlowForecast, useWizardProfile, useCriticalExpenseCommitment } from './use-local-db';
+import { useBudgets, useBills, useSavingsGoals, useNetWorth, useSubscriptions, useEmergencyFund, useDebtPayoff, useCashFlowForecast, useWizardProfile, useCriticalExpenseCommitment, useDatabaseListener } from './use-local-db';
+import { notifyBoardChanged } from '@/lib/types/budget';
 
 // Mock the local-db functions
 vi.mock('@/lib/db/local-db', () => ({
@@ -183,5 +184,20 @@ describe('use-local-db hooks', () => {
       expect(result.current.budgets).toHaveLength(2);
       expect(result.current.budgets[1].category).toBe('food');
     });
+  });
+
+  it('useDatabaseListener filters local mutations by store while passing remote/switch events', () => {
+    const callback = vi.fn();
+    renderHook(() => useDatabaseListener(callback, ['bills']));
+
+    notifyBoardChanged('local', ['expenses']);
+    expect(callback).not.toHaveBeenCalled();
+
+    notifyBoardChanged('local', ['bills']);
+    expect(callback).toHaveBeenCalledTimes(1);
+
+    notifyBoardChanged('remote');
+    notifyBoardChanged('switch');
+    expect(callback).toHaveBeenCalledTimes(3);
   });
 });

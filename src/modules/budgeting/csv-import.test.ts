@@ -42,6 +42,17 @@ describe('parseCsv', () => {
       ['1', '2'],
     ]);
   });
+
+  it('strips a leading UTF-8 BOM from Excel / Thai bank exports', () => {
+    expect(parseCsv('\uFEFFdate,merchant,amount\n2026-01-01,Grab,120')).toEqual([
+      ['date', 'merchant', 'amount'],
+      ['2026-01-01', 'Grab', '120'],
+    ]);
+    const imported = parseImport('\uFEFFวันที่,รายการ,จำนวนเงิน\n2026-02-10,ค่าเช่า,8000');
+    expect(imported.errors).toHaveLength(0);
+    expect(imported.valid).toHaveLength(1);
+    expect(imported.valid[0].date).toBe('2026-02-10');
+  });
 });
 
 describe('detectColumns', () => {

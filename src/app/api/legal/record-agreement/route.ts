@@ -48,11 +48,13 @@ export async function POST(req: NextRequest) {
 
   try {
     const client = getConvexHttpClient({ auth: authToken });
+    const relaySecret = process.env.CONVEX_SYNC_SECRET;
     const { id } = await client.mutation(api.legal.recordAgreement, {
       termsVersion,
       privacyVersion,
       userAgent: userAgent ?? undefined,
       ipAddress: clientIp(req),
+      ...(relaySecret ? { relaySecret } : {}),
     });
     return NextResponse.json({ id });
   } catch (error) {

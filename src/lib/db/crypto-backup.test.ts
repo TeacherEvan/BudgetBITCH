@@ -48,4 +48,22 @@ describe('Crypto Backup Engine', () => {
       )
     ).rejects.toThrow();
   });
+
+  it('should encrypt and decrypt large payloads (>65KB) without call-stack overflow', async () => {
+    const password = 'test-secret-password-123';
+    // 120KB payload
+    const plaintext = JSON.stringify({ large: 'x'.repeat(120 * 1024) });
+
+    const encrypted = await encryptBackup(plaintext, password);
+    expect(encrypted.ciphertext).toBeDefined();
+
+    const decrypted = await decryptBackup(
+      encrypted.ciphertext,
+      password,
+      encrypted.salt,
+      encrypted.iv
+    );
+
+    expect(decrypted).toBe(plaintext);
+  });
 });
