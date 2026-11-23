@@ -9,7 +9,7 @@ import { useLineLink } from '@/hooks/use-line-link';
 
 export default function LineLinkPage() {
   const router = useRouter();
-  const { status, error, lineUserId, link } = useLineLink();
+  const { status, error, lineUserId, code, setCode, start, link } = useLineLink();
 
   return (
     <RequireAuth>
@@ -53,15 +53,54 @@ export default function LineLinkPage() {
                   LINE account linked. You can now send receipts in LINE.
                 </span>
               </div>
-            ) : (
+            ) : !lineUserId ? (
               <Button
                 variant="primary"
-                className="w-full gap-2 justify-center bg-amber-400 text-black hover:bg-amber-300 font-semibold"
-                onClick={() => void link()}
+                className="w-full min-h-11 gap-2 justify-center bg-amber-400 text-black hover:bg-amber-300 font-semibold"
+                onClick={() => void start()}
                 disabled={status === 'loading'}
               >
-                {status === 'loading' ? 'Linking…' : 'Link my LINE account'}
+                {status === 'loading' ? 'Opening LINE…' : 'Link my LINE account'}
               </Button>
+            ) : (
+              <form
+                className="space-y-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void link();
+                }}
+              >
+                <label
+                  htmlFor="line-link-code"
+                  className="block text-sm font-medium text-white/80"
+                >
+                  LINE link code
+                </label>
+                <input
+                  id="line-link-code"
+                  name="code"
+                  type="text"
+                  inputMode="text"
+                  autoComplete="off"
+                  value={code}
+                  onChange={(event) => setCode(event.target.value)}
+                  placeholder="Code from the LINE bot"
+                  disabled={status === 'loading'}
+                  className="min-h-11 w-full rounded-xl border border-white/15 bg-black/40 px-4 py-2 text-sm text-white placeholder:text-white/40 focus:border-[#E8B020] focus:outline-none"
+                />
+                <p className="text-xs text-white/50">
+                  Ask the Budget Boss LINE bot for a code, then enter it here
+                  within 10 minutes. Each code works once.
+                </p>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  className="w-full min-h-11 gap-2 justify-center bg-amber-400 text-black hover:bg-amber-300 font-semibold"
+                  disabled={status === 'loading' || !code.trim()}
+                >
+                  {status === 'loading' ? 'Linking…' : 'Link with code'}
+                </Button>
+              </form>
             )}
 
             {status === 'error' && (
