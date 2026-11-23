@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, expect, test, vi, beforeEach } from 'vitest';
 import { ReceiptVerifySheet } from './receipt-verify-sheet';
 import type { Question } from '../../../convex/lib/receipt/types';
@@ -35,7 +35,8 @@ describe('ReceiptVerifySheet component', () => {
         isOpen={false}
         questions={[confirmQuestion]}
         onAnswer={vi.fn()}
-        onClose={vi.fn()}
+        onFinish={vi.fn()}
+        onCancel={vi.fn()}
       />
     );
 
@@ -48,14 +49,15 @@ describe('ReceiptVerifySheet component', () => {
         isOpen={true}
         questions={[]}
         onAnswer={vi.fn()}
-        onClose={vi.fn()}
+        onFinish={vi.fn()}
+        onCancel={vi.fn()}
       />
     );
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  test('renders confirm question, calls onAnswer with selection haptic, and advances to next question', () => {
+  test('renders confirm question, calls onAnswer with selection haptic, and advances to next question', async () => {
     const onAnswer = vi.fn();
     const onClose = vi.fn();
 
@@ -64,7 +66,8 @@ describe('ReceiptVerifySheet component', () => {
         isOpen={true}
         questions={[confirmQuestion, textEntryQuestion]}
         onAnswer={onAnswer}
-        onClose={onClose}
+        onFinish={onClose}
+        onCancel={vi.fn()}
       />
     );
 
@@ -72,17 +75,21 @@ describe('ReceiptVerifySheet component', () => {
     expect(screen.getByText('Confirm total: 150.00')).toBeInTheDocument();
 
     const confirmBtn = screen.getByRole('button', { name: /confirm/i });
-    fireEvent.click(confirmBtn);
+    await act(async () => {
+      fireEvent.click(confirmBtn);
+    });
 
     expect(mockTrigger).toHaveBeenCalledWith('selection');
     expect(onAnswer).toHaveBeenCalledWith({ total: '150.00' });
     expect(onClose).not.toHaveBeenCalled();
 
-    // Advances to question 2
-    expect(screen.getByText('Enter merchant name')).toBeInTheDocument();
+    // Advances to question 2 (after the answer promise resolves)
+    await waitFor(() =>
+      expect(screen.getByText('Enter merchant name')).toBeInTheDocument(),
+    );
   });
 
-  test('renders text entry question, accepts input, calls onAnswer, and calls onClose after last question', () => {
+  test('renders text entry question, accepts input, calls onAnswer, and calls onClose after last question', async () => {
     const onAnswer = vi.fn();
     const onClose = vi.fn();
 
@@ -91,7 +98,8 @@ describe('ReceiptVerifySheet component', () => {
         isOpen={true}
         questions={[textEntryQuestion]}
         onAnswer={onAnswer}
-        onClose={onClose}
+        onFinish={onClose}
+        onCancel={vi.fn()}
       />
     );
 
@@ -105,23 +113,27 @@ describe('ReceiptVerifySheet component', () => {
     expect(input).toHaveValue('Starbucks');
 
     const submitBtn = screen.getByRole('button', { name: /submit/i });
-    fireEvent.click(submitBtn);
+    await act(async () => {
+      fireEvent.click(submitBtn);
+    });
 
     expect(mockTrigger).toHaveBeenCalledWith('selection');
     expect(onAnswer).toHaveBeenCalledWith({ merchant: 'Starbucks' });
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  test('cancel button on confirm question triggers light haptic and calls onClose', () => {
+  test('cancel button on confirm question triggers light haptic and calls onCancel — never onFinish (no expense saved)', () => {
     const onAnswer = vi.fn();
-    const onClose = vi.fn();
+    const onFinish = vi.fn();
+    const onCancel = vi.fn();
 
     render(
       <ReceiptVerifySheet
         isOpen={true}
         questions={[confirmQuestion]}
         onAnswer={onAnswer}
-        onClose={onClose}
+        onFinish={onFinish}
+        onCancel={onCancel}
       />
     );
 
@@ -129,20 +141,25 @@ describe('ReceiptVerifySheet component', () => {
     fireEvent.click(cancelBtn);
 
     expect(mockTrigger).toHaveBeenCalledWith('light');
-    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    // Regression guard: the old single onClose routed Cancel to confirmDraft,
+    // which wrote the expense. Cancel must never reach the finishing path.
+    expect(onFinish).not.toHaveBeenCalled();
     expect(onAnswer).not.toHaveBeenCalled();
   });
 
-  test('skip button on entry question triggers light haptic and calls onClose', () => {
+  test('skip button on entry question triggers light haptic and calls onCancel — never onFinish (no expense saved)', () => {
     const onAnswer = vi.fn();
-    const onClose = vi.fn();
+    const onFinish = vi.fn();
+    const onCancel = vi.fn();
 
     render(
       <ReceiptVerifySheet
         isOpen={true}
         questions={[textEntryQuestion]}
         onAnswer={onAnswer}
-        onClose={onClose}
+        onFinish={onFinish}
+        onCancel={onCancel}
       />
     );
 
@@ -150,7 +167,45 @@ describe('ReceiptVerifySheet component', () => {
     fireEvent.click(skipBtn);
 
     expect(mockTrigger).toHaveBeenCalledWith('light');
-    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(onFinish).not.toHaveBeenCalled();
     expect(onAnswer).not.toHaveBeenCalled();
+  });
+
+  test('waits for the last answer to resolve before finishing (no lost final answer)', async () => {
+    const order: string[] = [];
+    let resolveAnswer: () => void = () => {};
+    const onAnswer = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveAnswer = resolve;
+        }),
+    );
+    const onFinish = vi.fn(() => order.push('finish'));
+
+    render(
+      <ReceiptVerifySheet
+        isOpen={true}
+        questions={[textEntryQuestion]}
+        onAnswer={onAnswer}
+        onFinish={onFinish}
+        onCancel={vi.fn()}
+      />
+    );
+
+    fireEvent.change(screen.getByPlaceholderText('Type value...'), {
+      target: { value: 'Starbucks' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /submit/i }));
+
+    expect(onAnswer).toHaveBeenCalledWith({ merchant: 'Starbucks' });
+    // The answer is still in flight — finishing early would save a stale draft.
+    expect(onFinish).not.toHaveBeenCalled();
+
+    await act(async () => {
+      resolveAnswer();
+    });
+    await waitFor(() => expect(onFinish).toHaveBeenCalledTimes(1));
+    expect(order).toEqual(['finish']);
   });
 });

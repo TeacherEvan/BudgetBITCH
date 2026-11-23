@@ -16,18 +16,13 @@ import { Toast } from '@/components/quick-add/toast';
 import { ReceiptVerifySheet } from '@/components/receipt/receipt-verify-sheet';
 import { QuickAddCameraSheet } from '@/components/quick-add/quick-add-camera-sheet';
 import { RequireAuth } from '@/components/auth/require-auth';
-import { useResolvedCurrency } from '@/hooks/use-currency';
 
 export default function QuickAddPage() {
   const router = useRouter();
   const t = useTranslations('quickAdd');
   const s = useQuickAddState();
   const haptic = useHaptic();
-  const resolvedBoardCurrency = useResolvedCurrency();
-  const boardCurrency =
-    resolvedBoardCurrency ||
-    s.profile?.answers?.currency ||
-    (s.profile?.locale?.includes('TH') ? 'THB' : s.profile?.locale?.includes('ZA') ? 'ZAR' : 'USD');
+  const boardCurrency = s.boardCurrency;
 
   return (
     <RequireAuth>
@@ -188,7 +183,10 @@ export default function QuickAddPage() {
           variant="primary"
           onClick={s.handleSave}
           isLoading={s.loading}
-          disabled={s.isExpense && s.entrySource === 'manual' && !s.verifiedSmsData}
+          disabled={
+            s.entrySource === 'receipt' ||
+            (s.isExpense && s.entrySource === 'manual' && !s.verifiedSmsData)
+          }
           className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-xs font-bold shadow-lg"
           data-testid="quick-add-save-btn"
         >
@@ -232,7 +230,8 @@ export default function QuickAddPage() {
         isOpen={Boolean(s.draft && s.draft.questions && s.draft.questions.length > 0)}
         questions={s.draft?.questions ?? []}
         onAnswer={s.answerQuestion}
-        onClose={() => s.confirmDraft()}
+        onFinish={() => void s.confirmDraft()}
+        onCancel={() => void s.cancelDraft()}
       />
     </div>
     </RequireAuth>

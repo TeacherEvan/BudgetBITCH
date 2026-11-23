@@ -19,12 +19,22 @@ import { categorizeReceipt } from '../../convex/lib/receipt/categorize';
 import { mapCategory } from '../lib/receipt/map-category';
 import type { ScrapeResult } from '../../convex/lib/receipt/types';
 import type { ReceiptLineItem } from '@/lib/types/budget';
+import { toISODate } from '@/lib/utils/date';
 
 export function useReceiptScan() {
   const [isScanning, setIsScanning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [draft, setDraft] = useState<ScrapeResult | null>(null);
+  // Mirror of `draft` kept in sync synchronously. The verification sheet awaits
+  // an answer and then calls a `confirmDraft` reference captured before the
+  // answer landed; reading state there would save the pre-correction draft.
+  const draftRef = useRef<ScrapeResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const setDraftSync = useCallback((next: ScrapeResult | null) => {
+    draftRef.current = next;
+    setDraft(next);
+  }, []);
 
   const scrapeMutation = useMutation(api.receipts.scrape);
   const answerMutation = useMutation(api.receipts.answer);
@@ -113,7 +123,7 @@ export function useReceiptScan() {
         // 3. Online or Offline execution
         if (typeof navigator !== 'undefined' && navigator.onLine) {
           const res = await scrapeMutation({ payload });
-          setDraft(res as unknown as ScrapeResult);
+          setDraftSync(res as unknown as ScrapeResult);
         } else {
           const offlineRes = scrapeOffline(payload);
           const clientDraftId = crypto.randomUUID();
@@ -125,7 +135,7 @@ export function useReceiptScan() {
             result: offlineRes,
             createdAt: Date.now(),
           });
-          setDraft(offlineRes);
+          setDraftSync(offlineRes);
         }
         setProgress(1.0);
       } catch (err: unknown) {
@@ -136,23 +146,33 @@ export function useReceiptScan() {
         setIsScanning(false);
       }
     },
-    [scrapeMutation]
+    [scrapeMutation, setDraftSync]
   );
 
   const answerQuestion = useCallback(
-    async (answers: Record<string, string>) => {
-      if (!draft?.draftId) return;
+    async (answers: Record<string, string>): Promise<void> => {
+      const current = draftRef.current;
+      if (!current?.draftId) return;
       try {
         if (typeof navigator !== 'undefined' && navigator.onLine) {
           const updated = await answerMutation({
-            draftId: draft.draftId as Id<'receipts'>,
+            draftId: current.draftId as Id<'receipts'>,
             answers,
           });
-          setDraft((previously) => (previously ? { ...previously, ...updated } : null));
+          // Fold into the ref synchronously: a caller awaiting this promise then
+          // invoking confirmDraft must see the corrected fields even if React
+          // has not re-rendered yet.
+          const merged: ScrapeResult = {
+            ...current,
+            ...updated,
+            fields: { ...current.fields, ...(updated.fields ?? {}) },
+          };
+          draftRef.current = merged;
+          setDraft(merged);
         } else {
-          const queuedDraft = await getOfflineDraft(draft.draftId);
+          const queuedDraft = await getOfflineDraft(current.draftId);
           if (queuedDraft) {
-            await updateOfflineDraft(draft.draftId, {
+            await updateOfflineDraft(current.draftId, {
               answers: { ...(queuedDraft.answers ?? {}), ...answers },
             });
           }
@@ -162,25 +182,39 @@ export function useReceiptScan() {
         setError(msg);
       }
     },
-    [draft, answerMutation]
+    [answerMutation]
   );
+
+  // Cancel/Skip in the verification sheet: abandon the draft without writing
+  // an expense. Offline drafts stay queued for a later explicit action; there
+  // is deliberately no confirm mutation here.
+  const cancelDraft = useCallback(async (): Promise<void> => {
+    draftRef.current = null;
+    setDraft(null);
+  }, []);
 
   // Persist the scanned receipt as a real local expense entry, then clear the draft.
   const confirmDraft = useCallback(
     async (
       overrides?: Record<string, string>,
-      opts?: { skipLocalAdd?: boolean }
+      opts?: { skipLocalAdd?: boolean; draftId?: Id<'receipts'> | string }
     ) => {
-      if (!draft) return;
-      const amount = Number(draft.fields.total?.value ?? 0);
+      // Read the latest draft from the ref, never from a stale render closure.
+      const currentDraft = draftRef.current;
+      const targetDraftId = opts?.draftId ?? currentDraft?.draftId ?? null;
+      if (!currentDraft && !targetDraftId) return;
+      if (!opts?.skipLocalAdd && !currentDraft) return;
+
+      const amount = Number(currentDraft?.fields?.total?.value ?? 0);
       const merchant = String(
-        overrides?.merchant ?? draft.fields.merchant?.value ?? 'Receipt'
+        overrides?.merchant ?? currentDraft?.fields?.merchant?.value ?? 'Receipt'
       ).trim() || 'Receipt';
-      const rawCategory = overrides?.category ?? (draft.fields.category?.value as string | undefined);
+      const rawCategory =
+        overrides?.category ?? (currentDraft?.fields?.category?.value as string | undefined);
       const category = categorizeReceipt(merchant, rawCategory);
-      const date = draft.fields.date?.value
-        ? String(draft.fields.date.value)
-        : new Date().toISOString().split('T')[0];
+      const date = currentDraft?.fields?.date?.value
+        ? String(currentDraft.fields.date.value)
+        : toISODate(new Date());
 
       const entry = {
         id: generateId(),
@@ -188,10 +222,10 @@ export function useReceiptScan() {
         category,
         merchant,
         amount: Math.round(amount * 100) / 100,
-        note: `Receipt scan${draft.draftId ? ` (draft ${draft.draftId})` : ''}`,
+        note: `Receipt scan${targetDraftId ? ` (draft ${targetDraftId})` : ''}`,
         source: 'receipt' as const,
-        lineItems: draft.lineItems?.length
-          ? draft.lineItems.map(
+        lineItems: currentDraft?.lineItems?.length
+          ? currentDraft.lineItems.map(
               (li): ReceiptLineItem => ({
                 description: li.description ?? '',
                 amount: Math.round((li.amount ?? 0) * 100) / 100,
@@ -209,25 +243,30 @@ export function useReceiptScan() {
           await addExpense(entry);
         }
 
-        if (typeof navigator !== 'undefined' && navigator.onLine && draft.draftId) {
+        if (typeof navigator !== 'undefined' && navigator.onLine && targetDraftId) {
           await confirmMutation({
-            draftId: draft.draftId as Id<'receipts'>,
+            draftId: targetDraftId as Id<'receipts'>,
             overrides,
           });
-        } else if (draft.draftId) {
-          const queuedDraft = await getOfflineDraft(draft.draftId);
+        } else if (targetDraftId) {
+          const queuedDraft = await getOfflineDraft(targetDraftId);
           if (queuedDraft) {
-            await updateOfflineDraft(draft.draftId, { confirmed: true });
+            await updateOfflineDraft(targetDraftId, { confirmed: true });
           }
         }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         setError(msg);
       } finally {
-        setDraft(null);
+        // Only an explicit draftId (server-side Tier-1/Tier-2 draft) must not
+        // clear a session draft that happens to be in flight.
+        if (!opts?.draftId) {
+          draftRef.current = null;
+          setDraft(null);
+        }
       }
     },
-    [draft, confirmMutation]
+    [confirmMutation]
   );
 
   return {
@@ -238,5 +277,6 @@ export function useReceiptScan() {
     scanImage,
     answerQuestion,
     confirmDraft,
+    cancelDraft,
   };
 }

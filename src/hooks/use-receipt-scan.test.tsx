@@ -29,6 +29,21 @@ const mockMutation = vi.fn().mockImplementation(async (args: unknown) => {
   if (args && typeof args === 'object' && 'clientDraftId' in (args as Record<string, unknown>)) {
     return { receiptId: 'receipt-1', alreadySynced: false };
   }
+  if (args && typeof args === 'object' && 'answers' in (args as Record<string, unknown>)) {
+    // Answer mutation returns the folded fields (as convex/receipts.answer does),
+    // so a corrected total must be reflected by a subsequent confirm.
+    const answers = (args as { answers: Record<string, string> }).answers;
+    return {
+      fields: {
+        total: { value: Number(answers.total ?? 150) },
+        merchant: { value: answers.merchant ?? 'CHECKERS' },
+        category: { value: 'groceries' },
+        date: { value: '2026-03-15' },
+      },
+      confidence: { total: 1, merchant: 1, category: 0.8, date: 1 },
+      questions: [],
+    };
+  }
   if (args && typeof args === 'object' && 'payload' in (args as Record<string, unknown>)) {
     return {
       draftId: 'draft-123',
@@ -149,6 +164,61 @@ describe('useReceiptScan hook', () => {
     expect(result.current.draft).toBeNull();
     const entry = mockMutation.mock.calls[mockMutation.mock.calls.length - 1][0];
     expect(entry).toMatchObject({ overrides: { merchant: 'CHECKERS' } });
+  });
+
+  test('a stale confirmDraft callback still saves the latest answered total (no lost last answer)', async () => {
+    const { result } = renderHook(() => useReceiptScan());
+
+    await act(async () => {
+      await result.current.scanImage({} as HTMLImageElement, 'ZA');
+    });
+
+    // Capture the callback BEFORE the answer lands — this is exactly what the
+    // verification sheet holds while it awaits onAnswer and then calls onFinish.
+    const staleConfirm = result.current.confirmDraft;
+
+    await act(async () => {
+      await result.current.answerQuestion({ total: '200' });
+    });
+
+    await act(async () => {
+      await staleConfirm();
+    });
+
+    const entry = mockAddExpense.mock.calls[0][0];
+    expect(entry.amount).toBe(200);
+  });
+
+  test('cancelDraft clears the draft without writing an expense', async () => {
+    const { result } = renderHook(() => useReceiptScan());
+
+    await act(async () => {
+      await result.current.scanImage({} as HTMLImageElement, 'ZA');
+    });
+    expect(result.current.draft).not.toBeNull();
+
+    await act(async () => {
+      await result.current.cancelDraft();
+    });
+
+    expect(mockAddExpense).not.toHaveBeenCalled();
+    expect(result.current.draft).toBeNull();
+  });
+
+  test('confirmDraft confirms an explicitly supplied server draft id even without a local draft', async () => {
+    const { result } = renderHook(() => useReceiptScan());
+
+    await act(async () => {
+      await result.current.confirmDraft(undefined, {
+        skipLocalAdd: true,
+        draftId: 'tier1-draft-123',
+      });
+    });
+
+    expect(mockAddExpense).not.toHaveBeenCalled();
+    expect(mockMutation).toHaveBeenCalledWith(
+      expect.objectContaining({ draftId: 'tier1-draft-123' }),
+    );
   });
 
   test('replays locally queued drafts after reconnecting and removes synced drafts', async () => {

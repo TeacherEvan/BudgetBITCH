@@ -9,7 +9,7 @@ import type { ScanConfidenceMap } from '@/hooks/use-quick-add-state';
 import { useHaptic } from '@/hooks/use-haptic';
 import { playPaperTearSound } from '@/lib/audio/sound-fx';
 import type { CurrencyCode } from '@/lib/utils/currency';
-import { FALLBACK_RATES } from '@/components/dashboard/currency-options';
+import { convertReceiptAmount } from '@/components/dashboard/currency-options';
 
 type LineItemField = 'description' | 'amount' | 'qty';
 
@@ -77,30 +77,12 @@ export function ScannedReceiptCard({
   const [showPhoto, setShowPhoto] = useState(false);
   const haptic = useHaptic();
 
-  const fxConversion = useMemo(() => {
-    if (!scannedCurrency || !boardCurrency) return null;
-    const normScanned = scannedCurrency.trim().toUpperCase() as CurrencyCode;
-    const normBoard = boardCurrency.trim().toUpperCase() as CurrencyCode;
-    if (normScanned === normBoard) return null;
-
-    const parsedAmt = parseFloat(amount) || 0;
-    if (parsedAmt <= 0) return null;
-
-    const rateFrom = FALLBACK_RATES[normScanned];
-    const rateTo = FALLBACK_RATES[normBoard];
-
-    let convertedAmount: number | null = null;
-    if (rateFrom && rateTo) {
-      // Rates are EUR-relative
-      convertedAmount = Math.round((parsedAmt / rateFrom) * rateTo * 100) / 100;
-    }
-
-    return {
-      scannedCurrency: normScanned,
-      boardCurrency: normBoard,
-      convertedAmount,
-    };
-  }, [scannedCurrency, boardCurrency, amount]);
+  // Single source of truth shared with the save path — the badge must show
+  // exactly the amount that will be persisted.
+  const fxConversion = useMemo(
+    () => convertReceiptAmount(amount, scannedCurrency, boardCurrency),
+    [scannedCurrency, boardCurrency, amount],
+  );
 
   const resolvedConfidence: ScanConfidenceMap = useMemo(() => {
     if (confidence) return confidence;

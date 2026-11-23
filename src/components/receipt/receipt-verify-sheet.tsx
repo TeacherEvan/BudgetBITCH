@@ -8,15 +8,20 @@ import type { Question } from '../../../convex/lib/receipt/types';
 export type ReceiptVerifySheetProps = {
   isOpen: boolean;
   questions: Question[];
-  onAnswer: (answers: Record<string, string>) => void;
-  onClose: () => void;
+  /** Resolves only after the answer has been applied to the draft. */
+  onAnswer: (answers: Record<string, string>) => Promise<void> | void;
+  /** All questions answered — the draft may be completed and saved. */
+  onFinish: () => void;
+  /** Cancel/Skip — abandon the draft; must never write an expense. */
+  onCancel: () => void;
 };
 
 export function ReceiptVerifySheet({
   isOpen,
   questions,
   onAnswer,
-  onClose,
+  onFinish,
+  onCancel,
 }: ReceiptVerifySheetProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [inputValue, setInputValue] = useState('');
@@ -25,21 +30,23 @@ export function ReceiptVerifySheet({
   const showSheet = isOpen && questions.length > 0;
   const currentQ = showSheet ? questions[currentIndex] : undefined;
 
-  const handleSubmit = (val: string) => {
+  const handleSubmit = async (val: string) => {
     if (!currentQ) return;
     haptic.trigger('selection');
-    onAnswer({ [currentQ.field]: val });
+    // Await the answer before advancing or finishing. Otherwise the last
+    // correction can be shadowed by the stale draft captured by onFinish.
+    await onAnswer({ [currentQ.field]: val });
     if (currentIndex + 1 < questions.length) {
       setCurrentIndex((prev) => prev + 1);
       setInputValue('');
     } else {
-      onClose();
+      onFinish();
     }
   };
 
   const handleCancelOrSkip = () => {
     haptic.trigger('light');
-    onClose();
+    onCancel();
   };
 
   return (
@@ -90,7 +97,7 @@ export function ReceiptVerifySheet({
               <button
                 type="button"
                 className="flex-1 min-h-[48px] rounded-xl bg-[var(--accent)] font-semibold text-[var(--accent-ink)] hover:brightness-110 active:duration-[25ms] active:translate-y-[1px] active:scale-[0.985] cursor-pointer"
-                onClick={() => handleSubmit(currentQ.value)}
+                onClick={() => void handleSubmit(currentQ.value)}
               >
                 Confirm
               </button>
@@ -108,7 +115,7 @@ export function ReceiptVerifySheet({
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                handleSubmit(inputValue);
+                void handleSubmit(inputValue);
               }}
               className="mt-4 space-y-3"
             >
