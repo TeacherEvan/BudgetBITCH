@@ -55,13 +55,3 @@ export function sanitizeUpstreamError(error: unknown, fallback: string): string 
   const result = sanitised || fallback;
   return result.length > 200 ? `${result.slice(0, 200)}…` : result;
 }
-
-/**
- * @deprecated Kept ONLY for the W3-owned `convex/line.ts` caller, which still
- * passes the key in the URL. All code in the W4 scope must use
- * `geminiGenerateUrlNoKey()` + `geminiAuthHeaders()` instead. Once line.ts has
- * been migrated this function can be removed.
- */
-export function geminiGenerateUrl(apiKey: string): string {
-  return `${geminiGenerateUrlNoKey()}?key=${apiKey}`;
-}

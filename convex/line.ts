@@ -4,7 +4,12 @@ import { v, ConvexError } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { GEMINI_MODEL, geminiGenerateUrl } from "./lib/gemini";
+import {
+  GEMINI_MODEL,
+  geminiAuthHeaders,
+  geminiGenerateUrlNoKey,
+  isAllowedReceiptMimeType,
+} from "./lib/gemini";
 import { verifyLineSignature } from "./lib/line/verify";
 import { clog, clogError, clogMetric, genTraceId } from "./lib/log";
 import {
@@ -363,6 +368,12 @@ export const parseLineReceipt = internalAction({
       );
     }
 
+    // P1-C9: enforce the size ceiling BEFORE running the data-URL regex on
+    // client input (a huge hostile string must not be regex-scanned first).
+    if (args.base64Image.length > 8_000_000) {
+      throw new ConvexError("Receipt image payload too large (max 8MB base64)");
+    }
+
     // Parse out MIME type if it's a data URL
     const match = args.base64Image.match(/^data:([^;]+);base64,(.+)$/);
     let mimeType = "image/jpeg";
@@ -371,14 +382,21 @@ export const parseLineReceipt = internalAction({
       mimeType = match[1];
       data = match[2];
     }
+    if (!isAllowedReceiptMimeType(mimeType)) {
+      throw new ConvexError("Unsupported receipt image type");
+    }
+
     const imageSizeBytes = Math.floor(data.length * 0.75);
 
     try {
       const response = await fetch(
-        geminiGenerateUrl(apiKey),
+        geminiGenerateUrlNoKey(),
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...geminiAuthHeaders(apiKey),
+          },
           signal: AbortSignal.timeout(25_000),
           body: JSON.stringify({
             contents: [

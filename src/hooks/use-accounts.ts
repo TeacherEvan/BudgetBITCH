@@ -16,6 +16,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useConvex, useMutation, useQuery } from "convex/react";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 import { PERSONAL_ACCOUNT_ID } from "@/lib/types/accounts";
 import type { LocalAccountMeta } from "@/lib/types/accounts";
 import {
@@ -35,6 +36,31 @@ import {
 } from "./use-local-db";
 
 export { useDatabaseListener, useWizardProfile, useNetWorth, useDebtPayoff };
+
+/**
+ * Read-only active account id for consumers that only need the board scope key
+ * (e.g. the storage diagnostics modal's cloud-snapshot query). Kept separate
+ * from `useAccounts()` so a scope-only consumer does not subscribe to every
+ * account mutation/query. Falls back to the personal board when local storage
+ * is unavailable (offline mode / unit tests).
+ */
+export function useCurrentAccountId(): string {
+  const [accountId, setAccountId] = useState<string>(PERSONAL_ACCOUNT_ID);
+  useEffect(() => {
+    let cancelled = false;
+    getCurrentAccountId()
+      .then((id) => {
+        if (!cancelled) setAccountId(id);
+      })
+      .catch(() => {
+        if (!cancelled) setAccountId(PERSONAL_ACCOUNT_ID);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return accountId;
+}
 
 export interface AccountView extends LocalAccountMeta {
   hasLocalData: boolean;
@@ -58,7 +84,7 @@ export interface UseAccounts {
   createInviteToken: (accountId: string) => Promise<string>;
   redeemInviteToken: (token: string) => Promise<{ accountId: string; boardId: string }>;
   leaveAccount: (accountId: string) => Promise<void>;
-  removeMember: (accountId: string, userId: string) => Promise<void>;
+  removeMember: (accountId: string, userId: Id<"users">) => Promise<void>;
   renameAccount: (accountId: string, name: string) => Promise<void>;
   deleteAccount: (accountId: string) => Promise<void>;
   setDisplayName: (displayName: string) => Promise<void>;
@@ -358,8 +384,10 @@ export function useAccounts(): UseAccounts {
   );
 
   const removeMember = useCallback(
-    async (accountId: string, userId: string) => {
-      await removeMut({ accountId, userId });
+    async (accountId: string, userId: Id<"users">) => {
+      // Single type boundary: the Convex mutation's `v.id("users")` validator
+      // remains the authoritative runtime check.
+      await removeMut({ accountId, userId: userId as Id<"users"> });
       refresh();
     },
     [removeMut, refresh],

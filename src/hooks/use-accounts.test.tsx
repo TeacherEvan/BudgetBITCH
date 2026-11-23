@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, act, waitFor } from '@testing-library/react';
 import { clearAllData } from '@/lib/db/local-db';
 import { getCurrentAccountId } from '@/lib/db/accountStorage';
+import type { Id } from '../../convex/_generated/dataModel';
 
 // Convex `api` is an `anyApi` Proxy whose function references can't be
 // reliably stringified in tests, so we map by call ARGS + a per-test mode
@@ -149,6 +150,23 @@ describe('useAccounts', () => {
     const { getLocalAccount, getStashedAccount } = await import('@/lib/db/accountStorage');
     expect(await getLocalAccount('acc-own')).toBeUndefined();
     expect(await getStashedAccount('acc-own')).toBeUndefined();
+  });
+
+  it('removeMember requires a typed Convex user id and delegates it unmodified', async () => {
+    let api!: ReturnType<typeof useAccounts>;
+    render(<HookProbe onReady={(a) => (api = a)} />);
+    await waitFor(() => expect(api?.ready).toBe(true));
+
+    const memberId = '123456789users' as Id<'users'>;
+    await act(async () => {
+      await api.removeMember('acc-own', memberId);
+    });
+    expect(spy).toHaveBeenCalledWith({ accountId: 'acc-own', userId: memberId });
+
+    // Compile-time guard: a plain string is no longer a valid member id.
+    // @ts-expect-error removeMember accepts Id<"users">, not an arbitrary string
+    const plainString: Parameters<typeof api.removeMember>[1] = 'raw-string-user-id';
+    expect(plainString).toBe('raw-string-user-id');
   });
 
   it('switchTo falls back to localSwitch when convex query throws error', async () => {
