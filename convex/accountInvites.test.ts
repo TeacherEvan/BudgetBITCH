@@ -309,3 +309,185 @@ describe("pendingDeletes consent matrix", () => {
     expect(rows[0].status).toBe("rejected");
   });
 });
+
+// W3 audit regressions: invite TTL, token burning, cap scan, and member revocation.
+describe("W3 invite lifecycle hardening", () => {
+  const EIGHT_DAYS_MS = 8 * 24 * 60 * 60 * 1000;
+
+  test("redeemInviteToken rejects a pending token older than 7 days and marks it expired", async () => {
+    const aliceId = await seedUser(t, "alice");
+    const bobId = await seedUser(t, "bob");
+    const { accountId } = await createAccount(aliceId, "family", "Fam");
+    const { token } = await asUser(aliceId).mutation(api.accounts.createInviteToken, {
+      accountId,
+    });
+
+    await t.run(async (ctx: any) => {
+      const row = await ctx.db
+        .query("invites")
+        .withIndex("by_token", (q: any) => q.eq("token", token))
+        .unique();
+      await ctx.db.patch(row._id, { createdAt: Date.now() - EIGHT_DAYS_MS });
+    });
+
+    await expect(
+      asUser(bobId).mutation(api.accounts.redeemInviteToken, { token }),
+    ).rejects.toThrow(/invalid or expired/);
+
+    // A throwing Convex mutation rolls back its writes, so the TTL is enforced
+    // on every redemption. The next invite operation sweeps the stale row to
+    // "expired" and persists it.
+    await asUser(aliceId).mutation(api.accounts.createInviteToken, { accountId });
+    const expired = await t.run(async (ctx: any) =>
+      ctx.db
+        .query("invites")
+        .withIndex("by_token", (q: any) => q.eq("token", token))
+        .unique(),
+    );
+    expect(expired.status).toBe("expired");
+  });
+
+  test("redeemInviteToken by an existing member does not burn a token meant for someone else", async () => {
+    const aliceId = await seedUser(t, "alice");
+    const bobId = await seedUser(t, "bob");
+    const carolId = await seedUser(t, "carol");
+    const { accountId } = await createAccount(aliceId, "family", "Fam");
+
+    await makeProfile(bobId, "BOB12345");
+    await asUser(aliceId).mutation(api.accounts.inviteByCode, {
+      accountId,
+      code: "BOB12345",
+    });
+    const bobInvites = await asUser(bobId).query(api.accounts.listInvites, {});
+    await asUser(bobId).mutation(api.accounts.acceptInvite, {
+      inviteId: bobInvites[0].inviteId,
+    });
+
+    const { token } = await asUser(aliceId).mutation(api.accounts.createInviteToken, {
+      accountId,
+    });
+
+    // Bob is already a member. He may be told so, but the token must stay usable.
+    const memberResult = await asUser(bobId).mutation(api.accounts.redeemInviteToken, {
+      token,
+    });
+    expect(memberResult.alreadyMember).toBe(true);
+
+    const stillPending = await t.run(async (ctx: any) =>
+      ctx.db
+        .query("invites")
+        .withIndex("by_token", (q: any) => q.eq("token", token))
+        .unique(),
+    );
+    expect(stillPending.status).toBe("pending");
+
+    // The intended joiner can still redeem the very same token.
+    const joinResult = await asUser(carolId).mutation(api.accounts.redeemInviteToken, {
+      token,
+    });
+    expect(joinResult.alreadyMember).toBe(false);
+  });
+
+  test("createInviteToken counts pending invites beyond the oldest 16 rows", async () => {
+    const aliceId = await seedUser(t, "alice");
+    const { accountId } = await createAccount(aliceId, "family", "Fam");
+
+    await t.run(async (ctx: any) => {
+      const acc = await ctx.db
+        .query("accounts")
+        .withIndex("by_accountId", (q: any) => q.eq("accountId", accountId))
+        .unique();
+      // 20 OLD terminal rows crowd out the oldest-16 scan window.
+      for (let i = 0; i < 20; i++) {
+        await ctx.db.insert("invites", {
+          boardId: acc.boardId,
+          fromUserId: aliceId,
+          status: i % 2 === 0 ? "accepted" : "declined",
+          createdAt: Date.now() - 30 * 24 * 60 * 60 * 1000 - i * 1000,
+          accountId,
+        });
+      }
+      // 7 still-pending token invites fill the cap (owner + 7 = MAX_MEMBERS).
+      for (let i = 0; i < 7; i++) {
+        await ctx.db.insert("invites", {
+          boardId: acc.boardId,
+          fromUserId: aliceId,
+          status: "pending",
+          createdAt: Date.now() - i * 1000,
+          accountId,
+          token: `w3-pending-token-${i}`,
+        });
+      }
+    });
+
+    await expect(
+      asUser(aliceId).mutation(api.accounts.createInviteToken, { accountId }),
+    ).rejects.toThrow(/at most 8 members/);
+  });
+
+  test("removeMember cancels outstanding invites so a removed member cannot rejoin with a token", async () => {
+    const aliceId = await seedUser(t, "alice");
+    const bobId = await seedUser(t, "bob");
+    const { accountId } = await createAccount(aliceId, "family", "Fam");
+
+    await makeProfile(bobId, "BOB12345");
+    await asUser(aliceId).mutation(api.accounts.inviteByCode, {
+      accountId,
+      code: "BOB12345",
+    });
+    const bobInvites = await asUser(bobId).query(api.accounts.listInvites, {});
+    await asUser(bobId).mutation(api.accounts.acceptInvite, {
+      inviteId: bobInvites[0].inviteId,
+    });
+    // A still-pending bearer token that the departing member could reuse.
+    const { token } = await asUser(aliceId).mutation(api.accounts.createInviteToken, {
+      accountId,
+    });
+
+    await asUser(aliceId).mutation(api.accounts.removeMember, {
+      accountId,
+      userId: bobId,
+    });
+
+    await expect(
+      asUser(bobId).mutation(api.accounts.redeemInviteToken, { token }),
+    ).rejects.toThrow(/invalid or expired/);
+  });
+
+  test("leaveAccount cancels outstanding invites so a departing member cannot rejoin", async () => {
+    const aliceId = await seedUser(t, "alice");
+    const bobId = await seedUser(t, "bob");
+    const { accountId } = await createAccount(aliceId, "family", "Fam");
+
+    await makeProfile(bobId, "BOB12345");
+    await asUser(aliceId).mutation(api.accounts.inviteByCode, {
+      accountId,
+      code: "BOB12345",
+    });
+    const bobInvites = await asUser(bobId).query(api.accounts.listInvites, {});
+    await asUser(bobId).mutation(api.accounts.acceptInvite, {
+      inviteId: bobInvites[0].inviteId,
+    });
+    const { token } = await asUser(aliceId).mutation(api.accounts.createInviteToken, {
+      accountId,
+    });
+
+    await asUser(bobId).mutation(api.accounts.leaveAccount, { accountId });
+
+    await expect(
+      asUser(bobId).mutation(api.accounts.redeemInviteToken, { token }),
+    ).rejects.toThrow(/invalid or expired/);
+  });
+
+  test("removeMember rejects a malformed user id", async () => {
+    const aliceId = await seedUser(t, "alice");
+    const { accountId } = await createAccount(aliceId, "family", "Fam");
+
+    await expect(
+      asUser(aliceId).mutation(api.accounts.removeMember, {
+        accountId,
+        userId: "not-a-valid-user-id" as any,
+      }),
+    ).rejects.toThrow();
+  });
+});

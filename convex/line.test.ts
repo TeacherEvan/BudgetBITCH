@@ -5,6 +5,8 @@ import { describe, it, expect, vi } from "vitest";
 import crypto from "crypto";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
+import { LINE_RECEIPT_PROMPT } from "./line";
+import { VALID_CATEGORIES } from "./receipts/constants";
 
 const modules = import.meta.glob("./**/*.ts");
 
@@ -83,16 +85,21 @@ describe("line identity mapping (Task 2)", () => {
   const newTest = () => convexTest(schema, import.meta.glob("./**/*.ts"));
   const asUser = (userId: any) => (t: ReturnType<typeof convexTest>) =>
     t.withIdentity({ subject: userId });
+  const issueCode = async (
+    t: ReturnType<typeof convexTest>,
+    lineUserId: string,
+  ) => (await t.mutation(internal.line.issueLineLinkChallenge, { lineUserId })).code;
 
   it("Test A: authed user can link and resolver returns the mapped userId", async () => {
     const t = newTest();
     const userId = await t.run(async (ctx: any) =>
       ctx.db.insert("users", { email: "x@y.z" }),
     );
+    const code = await issueCode(t, "U1");
 
     const lineDocId = await asUser(userId)(t).mutation(
       api.line.linkLineAccount,
-      { lineUserId: "U1" },
+      { lineUserId: "U1", code },
     );
     expect(typeof lineDocId).toBe("string");
 
@@ -104,8 +111,9 @@ describe("line identity mapping (Task 2)", () => {
 
   it("Test B: unauthenticated linkLineAccount rejects with Authentication required", async () => {
     const t = newTest();
+    const code = await issueCode(t, "U1");
     await expect(
-      t.mutation(api.line.linkLineAccount, { lineUserId: "U1" }),
+      t.mutation(api.line.linkLineAccount, { lineUserId: "U1", code }),
     ).rejects.toThrow(/Authentication required/);
   });
 
@@ -114,14 +122,24 @@ describe("line identity mapping (Task 2)", () => {
     const userId = await t.run(async (ctx: any) =>
       ctx.db.insert("users", { email: "x@y.z" }),
     );
+    const first = await asUser(userId)(t).mutation(api.accounts.createAccount, {
+      umbrella: "family",
+      name: "First",
+    });
+    const second = await asUser(userId)(t).mutation(api.accounts.createAccount, {
+      umbrella: "family",
+      name: "Second",
+    });
 
     await asUser(userId)(t).mutation(api.line.linkLineAccount, {
       lineUserId: "U1",
-      accountId: "acc-1",
+      accountId: first.accountId,
+      code: await issueCode(t, "U1"),
     });
     await asUser(userId)(t).mutation(api.line.linkLineAccount, {
       lineUserId: "U1",
-      accountId: "acc-2",
+      accountId: second.accountId,
+      code: await issueCode(t, "U1"),
     });
 
     const rows = await t.run(async (ctx: any) =>
@@ -129,7 +147,7 @@ describe("line identity mapping (Task 2)", () => {
     );
     const forU1 = rows.filter((r: any) => r.lineUserId === "U1");
     expect(forU1).toHaveLength(1);
-    expect(forU1[0].accountId).toBe("acc-2");
+    expect(forU1[0].accountId).toBe(second.accountId);
   });
 
   it("Test D: linking an already-linked lineUserId by another user is rejected (anti-hijack)", async () => {
@@ -141,17 +159,28 @@ describe("line identity mapping (Task 2)", () => {
       ctx.db.insert("users", { email: "bob@y.z" }),
     );
 
-    // Alice links her LINE account
+    // Alice links her LINE account (with an account she actually owns).
+    const aliceAcc = await asUser(aliceId)(t).mutation(api.accounts.createAccount, {
+      umbrella: "family",
+      name: "Alice",
+    });
     await asUser(aliceId)(t).mutation(api.line.linkLineAccount, {
       lineUserId: "LINE_ALICE",
-      accountId: "acc-alice",
+      accountId: aliceAcc.accountId,
+      code: await issueCode(t, "LINE_ALICE"),
     });
 
-    // Bob tries to link Alice's LINE account -> must throw
+    // Bob tries to link Alice's LINE account -> must throw. He uses his own
+    // account so the anti-hijack check (not the accountId check) is exercised.
+    const bobAcc = await asUser(bobId)(t).mutation(api.accounts.createAccount, {
+      umbrella: "family",
+      name: "Bob",
+    });
     await expect(
       asUser(bobId)(t).mutation(api.line.linkLineAccount, {
         lineUserId: "LINE_ALICE",
-        accountId: "acc-bob",
+        accountId: bobAcc.accountId,
+        code: await issueCode(t, "LINE_ALICE"),
       }),
     ).rejects.toThrow("already linked to another user");
 
@@ -645,5 +674,157 @@ describe("line webhook per-message-id idempotency (Task 1)", () => {
 
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
+  });
+});
+
+// W3 audit regressions: challenge-bound LINE linking, accountId authorization,
+// and canonical Gemini category vocabulary.
+describe("W3 LINE link hardening", () => {
+  const newTest = () => convexTest(schema, import.meta.glob("./**/*.ts"));
+  const asUser = (userId: any) => (t: ReturnType<typeof convexTest>) =>
+    t.withIdentity({ subject: userId });
+  const issueCode = async (
+    t: ReturnType<typeof convexTest>,
+    lineUserId: string,
+  ) => (await t.mutation(internal.line.issueLineLinkChallenge, { lineUserId })).code;
+
+  it("linkLineAccount consumes the challenge code (single-use)", async () => {
+    const t = newTest();
+    const userId = await t.run(async (ctx: any) =>
+      ctx.db.insert("users", { email: "consume@y.z" }),
+    );
+    const code = await issueCode(t, "U-CONSUME");
+
+    await asUser(userId)(t).mutation(api.line.linkLineAccount, {
+      lineUserId: "U-CONSUME",
+      code,
+    });
+
+    await expect(
+      asUser(userId)(t).mutation(api.line.linkLineAccount, {
+        lineUserId: "U-CONSUME",
+        code,
+      }),
+    ).rejects.toThrow(/Invalid or expired LINE link code/);
+  });
+
+  it("linkLineAccount rejects an expired challenge code", async () => {
+    const t = newTest();
+    const userId = await t.run(async (ctx: any) =>
+      ctx.db.insert("users", { email: "expired@y.z" }),
+    );
+    const lineUserId = "U-EXPIRED";
+    const code = await issueCode(t, lineUserId);
+
+    await t.run(async (ctx: any) => {
+      const rows = await ctx.db.query("processedWebhooks").collect();
+      const challenge = rows.find((r: any) =>
+        r.webhookEventId.startsWith(`linkchallenge:${lineUserId}:`),
+      );
+      expect(challenge).toBeDefined();
+      await ctx.db.patch(challenge._id, { createdAt: Date.now() - 11 * 60 * 1000 });
+    });
+
+    await expect(
+      asUser(userId)(t).mutation(api.line.linkLineAccount, { lineUserId, code }),
+    ).rejects.toThrow(/Invalid or expired LINE link code/);
+  });
+
+  it("linkLineAccount rejects a code issued for a different LINE user id", async () => {
+    const t = newTest();
+    const userId = await t.run(async (ctx: any) =>
+      ctx.db.insert("users", { email: "mismatch@y.z" }),
+    );
+    const code = await issueCode(t, "U-REAL");
+
+    await expect(
+      asUser(userId)(t).mutation(api.line.linkLineAccount, {
+        lineUserId: "U-ATTACKER",
+        code,
+      }),
+    ).rejects.toThrow(/Invalid or expired LINE link code/);
+  });
+
+  it("rejects app-prefixed internal LINE identities", async () => {
+    const t = newTest();
+    const userId = await t.run(async (ctx: any) =>
+      ctx.db.insert("users", { email: "app-prefix@y.z" }),
+    );
+
+    await expect(
+      t.mutation(internal.line.issueLineLinkChallenge, { lineUserId: "app:U1" }),
+    ).rejects.toThrow(/app:/);
+    await expect(
+      asUser(userId)(t).mutation(api.line.linkLineAccount, {
+        lineUserId: "app:U1",
+        code: "anything",
+      }),
+    ).rejects.toThrow(/app:/);
+  });
+
+  it("linkLineAccount rejects an accountId the caller does not own or belong to", async () => {
+    const t = newTest();
+    const ownerId = await t.run(async (ctx: any) =>
+      ctx.db.insert("users", { email: "owner@y.z" }),
+    );
+    const outsiderId = await t.run(async (ctx: any) =>
+      ctx.db.insert("users", { email: "outsider@y.z" }),
+    );
+    const { accountId } = await asUser(ownerId)(t).mutation(
+      api.accounts.createAccount,
+      { umbrella: "family", name: "Fam" },
+    );
+    const code = await issueCode(t, "U-OUTSIDER");
+
+    await expect(
+      asUser(outsiderId)(t).mutation(api.line.linkLineAccount, {
+        lineUserId: "U-OUTSIDER",
+        code,
+        accountId,
+      }),
+    ).rejects.toThrow(/not authorized for this account/);
+  });
+
+  it("linkLineAccount accepts an accountId the caller is a board member of", async () => {
+    const t = newTest();
+    const ownerId = await t.run(async (ctx: any) =>
+      ctx.db.insert("users", { email: "owner2@y.z" }),
+    );
+    const memberId = await t.run(async (ctx: any) =>
+      ctx.db.insert("users", { email: "member2@y.z" }),
+    );
+    const { accountId, boardId } = await asUser(ownerId)(t).mutation(
+      api.accounts.createAccount,
+      { umbrella: "family", name: "Fam" },
+    );
+    await t.run(async (ctx: any) =>
+      ctx.db.insert("boardMembers", {
+        boardId,
+        userId: memberId,
+        role: "member",
+        joinedAt: Date.now(),
+      }),
+    );
+    const code = await issueCode(t, "U-MEMBER");
+
+    await asUser(memberId)(t).mutation(api.line.linkLineAccount, {
+      lineUserId: "U-MEMBER",
+      code,
+      accountId,
+    });
+
+    const mapping = await t.query(internal.line.getLineMapping, {
+      lineUserId: "U-MEMBER",
+    });
+    expect(mapping?.accountId).toBe(accountId);
+  });
+
+  it("LINE Gemini prompt uses the canonical receipt category vocabulary", () => {
+    for (const category of VALID_CATEGORIES) {
+      expect(LINE_RECEIPT_PROMPT).toContain(category);
+    }
+    for (const stale of ["shopping", "medical", "personal", "education", "income"]) {
+      expect(LINE_RECEIPT_PROMPT).not.toContain(stale);
+    }
   });
 });

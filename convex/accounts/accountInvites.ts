@@ -1,14 +1,67 @@
 // convex/accounts/accountInvites.ts
 import { v, ConvexError } from "convex/values";
 import { query, mutation } from "../_generated/server";
+import type { MutationCtx } from "../_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { Id } from "../_generated/dataModel";
+import type { Doc } from "../_generated/dataModel";
 import {
   MAX_MEMBERS,
 } from "./types";
 import {
   ensureProfileDoc,
 } from "./helpers";
+
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+// Bound the by_board scan. schema.ts (owned by W4) has no by_board_and_status
+// index yet; newest-first keeps live pending rows inside the bound even when
+// old accepted/declined rows accumulate. Desired index is documented in the W3 report.
+const INVITE_SCAN_LIMIT = 250;
+
+/** Newest-first bounded scan of a board's invites. Expires stale pending rows
+ * and returns only those still live. */
+async function loadPendingBoardInvites(
+  ctx: MutationCtx,
+  boardId: string,
+): Promise<Doc<"invites">[]> {
+  const now = Date.now();
+  const rows = await ctx.db
+    .query("invites")
+    .withIndex("by_board", (q) => q.eq("boardId", boardId))
+    .order("desc")
+    .take(INVITE_SCAN_LIMIT);
+  const pending: Doc<"invites">[] = [];
+  for (const row of rows) {
+    if (row.status !== "pending") continue;
+    if (now - row.createdAt > SEVEN_DAYS_MS) {
+      await ctx.db.patch(row._id, { status: "expired" });
+    } else {
+      pending.push(row);
+    }
+  }
+  return pending;
+}
+
+/** Equivalent of a board epoch without a schema change: on every removal we
+ * invalidate all still-pending invites for the board that a departing member
+ * could hold — targeted invites to them and every bearer-token invite. */
+async function revokeInvitesForDepartingMember(
+  ctx: MutationCtx,
+  boardId: string,
+  departingUserId: Id<"users">,
+): Promise<void> {
+  const rows = await ctx.db
+    .query("invites")
+    .withIndex("by_board", (q) => q.eq("boardId", boardId))
+    .order("desc")
+    .take(INVITE_SCAN_LIMIT);
+  for (const row of rows) {
+    if (row.status !== "pending") continue;
+    if (row.toUserId === departingUserId || row.toUserId === undefined) {
+      await ctx.db.patch(row._id, { status: "expired" });
+    }
+  }
+}
 
 export const inviteByCode = mutation({
   args: { accountId: v.string(), code: v.string() },
@@ -30,14 +83,10 @@ export const inviteByCode = mutation({
       .query("boardMembers")
       .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
       .take(MAX_MEMBERS + 1);
-    const pendingInviteRows = await ctx.db
-      .query("invites")
-      .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
-      .take(MAX_MEMBERS + 1);
-    const pendingInvites = pendingInviteRows.filter(
-      (r) => r.status === "pending",
-    ).length;
-    const totalOccupied = memberRows.length + pendingInvites;
+    // N10: scan the most recent INVITE_SCAN_LIMIT rows (not just the oldest
+    // MAX_MEMBERS*2) so stale terminal rows cannot hide live pending invites.
+    const pendingInvites = await loadPendingBoardInvites(ctx, acc.boardId!);
+    const totalOccupied = memberRows.length + pendingInvites.length;
     if (totalOccupied >= MAX_MEMBERS) {
       throw new ConvexError(`An account can have at most ${MAX_MEMBERS} members`);
     }
@@ -60,11 +109,7 @@ export const inviteByCode = mutation({
       return { alreadyMember: true };
     }
 
-    if (
-      pendingInviteRows.some(
-        (r) => r.toUserId === invitee.userId && r.status === "pending",
-      )
-    ) {
+    if (pendingInvites.some((r) => r.toUserId === invitee.userId)) {
       return { alreadyInvited: true };
     }
 
@@ -99,22 +144,10 @@ export const createInviteToken = mutation({
       .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
       .take(MAX_MEMBERS + 1);
 
-    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-    const now = Date.now();
-    const tokenRows = await ctx.db
-      .query("invites")
-      .withIndex("by_board", (q) => q.eq("boardId", acc.boardId!))
-      .take(MAX_MEMBERS * 2);
-
-    for (const r of tokenRows) {
-      if (r.status === "pending" && !r.toUserId && now - r.createdAt > SEVEN_DAYS_MS) {
-        await ctx.db.patch(r._id, { status: "expired" });
-      }
-    }
-
-    const activeOutstanding = tokenRows.filter(
-      (r) => r.status === "pending" && !r.toUserId && (now - r.createdAt <= SEVEN_DAYS_MS),
-    ).length;
+    // N10: sweep expired pending rows and count all still-live pending invites
+    // over a bounded newest-first window, not just the oldest 16 rows.
+    const pendingInvites = await loadPendingBoardInvites(ctx, acc.boardId!);
+    const activeOutstanding = pendingInvites.length;
 
     if (memberRows.length + activeOutstanding >= MAX_MEMBERS) {
       throw new ConvexError(`An account can have at most ${MAX_MEMBERS} members`);
@@ -166,12 +199,23 @@ export const redeemInviteToken = mutation({
       )
       .first()) !== null;
     if (isMember) {
-      await ctx.db.patch(invite._id, { status: "accepted", toUserId: userId });
+      // P0-C3: an existing member must NOT burn a token meant for someone else.
       return { accountId: acc.accountId, boardId: acc.boardId, alreadyMember: true };
     }
 
+    if (invite.status === "expired") {
+      throw new ConvexError("Invite link is invalid or expired");
+    }
     if (invite.status !== "pending") {
       throw new ConvexError("Invite link has already been used");
+    }
+
+    // P0-C3: enforce the 7-day TTL at redemption, not only at token creation.
+    // NOTE: a mutating patch here would be rolled back by the throw (Convex
+    // transaction semantics). The TTL check is authoritative on every redeem;
+    // loadPendingBoardInvites persists status:"expired" on the next invite op.
+    if (Date.now() - invite.createdAt > SEVEN_DAYS_MS) {
+      throw new ConvexError("Invite link is invalid or expired");
     }
 
     // Insert the boardMember first, then check if we exceeded the cap.
@@ -311,6 +355,10 @@ export const declineInvite = mutation({
 });
 
 export const removeMember = mutation({
+  // P3-N3: runtime-validated as an Id below. Kept as v.string() at the validator
+  // boundary because src/hooks/use-accounts.ts (another worker's scope) still
+  // passes a plain string; see the W3 report for the one-line client fix that
+  // allows tightening this to v.id("users").
   args: { accountId: v.string(), userId: v.string() },
   handler: async (ctx, args) => {
     const ownerId = await getAuthUserId(ctx);
@@ -325,7 +373,15 @@ export const removeMember = mutation({
     if (acc.ownerId !== ownerId) {
       throw new ConvexError("Only the owner can remove members");
     }
-    const target = args.userId as Id<"users">;
+    let target: Id<"users">;
+    try {
+      target = args.userId as Id<"users">;
+      if (!target || !(await ctx.db.get(target))) {
+        throw new ConvexError("Invalid user id");
+      }
+    } catch {
+      throw new ConvexError("Invalid user id");
+    }
     if (target === ownerId) {
       throw new ConvexError("Owner cannot be removed; transfer or delete the account");
     }
@@ -338,6 +394,9 @@ export const removeMember = mutation({
       )
       .first();
     if (memberRow) await ctx.db.delete(memberRow._id);
+
+    // N11: revoke any outstanding invite the departing member could redeem.
+    await revokeInvitesForDepartingMember(ctx, acc.boardId!, target);
 
     const board = await ctx.db
       .query("accountBoards")
@@ -387,6 +446,9 @@ export const leaveAccount = mutation({
       )
       .first();
     if (memberRow) await ctx.db.delete(memberRow._id);
+
+    // N11: revoke any outstanding invite the departing member could redeem.
+    await revokeInvitesForDepartingMember(ctx, acc.boardId!, userId);
 
     const board = await ctx.db
       .query("accountBoards")
