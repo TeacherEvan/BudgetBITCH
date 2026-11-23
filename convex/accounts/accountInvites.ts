@@ -355,11 +355,10 @@ export const declineInvite = mutation({
 });
 
 export const removeMember = mutation({
-  // P3-N3: runtime-validated as an Id below. Kept as v.string() at the validator
-  // boundary because src/hooks/use-accounts.ts (another worker's scope) still
-  // passes a plain string; see the W3 report for the one-line client fix that
-  // allows tightening this to v.id("users").
-  args: { accountId: v.string(), userId: v.string() },
+  // P3-N1/W8: the client now passes a typed Id<"users">, so the validator can
+  // be authoritative. The db.get below is still meaningful: v.id("users")
+  // checks the id's table/shape but not that the user still exists.
+  args: { accountId: v.string(), userId: v.id("users") },
   handler: async (ctx, args) => {
     const ownerId = await getAuthUserId(ctx);
     if (!ownerId) throw new ConvexError("Authentication required");
@@ -373,13 +372,8 @@ export const removeMember = mutation({
     if (acc.ownerId !== ownerId) {
       throw new ConvexError("Only the owner can remove members");
     }
-    let target: Id<"users">;
-    try {
-      target = args.userId as Id<"users">;
-      if (!target || !(await ctx.db.get(target))) {
-        throw new ConvexError("Invalid user id");
-      }
-    } catch {
+    const target: Id<"users"> = args.userId;
+    if (!(await ctx.db.get(target))) {
       throw new ConvexError("Invalid user id");
     }
     if (target === ownerId) {

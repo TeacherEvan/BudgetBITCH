@@ -479,7 +479,7 @@ describe("W3 invite lifecycle hardening", () => {
     ).rejects.toThrow(/invalid or expired/);
   });
 
-  test("removeMember rejects a malformed user id", async () => {
+  test("removeMember rejects a malformed user id at the validator boundary", async () => {
     const aliceId = await seedUser(t, "alice");
     const { accountId } = await createAccount(aliceId, "family", "Fam");
 
@@ -488,6 +488,18 @@ describe("W3 invite lifecycle hardening", () => {
         accountId,
         userId: "not-a-valid-user-id" as any,
       }),
-    ).rejects.toThrow();
+    ).rejects.toThrow(/Expected ID for table "users"/);
+  });
+
+  test("removeMember still rejects a well-formed user id that does not exist", async () => {
+    const aliceId = await seedUser(t, "alice");
+    const { accountId } = await createAccount(aliceId, "family", "Fam");
+
+    await expect(
+      asUser(aliceId).mutation(api.accounts.removeMember, {
+        accountId,
+        userId: "999999999users" as any,
+      }),
+    ).rejects.toThrow(/Invalid user id/);
   });
 });

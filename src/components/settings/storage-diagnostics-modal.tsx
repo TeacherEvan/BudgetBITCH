@@ -15,6 +15,7 @@ import {
   createLocalCheckpoint,
 } from '@/lib/db/local-db';
 import { restoreFromCloudSnapshot } from '@/lib/convex/sync-snapshots';
+import { useCurrentAccountId } from '@/hooks/use-accounts';
 import { Shield, Database, Activity } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -38,8 +39,13 @@ export function StorageDiagnosticsModal({ isOpen, onClose}: StorageDiagnosticsMo
   const [requestingPersist, setRequestingPersist] = useState(false);
   const [creatingCheckpoint, setCreatingCheckpoint] = useState(false);
 
-  // Fetch Convex cloud snapshots list
-  const cloudSnapshots = useQuery(api.snapshots.listCloudSnapshots) ?? [];
+  // N7: cloud snapshots must be scoped to the active account/board. The
+  // zero-argument listCloudSnapshots query can expose snapshots from other
+  // boards, so always pass the current account id to the scoped variant.
+  const currentAccountId = useCurrentAccountId();
+  const cloudSnapshots = useQuery(api.snapshots.listCloudSnapshotsForAccount, {
+    accountId: currentAccountId,
+  }) ?? [];
 
   const loadStorageInfo = async () => {
     const info = await getStorageEstimate();

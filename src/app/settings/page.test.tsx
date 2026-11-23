@@ -1,6 +1,7 @@
 // src/app/settings/page.test.tsx
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { getFunctionName } from 'convex/server';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 
 // Mock i18n (useLocale + useTranslations) and router for the LocaleSwitcher
@@ -18,13 +19,27 @@ vi.mock('next/navigation', () => ({
   useRouter: () => mockRouter,
 }));
 
+const snapshotQueryCalls = vi.hoisted(() => ({
+  calls: [] as Array<{ name?: string; args?: unknown }>,
+}));
+
+function queryName(ref: unknown): string | undefined {
+  try {
+    return getFunctionName(ref as Parameters<typeof getFunctionName>[0]);
+  } catch {
+    return undefined;
+  }
+}
+
 vi.mock('convex/react', () => {
   return {
     useMutation: () => vi.fn().mockResolvedValue({ success: true }),
     useAction: () => vi.fn().mockResolvedValue({ success: true }),
-    useQuery: (queryRef: { name?: string } | null | undefined) => {
-      // Mock cloud snapshots list for diagnostic modal
-      if (queryRef && typeof queryRef === 'object' && queryRef.name === 'listCloudSnapshots') {
+    useQuery: (queryRef: unknown, args?: unknown) => {
+      const name = queryName(queryRef);
+      snapshotQueryCalls.calls.push({ name, args });
+      // W8/N7: diagnostics must use the account-scoped cloud snapshot query.
+      if (name === 'snapshots:listCloudSnapshotsForAccount') {
         return [];
       }
       return null;
@@ -101,6 +116,7 @@ describe('SettingsPage', () => {
   beforeEach(() => {
     localStorage.clear();
     vi.clearAllMocks();
+    snapshotQueryCalls.calls.length = 0;
     sharedState.state = {
       myProfile: { shareCode: 'ABCD1234', displayName: null, linkedBoardId: null },
       partnerName: null,
@@ -243,5 +259,16 @@ describe('SettingsPage', () => {
     expect(screen.getByText(/change password/i)).toBeInTheDocument();
     fireEvent.click(screen.getByText(/change password/i));
     expect(screen.getByText('Current Password')).toBeInTheDocument();
+  });
+
+  it('scopes diagnostics cloud snapshots to the current account', () => {
+    renderWithProviders(<SettingsPage />);
+
+    const scoped = snapshotQueryCalls.calls.find(
+      (c) => c.name === 'snapshots:listCloudSnapshotsForAccount',
+    );
+    expect(scoped).toBeDefined();
+    expect(scoped?.args).toEqual({ accountId: 'personal' });
+    expect(snapshotQueryCalls.calls.some((c) => c.name === 'snapshots:listCloudSnapshots')).toBe(false);
   });
 });
