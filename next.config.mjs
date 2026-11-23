@@ -13,7 +13,7 @@ const nextConfig = {
   },
   allowedDevOrigins: ["127.0.0.1"],
   async headers() {
-    // CSP is now applied per-request with a nonce in src/app/proxy.ts
+    // CSP is now applied per-request with a nonce in src/proxy.ts
     // (required so Next.js 16's inline RSC/hydration scripts pass a strict
     // policy without 'unsafe-inline'). Non-CSP security headers stay here.
     return [

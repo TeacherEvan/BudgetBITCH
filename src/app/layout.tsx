@@ -14,7 +14,7 @@ import { SiteFooter } from '@/components/legal/site-footer';
 import { CookieConsentBanner } from '@/components/legal/cookie-consent-banner';
 import { WebVitalsInitializer } from '@/components/web-vitals-initializer';
 import { NextIntlClientProvider } from 'next-intl';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { resolveLocale, getLocaleMessages, localeCookieName } from '@/i18n/messages';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { NoticeHost } from '@/components/ui/notice-host';
@@ -72,6 +72,10 @@ export default async function RootLayout({
   const cookieStore = await cookies();
   const locale = resolveLocale(cookieStore.get(localeCookieName)?.value);
   const messages = getLocaleMessages(locale);
+  // src/proxy.ts generates a fresh nonce per request and forwards it in the
+  // x-nonce request header. Next.js auto-nonces framework scripts, but this
+  // hand-authored inline speculationrules <script> needs the nonce explicitly.
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
 
   return (
     <html lang={locale} suppressHydrationWarning className={`${inter.variable} ${spaceGrotesk.variable} ${robotoMono.variable} antialiased`}>
@@ -85,6 +89,7 @@ export default async function RootLayout({
             them would waste bandwidth and could cache unauthenticated shells. */}
         <script
           type="speculationrules"
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               prerender: [

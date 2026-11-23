@@ -7,21 +7,22 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
+// Shared values become part of the redirect Location, so cap them to keep the
+// URL bounded. A `File` part is not a valid shared text value and must not be
+// cast to string — trimming it used to throw and return a 500.
+const MAX_SHARED_TEXT_LENGTH = 4096;
+
 export async function POST(request: NextRequest) {
   let text = '';
 
-  const contentType = request.headers.get('content-type') ?? '';
-  if (contentType.includes('application/x-www-form-urlencoded')) {
+  try {
+    // Both urlencoded and multipart share posts are parsed by formData(); the
+    // original content-type branch was redundant and both paths did the same.
     const params = await request.formData();
-    text = (params.get('text') as string) || (params.get('url') as string) || '';
-  } else {
-    // multipart/form-data (default for share_target) or anything else
-    try {
-      const params = await request.formData();
-      text = (params.get('text') as string) || (params.get('url') as string) || '';
-    } catch {
-      text = '';
-    }
+    const raw = params.get('text') ?? params.get('url');
+    text = typeof raw === 'string' ? raw.slice(0, MAX_SHARED_TEXT_LENGTH) : '';
+  } catch {
+    text = '';
   }
 
   const trimmed = text.trim();
