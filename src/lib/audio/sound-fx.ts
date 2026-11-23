@@ -64,6 +64,7 @@ export function resetAudioContext(): void {
 
 /**
  * Enable or disable all procedural sound effects.
+ * Kept for backwards compatibility; prefer setSoundMuted() for new wiring.
  */
 export function setAudioMuted(muted: boolean): void {
   isAudioMuted = muted;
@@ -71,6 +72,37 @@ export function setAudioMuted(muted: boolean): void {
 
 export function isMuted(): boolean {
   return isAudioMuted;
+}
+
+/**
+ * Canonical mute API for settings wiring: call setSoundMuted(value) from the
+ * display-preferences/settings layer (outside this module's scope).
+ */
+export function setSoundMuted(muted: boolean): void {
+  setAudioMuted(muted);
+}
+
+/**
+ * Schedule nodes only once a suspended AudioContext has actually resumed.
+ * Scheduling at the pre-resume currentTime drops the first sound entirely.
+ */
+function scheduleWhenReady(ctx: AudioContext, schedule: (readyCtx: AudioContext) => void): void {
+  if (ctx.state === 'suspended' && typeof ctx.resume === 'function') {
+    void ctx.resume()
+      .then(() => {
+        if (isAudioMuted) return;
+        try {
+          schedule(ctx);
+        } catch {
+          // Graceful catch for any Web Audio execution errors
+        }
+      })
+      .catch(() => {
+        // Autoplay resume blocked — drop this sound rather than scheduling into a stopped context.
+      });
+    return;
+  }
+  schedule(ctx);
 }
 
 /**
@@ -84,36 +116,38 @@ export function playPaperTearSound(): void {
     const ctx = getAudioContext();
     if (!ctx) return;
 
-    const duration = 0.012; // 12ms burst
-    const sampleRate = ctx.sampleRate || 44100;
-    const frameCount = Math.max(1, Math.floor(sampleRate * duration));
-    const noiseBuffer = ctx.createBuffer(1, frameCount, sampleRate);
-    const output = noiseBuffer.getChannelData(0);
+    scheduleWhenReady(ctx, (readyCtx) => {
+      const duration = 0.012; // 12ms burst
+      const sampleRate = readyCtx.sampleRate || 44100;
+      const frameCount = Math.max(1, Math.floor(sampleRate * duration));
+      const noiseBuffer = readyCtx.createBuffer(1, frameCount, sampleRate);
+      const output = noiseBuffer.getChannelData(0);
 
-    for (let i = 0; i < frameCount; i++) {
-      output[i] = Math.random() * 2 - 1;
-    }
+      for (let i = 0; i < frameCount; i++) {
+        output[i] = Math.random() * 2 - 1;
+      }
 
-    const whiteNoise = ctx.createBufferSource();
-    whiteNoise.buffer = noiseBuffer;
+      const whiteNoise = readyCtx.createBufferSource();
+      whiteNoise.buffer = noiseBuffer;
 
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'bandpass';
-    const now = ctx.currentTime;
-    filter.frequency.setValueAtTime(3200, now);
-    filter.frequency.exponentialRampToValueAtTime(800, now + duration);
-    filter.Q.setValueAtTime(3.5, now);
+      const filter = readyCtx.createBiquadFilter();
+      filter.type = 'bandpass';
+      const now = readyCtx.currentTime;
+      filter.frequency.setValueAtTime(3200, now);
+      filter.frequency.exponentialRampToValueAtTime(800, now + duration);
+      filter.Q.setValueAtTime(3.5, now);
 
-    const gainNode = ctx.createGain();
-    gainNode.gain.setValueAtTime(0.3, now);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration);
+      const gainNode = readyCtx.createGain();
+      gainNode.gain.setValueAtTime(0.3, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration);
 
-    whiteNoise.connect(filter);
-    filter.connect(gainNode);
-    gainNode.connect(ctx.destination);
+      whiteNoise.connect(filter);
+      filter.connect(gainNode);
+      gainNode.connect(readyCtx.destination);
 
-    whiteNoise.start(now);
-    whiteNoise.stop(now + duration);
+      whiteNoise.start(now);
+      whiteNoise.stop(now + duration);
+    });
   } catch {
     // Graceful catch for any Web Audio execution errors
   }
@@ -129,33 +163,35 @@ export function playSuccessChime(): void {
     const ctx = getAudioContext();
     if (!ctx) return;
 
-    const now = ctx.currentTime;
-    const duration = 0.35; // 350ms chime
+    scheduleWhenReady(ctx, (readyCtx) => {
+      const now = readyCtx.currentTime;
+      const duration = 0.35; // 350ms chime
 
-    // Primary oscillator (A5: 880Hz)
-    const osc1 = ctx.createOscillator();
-    osc1.type = 'sine';
-    osc1.frequency.setValueAtTime(880, now);
-    osc1.frequency.exponentialRampToValueAtTime(1108, now + 0.12);
+      // Primary oscillator (A5: 880Hz)
+      const osc1 = readyCtx.createOscillator();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(880, now);
+      osc1.frequency.exponentialRampToValueAtTime(1108, now + 0.12);
 
-    // Harmonic overtone oscillator (C#6: ~1108Hz)
-    const osc2 = ctx.createOscillator();
-    osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(1108, now);
-    osc2.frequency.exponentialRampToValueAtTime(1760, now + 0.15);
+      // Harmonic overtone oscillator (C#6: ~1108Hz)
+      const osc2 = readyCtx.createOscillator();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(1108, now);
+      osc2.frequency.exponentialRampToValueAtTime(1760, now + 0.15);
 
-    const gainNode = ctx.createGain();
-    gainNode.gain.setValueAtTime(0.2, now);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
+      const gainNode = readyCtx.createGain();
+      gainNode.gain.setValueAtTime(0.2, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
-    osc1.connect(gainNode);
-    osc2.connect(gainNode);
-    gainNode.connect(ctx.destination);
+      osc1.connect(gainNode);
+      osc2.connect(gainNode);
+      gainNode.connect(readyCtx.destination);
 
-    osc1.start(now);
-    osc2.start(now);
-    osc1.stop(now + duration);
-    osc2.stop(now + duration);
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + duration);
+      osc2.stop(now + duration);
+    });
   } catch {
     // Graceful catch
   }
@@ -171,28 +207,30 @@ export function playToggleClick(): void {
     const ctx = getAudioContext();
     if (!ctx) return;
 
-    const now = ctx.currentTime;
-    const duration = 0.003; // 3ms click
+    scheduleWhenReady(ctx, (readyCtx) => {
+      const now = readyCtx.currentTime;
+      const duration = 0.003; // 3ms click
 
-    const osc = ctx.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(1200, now);
+      const osc = readyCtx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1200, now);
 
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(1200, now);
-    filter.Q.setValueAtTime(12, now); // High Q transient click
+      const filter = readyCtx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(1200, now);
+      filter.Q.setValueAtTime(12, now); // High Q transient click
 
-    const gainNode = ctx.createGain();
-    gainNode.gain.setValueAtTime(0.25, now);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration);
+      const gainNode = readyCtx.createGain();
+      gainNode.gain.setValueAtTime(0.25, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration);
 
-    osc.connect(filter);
-    filter.connect(gainNode);
-    gainNode.connect(ctx.destination);
+      osc.connect(filter);
+      filter.connect(gainNode);
+      gainNode.connect(readyCtx.destination);
 
-    osc.start(now);
-    osc.stop(now + duration);
+      osc.start(now);
+      osc.stop(now + duration);
+    });
   } catch {
     // Graceful catch
   }

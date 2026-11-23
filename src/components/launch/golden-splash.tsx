@@ -30,6 +30,13 @@ let cachedSparkleCanvas: HTMLCanvasElement | null = null;
 
 const SPRITE_SIZE = 64; // 64x64 canvas sprite with center at (32, 32), radius 32
 
+/** Test/teardown helper: drop the module-level sprite caches. */
+export function resetParticleSpriteCaches(): void {
+  cachedDustCanvas = null;
+  cachedCoinCanvas = null;
+  cachedSparkleCanvas = null;
+}
+
 function getDustSprite(): HTMLCanvasElement | null {
   if (typeof document === 'undefined') return null;
   if (!cachedDustCanvas) {
@@ -136,6 +143,10 @@ export function drawCoin(ctx: CanvasRenderingContext2D, p: Particle) {
     ctx.fill();
   }
   
+  // The cached-sprite branch leaves the sprite's path open. Start a fresh
+  // rim path explicitly or ctx.stroke() redraws a ghost of the sprite arc.
+  ctx.beginPath();
+  ctx.arc(0, 0, p.size, 0, Math.PI * 2);
   ctx.strokeStyle = `rgba(255, 255, 255, ${p.opacity * 0.5})`;
   ctx.lineWidth = 1;
   ctx.stroke();
@@ -314,6 +325,24 @@ export function releaseParticle(pool: Particle[], p: Particle) {
   p.active = false;
 }
 
+/** Dust spawn cadence in 60fps-frame equivalents (~50ms at any refresh rate). */
+export const DUST_SPAWN_INTERVAL = 3;
+
+/**
+ * Time-based dust spawn scheduler. `dt` is normalized to 60fps frame
+ * equivalents, so a 144Hz display no longer spawns 2.4x as many particles.
+ */
+export function advanceDustSpawn(
+  accum: number,
+  dt: number
+): { accum: number; spawn: boolean } {
+  const next = accum + dt;
+  if (next >= DUST_SPAWN_INTERVAL) {
+    return { accum: next - DUST_SPAWN_INTERVAL, spawn: true };
+  }
+  return { accum: next, spawn: false };
+}
+
 interface GoldenSplashProps {
   onProceed: () => void;
 }
@@ -382,6 +411,12 @@ const letterVariants = {
   },
 };
 
+// Reduced motion: no spring slam, just an instant fade to the final state.
+const reducedLetterVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { duration: 0 } },
+};
+
 export function GoldenSplash({ onProceed }: GoldenSplashProps) {
   const [phase, setPhase] = useState<"reckoning" | "statement" | "invitation">("reckoning");
   const [ready, setReady] = useState(false);
@@ -433,7 +468,7 @@ export function GoldenSplash({ onProceed }: GoldenSplashProps) {
       active: false,
     }));
 
-    let frameCount = 0;
+    let spawnAccum = 0;
     let activeDustCount = 0;
     let lastPhase = phaseRef.current;
 
@@ -483,9 +518,11 @@ export function GoldenSplash({ onProceed }: GoldenSplashProps) {
         lastPhase = currentPhase;
       }
 
-      // Spawn logic: spawns gold-dust from the bottom continuously (every 3 frames, max 60 active)
-      frameCount++;
-      if (frameCount % 3 === 0) {
+      // Spawn gold-dust from the bottom at a fixed ~50ms cadence regardless of
+      // refresh rate (dt is normalized to 60fps frame equivalents).
+      const nextSpawn = advanceDustSpawn(spawnAccum, dt);
+      spawnAccum = nextSpawn.accum;
+      if (nextSpawn.spawn) {
         if (activeDustCount < 60) {
           const p = acquireParticle(pool);
           if (p) {
@@ -596,7 +633,11 @@ export function GoldenSplash({ onProceed }: GoldenSplashProps) {
         {/* Floating Money & Gold Particles */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           {PARTICLES.map((p) => (
-            <Particle key={p.id} style={p.style} char={p.char} />
+            <Particle
+              key={p.id}
+              style={prefersReducedMotion ? { ...p.style, animationName: 'none' } : p.style}
+              char={p.char}
+            />
           ))}
         </div>
 
@@ -615,10 +656,11 @@ export function GoldenSplash({ onProceed }: GoldenSplashProps) {
         {/* Scanline Overlay */}
         <div
           aria-hidden="true"
+          data-testid="scanline-overlay"
           className="absolute inset-0 pointer-events-none z-10"
           style={{
             backgroundImage: "repeating-linear-gradient(0deg, rgba(0,0,0,0.22) 0px, rgba(0,0,0,0.22) 1px, transparent 1px, transparent 4px)",
-            animation: "bb-scanline 0.3s steps(1) infinite",
+            animation: prefersReducedMotion ? "none" : "bb-scanline 0.3s steps(1) infinite",
           }}
         />
 
@@ -633,13 +675,21 @@ export function GoldenSplash({ onProceed }: GoldenSplashProps) {
                 ? { opacity: 1, scale: 1, y: 0 }
                 : { opacity: 0, scale: 0.3, y: 20 }
             }
-            transition={{ type: "spring", stiffness: 380, damping: 18, delay: 0 }}
+            transition={
+              prefersReducedMotion
+                ? { duration: 0 }
+                : { type: "spring", stiffness: 380, damping: 18, delay: 0 }
+            }
             className="relative mb-6 flex justify-center"
           >
             <motion.div
               className="absolute inset-0 rounded-full pointer-events-none"
-              animate={phase === "statement" ? { opacity: [0, 0.7, 0] } : { opacity: 0 }}
-              transition={{ duration: 1.2, delay: 0.1 }}
+              animate={
+                phase === "statement" && !prefersReducedMotion
+                  ? { opacity: [0, 0.7, 0] }
+                  : { opacity: 0 }
+              }
+              transition={{ duration: prefersReducedMotion ? 0 : 1.2, delay: 0.1 }}
               style={{
                 background: "radial-gradient(circle 70px at 50% 50%, #F5D742 0%, transparent 70%)",
                 filter: "blur(10px)",
@@ -693,7 +743,7 @@ export function GoldenSplash({ onProceed }: GoldenSplashProps) {
               {budgetLetters.map((letter, idx) => (
                 <motion.span
                   key={idx}
-                  variants={letterVariants}
+                  variants={prefersReducedMotion ? reducedLetterVariants : letterVariants}
                   className="inline-block transform-gpu filter drop-shadow-[0_4px_12px_rgba(255,255,255,0.2)]"
                   style={{ transformOrigin: "bottom center" }}
                 >
@@ -704,18 +754,22 @@ export function GoldenSplash({ onProceed }: GoldenSplashProps) {
 
             {/* LINE 2: BOSS */}
             <motion.div
+              data-testid="boss-line"
               variants={containerVariants}
               initial="hidden"
               animate={phase !== "reckoning" ? "visible" : "hidden"}
               className="flex justify-center text-5xl md:text-7xl font-black uppercase tracking-[0.3em] bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-600 bg-clip-text text-transparent font-space-grotesk"
               style={{
-                animation: phase === "invitation" ? "bb-glow-pulse 2.4s ease-in-out infinite" : "none",
+                animation:
+                  phase === "invitation" && !prefersReducedMotion
+                    ? "bb-glow-pulse 2.4s ease-in-out infinite"
+                    : "none",
               }}
             >
               {bossLetters.map((letter, idx) => (
                 <motion.span
                   key={idx}
-                  variants={letterVariants}
+                  variants={prefersReducedMotion ? reducedLetterVariants : letterVariants}
                   className="inline-block transform-gpu filter drop-shadow-[0_6px_30px_rgba(245,215,66,0.65)]"
                   style={{ transformOrigin: "bottom center" }}
                 >
@@ -732,8 +786,14 @@ export function GoldenSplash({ onProceed }: GoldenSplashProps) {
                 initial={{ scale: 0, rotate: -15, opacity: 0 }}
                 animate={{ scale: 1, rotate: -2, opacity: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ type: "spring", stiffness: 240, damping: 11 }}
-                className="mt-6 inline-block rounded-2xl border-2 border-[#F5D742] bg-zinc-950 px-6 py-2.5 shadow-[0_0_35px_rgba(245,215,66,0.3)] animate-pulse"
+                transition={
+                  prefersReducedMotion
+                    ? { duration: 0 }
+                    : { type: "spring", stiffness: 240, damping: 11 }
+                }
+                className={`mt-6 inline-block rounded-2xl border-2 border-[#F5D742] bg-zinc-950 px-6 py-2.5 shadow-[0_0_35px_rgba(245,215,66,0.3)] ${
+                  prefersReducedMotion ? "" : "animate-pulse"
+                }`}
               >
                 <span 
                   className="text-sm md:text-base font-black uppercase tracking-widest bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 bg-clip-text text-transparent filter drop-shadow font-space-grotesk"
@@ -769,7 +829,7 @@ export function GoldenSplash({ onProceed }: GoldenSplashProps) {
                   className="relative px-9 py-3 text-black bg-[#F5D742] font-black text-sm tracking-widest uppercase cursor-pointer transition-all duration-200 hover:bg-amber-300 hover:scale-105 active:scale-[0.97] rounded-xl shadow-[0_0_25px_rgba(245,215,66,0.4)]"
                   style={{
                     fontFamily: "var(--font-space-grotesk, sans-serif)",
-                    animation: "bb-cta-breathe 2s ease-in-out infinite",
+                    animation: prefersReducedMotion ? "none" : "bb-cta-breathe 2s ease-in-out infinite",
                   }}
                 >
                   [ ENTER BOSS MODE ]

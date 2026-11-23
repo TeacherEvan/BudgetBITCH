@@ -162,6 +162,38 @@ describe('ReceiptDraftsList', () => {
     });
   });
 
+  // Regression for P2-N10: Number(e.target.value) on a controlled number input
+  // collapsed "12.50" to 12.5 while typing, making cents impossible to enter.
+  it('keeps decimal line-item amounts as text while editing and parses them on save', async () => {
+    hoisted.queryResult = { receipts: [draft], nextCursor: null };
+    render(<ReceiptDraftsList />);
+
+    const item1Amount = screen.getByLabelText('Item 1 amount') as HTMLInputElement;
+    expect(item1Amount).toHaveValue(20);
+
+    fireEvent.change(item1Amount, { target: { value: '12.50' } });
+    expect(item1Amount.value).toBe('12.50');
+
+    fireEvent.click(screen.getByText('Save expense'));
+
+    await waitFor(() => {
+      expect(confirmFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          overrides: expect.objectContaining({
+            items: expect.arrayContaining([
+              expect.objectContaining({ title: 'Pad Thai', amount: 12.5 }),
+            ]),
+          }),
+        })
+      );
+      expect(addExpensesBulk).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ merchant: 'Pad Thai', amount: 12.5 }),
+        ])
+      );
+    });
+  });
+
   it('supports adding and deleting line items with tactile feedback', async () => {
     hoisted.queryResult = { receipts: [draft], nextCursor: null };
     render(<ReceiptDraftsList />);

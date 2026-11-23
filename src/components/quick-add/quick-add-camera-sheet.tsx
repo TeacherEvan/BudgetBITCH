@@ -63,11 +63,13 @@ export function QuickAddCameraSheet({
   handleCapturedFrame,
 }: QuickAddCameraSheetProps) {
   const [isLiveActive, setIsLiveActive] = useState(false);
+  const [isVideoReady, setIsVideoReady] = useState(false);
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
   const [streamError, setStreamError] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const libraryInputRef = useRef<HTMLInputElement | null>(null);
 
   // Stop current active media stream tracks
   const stopStream = useCallback(() => {
@@ -96,6 +98,7 @@ export function QuickAddCameraSheet({
   // Start live stream when isLiveActive or facingMode changes
   useEffect(() => {
     if (!isLiveActive) {
+      setIsVideoReady(false);
       stopStream();
       return;
     }
@@ -105,6 +108,8 @@ export function QuickAddCameraSheet({
     async function startCamera() {
       setStreamError(null);
 
+      setIsVideoReady(false);
+
       if (
         typeof navigator === 'undefined' ||
         !navigator.mediaDevices ||
@@ -112,7 +117,6 @@ export function QuickAddCameraSheet({
       ) {
         setStreamError('Live camera not supported in this browser.');
         setIsLiveActive(false);
-        fileInputRef.current?.click();
         return;
       }
 
@@ -151,8 +155,11 @@ export function QuickAddCameraSheet({
         if (!isSubscribed) return;
         console.warn('getUserMedia failed, falling back to file picker:', err);
         setStreamError('Camera permission denied or camera unavailable.');
+        setIsVideoReady(false);
         setIsLiveActive(false);
-        fileInputRef.current?.click();
+        // Do NOT call .click() here: after an await, the browser no longer
+        // grants user activation and the picker is silently blocked. The
+        // visible "Choose Photo from Library" button handles the fallback.
       }
     }
 
@@ -185,16 +192,26 @@ export function QuickAddCameraSheet({
   // Close live viewfinder and return to static mode
   const closeLiveStream = useCallback(() => {
     setIsLiveActive(false);
+    setIsVideoReady(false);
     stopStream();
   }, [stopStream]);
+
+  // A loadeddata event is the first point at which the video has a real frame:
+  // readyState >= HAVE_CURRENT_DATA and a non-zero intrinsic size.
+  const onVideoLoadedData = useCallback(() => {
+    const video = videoRef.current;
+    if (video && video.readyState >= 2 && video.videoWidth > 0) {
+      setIsVideoReady(true);
+    }
+  }, []);
 
   // Grab snapshot frame from live video
   const captureFrame = useCallback(async () => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || !isVideoReady || video.readyState < 2 || video.videoWidth <= 0) return;
 
-    const width = video.videoWidth || 1280;
-    const height = video.videoHeight || 720;
+    const width = video.videoWidth;
+    const height = video.videoHeight;
 
     const canvas = document.createElement('canvas');
     canvas.width = width;
@@ -232,7 +249,7 @@ export function QuickAddCameraSheet({
 
       await handleFileChange(syntheticEvent);
     }
-  }, [closeLiveStream, handleCapturedFrame, handleFileChange]);
+  }, [closeLiveStream, handleCapturedFrame, handleFileChange, isVideoReady]);
 
   const isActivelyScanning =
     loading && scanStage !== 'idle' && scanStage !== 'complete';
@@ -264,6 +281,37 @@ export function QuickAddCameraSheet({
         className="hidden"
         data-testid="camera-file-input"
       />
+
+      {/* Library picker: separate input without capture="environment" so it
+          opens the photo library rather than forcing the camera. */}
+      <input
+        type="file"
+        ref={libraryInputRef}
+        onChange={handleFileChange}
+        accept="image/*"
+        className="hidden"
+        data-testid="library-file-input"
+      />
+
+      {/* Camera errors and the user-activated fallback are rendered outside
+          the isLiveActive gate so they remain visible after a failed stream. */}
+      {streamError && (
+        <div
+          role="alert"
+          data-testid="camera-stream-error"
+          className="mb-2 rounded-lg border border-rose-800/60 bg-rose-950/60 px-3 py-2 text-xs text-rose-300"
+        >
+          {streamError}
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={() => libraryInputRef.current?.click()}
+        className="mb-2 min-h-[44px] rounded-xl border border-[var(--gold-border)] px-3 py-1.5 text-xs font-semibold text-[var(--gold-bright)] transition-colors hover:bg-[var(--gold-border-soft)] cursor-pointer"
+        data-testid="choose-library-btn"
+      >
+        Choose Photo from Library
+      </button>
 
       {/* Live Camera Stream Viewfinder Modal / Overlay */}
       {isLiveActive && (
@@ -310,6 +358,7 @@ export function QuickAddCameraSheet({
               autoPlay
               playsInline
               muted
+              onLoadedData={onVideoLoadedData}
               className="absolute inset-0 w-full h-full object-cover"
               data-testid="live-camera-video"
             />
@@ -333,18 +382,14 @@ export function QuickAddCameraSheet({
 
           {/* Bottom Shutter Trigger Controls */}
           <div className="w-full max-w-md flex flex-col items-center justify-center gap-3 pb-4 z-10">
-            {streamError && (
-              <p className="text-xs text-rose-400 bg-rose-950/60 border border-rose-800/60 px-3 py-1 rounded-lg">
-                {streamError}
-              </p>
-            )}
-
             <div className="flex items-center justify-center w-full relative">
-              {/* Shutter Button with Gold Halo Ring */}
+              {/* Shutter Button with Gold Halo Ring — disabled until a real
+                  video frame is available so captures are never black. */}
               <button
                 type="button"
                 onClick={captureFrame}
-                className="group relative flex items-center justify-center h-20 w-20 min-h-[56px] min-w-[56px] rounded-full p-1 transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--gold-bright)] cursor-pointer"
+                disabled={!isVideoReady}
+                className="group relative flex items-center justify-center h-20 w-20 min-h-[56px] min-w-[56px] rounded-full p-1 transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--gold-bright)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label="Capture receipt frame"
                 data-testid="camera-shutter-btn"
               >
@@ -357,7 +402,7 @@ export function QuickAddCameraSheet({
               </button>
             </div>
             <p className="text-[11px] text-[var(--text-muted)] font-mono">
-              Tap shutter to freeze &amp; scan
+              {isVideoReady ? 'Tap shutter to freeze & scan' : 'Preparing live frame…'}
             </p>
           </div>
         </div>

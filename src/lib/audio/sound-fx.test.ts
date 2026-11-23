@@ -7,6 +7,7 @@ import {
   playPaperTearSound,
   playSuccessChime,
   playToggleClick,
+  setSoundMuted,
 } from './sound-fx';
 
 describe('Procedural Web Audio Synthesizer (sound-fx)', () => {
@@ -115,6 +116,48 @@ describe('Procedural Web Audio Synthesizer (sound-fx)', () => {
     expect(() => playToggleClick()).not.toThrow();
     expect(mockAudioContext.createOscillator).toHaveBeenCalledTimes(1);
     expect(mockAudioContext.createBiquadFilter).toHaveBeenCalledTimes(1);
+    expect(mockAudioContext.createGain).toHaveBeenCalledTimes(1);
+  });
+
+  // Regression for P3-C1: a suspended context dropped the first sound because
+  // nodes were scheduled at the pre-resume currentTime (or before resume won).
+  it('schedules sound only after a suspended context resumes, using post-resume time', async () => {
+    let resolveResume!: () => void;
+    mockAudioContext.state = 'suspended';
+    mockAudioContext.currentTime = 0;
+    mockAudioContext.resume = vi.fn(() => new Promise<void>((resolve) => {
+      resolveResume = resolve;
+      mockAudioContext.currentTime = 0.75;
+    }));
+
+    playSuccessChime();
+
+    expect(mockAudioContext.resume).toHaveBeenCalled();
+    expect(mockAudioContext.createOscillator).not.toHaveBeenCalled();
+
+    resolveResume();
+    await vi.waitFor(() => {
+      expect(mockAudioContext.createOscillator).toHaveBeenCalledTimes(2);
+    });
+
+    const firstOsc = mockAudioContext.createOscillator.mock.results[0].value;
+    expect(firstOsc.frequency.setValueAtTime).toHaveBeenCalledWith(880, 0.75);
+    expect(firstOsc.start).toHaveBeenCalledWith(0.75);
+  });
+
+  it('exposes a single canonical mute API that silences all effects', () => {
+    setSoundMuted(true);
+    expect(isMuted()).toBe(true);
+
+    playPaperTearSound();
+    playSuccessChime();
+    playToggleClick();
+
+    expect(mockAudioContext.createGain).not.toHaveBeenCalled();
+
+    setSoundMuted(false);
+    expect(isMuted()).toBe(false);
+    playToggleClick();
     expect(mockAudioContext.createGain).toHaveBeenCalledTimes(1);
   });
 
