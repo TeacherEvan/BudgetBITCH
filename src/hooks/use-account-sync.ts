@@ -236,6 +236,11 @@ export function useAccountSync(): UseAccountSync {
     const updatedAt = Date.now();
     const data = await serializeBoardForSync();
 
+    // A switch can resolve a different active board while serialization is
+    // awaiting. Pushing — or queueing for retry — this snapshot under the old
+    // boardId would write board A's data into board B.
+    if (boardIdRef.current !== bid) return;
+
     if (isOnline()) {
       try {
         setSyncing(true);

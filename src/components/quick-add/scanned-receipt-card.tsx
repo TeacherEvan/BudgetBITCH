@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Camera, Save, Plus, Trash2, Eye, EyeOff, CheckCircle2, AlertTriangle, ArrowRightLeft } from 'lucide-react';
@@ -12,6 +12,14 @@ import type { CurrencyCode } from '@/lib/utils/currency';
 import { convertReceiptAmount } from '@/components/dashboard/currency-options';
 
 type LineItemField = 'description' | 'amount' | 'qty';
+
+let rowIdSeq = 0;
+function makeRowId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `row-${crypto.randomUUID()}`;
+  }
+  return `row-${++rowIdSeq}`;
+}
 
 function ConfidencePip({ status, label }: { status: 'high' | 'review'; label: string }) {
   return (
@@ -76,6 +84,20 @@ export function ScannedReceiptCard({
 }) {
   const [showPhoto, setShowPhoto] = useState(false);
   const haptic = useHaptic();
+
+  // Guards regression: keys derived from description/amount changed on every
+  // keystroke, remounting the row and stealing focus. ids are stable for the
+  // lifetime of a row; amount drafts keep the raw string while editing so a
+  // trailing "." or partial cents survive until blur/save commits the number.
+  const rowIdsRef = useRef<string[]>([]);
+  const [amountDrafts, setAmountDrafts] = useState<Record<string, string>>({});
+  const rowCount = lineItems?.length ?? 0;
+  const rowIds = useMemo(() => {
+    const ids = rowIdsRef.current;
+    while (ids.length < rowCount) ids.push(makeRowId());
+    if (ids.length > rowCount) ids.length = rowCount;
+    return ids.slice();
+  }, [rowCount]);
 
   // Single source of truth shared with the save path — the badge must show
   // exactly the amount that will be persisted.
@@ -319,10 +341,11 @@ export function ScannedReceiptCard({
           <div className="space-y-2">
             <AnimatePresence initial={false}>
               {lineItems.map((item, idx) => {
-                const itemKey = `item-${idx}-${item.description}-${item.amount}`;
+                const rowId = rowIds[idx];
+                const rawAmount = amountDrafts[rowId] ?? String(item.amount);
                 return (
                   <motion.div
-                    key={itemKey}
+                    key={rowId}
                     layout
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
@@ -373,10 +396,23 @@ export function ScannedReceiptCard({
                       <input
                         type="text"
                         inputMode="decimal"
-                        value={String(item.amount)}
-                        onChange={(e) =>
-                          onUpdateLineItem(idx, 'amount', parseFloat(e.target.value) || 0)
-                        }
+                        value={rawAmount}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          setAmountDrafts((prev) => ({ ...prev, [rowId]: raw }));
+                          // Parse for the parent's numeric state (and the live
+                          // reconciliation badge), but never feed that parsed
+                          // value back into this input while it is focused.
+                          onUpdateLineItem(idx, 'amount', parseFloat(raw) || 0);
+                        }}
+                        onBlur={() => {
+                          setAmountDrafts((prev) => {
+                            if (!(rowId in prev)) return prev;
+                            const next = { ...prev };
+                            delete next[rowId];
+                            return next;
+                          });
+                        }}
                         placeholder="0.00"
                         className="col-span-3 min-h-[36px] bg-[var(--surface-layer-3)] border border-[var(--border-neutral)] rounded-lg px-2 py-1.5 text-xs text-[var(--text-1)] font-mono tabular-nums"
                         data-testid={`scanned-line-item-amount-${idx}`}

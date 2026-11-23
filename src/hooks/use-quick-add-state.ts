@@ -177,6 +177,23 @@ export function useQuickAddState(): QuickAddState {
   const [scanStage, setScanStage] = useState<ScanStage>('idle');
   const [scanPreviewUrl, setScanPreviewUrl] = useState<string | null>(null);
 
+  // Guards regression: scanPreviewUrl is a blob: URL from the preprocessor (or
+  // the createObjectURL fallback). The revoke calls in the Tier-3 <img> paths
+  // cover a different, short-lived URL, so a replaced preview, a save/reset,
+  // or an unmount leaked this one. The cleanup runs whenever the value changes
+  // (releasing the previous URL) and once on unmount.
+  useEffect(() => {
+    return () => {
+      if (
+        scanPreviewUrl?.startsWith('blob:') &&
+        typeof URL !== 'undefined' &&
+        typeof URL.revokeObjectURL === 'function'
+      ) {
+        URL.revokeObjectURL(scanPreviewUrl);
+      }
+    };
+  }, [scanPreviewUrl]);
+
   // UI States
   const [isExpense, setIsExpense] = useState(true);
   const [inputText, setInputText] = useState('');

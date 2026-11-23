@@ -38,6 +38,17 @@ vi.mock('@/lib/receipt/map-category', () => ({
   reconcileLineItems: (items: unknown[], _total: number) => items,
 }));
 
+const previewFixtures = vi.hoisted(() => ({
+  next: [] as Array<{ processedBlob: Blob; previewUrl: string; width: number; height: number }>,
+}));
+vi.mock('@/lib/receipt/image-preprocessor', () => ({
+  preprocessReceiptImage: async () => {
+    const fixture = previewFixtures.next.shift();
+    if (!fixture) throw new Error('missing preprocess fixture');
+    return fixture;
+  },
+}));
+
 const parseSMSMock = vi.fn(() => ({ candidates: [], rawText: '', detectedCountry: null }));
 const getBestCandidateMock = vi.fn(() => null);
 vi.mock('@/lib/sms-parser', () =>
@@ -82,8 +93,19 @@ describe('useQuickAddState', () => {
     mockDraft = null;
     mockExpenses = [];
     mockFindRepeat.mockReset();
+    previewFixtures.next.length = 0;
     parseSMSMock.mockReturnValue({ candidates: [], rawText: '', detectedCountry: null });
     getBestCandidateMock.mockReturnValue(null);
+    Object.defineProperty(URL, 'createObjectURL', {
+      value: vi.fn(() => 'blob:ocr-preview'),
+      configurable: true,
+      writable: true,
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      value: vi.fn(),
+      configurable: true,
+      writable: true,
+    });
   });
 
   it('initializes with expense mode + manual entry source', () => {
@@ -244,5 +266,34 @@ describe('useQuickAddState', () => {
       expect(result.current.toast.message).toContain('valid image file');
     });
     expect(mockScanImage).not.toHaveBeenCalled();
+  });
+
+  it('guards regression: revokes scan preview blob URLs on replacement and on unmount', async () => {
+    const revoke = URL.revokeObjectURL as unknown as ReturnType<typeof vi.fn>;
+    const fileEvent = (name: string) =>
+      ({ target: { files: [{ type: 'image/jpeg', name }], value: '' } }) as unknown as React.ChangeEvent<HTMLInputElement>;
+
+    previewFixtures.next.push({
+      processedBlob: new Blob(['a']), previewUrl: 'blob:preview-1', width: 10, height: 10,
+    });
+    const { result, unmount } = renderHook(() => useQuickAddState());
+    await act(async () => {
+      await result.current.handleFileChange(fileEvent('first.jpg'));
+    });
+    expect(result.current.scanPreviewUrl).toBe('blob:preview-1');
+
+    // A second scan replaces the preview — the first blob must be released.
+    previewFixtures.next.push({
+      processedBlob: new Blob(['b']), previewUrl: 'blob:preview-2', width: 10, height: 10,
+    });
+    await act(async () => {
+      await result.current.handleFileChange(fileEvent('second.jpg'));
+    });
+    expect(result.current.scanPreviewUrl).toBe('blob:preview-2');
+    expect(revoke).toHaveBeenCalledWith('blob:preview-1');
+
+    // Unmounting releases the currently displayed preview.
+    unmount();
+    expect(revoke).toHaveBeenCalledWith('blob:preview-2');
   });
 });

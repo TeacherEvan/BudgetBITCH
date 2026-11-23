@@ -119,7 +119,8 @@ flowchart TD
 | Root auth gate | `src/app/page.tsx` | Auth-first gate: welcome, wizard, or board |
 | Client auth guard | `src/lib/auth/route-guard.ts` | Protected-surface handling for `/dashboard`, `/accounts`, `/settings`, `/wizard`, `/api/v1/auth/bootstrap` |
 | Auth route map | `src/lib/auth/routes.ts` | Auth route constants + protected-path prefixes. `AUTH_ROUTES.continue = "/auth/continue"` has no page behind it |
-| Root config | `next.config.ts` | Next.js runtime config |
+| Root config | `next.config.mjs` | Next.js runtime config |
+| Request proxy | `src/proxy.ts` | Per-request CSP with a nonce forwarded via `x-nonce` (Next.js 16 proxy); replaces the removed `src/middleware.ts` |
 | Data model | `convex/schema.ts` | Canonical Convex schema (14 tables + `authTables`) |
 | Local data model | `src/lib/db/local-db.ts` | IndexedDB stores, migrations, integrity |
 | Dashboard | `src/components/dashboard/dashboard-shell.tsx` | Panels, sidebar, modals, view modes |
@@ -150,7 +151,6 @@ flowchart TD
 | `/api/news/vicinity` | `src/app/api/news/vicinity/route.ts` | Location-gated vicinity feeds |
 | `/api/legal/record-agreement` | `src/app/api/legal/record-agreement/route.ts` | Records a signed legal agreement |
 | `/api/legal/record-cookie-consent` | `src/app/api/legal/record-cookie-consent/route.ts` | Records a cookie-consent choice |
-| `/api/auth/[...nextauth]` | `src/app/api/auth/[...nextauth]/route.ts` | Unwired NextAuth Google scaffold (`src/auth.ts`) — not the shipped auth path |
 
 ## 3. Component index
 
@@ -348,7 +348,6 @@ Useful anchors:
 | Path | Status |
 | --- | --- |
 | `WelcomeWindow-startup/` | Legacy visual reference folder; not part of the active flow |
-| `src/auth.ts`, `src/app/api/auth/[...nextauth]/` | Unwired NextAuth Google scaffold; shipped auth is Convex Auth |
 
 ## 9. Navigation recipes
 

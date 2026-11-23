@@ -21,13 +21,13 @@ import { PERSONAL_ACCOUNT_ID } from "@/lib/types/accounts";
 import type { LocalAccountMeta } from "@/lib/types/accounts";
 import {
   switchAccount as localSwitch,
-  adoptRemoteBoardMap,
   getLocalAccounts,
   saveLocalAccount,
   removeLocalAccount,
   removeStashedAccount,
   getCurrentAccountId,
 } from "@/lib/db/accountStorage";
+import { applyRemoteBoard } from "@/lib/db/local-db";
 import {
   useDatabaseListener,
   useWizardProfile,
@@ -286,10 +286,14 @@ export function useAccounts(): UseAccounts {
             updatedAt: number;
             data: Record<string, { value: unknown; updatedAt: number }> | null;
           } | null;
+          // Restore the local stash FIRST — it holds unsynced offline edits and
+          // their LWW clocks. The old adoptRemoteBoardMap path cleared both,
+          // silently discarding work that had never reached Convex.
+          await localSwitch(accountId);
           if (board?.data) {
-            await adoptRemoteBoardMap(meta, board.data);
-          } else {
-            await localSwitch(accountId);
+            // Overlay the remote board through the LWW merge: newer remote
+            // records win, local-only records and their timestamps survive.
+            await applyRemoteBoard(board.data);
           }
         } else {
           await localSwitch(accountId);
