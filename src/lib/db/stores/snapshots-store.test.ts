@@ -1,6 +1,7 @@
 // lib/db/stores/snapshots-store.test.ts
 import 'fake-indexeddb/auto';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import * as localDbModule from '@/lib/db/local-db';
 import {
   getDB,
   clearAllData,
@@ -12,6 +13,8 @@ import {
   saveSettings,
   getSettings,
   restoreCheckpoint,
+  getLocalWrite,
+  recordLocalWriteAt,
 } from '@/lib/db/local-db';
 import {
   serializeBoardForSync,
@@ -88,6 +91,54 @@ describe('applyRemoteBoard (Fix A)', () => {
     });
 
     expect((await getExpenses())[0].amount).toBe(10);
+  });
+});
+
+// N5: the LWW clock read and the applied stamps must share the data tx.
+describe('applyRemoteBoard (N5 atomic LWW clock)', () => {
+  const exp = (amount: number) => ({
+    id: 'a', date: '2026-07-01', category: 'food' as const, merchant: 'x', amount, source: 'manual' as const,
+  });
+
+  it('applies the record and its stamp inside ONE readwrite transaction', async () => {
+    await addExpense(exp(10) as never);
+    const db = await getDB();
+    const orig = (db as unknown as { transaction: (...a: unknown[]) => unknown }).transaction.bind(db);
+    let txCount = 0;
+    (db as unknown as { transaction: (...a: unknown[]) => unknown }).transaction = (...a: unknown[]) => {
+      txCount += 1;
+      return orig(...a);
+    };
+    try {
+      const remoteTs = Date.now() + 5_000;
+      await applyRemoteBoard({ 'expenses:a': { value: exp(999), updatedAt: remoteTs } });
+      expect(txCount).toBe(1);
+      expect(await getLocalWrite('expenses', 'a')).toBe(remoteTs);
+      expect((await getExpenses())[0].amount).toBe(999);
+    } finally {
+      (db as unknown as { transaction: unknown }).transaction = orig;
+    }
+  });
+
+  it('preserves a local edit when a separate clock read would return a stale map', async () => {
+    await addExpense(exp(10) as never);
+    const localTs = Date.now() + 10_000;
+    await recordLocalWriteAt('expenses', 'a', localTs);
+
+    // Old code read the clock through getAllLocalWrites() BEFORE opening the
+    // data tx. Force that read to observe an empty (stale) map: the remote
+    // record must still lose to the real, newer stamp stored in IndexedDB.
+    const staleClock = vi.spyOn(localDbModule, 'getAllLocalWrites')
+      .mockResolvedValue(new Map());
+    try {
+      await applyRemoteBoard({
+        'expenses:a': { value: exp(1), updatedAt: localTs - 1 },
+      });
+      expect((await getExpenses())[0].amount).toBe(10);
+      expect(await getLocalWrite('expenses', 'a')).toBe(localTs);
+    } finally {
+      staleClock.mockRestore();
+    }
   });
 });
 

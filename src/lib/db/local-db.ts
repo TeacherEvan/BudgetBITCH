@@ -202,6 +202,19 @@ export async function getDB(): Promise<IDBPDatabase<BudgetBITCHDB>> {
   if (dbPromise) return dbPromise;
 
   dbPromise = openDB<BudgetBITCHDB>(DB_NAME, DB_VERSION, {
+    // P3-C4: another tab may hold an older connection while we request an
+    // upgrade. Without this handler the openPromise never settles and every
+    // local-first caller hangs forever. Drop our cached connection so the
+    // upgrade can proceed (idb's `blocking`, not `blocked`).
+    blocking() {
+      try {
+        dbInstance?.close();
+      } catch {
+        // ignore close errors
+      }
+      dbInstance = null;
+      dbPromise = null;
+    },
     upgrade(db, oldVersion, newVersion) {
       if (!db.objectStoreNames.contains('wizardProfile')) db.createObjectStore('wizardProfile');
       if (!db.objectStoreNames.contains('expenses')) {
@@ -472,8 +485,9 @@ export async function getWizardProfile(): Promise<WizardProfile | undefined> {
 }
 
 export async function clearWizardProfile(): Promise<void> {
-  const db = await getDB();
-  await db.delete('wizardProfile', 'current');
+  // P3-C4: a bare delete left no LWW tombstone and emitted no board change,
+  // so the cleared profile could be resurrected by the next partner push.
+  await putWithStamp('wizardProfile', null, 'current');
 }
 
 // Budgets

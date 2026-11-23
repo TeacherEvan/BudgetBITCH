@@ -37,7 +37,7 @@ vi.mock('convex/react', () => ({
   },
 }));
 
-import { useSharedBoard } from './use-shared-board';
+import { useSharedBoard, drainBoardQueue } from './use-shared-board';
 
 function HookProbe() {
   useSharedBoard();
@@ -195,6 +195,62 @@ describe('useSharedBoard', () => {
 
     // Should NOT push since active board ('board_different') !== couple board ('board_1')
     expect(pushBoard).not.toHaveBeenCalled();
+  });
+
+  // N4: an unlinked board must never erase the offline queue.
+  it('drainBoardQueue keeps the entire queue when boardId is null', async () => {
+    const queue = [{ data: { 'expenses:x': { value: null, updatedAt: 1 } }, updatedAt: 1 }];
+    const push = vi.fn(async () => ({ applied: true }));
+    const result = await drainBoardQueue(queue, null, push);
+
+    expect(result.remaining).toEqual(queue);
+    expect(result.applied).toEqual([]);
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it('keeps queued pushes across an unlink/reload and flushes when the board is relinked', async () => {
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+    const linked = {
+      getMyProfile: { shareCode: 'ABCD1234', displayName: null, linkedBoardId: 'board_1' },
+      getBoard: { boardId: 'board_1', updatedAt: 100, data: null } as FixtureBoard,
+    };
+    queryResults = linked;
+    const view = render(<HookProbe />);
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT));
+      await sleep(1000);
+    });
+    expect(JSON.parse(localStorage.getItem('budgetbitch:boardQueue') || '[]')).toHaveLength(1);
+
+    // Unlink — boardId becomes null.
+    await act(async () => {
+      queryResults = {
+        getMyProfile: { shareCode: 'ABCD1234', displayName: null, linkedBoardId: null },
+        getBoard: null,
+      };
+      view.rerender(<HookProbe />);
+      await sleep(50);
+    });
+
+    Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+    await act(async () => {
+      window.dispatchEvent(new Event('online'));
+      window.dispatchEvent(new Event('budgetbitch:flushQueues'));
+      await sleep(50);
+    });
+    // Survives the unlink/reload: neither the item nor the queue is dropped.
+    expect(JSON.parse(localStorage.getItem('budgetbitch:boardQueue') || '[]')).toHaveLength(1);
+    expect(pushBoard).not.toHaveBeenCalled();
+
+    // Relink — the pending queue is drained automatically.
+    await act(async () => {
+      queryResults = linked;
+      view.rerender(<HookProbe />);
+      await sleep(100);
+    });
+    expect(pushBoard).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(localStorage.getItem('budgetbitch:boardQueue') || '[]')).toHaveLength(0);
   });
 
   it('replays queued pushes on custom budgetbitch:flushQueues event', async () => {

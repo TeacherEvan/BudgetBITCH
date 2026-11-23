@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { compactQueueByDate, backoffWithJitter, type QueuedSnapshot } from './sync-queue-compaction';
+import {
+  compactQueueByDate,
+  compactQueueByDateDetailed,
+  backoffWithJitter,
+  type QueuedSnapshot,
+} from './sync-queue-compaction';
 
 // Anchor timestamps (UTC) for deterministic day-bucketing.
 const day = (iso: string) => new Date(iso).getTime();
@@ -44,6 +49,54 @@ describe('compactQueueByDate', () => {
     const snapshot = [...items];
     compactQueueByDate(items);
     expect(items).toEqual(snapshot);
+  });
+});
+
+// P0-C2: the flush must know WHICH ids a winner superseded so it can delete
+// all same-day rows in one transaction. The plain winners-only helper cannot
+// express this — hence the detailed variant.
+describe('compactQueueByDateDetailed (P0-C2)', () => {
+  it('returns the winner plus every superseded id for each calendar day', () => {
+    const items: QueuedSnapshot[] = [
+      { id: 1, data: { v: 'morning' }, timestamp: A },
+      { id: 2, data: { v: 'afternoon' }, timestamp: B },
+      { id: 3, data: { v: 'next-day' }, timestamp: C },
+    ];
+    const out = compactQueueByDateDetailed(items);
+    expect(out).toHaveLength(2);
+    expect(out[0]).toEqual({ winner: items[1], supersededIds: [1] });
+    expect(out[1]).toEqual({ winner: items[2], supersededIds: [] });
+  });
+
+  it('reports ALL earlier same-day rows, not just the immediately previous one', () => {
+    const items: QueuedSnapshot[] = [
+      { id: 1, data: { v: 'a' }, timestamp: A - 1000 },
+      { id: 2, data: { v: 'b' }, timestamp: A },
+      { id: 3, data: { v: 'c' }, timestamp: B },
+    ];
+    const out = compactQueueByDateDetailed(items);
+    expect(out).toHaveLength(1);
+    expect(out[0].winner.id).toBe(3);
+    expect(out[0].supersededIds.sort()).toEqual([1, 2]);
+  });
+
+  it('keeps invalid-timestamp entries as their own buckets (no lost ids)', () => {
+    const items: QueuedSnapshot[] = [
+      { id: 1, data: {}, timestamp: 0 },
+      { id: 2, data: {}, timestamp: NaN },
+    ];
+    const out = compactQueueByDateDetailed(items);
+    expect(out.map((d) => d.winner.id).sort()).toEqual([1, 2]);
+    expect(out.every((d) => d.supersededIds.length === 0)).toBe(true);
+  });
+
+  it('stays the source of truth for compactQueueByDate', () => {
+    const items: QueuedSnapshot[] = [
+      { id: 1, data: {}, timestamp: A },
+      { id: 2, data: {}, timestamp: B },
+      { id: 3, data: {}, timestamp: C },
+    ];
+    expect(compactQueueByDate(items)).toEqual(compactQueueByDateDetailed(items).map((d) => d.winner));
   });
 });
 

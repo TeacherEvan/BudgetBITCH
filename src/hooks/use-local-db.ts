@@ -500,28 +500,35 @@ export function useNetWorth() {
   useDatabaseListener(load, NET_WORTH_STORES);
 
   /**
-   * A new user has NO net-worth snapshot yet, so every `if (!snapshot) return;`
-   * guard below used to make the very first "Add Asset" / "Add Liability" a
-   * silent no-op. Seed an empty snapshot for today instead of bailing.
+   * N7b: net-worth snapshots are keyed by date, so two writes assembled from
+   * the same render-time state overwrite each other. Serialize mutations and
+   * re-read the latest snapshot from IndexedDB immediately before each write.
    */
-  const baseSnapshot = useCallback((): NetWorthSnapshot => {
-    return (
-      snapshot ?? {
-        date: new Date().toISOString().slice(0, 10),
-        assets: [],
-        liabilities: [],
-        netWorth: 0,
-      }
-    );
-  }, [snapshot]);
+  const mutationChain = useRef<Promise<unknown>>(Promise.resolve());
+  const runMutation = useCallback((fn: () => Promise<void>): Promise<void> => {
+    const next = mutationChain.current.then(fn, fn);
+    mutationChain.current = next.catch(() => undefined);
+    return next;
+  }, []);
+
+  const freshSnapshot = useCallback(async (): Promise<NetWorthSnapshot> => {
+    return (await getLatestNetWorthSnapshot()) ?? {
+      date: new Date().toISOString().slice(0, 10),
+      assets: [],
+      liabilities: [],
+      netWorth: 0,
+    };
+  }, []);
 
   const addAsset = useCallback(async (asset: Asset) => {
-    const base = baseSnapshot();
-    const newAssets = [...base.assets, { ...asset, id: generateId() }];
-    const newSnapshot = { ...base, assets: newAssets };
-    await saveNetWorthSnapshot(newSnapshot);
-    setSnapshot(newSnapshot);
-  }, [baseSnapshot]);
+    await runMutation(async () => {
+      const base = await freshSnapshot();
+      const newAssets = [...base.assets, { ...asset, id: generateId() }];
+      const newSnapshot = { ...base, assets: newAssets };
+      await saveNetWorthSnapshot(newSnapshot);
+      setSnapshot(newSnapshot);
+    });
+  }, [freshSnapshot, runMutation]);
 
   const updateAsset = useCallback(async (asset: Asset) => {
     if (!snapshot) return;
@@ -540,12 +547,14 @@ export function useNetWorth() {
   }, [snapshot]);
 
   const addLiability = useCallback(async (liability: Liability) => {
-    const base = baseSnapshot();
-    const newLiabilities = [...base.liabilities, { ...liability, id: generateId() }];
-    const newSnapshot = { ...base, liabilities: newLiabilities };
-    await saveNetWorthSnapshot(newSnapshot);
-    setSnapshot(newSnapshot);
-  }, [baseSnapshot]);
+    await runMutation(async () => {
+      const base = await freshSnapshot();
+      const newLiabilities = [...base.liabilities, { ...liability, id: generateId() }];
+      const newSnapshot = { ...base, liabilities: newLiabilities };
+      await saveNetWorthSnapshot(newSnapshot);
+      setSnapshot(newSnapshot);
+    });
+  }, [freshSnapshot, runMutation]);
 
   const updateLiability = useCallback(async (liability: Liability) => {
     if (!snapshot) return;

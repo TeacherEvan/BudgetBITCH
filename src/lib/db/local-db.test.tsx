@@ -43,6 +43,7 @@ import {
   deleteExpense,
   recordLocalWriteAt,
   getLocalWrite,
+  clearWizardProfile,
 } from './local-db';
 import { BOARD_CHANGED_EVENT } from '@/lib/types/budget';
 import type { WizardProfile, ExpenseEntry, NewsItem } from '@/lib/types/budget';
@@ -252,6 +253,38 @@ describe('shared board serialize/replace', () => {
 
     // Verified: local record removed by remote tombstone
     expect(await getExpenses()).toHaveLength(0);
+  });
+});
+
+// P3-C4: the unsynced wizard clear and the blocked-upgrade hang.
+describe('local database lifecycle (P3-C4)', () => {
+  beforeEach(async () => {
+    await clearAllData();
+    localStorage.clear();
+  });
+
+  it('clearWizardProfile writes an LWW tombstone and notifies listeners', async () => {
+    await saveWizardProfile(makeProfile());
+    const handler = vi.fn();
+    window.addEventListener(BOARD_CHANGED_EVENT, handler);
+    try {
+      await clearWizardProfile();
+      expect(await getWizardProfile()).toBeUndefined();
+      expect(await getLocalWrite('wizardProfile', 'current')).toBeGreaterThan(0);
+      expect(handler).toHaveBeenCalledTimes(1);
+      const event = handler.mock.calls[0][0] as CustomEvent;
+      expect(event.detail?.source).toBe('local');
+    } finally {
+      window.removeEventListener(BOARD_CHANGED_EVENT, handler);
+    }
+  });
+
+  it('installs a blocking() handler that drops the stale connection', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { resolve } = await import('node:path');
+    const source = readFileSync(resolve(process.cwd(), 'src/lib/db/local-db.ts'), 'utf8');
+    expect(source).toMatch(/blocking\s*\(\)\s*\{/);
+    expect(source).toMatch(/blocking\s*\(\)\s*\{[\s\S]*?dbInstance\?\.close\(\)[\s\S]*?dbInstance\s*=\s*null[\s\S]*?dbPromise\s*=\s*null/);
   });
 });
 

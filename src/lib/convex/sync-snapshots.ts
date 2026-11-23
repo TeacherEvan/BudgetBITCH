@@ -17,9 +17,18 @@ import { calculateNetWorthBaseline } from '@/lib/utils/budget-calculator';
 import type { WizardProfile } from '@/lib/types/budget';
 import { api } from '../../../convex/_generated/api';
 import { getCurrentAccountId } from '@/lib/db/accountStorage';
-import { compactQueueByDate, backoffWithJitter } from './sync-queue-compaction';
-
+import { compactQueueByDateDetailed, backoffWithJitter } from './sync-queue-compaction';
 import { convex as sharedConvexClient } from '@/components/providers/convex-client-provider';
+
+// C5: strict WebViews can throw SecurityError on ANY localStorage access.
+function safeLocalStorageGet(key: string): string | null {
+  try {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
 
 function getConvexClient(): ConvexReactClient | null {
   const url = process.env.NEXT_PUBLIC_CONVEX_URL;
@@ -31,14 +40,18 @@ function getConvexClient(): ConvexReactClient | null {
 
 function hasAuthToken(): boolean {
   if (typeof window === 'undefined') return false;
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k && k.includes('convexAuthJWT')) {
-      const val = localStorage.getItem(k);
-      if (val && val !== 'null' && val !== 'undefined' && val.trim().length > 10) {
-        return true;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.includes('convexAuthJWT')) {
+        const val = safeLocalStorageGet(k);
+        if (val && val !== 'null' && val !== 'undefined' && val.trim().length > 10) {
+          return true;
+        }
       }
     }
+  } catch {
+    return false;
   }
   return false;
 }
@@ -360,16 +373,20 @@ export async function flushOfflineQueue() {
   isFlushingQueue = true;
   try {
     const db = await getDB();
-    const items = compactQueueByDate(await db.getAll('syncQueue'));
-    if (items.length === 0) return;
-    
-    for (const item of items) {
+    const days = compactQueueByDateDetailed(await db.getAll('syncQueue'));
+    if (days.length === 0) return;
+
+    // P0-C2: collect the winner AND every same-day row it supersedes, then
+    // delete them together AFTER the uploads succeed. Deleting only the winner
+    // left stale rows that replayed older snapshots on the next online event.
+    const uploadedIds = new Set<number>();
+    for (const day of days) {
+      const item = day.winner;
       try {
         const cleanData = sanitizeForConvex(item.data);
         await convex.mutation(api.snapshots.upsertDailySnapshot, cleanData as never);
-        if (item.id !== undefined) {
-          await db.delete('syncQueue', item.id);
-        }
+        if (item.id !== undefined) uploadedIds.add(item.id);
+        for (const id of day.supersededIds) uploadedIds.add(id);
         console.debug('Flushed offline snapshot:', item.timestamp);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -394,6 +411,14 @@ export async function flushOfflineQueue() {
           }
         }
       }
+    }
+
+    if (uploadedIds.size > 0) {
+      const tx = db.transaction('syncQueue', 'readwrite');
+      for (const id of uploadedIds) {
+        await tx.store.delete(id);
+      }
+      await tx.done;
     }
   } catch (err) {
     console.error('Failed to read syncQueue from IndexedDB:', err);
@@ -425,11 +450,7 @@ export async function restoreFromCloudSnapshot(
   // the user just wiped. Centralize the check HERE so the auto path is always
   // protected. The manual "Restore from cloud" button passes force:true — it is
   // an explicit user choice to recover data, so it may override the tombstone.
-  const resetAt = Number(
-    typeof window !== 'undefined'
-      ? localStorage.getItem(RESET_TOMBSTONE_KEY) || '0'
-      : '0'
-  );
+  const resetAt = Number(safeLocalStorageGet(RESET_TOMBSTONE_KEY) || '0');
   const snapshotTime = (snapshot as { createdAt?: number }).createdAt ?? 0;
   if (!opts.force && resetAt > 0 && snapshotTime > 0 && snapshotTime <= resetAt) {
     console.log('[Sync] Skipping cloud restore: snapshot predates last reset.');
@@ -445,23 +466,25 @@ export async function restoreFromCloudSnapshot(
     const db = await getDB();
     const backup = snapshot.fullBackupData;
 
-    // Account-aware restore: under the multi-board swap model the 8 flat
-    // stores ALWAYS hold the ACTIVE account. If we just overwrite them, the
-    // switch model would later stash this (possibly foreign) data over the
-    // real active account's stash and push it to other members.
-    // So: stash the currently-active board first, then point the active
-    // account at the snapshot's accountId (fall back to whatever is current).
+    // N7: repointing the active account is ONLY valid for an explicit manual
+    // restore (force:true). Auto-restore must never hijack the active board —
+    // AccountSyncMount already refuses mismatched snapshots before calling us,
+    // but keep the defensive guard here too.
     if (snapshot.accountId) {
-      try {
-        const { getCurrentAccountId, stashCurrentAccount, setCurrentAccountId } =
-          await import('@/lib/db/accountStorage');
-        const activeId = await getCurrentAccountId();
-        if (activeId !== snapshot.accountId) {
-          await stashCurrentAccount(activeId);
+      const activeId = await getCurrentAccountId();
+      if (activeId !== snapshot.accountId) {
+        if (!opts.force) {
+          console.log('[Sync] Skipping auto-restore: snapshot belongs to another account.');
+          return false;
         }
-        await setCurrentAccountId(snapshot.accountId);
-      } catch (e) {
-        console.warn('[Sync] Account-aware restore bookkeeping failed; restoring into active stores only:', e);
+        try {
+          const { stashCurrentAccount, setCurrentAccountId } =
+            await import('@/lib/db/accountStorage');
+          await stashCurrentAccount(activeId);
+          await setCurrentAccountId(snapshot.accountId);
+        } catch (e) {
+          console.warn('[Sync] Account-aware restore bookkeeping failed; restoring into active stores only:', e);
+        }
       }
     }
 
@@ -511,10 +534,12 @@ export async function restoreFromCloudSnapshot(
           for (const item of items) {
             // wizardProfile & settings have no keyPath; restore under their
             // fixed 'current' key so the app (which only reads 'current') sees them.
+            // C5: these stores have NO keyPath. A legacy payload may still
+            // carry an `id` field, but passing it to put() without the fixed
+            // 'current' key raises DataError and aborts the whole restore.
             if (
               (store === 'wizardProfile' || store === 'settings') &&
-              item && typeof item === 'object' &&
-              !('id' in (item as Record<string, unknown>))
+              item && typeof item === 'object'
             ) {
               const payloadTs = (item as Record<string, unknown>)?.updatedAt as number | undefined;
               const hasPayloadTs = typeof payloadTs === 'number' && Number.isFinite(payloadTs) && payloadTs > 0;

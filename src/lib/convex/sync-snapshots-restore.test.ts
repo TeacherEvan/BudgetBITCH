@@ -3,7 +3,7 @@
 // so we verify Fix B (wizardProfile 'current' key) and Fix C
 // (account-aware restore under the multi-board swap model).
 import 'fake-indexeddb/auto';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   clearAllData,
   getWizardProfile,
@@ -47,7 +47,7 @@ describe('restoreFromCloudSnapshot (Fix B + C)', () => {
     expect((wiz as { locale: string }).locale).toBe('th');
   });
 
-  it('is account-aware: stashes the active board and repoints the active account (Fix C)', async () => {
+  it('is account-aware on an EXPLICIT force:true restore: stashes the active board and repoints the active account (N7)', async () => {
     // User is currently on a SHARED account with live data.
     await setCurrentAccountId('acc-family');
     await saveLocalAccount({
@@ -77,7 +77,9 @@ describe('restoreFromCloudSnapshot (Fix B + C)', () => {
       },
     };
 
-    await restoreFromCloudSnapshot(snapshot);
+    // Repointing the active account is ONLY allowed for an explicit manual
+    // restore. The automatic path must never hijack the active board (N7).
+    await restoreFromCloudSnapshot(snapshot, { force: true });
 
     // Active account is now the snapshot's account.
     expect(await getCurrentAccountId()).toBe('acc-business');
@@ -185,5 +187,67 @@ describe('restoreFromCloudSnapshot (Fix B + C)', () => {
     expect(ok).toBe(true);
     const db = await getDB();
     expect(await db.count('expenses')).toBe(1);
+  });
+});
+
+describe('cloud restore account/board safety (N7 + C5)', () => {
+  beforeEach(async () => {
+    await clearAllData();
+    localStorage.clear();
+  });
+
+  it('auto restore refuses a snapshot belonging to another account and leaves the active board untouched', async () => {
+    await setCurrentAccountId('acc-family');
+    const db = await getDB();
+    await db.put('expenses', { id: 'live-1', date: '2026-07-01', category: 'food', amount: 50, source: 'manual' } as never);
+
+    const ok = await restoreFromCloudSnapshot({
+      accountId: 'acc-business',
+      fullBackupData: {
+        wizardProfile: [],
+        expenses: [{ id: 'foreign-1', date: '2026-07-01', category: 'food', amount: 999, source: 'manual' }],
+      },
+    });
+
+    expect(ok).toBe(false);
+    expect(await getCurrentAccountId()).toBe('acc-family');
+    expect((await db.getAll('expenses')).map((e: { id: string }) => e.id)).toEqual(['live-1']);
+  });
+
+  it('always restores wizardProfile under "current" even when the payload carries an id (C5)', async () => {
+    const ok = await restoreFromCloudSnapshot({
+      fullBackupData: {
+        wizardProfile: [{ id: 'wiz-legacy', completed: true, locale: 'th' }],
+      },
+    });
+    expect(ok).toBe(true);
+    expect((await getWizardProfile() as { locale: string } | undefined)?.locale).toBe('th');
+  });
+
+  it('always restores settings under "current" even when the payload carries an id (C5)', async () => {
+    const ok = await restoreFromCloudSnapshot({
+      fullBackupData: {
+        settings: [{ id: 'settings-legacy', preferredLocale: 'th' }],
+      },
+    });
+    expect(ok).toBe(true);
+    await expect((await getDB()).get('settings', 'current')).resolves.toMatchObject({ preferredLocale: 'th' });
+  });
+
+  it('does not crash when localStorage throws a SecurityError (C5)', async () => {
+    const getItem = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('SecurityError: storage disabled');
+    });
+    try {
+      const ok = await restoreFromCloudSnapshot({
+        fullBackupData: {
+          wizardProfile: [{ completed: true, locale: 'en' }],
+        },
+      });
+      expect(ok).toBe(true);
+      expect(await getWizardProfile()).toBeTruthy();
+    } finally {
+      getItem.mockRestore();
+    }
   });
 });

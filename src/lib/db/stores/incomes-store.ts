@@ -1,28 +1,24 @@
 import type { IncomeEntry, IncomeCategory } from '@/lib/types/budget';
-import { getDB, afterBoardMutation } from '../local-db';
+import { getDB, putWithStamp } from '../local-db';
 import { logUserAction } from '@/lib/utils/action-logger';
 import { getCurrentMember } from '../current-member';
 
 export async function addIncome(income: IncomeEntry): Promise<void> {
   if (!income.createdByName) income.createdByName = getCurrentMember() ?? 'Personal';
-  const db = await getDB();
-  await db.add('incomes', income);
-  await afterBoardMutation('incomes', income.id);
+  // N6b: record + LWW stamp in ONE transaction; a stamp failure can no longer
+  // leave an unstamped income that a later push fails to propagate.
+  await putWithStamp('incomes', income);
   logUserAction(`Add income ${income.category} ${income.amount} (${income.source || 'n/a'})`);
 }
 
 export async function updateIncome(income: IncomeEntry): Promise<void> {
   if (!income.createdByName) income.createdByName = getCurrentMember() ?? 'Personal';
-  const db = await getDB();
-  await db.put('incomes', income);
-  await afterBoardMutation('incomes', income.id);
+  await putWithStamp('incomes', income);
   logUserAction(`Update income ${income.category} ${income.amount}`);
 }
 
 export async function deleteIncome(id: string): Promise<void> {
-  const db = await getDB();
-  await db.delete('incomes', id);
-  await afterBoardMutation('incomes', id);
+  await putWithStamp('incomes', null, id);
   logUserAction(`Delete income ${id}`);
 }
 
