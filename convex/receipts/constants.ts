@@ -1,7 +1,7 @@
 // Shared receipt validation helpers + canonical category set.
 // Imported by ./scanActions, ./ingest, and convex/line.ts (via the receipts barrel).
 
-const VALID_CATEGORIES = [
+export const VALID_CATEGORIES = [
   "food", "transport", "utilities", "entertainment",
   "housing", "phone_internet", "subscriptions", "healthcare",
   "insurance", "debt", "savings", "other"

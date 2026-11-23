@@ -1,4 +1,5 @@
 import { httpAction, internalAction, internalMutation, internalQuery, mutation } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
@@ -12,8 +13,95 @@ import {
   validateDate,
   validateMerchant,
 } from "./receipts";
+import { VALID_CATEGORIES } from "./receipts/constants";
 
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+// W3: LINE link challenges. Stored in `processedWebhooks` under a reserved,
+// namespaced key so no schema change is required (schema.ts is owned by W4).
+// A dedicated `lineLinkChallenges` table is documented in the W3 report.
+const LINE_LINK_CHALLENGE_PREFIX = "linkchallenge:";
+const LINE_LINK_CHALLENGE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+function challengeCodeHash(code: string): string {
+  // Deterministic non-cryptographic hash: the code is 24 random hex chars and
+  // the hash only avoids persisting the code verbatim in the database key.
+  let h1 = 0x811c9dc5;
+  let h2 = 0x01000193;
+  for (let i = 0; i < code.length; i++) {
+    const c = code.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 0x01000193) >>> 0;
+    h2 = Math.imul(h2 + c, 0x85ebca6b) >>> 0;
+  }
+  return `${h1.toString(16).padStart(8, "0")}${h2.toString(16).padStart(8, "0")}`;
+}
+
+function challengeKey(lineUserId: string, codeHash: string): string {
+  return `${LINE_LINK_CHALLENGE_PREFIX}${lineUserId}:${codeHash}`;
+}
+
+async function findLineLinkChallenges(
+  ctx: MutationCtx,
+  lineUserId: string,
+) {
+  const prefix = `${LINE_LINK_CHALLENGE_PREFIX}${lineUserId}:`;
+  return await ctx.db
+    .query("processedWebhooks")
+    .withIndex("by_webhookEventId", (q) =>
+      q.gte("webhookEventId", prefix).lt("webhookEventId", `${prefix}\uffff`),
+    )
+    .take(10);
+}
+
+/** Bot-callable challenge issuer. The bot must deliver `code` to the LINE
+ * user out-of-band before the user submits it to `linkLineAccount`. */
+export const issueLineLinkChallenge = internalMutation({
+  args: { lineUserId: v.string() },
+  handler: async (ctx, args) => {
+    const lineUserId = args.lineUserId.trim();
+    if (!lineUserId) throw new ConvexError("lineUserId is required");
+    if (lineUserId.startsWith("app:")) {
+      throw new ConvexError("app: LINE user IDs are internal and cannot be linked");
+    }
+
+    // A new challenge invalidates any earlier outstanding one for this LINE id.
+    for (const existing of await findLineLinkChallenges(ctx, lineUserId)) {
+      await ctx.db.delete(existing._id);
+    }
+
+    const bytes = new Uint8Array(12);
+    crypto.getRandomValues(bytes);
+    const code = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    const issuedAt = Date.now();
+    await ctx.db.insert("processedWebhooks", {
+      webhookEventId: challengeKey(lineUserId, challengeCodeHash(code)),
+      createdAt: issuedAt,
+    });
+    return { code, lineUserId, expiresAt: issuedAt + LINE_LINK_CHALLENGE_TTL_MS };
+  },
+});
+
+/** Atomically consume a single-use, 10-minute challenge bound to lineUserId. */
+async function consumeLineLinkChallenge(
+  ctx: MutationCtx,
+  lineUserId: string,
+  code: string,
+): Promise<void> {
+  const key = challengeKey(lineUserId, challengeCodeHash(code.trim()));
+  const row = await ctx.db
+    .query("processedWebhooks")
+    .withIndex("by_webhookEventId", (q) => q.eq("webhookEventId", key))
+    .unique();
+  if (!row) throw new ConvexError("Invalid or expired LINE link code");
+  if (Date.now() - row.createdAt > LINE_LINK_CHALLENGE_TTL_MS) {
+    // Any write here would be rolled back by the throw; cleanupProcessedWebhooks
+    // reclaims expired challenge rows with the rest of the 24h TTL sweep.
+    throw new ConvexError("Invalid or expired LINE link code");
+  }
+  // Deleting inside the mutation makes the consume single-use: a later reuse
+  // fails the lookup above (and rolls back with the transaction on any error).
+  await ctx.db.delete(row._id);
+}
 
 /** Check webhook event idempotency (read-only query). Returns true if already processed. */
 export const isWebhookEventProcessed = internalQuery({
@@ -123,9 +211,14 @@ export const cleanupProcessedWebhooks = internalAction({
 
 // Links a LINE user ID to the authenticated Convex user (and optional account).
 // The userId is resolved server-side from auth — never taken from client args.
+// W3: linking now requires a bot-issued, single-use challenge code proving
+// control of the LINE identity, and any accountId must be owned/joined by the caller.
 export const linkLineAccount = mutation({
   args: {
     lineUserId: v.string(),
+    // Optional at the validator level so the current client (src/hooks/use-line-link.ts,
+    // owned by another worker) still typechecks; required at runtime below.
+    code: v.optional(v.string()),
     accountId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -133,11 +226,48 @@ export const linkLineAccount = mutation({
     if (!userIdStr) {
       throw new ConvexError("Authentication required");
     }
+    if (!args.code || !args.code.trim()) {
+      throw new ConvexError("LINE link code is required");
+    }
     const userId = userIdStr as Id<"users">;
+    const lineUserId = args.lineUserId.trim();
+    if (!lineUserId) {
+      throw new ConvexError("lineUserId is required");
+    }
+    if (lineUserId.startsWith("app:")) {
+      throw new ConvexError("app: LINE user IDs are internal and cannot be linked");
+    }
+
+    // N9: never persist a client-supplied accountId without an ownership check.
+    const accountId = args.accountId?.trim() || undefined;
+    if (accountId) {
+      const acc = await ctx.db
+        .query("accounts")
+        .withIndex("by_accountId", (q) => q.eq("accountId", accountId))
+        .unique();
+      if (!acc) throw new ConvexError("Account not found");
+      let authorized = acc.ownerId === userId;
+      if (!authorized && acc.boardId) {
+        authorized =
+          (await ctx.db
+            .query("boardMembers")
+            .withIndex("by_user_and_board", (q) =>
+              q.eq("userId", userId).eq("boardId", acc.boardId!),
+            )
+            .first()) !== null;
+      }
+      if (!authorized) {
+        throw new ConvexError("You are not authorized for this account");
+      }
+    }
+
+    // Consume before touching the mapping: an attacker without the code cannot
+    // pre-claim (or re-point) any LINE identity.
+    await consumeLineLinkChallenge(ctx, lineUserId, args.code);
 
     const existing = await ctx.db
       .query("lineUsers")
-      .withIndex("by_lineUserId", (q) => q.eq("lineUserId", args.lineUserId))
+      .withIndex("by_lineUserId", (q) => q.eq("lineUserId", lineUserId))
       .unique();
 
     // Prevent hijacking: if this LINE account is already linked to a DIFFERENT user, reject.
@@ -149,16 +279,16 @@ export const linkLineAccount = mutation({
     if (existing) {
       await ctx.db.patch(existing._id, {
         userId,
-        accountId: args.accountId ?? existing.accountId,
+        accountId: accountId ?? existing.accountId,
         linkedAt: Date.now(),
       });
       return existing._id;
     }
 
     return await ctx.db.insert("lineUsers", {
-      lineUserId: args.lineUserId,
+      lineUserId,
       userId,
-      accountId: args.accountId,
+      accountId,
       linkedAt: Date.now(),
     });
   },
@@ -179,10 +309,12 @@ export const getConvexUserByLineId = internalQuery({
   },
 });
 
-const LINE_RECEIPT_PROMPT = `Analyze the receipt in the image. You must extract:
+// W3: keep the prompt vocabulary in lockstep with the canonical category set
+// used by normalizeCategory so both receipt-ingest paths agree.
+export const LINE_RECEIPT_PROMPT = `Analyze the receipt in the image. You must extract:
 1. Total amount spent (as a number, do not include currency symbols).
 2. Merchant/Store name.
-3. A suggested category (e.g. food, transport, shopping, utilities, entertainment, medical, housing, personal, education, income, other).
+3. A suggested category. Choose ONLY from this canonical vocabulary: ${VALID_CATEGORIES.join(", ")}. Use "other" when unsure.
 4. Date (formatted as YYYY-MM-DD or null if not clear).
 
 Return a JSON object matching this schema exactly:
