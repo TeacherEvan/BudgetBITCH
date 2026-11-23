@@ -81,14 +81,21 @@ async function staleWhileRevalidate(request) {
 
 async function networkFirst(request) {
   const cache = await caches.open(APP_SHELL_CACHE);
+  const controller = new AbortController();
+  let timeoutId = null;
 
   try {
-    // Race the fetch request against a 3-second timeout to prevent mobile network hangs
+    // Race the fetch request against a 3-second timeout to prevent mobile network hangs.
+    // The controller aborts the in-flight request so it cannot resolve later, and the
+    // timer is always cleared so it cannot keep a worker alive (C1b).
     const networkResponse = await Promise.race([
-      fetch(request),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Navigation fetch timeout")), 3000)
-      )
+      fetch(request, { signal: controller.signal }),
+      new Promise((_, reject) => {
+        timeoutId = setTimeout(() => {
+          controller.abort();
+          reject(new Error("Navigation fetch timeout"));
+        }, 3000);
+      })
     ]);
 
     if (networkResponse.ok) {
@@ -110,6 +117,8 @@ async function networkFirst(request) {
     }
 
     throw new Error("Offline route shell not available in cache.");
+  } finally {
+    if (timeoutId !== null) clearTimeout(timeoutId);
   }
 }
 
@@ -125,7 +134,13 @@ self.addEventListener("activate", (event) => {
 
       await Promise.all(
         cacheKeys
-          .filter((cacheKey) => cacheKey !== APP_SHELL_CACHE && cacheKey !== STATIC_ASSET_CACHE)
+          // N5b: prune ONLY our own versioned caches. Deleting every key on the
+          // origin destroys other apps'/features' Cache Storage entries.
+          .filter((cacheKey) =>
+            cacheKey.startsWith("bb-") &&
+            cacheKey !== APP_SHELL_CACHE &&
+            cacheKey !== STATIC_ASSET_CACHE
+          )
           .map((cacheKey) => caches.delete(cacheKey)),
       );
 

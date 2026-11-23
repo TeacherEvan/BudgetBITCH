@@ -19,7 +19,37 @@ import {
 const PUSH_DEBOUNCE_MS = 800;
 const BOARD_QUEUE_KEY = 'budgetbitch:boardQueue';
 
-type QueuedPush = { data: Record<string, { value: unknown; updatedAt: number }>; updatedAt: number };
+export type QueuedPush = { data: Record<string, { value: unknown; updatedAt: number }>; updatedAt: number };
+
+type PushResult = { applied?: boolean; updatedAt?: number } | undefined;
+
+/**
+ * Drain a queue of pending pushes. N4: with no linked board the queue is
+ * returned untouched — callers must never persist an empty replacement, or an
+ * unlink erases offline edits.
+ */
+export async function drainBoardQueue(
+  queue: QueuedPush[],
+  boardId: string | null,
+  pushBoard: (item: QueuedPush, boardId: string) => Promise<PushResult>,
+): Promise<{ remaining: QueuedPush[]; applied: Array<{ item: QueuedPush; updatedAt: number }> }> {
+  if (!boardId) return { remaining: queue, applied: [] };
+  const remaining: QueuedPush[] = [];
+  const applied: Array<{ item: QueuedPush; updatedAt: number }> = [];
+  for (const item of queue) {
+    try {
+      const res = await pushBoard(item, boardId);
+      if (res?.applied) {
+        applied.push({ item, updatedAt: Math.max(item.updatedAt, res.updatedAt ?? item.updatedAt) });
+      } else {
+        remaining.push(item);
+      }
+    } catch {
+      remaining.push(item);
+    }
+  }
+  return { remaining, applied };
+}
 
 function readQueue(): QueuedPush[] {
   if (typeof window === 'undefined') return [];
@@ -174,35 +204,37 @@ export function useSharedBoard(): UseSharedBoard {
 
   const flushQueue = useCallback(async () => {
     if (isFlushingQueueRef.current) return;
+    // N4: gate at the top. The old `if (!boardId) break;` fell through to
+    // writeQueue([]) and permanently erased offline edits on unlink.
+    if (!boardId) return;
     const queue = readQueue();
     if (queue.length === 0) return;
 
     isFlushingQueueRef.current = true;
     try {
-      const remaining: QueuedPush[] = [];
-      for (const item of queue) {
-        try {
-          if (!boardId) break;
-          const res = (await pushBoard({
-            boardId,
-            data: item.data,
-            updatedAt: item.updatedAt,
-          })) as { success?: boolean; applied?: boolean; updatedAt?: number } | undefined;
-          if (res?.applied) {
-            setLastSyncedAt(item.updatedAt);
-            lastAppliedAt.current = Math.max(item.updatedAt, res.updatedAt ?? item.updatedAt);
-          } else {
-            remaining.push(item);
-          }
-        } catch {
-          remaining.push(item);
-        }
-      }
+      const { remaining, applied } = await drainBoardQueue(
+        queue,
+        boardId,
+        (item, id) => pushBoard({
+          boardId: id,
+          data: item.data,
+          updatedAt: item.updatedAt,
+        }) as Promise<PushResult>,
+      );
       writeQueue(remaining);
+      for (const a of applied) {
+        setLastSyncedAt(a.item.updatedAt);
+        lastAppliedAt.current = a.updatedAt;
+      }
     } finally {
       isFlushingQueueRef.current = false;
     }
   }, [boardId, pushBoard]);
+
+  // Flush immediately when a board is (re)linked after being offline/unlinked.
+  useEffect(() => {
+    if (boardId) void flushQueue();
+  }, [boardId, flushQueue]);
 
   // PUSH: debounce local edits, then push (or queue if offline).
   useEffect(() => {

@@ -19,20 +19,45 @@ export interface QueuedSnapshot {
  * Entries with no valid timestamp are preserved (we can't bucket them) but
  * sorted to the end so they flush last.
  */
-export function compactQueueByDate(items: QueuedSnapshot[]): QueuedSnapshot[] {
-  if (items.length <= 1) return items;
+export interface CompactedQueueDay {
+  /** Newest entry for the day — the only one that should be uploaded. */
+  winner: QueuedSnapshot;
+  /** IDs of every earlier same-day entry the winner replaces. */
+  supersededIds: number[];
+}
 
-  const dayKey = (ts: number): string => {
-    if (!Number.isFinite(ts) || ts <= 0) return `invalid:${ts}`;
-    return new Date(ts).toISOString().split('T')[0];
-  };
+function dayKey(ts: number): string {
+  if (!Number.isFinite(ts) || ts <= 0) return `invalid:${ts}`;
+  return new Date(ts).toISOString().split('T')[0];
+}
 
-  const byDay = new Map<string, QueuedSnapshot>();
+/**
+ * Same bucketing as `compactQueueByDate`, but keeps the superseded row IDs so
+ * the flush can delete ALL same-day entries atomically with the winner. Without
+ * this, older rows survive in the IDB queue and replay on a later `online`
+ * event, overwriting the cloud backup backwards in time (P0-C2).
+ */
+export function compactQueueByDateDetailed(items: QueuedSnapshot[]): CompactedQueueDay[] {
+  const byDay = new Map<string, CompactedQueueDay>();
   // Iterate in order; later entries (more recent) overwrite earlier ones.
   for (const item of items) {
-    byDay.set(dayKey(item.timestamp), item);
+    const key = dayKey(item.timestamp);
+    const existing = byDay.get(key);
+    if (!existing) {
+      byDay.set(key, { winner: item, supersededIds: [] });
+      continue;
+    }
+    if (existing.winner.id !== undefined) {
+      existing.supersededIds.push(existing.winner.id);
+    }
+    existing.winner = item;
   }
   return Array.from(byDay.values());
+}
+
+export function compactQueueByDate(items: QueuedSnapshot[]): QueuedSnapshot[] {
+  if (items.length <= 1) return items;
+  return compactQueueByDateDetailed(items).map((day) => day.winner);
 }
 
 /**

@@ -3,7 +3,6 @@ import { notifyBoardChanged } from '@/lib/types/budget';
 import {
   getDB,
   putWithStamp,
-  recordLocalWritesBulk,
   getAllLocalWrites,
 } from '../local-db';
 
@@ -228,47 +227,51 @@ export async function applyRemoteBoard(
     }
   }
 
-  // Read all local write timestamps in a single transaction
-  const localTsMap = await getAllLocalWrites();
-
   const activeStores = db.objectStoreNames
     ? stores.filter((s) => db.objectStoreNames.contains(s))
     : [...stores];
   if (activeStores.length === 0) return;
-  const tx = db.transaction(activeStores, 'readwrite');
-  const appliedWrites: Array<{ store: string; key: string; updatedAt: number }> = [];
+
+  // N5: read the per-record LWW clock INSIDE the same readwrite transaction
+  // that applies the records, and write the applied stamps before tx.done.
+  // A separate getAllLocalWrites() read + trailing recordLocalWritesBulk()
+  // let a concurrent local edit be silently overwritten by a stale clock.
+  type AppliedTx = {
+    objectStore: (name: string) => {
+      get: (key: string) => Promise<number | undefined>;
+      put: (value: unknown, key?: string) => Promise<unknown>;
+      delete: (key: string) => Promise<void>;
+    };
+    done: Promise<void>;
+  };
+  const wantLocalWrites = db.objectStoreNames.contains('localWrites');
+  const txNames = (wantLocalWrites ? [...activeStores, 'localWrites'] : [...activeStores]) as string[];
+  const tx = (db.transaction as (names: string[], mode: 'readwrite') => unknown)(
+    txNames,
+    'readwrite',
+  ) as AppliedTx;
+  const lwStore = wantLocalWrites ? tx.objectStore('localWrites') : null;
 
   for (const item of stage) {
-    const localTs = localTsMap.get(`${item.store}:${item.explicitKey}`) ?? 0;
+    const writeKey = `${item.store}:${item.explicitKey}`;
+    const localTs = lwStore ? ((await lwStore.get(writeKey)) ?? 0) : 0;
     if (item.updatedAt <= localTs) continue;
 
     if (item.deleted || item.value === null) {
       // Remote deletion/tombstone: remove local record if present
       if (item.explicitKey !== undefined) {
-        await tx.objectStore(item.store).delete(item.explicitKey as never);
+        await tx.objectStore(item.store).delete(String(item.explicitKey));
       }
     } else {
-      await tx.objectStore(item.store).put(item.value as never);
+      // All staged stores are keyPath stores — never pass an explicit key here.
+      await tx.objectStore(item.store).put(item.value);
     }
 
-    appliedWrites.push({
-      store: item.store,
-      key: String(item.explicitKey),
-      updatedAt: item.updatedAt,
-    });
+    // Stamp the record's TRUE remote timestamp (not "now") inside this tx so
+    // the data and its LWW clock commit or roll back together.
+    if (lwStore) await lwStore.put(item.updatedAt, writeKey);
   }
   await tx.done;
 
-  // Stamp the local-write clock with each record's true timestamp (not "now"),
-  // preserving the per-key merge on a later push, AFTER tx has successfully committed.
-  if (appliedWrites.length > 0) {
-    await recordLocalWritesBulk(
-      appliedWrites.map((w) => ({
-        store: w.store,
-        key: w.key,
-        timestamp: w.updatedAt,
-      })),
-    );
-  }
   notifyBoardChanged('remote');
 }

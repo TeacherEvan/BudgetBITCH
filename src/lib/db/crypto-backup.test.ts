@@ -70,6 +70,20 @@ describe('Crypto Backup Engine', () => {
     expect(decrypted).toBe(plaintext);
   });
 
+  // N8: never let a caller-supplied iteration count turn into a CPU DoS.
+  it('rejects out-of-range PBKDF2 iteration counts on decrypt', async () => {
+    const salt = Buffer.from(new Uint8Array(32).fill(7)).toString('base64');
+    const iv = Buffer.from(new Uint8Array(12).fill(1)).toString('base64');
+    await expect(decryptBackup('eA==', 'password', salt, iv, 1)).rejects.toThrow(/Invalid iterations/);
+    await expect(decryptBackup('eA==', 'password', salt, iv, 2_000_001)).rejects.toThrow(/Invalid iterations/);
+  });
+
+  it('rejects an IV whose length is not 12 bytes (AES-GCM requirement)', async () => {
+    const salt = Buffer.from(new Uint8Array(32).fill(7)).toString('base64');
+    const shortIv = Buffer.from(new Uint8Array(11).fill(1)).toString('base64');
+    await expect(decryptBackup('eA==', 'password', salt, shortIv)).rejects.toThrow(/Invalid IV/);
+  });
+
   it('should throw an error when decrypting with wrong password', async () => {
     const password = 'test-secret-password-123';
     const wrongPassword = 'wrong-password';

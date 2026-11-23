@@ -6,6 +6,11 @@ export const PBKDF2_ITERATIONS = 600_000;
 export const LEGACY_ITERATIONS = 100_000;
 /** Minimum salt length accepted on decrypt. */
 export const MIN_SALT_BYTES = 16;
+/** Callers cannot force an unbounded PBKDF2 workload on decrypt (N8). */
+export const MIN_DECRYPT_ITERATIONS = 100_000;
+export const MAX_DECRYPT_ITERATIONS = 2_000_000;
+/** AES-GCM requires a 12-byte IV. */
+export const IV_BYTES = 12;
 
 /**
  * Derives an AES-GCM key from a password string and salt using PBKDF2.
@@ -102,12 +107,22 @@ export async function decryptBackup(
   if (!password || password.length === 0) {
     throw new Error('Password required for decryption');
   }
+  if (
+    !Number.isFinite(iterations) ||
+    iterations < MIN_DECRYPT_ITERATIONS ||
+    iterations > MAX_DECRYPT_ITERATIONS
+  ) {
+    throw new Error(`Invalid iterations: ${iterations}`);
+  }
 
   const salt = Uint8Array.from(atob(saltBase64), (c) => c.charCodeAt(0));
   if (salt.length < MIN_SALT_BYTES) {
     throw new Error(`Invalid salt length: ${salt.length} < ${MIN_SALT_BYTES} bytes`);
   }
   const iv = Uint8Array.from(atob(ivBase64), (c) => c.charCodeAt(0));
+  if (iv.length !== IV_BYTES) {
+    throw new Error(`Invalid IV length: ${iv.length} != ${IV_BYTES} bytes`);
+  }
   const encryptedData = Uint8Array.from(atob(ciphertext), (c) => c.charCodeAt(0));
 
   // Backward compatible: old backups have no iterations field → 100k default.

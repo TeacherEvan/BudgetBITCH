@@ -1,4 +1,6 @@
 // lib/convex/sync-snapshots.test.ts
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as localDb from '@/lib/db/local-db';
 
@@ -41,6 +43,15 @@ vi.mock('@/lib/db/local-db', () => ({
         syncQueueStore = syncQueueStore.filter((i) => i.id !== id);
       }
     }),
+    // P0-C2: the flush deletes winner + superseded ids in one readwrite tx.
+    transaction: vi.fn().mockImplementation(() => ({
+      store: {
+        delete: vi.fn().mockImplementation(async (id: number) => {
+          syncQueueStore = syncQueueStore.filter((i) => i.id !== id);
+        }),
+      },
+      done: Promise.resolve(),
+    })),
   })),
   USER_DATA_STORES: [
     'wizardProfile',
@@ -234,6 +245,52 @@ describe('flushOfflineQueue (no item-skip on partial failure)', () => {
     await flushOfflineQueue();
 
     expect(syncQueueStore).toHaveLength(3);
+  });
+
+  // P0-C2 regression: deleting only the compacted winner left same-day rows in
+  // the queue; the next `online` event replayed them and overwrote the cloud
+  // backup with an OLDER snapshot.
+  it('deletes superseded same-day rows with the winner so a second flush uploads nothing', async () => {
+    const day = new Date('2026-08-18T09:00:00Z').getTime();
+    syncQueueStore = [
+      { id: 1, data: { totals: { income: 1 } }, timestamp: day - 2000 },
+      { id: 2, data: { totals: { income: 2 } }, timestamp: day - 1000 },
+      { id: 3, data: { totals: { income: 3 } }, timestamp: day },
+    ];
+    mockConvex.mutation.mockImplementation(async () => ({ ok: true }));
+
+    await flushOfflineQueue();
+
+    // Only the NEWEST payload was ever pushed, and the whole day was drained.
+    expect(mockConvex.mutation).toHaveBeenCalledTimes(1);
+    expect(mockConvex.mutation.mock.calls[0][1]).toEqual({ totals: { income: 3 } });
+    expect(syncQueueStore).toHaveLength(0);
+
+    mockConvex.mutation.mockClear();
+    await flushOfflineQueue();
+    expect(mockConvex.mutation).not.toHaveBeenCalled();
+  });
+});
+
+// The service worker lives in public/ (outside vitest's include glob), so pin
+// its two lifecycle guarantees with a source-level guard here rather than
+// leaving them untested.
+describe('service worker lifecycle hygiene (N5b + C1b)', () => {
+  const swSource = () => readFileSync(resolve(process.cwd(), 'public/sw.js'), 'utf8');
+
+  it('activate prunes ONLY Budget Boss caches, never unrelated origin caches', () => {
+    const sw = swSource();
+    expect(sw).toMatch(/cacheKeys[\s\S]*?\.filter\(/);
+    expect(sw).toMatch(/cacheKey\.startsWith\(["']bb-["']\)\s*&&\s*cacheKey\s*!==\s*APP_SHELL_CACHE\s*&&\s*cacheKey\s*!==\s*STATIC_ASSET_CACHE/);
+  });
+
+  it('navigation timeout aborts the fetch and clears its timer in finally', () => {
+    const sw = swSource();
+    expect(sw).toMatch(/new AbortController\(\)/);
+    expect(sw).toMatch(/signal:\s*controller\.signal/);
+    expect(sw).toMatch(/controller\.abort\(\)/);
+    expect(sw).toMatch(/clearTimeout\(/);
+    expect(sw.indexOf('clearTimeout(')).toBeGreaterThan(sw.indexOf('} catch {'));
   });
 });
 

@@ -51,4 +51,23 @@ describe('useNetWorth — first add on a fresh install', () => {
     expect(result.current.totalLiabilities).toBe(2000);
     expect(result.current.netWorth).toBe(-2000);
   });
+
+  // N7b: snapshots are keyed by date, so two writes assembled from the same
+  // render-time `baseSnapshot()` overwrite each other.
+  it('keeps BOTH assets and liabilities when additions are fired in rapid succession', async () => {
+    const { result } = renderHook(() => useNetWorth());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      const p1 = result.current.addAsset({ id: '', name: 'Car', value: 5000, type: 'vehicle' });
+      const p2 = result.current.addAsset({ id: '', name: 'Cash', value: 1000, type: 'cash' });
+      const p3 = result.current.addLiability({ id: '', name: 'Loan', value: 2000, type: 'personal_loan' });
+      await Promise.all([p1, p2, p3]);
+    });
+
+    const saved = await getLatestNetWorthSnapshot();
+    expect(saved!.assets).toHaveLength(2);
+    expect(saved!.liabilities).toHaveLength(1);
+    expect(saved!.assets.map((a) => a.name).sort()).toEqual(['Car', 'Cash']);
+  });
 });

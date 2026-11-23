@@ -8,13 +8,29 @@ import { api } from '../../../convex/_generated/api';
 import { useAccountSync } from '@/hooks/use-account-sync';
 import { restoreFromCloudSnapshot, syncDailySnapshot } from '@/lib/convex/sync-snapshots';
 import { getExpenses, RESET_TOMBSTONE_KEY } from '@/lib/db/local-db';
-import { ensurePersonalAccount } from '@/lib/db/accountStorage';
+import { ensurePersonalAccount, getCurrentAccountId } from '@/lib/db/accountStorage';
 import { claimLocalDataOwner } from '@/lib/db/data-owner';
 import { setCurrentMember } from '@/lib/db/current-member';
 import { BOARD_CHANGED_EVENT, notifyBoardChanged } from '@/lib/types/budget';
 
 const LAST_RESTORED_KEY = 'bb:lastCloudSnapshotAt';
 const SNAPSHOT_DEBOUNCE_MS = 10000; // 10 seconds background debounce
+
+// Strict WebViews can throw SecurityError on any storage access (C5).
+function safeStorageGet(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+function safeStorageSet(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // best-effort only
+  }
+}
 
 /**
  * Side-effect-only component that drives Accounts-feature board sync
@@ -100,13 +116,24 @@ export function AccountSyncMount() {
     (async () => {
       try {
         const localExpenses = await getExpenses();
-        const storedLastRestored = Number(localStorage.getItem(LAST_RESTORED_KEY) || '0');
+        const storedLastRestored = Number(safeStorageGet(LAST_RESTORED_KEY) || '0');
         const snapshotTime = latestSnapshot.createdAt || 0;
+
+        // N7: the cloud snapshot store is keyed by (user, date), so the latest
+        // snapshot for this user may belong to a DIFFERENT board. Never pull it
+        // into the active board and never repoint the active account here.
+        const snapshotAccountId = (latestSnapshot as { accountId?: string }).accountId;
+        const activeAccountId = (await getCurrentAccountId()) || 'personal';
+        if (snapshotAccountId && snapshotAccountId !== activeAccountId) {
+          console.log('[AccountSyncMount] Skipping cloud restore: snapshot belongs to another account.', snapshotAccountId, activeAccountId);
+          restoredSnapshotIdRef.current = snapshotId;
+          return;
+        }
 
         // Guard against re-restoring data the user just deleted. If a reset
         // tombstone exists and is newer than the snapshot, the snapshot is
         // stale and must not be pulled back.
-        const resetAt = Number(localStorage.getItem(RESET_TOMBSTONE_KEY) || '0');
+        const resetAt = Number(safeStorageGet(RESET_TOMBSTONE_KEY) || '0');
         if (resetAt > 0 && snapshotTime <= resetAt) {
           console.log('[AccountSyncMount] Skipping cloud restore: snapshot predates last reset.');
           restoredSnapshotIdRef.current = snapshotId;
@@ -119,7 +146,7 @@ export function AccountSyncMount() {
           const success = await restoreFromCloudSnapshot(latestSnapshot);
           if (success) {
             restoredSnapshotIdRef.current = snapshotId;
-            localStorage.setItem(LAST_RESTORED_KEY, String(snapshotTime));
+            safeStorageSet(LAST_RESTORED_KEY, String(snapshotTime));
             notifyBoardChanged('remote');
           }
         }
