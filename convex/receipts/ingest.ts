@@ -35,7 +35,7 @@ async function deriveHmacKey(syncSecret: string): Promise<CryptoKey> {
   );
 }
 
-async function validateAppToken(lineUserId: string, token: string, syncSecret: string): Promise<{ userId: Id<"users">; rawStillUsed: boolean } | null> {
+async function validateAppToken(lineUserId: string, token: string, syncSecret: string): Promise<{ userId: Id<"users"> } | null> {
   if (!lineUserId.startsWith("app:")) return null;
   
   const rawUserId = lineUserId.slice(4) as Id<"users">;
@@ -55,39 +55,36 @@ async function validateAppToken(lineUserId: string, token: string, syncSecret: s
   if (diff > 5 * 60 * 1000 || diff < -60 * 1000) return null;
   
   const message = `${rawUserId}:${timestamp}`;
+  if (!/^[0-9a-fA-F]+$/.test(hmac) || hmac.length % 2 !== 0) return null;
   const signature = new Uint8Array(Buffer.from(hmac, "hex"));
-  
-  // Try derived key first (new method)
+
+  // Domain-separated key only. The legacy raw-secret HMAC path has been
+  // removed: accepting both keys meant a token signed with the Bearer secret
+  // was indistinguishable from one signed with the app-token derived key.
   try {
     const derivedKey = await deriveHmacKey(syncSecret);
-    const valid = await crypto.subtle.verify("HMAC", derivedKey, signature, new TextEncoder().encode(message));
-    if (valid) {
-      return { userId: rawUserId, rawStillUsed: false };
-    }
-  } catch {
-    // Malformed hex or other crypto errors → try raw key
-  }
-  
-  // Dual-verify window: accept raw key (old method) for one deploy cycle
-  // Log when raw key is used so we can monitor migration
-  try {
-    const rawKey = await crypto.subtle.importKey(
-      "raw",
-      new TextEncoder().encode(syncSecret),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign", "verify"]
+    const valid = await crypto.subtle.verify(
+      "HMAC",
+      derivedKey,
+      signature,
+      new TextEncoder().encode(message),
     );
-    const valid = await crypto.subtle.verify("HMAC", rawKey, signature, new TextEncoder().encode(message));
-    if (valid) {
-      console.warn("rawStillUsed: true - HMAC validated with raw key (legacy)");
-      return { userId: rawUserId, rawStillUsed: true };
-    }
+    if (valid) return { userId: rawUserId };
   } catch {
-    // Raw key verification failed
+    // Malformed signature or crypto failure → reject.
   }
-  
+
   return null;
+}
+
+/** Constant-time-ish string comparison: always scans the full input length. */
+function constantTimeEqual(a: string, b: string): boolean {
+  const length = Math.max(a.length, b.length);
+  let mismatch = a.length ^ b.length;
+  for (let i = 0; i < length; i++) {
+    mismatch |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  }
+  return mismatch === 0;
 }
 
 // Budget Boss: HTTP action for TeacherBOY receipt ingestion
@@ -105,19 +102,9 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
   }
 
   const providedToken = authHeader.slice(7);
-  // Constant-time comparison
-  if (providedToken.length !== expectedToken.length) {
-    return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
-  let mismatch = 0;
-  for (let i = 0; i < providedToken.length; i++) {
-    if (providedToken.charCodeAt(i) !== expectedToken.charCodeAt(i)) mismatch++;
-  }
-  if (mismatch > 0) {
+  // Full-length comparison (not a length-only check) so a wrong-length token
+  // cannot be distinguished from a wrong-character one by timing.
+  if (!constantTimeEqual(providedToken, expectedToken)) {
     return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
       status: 401,
       headers: { "Content-Type": "application/json" },
@@ -213,9 +200,6 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
       });
     }
     const validatedUserId = validationResult.userId;
-    if (validationResult.rawStillUsed) {
-      // Could add a header or log metric here for monitoring
-    }
     const user = await ctx.runQuery(internal.receipts.getUserForIngest, { userId: validatedUserId });
     if (!user) {
       return new Response(JSON.stringify({ success: false, error: "User not found" }), {
@@ -266,42 +250,37 @@ export const ingestReceipt = httpAction(async (ctx, req) => {
 
   // Insert draft receipt via idempotent internal mutation (insert-then-read pattern)
   // Uses the by_user_and_clientDraftId index as the claim to prevent duplicate drafts
-  const draftId = await ctx.runMutation(internal.receipts.saveReceiptIdempotent, {
-    userId,
-    accountId,
-    amount,
-    merchant,
-    category,
-    date,
-    parsedAt: Date.now(),
-    geminiModel: "gemini-2.5-flash",
-    imageMimeType: "application/json",
-    imageSizeBytes: 0,
-    clientDraftId: idempotencyKey,
-    engine: "scraper-bot",
-    confidence: scraped.confidence,
-    evidence: scraped.evidence,
-    ocrText: payload.lines?.map((l: any) => l.text).join("\n"),
-    tax,
-    currency,
-    questionsAsked: scraped.questions,
-    status: "draft",
-    source: resolvedSource,
-    lineItems,
-  });
-
-  // Check if this was a duplicate by querying the draft
-  const draft = await ctx.runQuery(internal.receipts.getReceiptByClientDraftId, {
-    userId,
-    clientDraftId: idempotencyKey,
-  });
-
-  const isDuplicate = draft && draft._id !== draftId;
+  const { draftId, alreadySynced } = await ctx.runMutation(
+    internal.receipts.saveReceiptIdempotentWithStatus,
+    {
+      userId,
+      accountId,
+      amount,
+      merchant,
+      category,
+      date,
+      parsedAt: Date.now(),
+      geminiModel: "gemini-2.5-flash",
+      imageMimeType: "application/json",
+      imageSizeBytes: 0,
+      clientDraftId: idempotencyKey,
+      engine: "scraper-bot",
+      confidence: scraped.confidence,
+      evidence: scraped.evidence,
+      ocrText: payload.lines?.map((l: any) => l.text).join("\n"),
+      tax,
+      currency,
+      questionsAsked: scraped.questions,
+      status: "draft",
+      source: resolvedSource,
+      lineItems,
+    },
+  );
 
   return new Response(JSON.stringify({
     success: true,
-    draftId: draft?._id ?? draftId,
-    alreadySynced: isDuplicate,
+    draftId,
+    alreadySynced,
     fields: normalizedFields,
     confidence: scraped.confidence,
     evidence: scraped.evidence,

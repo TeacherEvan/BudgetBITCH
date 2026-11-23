@@ -246,4 +246,96 @@ describe("listReceipts - index-safe windowed pagination", () => {
       expect(r.source).toBe("app");
     }
   });
+
+  // P1-C1 regression guards: single bounded pass, working external cursor,
+  // and dedupe by _id (not _creationTime).
+  test("(e) single-pass pagination finds a line draft behind 60 app rows and walks via nextCursor", async () => {
+    const userId = await seedUser(t, "p1c1");
+
+    // 60 app receipts with newer parsedAt values.
+    for (let i = 0; i < 60; i++) {
+      await insertReceipt(t, {
+        userId,
+        amount: 10 + i,
+        merchant: `App ${i}`,
+        category: "food",
+        parsedAt: 5000 + i,
+        source: "app",
+        status: "draft",
+        imageMimeType: "image/jpeg",
+        imageSizeBytes: 10,
+        geminiModel: "gemini-2.5-flash",
+      });
+    }
+    // 2 line drafts with older, distinct parsedAt values.
+    const line1 = await insertReceipt(t, {
+      userId,
+      amount: 100,
+      merchant: "Line One",
+      category: "food",
+      parsedAt: 1000,
+      source: "line",
+      status: "draft",
+      imageMimeType: "image/jpeg",
+      imageSizeBytes: 10,
+      geminiModel: "gemini-2.5-flash",
+    });
+    const line2 = await insertReceipt(t, {
+      userId,
+      amount: 200,
+      merchant: "Line Two",
+      category: "food",
+      parsedAt: 900,
+      source: "line",
+      status: "draft",
+      imageMimeType: "image/jpeg",
+      imageSizeBytes: 10,
+      geminiModel: "gemini-2.5-flash",
+    });
+
+    const page1 = await asUser(userId).query(api.receipts.draftCrud.listReceipts, {
+      source: "line",
+      limit: 1,
+    });
+    expect(page1.receipts).toHaveLength(1);
+    expect(page1.receipts[0]._id).toEqual(line1);
+    expect(page1.nextCursor).toBe("1000");
+    // Bounded: a single bounded pass over the 62 existing rows, not repeated
+    // growing take() windows that re-read the index head.
+    expect((page1 as any).scanned).toBeLessThanOrEqual(62);
+
+    const page2 = await asUser(userId).query(api.receipts.draftCrud.listReceipts, {
+      source: "line",
+      limit: 1,
+      cursor: page1.nextCursor ?? undefined,
+    });
+    expect(page2.receipts).toHaveLength(1);
+    expect(page2.receipts[0]._id).toEqual(line2);
+    expect(page2.nextCursor).toBeNull();
+  });
+
+  test("(f) receipts sharing the same parsedAt are both returned (dedupe by _id)", async () => {
+    const userId = await seedUser(t, "p1c1b");
+    const base = {
+      userId,
+      amount: 1,
+      merchant: "Same Ms",
+      category: "food",
+      parsedAt: 4242,
+      source: "app",
+      status: "draft",
+      imageMimeType: "image/jpeg",
+      imageSizeBytes: 10,
+      geminiModel: "gemini-2.5-flash",
+    };
+    const a = await insertReceipt(t, base);
+    const b = await insertReceipt(t, base);
+
+    const res = await asUser(userId).query(api.receipts.draftCrud.listReceipts, {
+      limit: 10,
+    });
+    const ids = res.receipts.map((r: any) => r._id);
+    expect(ids).toContain(a);
+    expect(ids).toContain(b);
+  });
 });

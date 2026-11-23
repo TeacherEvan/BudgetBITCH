@@ -18,6 +18,7 @@ export {
 export {
   saveReceipt,
   saveReceiptIdempotent,
+  saveReceiptIdempotentWithStatus,
   getReceiptByClientDraftId,
   getUserForIngest,
   listReceipts,

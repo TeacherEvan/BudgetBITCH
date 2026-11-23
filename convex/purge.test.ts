@@ -15,7 +15,7 @@
 // audit trail is deliberately retained.
 import { convexTest } from "convex-test";
 import { expect, test, beforeEach } from "vitest";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import schema from "./schema";
 
 const modules = import.meta.glob("./**/*.ts");
@@ -460,4 +460,50 @@ test("purge destroys personal board and permits re-pushing after reset", async (
   });
   expect(rePushRes.success).toBe(true);
   expect(rePushRes.applied).toBe(true);
+});
+
+// P1-C8 regression guard: large boards (>600 entries) must be purged in
+// bounded continuations rather than one unbounded while(true) write loop.
+test("purge of >600 board entries uses bounded continuations and never exceeds the per-chunk budget", async () => {
+  const alice = await seedUser("bulk");
+  for (let i = 0; i < 700; i++) {
+    await t.run(async (ctx: any) => {
+      await ctx.db.insert("receipts", {
+        userId: alice,
+        amount: i,
+        merchant: `Shop ${i}`,
+        category: "food",
+        imageMimeType: "image/jpeg",
+        imageSizeBytes: 10,
+        parsedAt: Date.now() + i,
+        geminiModel: "gemini-2.5-flash",
+      });
+    });
+  }
+
+  const first: any = await asUser(alice).mutation(api.purge.purgeMyAccountData, {});
+  expect(first.success).toBe(true);
+  expect(first.continuation).toBe(true);
+  expect(first.counts.receipts).toBeLessThanOrEqual(500);
+
+  // Drain explicitly so each continuation's write count is observable.
+  let drained = first.counts.receipts;
+  for (let i = 0; i < 10; i++) {
+    const chunk: any = await t.mutation(internal.purge.continuePurgeUserData, { userId: alice });
+    const chunkWrites =
+      chunk.counts.snapshots + chunk.counts.receipts + chunk.counts.merchantAliases +
+      chunk.counts.accounts + chunk.counts.accountBoards + chunk.counts.sharedBoards +
+      chunk.counts.boardMemberships + chunk.counts.invites + chunk.counts.pendingDeletes +
+      chunk.counts.pushSubscriptions + chunk.counts.lineIdentities + chunk.counts.profiles +
+      chunk.counts.boardShards + chunk.counts.ledgerEntries;
+    expect(chunkWrites).toBeLessThanOrEqual(500);
+    drained += chunk.counts.receipts;
+    if (!chunk.continuation) break;
+  }
+  expect(drained).toBe(700);
+
+  const remaining = await t.run(async (ctx: any) =>
+    ctx.db.query("receipts").withIndex("by_user", (q: any) => q.eq("userId", alice)).collect(),
+  );
+  expect(remaining).toHaveLength(0);
 });

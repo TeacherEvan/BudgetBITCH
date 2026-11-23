@@ -4,7 +4,8 @@ import { v, ConvexError } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { scrape as scrapeEngine } from "../lib/receipt/engine";
 import { applyAnswers, generateQuestions } from "../lib/receipt/questions";
-import type { OcrPayload } from "../lib/receipt/types";
+import type { FieldCandidate, FieldName, OcrPayload } from "../lib/receipt/types";
+import { normalizeCategory, validateAmount, validateDate, validateMerchant } from "./constants";
 
 // Shared payload validator (mirrors ingestSchema.ts caps)
 const ocrPayloadValidator = v.object({
@@ -22,6 +23,70 @@ const ocrPayloadValidator = v.object({
   countryHint: v.optional(v.union(v.string(), v.null())),
   currencyHint: v.optional(v.union(v.string(), v.null())),
 });
+
+/**
+ * P1-C3: receipts store extracted values in real columns (amount/merchant/
+ * category/date/tax/currency) — there is no `fields` column. Rebuild the
+ * field/confidence maps from those columns so `applyAnswers` folds into the
+ * *current* extraction instead of an empty object that erases it.
+ */
+function fieldsFromReceipt(draft: Doc<"receipts">): {
+  fields: Record<FieldName, FieldCandidate | null>;
+  confidence: Record<FieldName, number>;
+} {
+  const candidate = (value: unknown): FieldCandidate | null =>
+    value === undefined || value === null
+      ? null
+      : { value: value as string | number, conf: 1, ruleId: "stored" };
+
+  const fields: Record<FieldName, FieldCandidate | null> = {
+    total: candidate(draft.amount),
+    date: candidate(draft.date),
+    merchant: candidate(draft.merchant),
+    category: candidate(draft.category),
+    currency: candidate(draft.currency),
+    tax: candidate(draft.tax),
+  };
+  const confidence: Record<FieldName, number> = {
+    total: draft.amount !== undefined ? 1 : 0,
+    date: draft.date !== undefined ? 1 : 0,
+    merchant: draft.merchant ? 1 : 0,
+    category: draft.category ? 1 : 0,
+    currency: draft.currency !== undefined ? 1 : 0,
+    tax: draft.tax !== undefined ? 1 : 0,
+  };
+  return { fields, confidence };
+}
+
+type ReceiptColumns = Pick<
+  Doc<"receipts">,
+  "amount" | "merchant" | "category" | "date" | "tax" | "currency"
+>;
+
+function columnsFromFields(
+  fields: Record<FieldName, FieldCandidate | null>,
+  draft: ReceiptColumns,
+) {
+  const num = (value: unknown, fallback: number | undefined): number | undefined => {
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value))) {
+      return Number(value);
+    }
+    return fallback;
+  };
+  const str = (value: unknown, fallback: string | undefined): string | undefined => {
+    if (value === undefined || value === null) return fallback;
+    return String(value);
+  };
+  return {
+    amount: num(fields.total?.value, draft.amount) ?? 0,
+    merchant: str(fields.merchant?.value, draft.merchant) ?? "Unknown Merchant",
+    category: str(fields.category?.value, draft.category) ?? "other",
+    date: str(fields.date?.value, draft.date),
+    tax: num(fields.tax?.value, draft.tax),
+    currency: str(fields.currency?.value, draft.currency),
+  };
+}
 
 // Scraper Bot: Scrape receipt from OCR payload
 export const scrape = mutation({
@@ -122,24 +187,14 @@ export const answer = mutation({
       throw new ConvexError("Draft not found or access denied");
     }
 
-    const currentFields = (draft as any).fields ?? {};
-    const currentConfidence = (draft.confidence as any) ?? {};
+    const { fields: currentFields, confidence: currentConfidence } = fieldsFromReceipt(draft);
 
     const folded = applyAnswers(currentFields, currentConfidence, args.answers);
     const questions = generateQuestions(folded.updatedFields, folded.updatedConfidence);
-
-    const rawAmount = typeof folded.updatedFields.total?.value === "number" ? folded.updatedFields.total.value : draft.amount;
-    // Ensure amount in major units
-    const amount = rawAmount;
-    const merchant = typeof folded.updatedFields.merchant?.value === "string" ? folded.updatedFields.merchant.value : draft.merchant;
-    const category = typeof folded.updatedFields.category?.value === "string" ? folded.updatedFields.category.value : draft.category;
-    const date = typeof folded.updatedFields.date?.value === "string" ? folded.updatedFields.date.value : draft.date;
+    const columns = columnsFromFields(folded.updatedFields, draft);
 
     await ctx.db.patch(args.draftId, {
-      amount,
-      merchant,
-      category,
-      date,
+      ...columns,
       confidence: folded.updatedConfidence,
       questionsAsked: questions,
     });
@@ -167,12 +222,28 @@ export const confirm = mutation({
       throw new ConvexError("Draft not found or access denied");
     }
 
-    await ctx.db.patch(args.draftId, {
+    // P1-C3: overrides are edits to the receipt itself, not just an audit
+    // note. Validate them and persist onto the row before learning aliases.
+    const overrides = (args.overrides ?? {}) as Record<string, unknown>;
+    const patch: Record<string, unknown> = {
       status: "confirmed",
       corrections: args.overrides,
-    });
+    };
+    if (overrides.amount !== undefined) patch.amount = validateAmount(overrides.amount);
+    if (overrides.merchant !== undefined) patch.merchant = validateMerchant(overrides.merchant);
+    if (overrides.category !== undefined) {
+      patch.category = normalizeCategory(String(overrides.category));
+    }
+    if (overrides.date !== undefined) {
+      const validatedDate = validateDate(overrides.date);
+      if (validatedDate !== null) patch.date = validatedDate;
+    }
+    if (overrides.tax !== undefined) patch.tax = validateAmount(overrides.tax);
+    if (overrides.currency !== undefined) patch.currency = String(overrides.currency).trim();
+    if (overrides.lineItems !== undefined) patch.lineItems = overrides.lineItems;
+    await ctx.db.patch(args.draftId, patch);
 
-    const merchantName = (typeof args.overrides?.merchant === "string" ? args.overrides.merchant : draft.merchant) || "Unknown";
+    const merchantName = String(patch.merchant ?? draft.merchant ?? "") || "Unknown";
     const normalised = merchantName.toLowerCase().trim();
 
     const existingAlias = await ctx.db
@@ -183,7 +254,7 @@ export const confirm = mutation({
     if (existingAlias) {
       await ctx.db.patch(existingAlias._id, {
         hits: existingAlias.hits + 1,
-        category: args.overrides?.category || draft.category,
+        category: String(patch.category ?? draft.category),
         updatedAt: Date.now(),
       });
     } else {
@@ -191,7 +262,7 @@ export const confirm = mutation({
         userId,
         normalised,
         displayName: merchantName,
-        category: args.overrides?.category || draft.category,
+        category: String(patch.category ?? draft.category),
         hits: 1,
         updatedAt: Date.now(),
       });
@@ -223,7 +294,32 @@ export const syncOfflineDraft = mutation({
       )
       .first();
     if (existing) {
-      return { receiptId: existing._id, alreadySynced: true };
+      // P2-N2: an offline replay may carry the user's final answers and the
+      // confirmed flag. The first insert created the row, but a retry that
+      // adds those must still apply them (and report that it did).
+      if (!args.answers && !args.confirmed) {
+        return { receiptId: existing._id, alreadySynced: true };
+      }
+
+      const patch: Record<string, unknown> = {};
+      let changed = false;
+
+      if (args.answers) {
+        const { fields: storedFields, confidence: storedConfidence } = fieldsFromReceipt(existing);
+        const folded = applyAnswers(storedFields, storedConfidence, args.answers);
+        Object.assign(patch, columnsFromFields(folded.updatedFields, existing), {
+          confidence: folded.updatedConfidence,
+          questionsAsked: generateQuestions(folded.updatedFields, folded.updatedConfidence),
+        });
+        changed = true;
+      }
+      if (args.confirmed && existing.status !== "confirmed") {
+        patch.status = "confirmed";
+        changed = true;
+      }
+
+      if (changed) await ctx.db.patch(existing._id, patch);
+      return { receiptId: existing._id, alreadySynced: !changed };
     }
 
     // 5000 lines cap (mirroring ingestSchema.ts)
@@ -243,7 +339,19 @@ export const syncOfflineDraft = mutation({
     const payload = args.payload as OcrPayload;
     const result = scrapeEngine(payload);
 
-    let fields = result.fields;
+    // The engine reports minor units. Normalise to major units BEFORE folding
+    // answers so a user-entered total is not divided by 100 a second time.
+    const rawTotal = typeof result.fields.total?.value === "number" ? result.fields.total.value : 0;
+    const engineAmount = Math.round(rawTotal) / 100;
+    const rawTax = typeof result.fields.tax?.value === "number" ? result.fields.tax.value : undefined;
+    const engineTax = rawTax !== undefined ? Math.round(rawTax) / 100 : undefined;
+    let fields: typeof result.fields = {
+      ...result.fields,
+      total: result.fields.total ? { ...result.fields.total, value: engineAmount } : null,
+      tax: result.fields.tax && engineTax !== undefined
+        ? { ...result.fields.tax, value: engineTax }
+        : null,
+    };
     let confidence = result.confidence;
 
     if (args.answers) {
@@ -252,11 +360,15 @@ export const syncOfflineDraft = mutation({
       confidence = folded.updatedConfidence;
     }
 
-    const rawTotal = typeof fields.total?.value === "number" ? fields.total.value : 0;
-    const amount = Math.round(rawTotal) / 100;
-    const merchant = typeof fields.merchant?.value === "string" ? fields.merchant.value : "Unknown Merchant";
-    const category = typeof fields.category?.value === "string" ? fields.category.value : "other";
-    const date = typeof fields.date?.value === "string" ? fields.date.value : undefined;
+    const columns = columnsFromFields(fields, {
+      amount: engineAmount,
+      merchant: "Unknown Merchant",
+      category: "other",
+      date: undefined,
+      tax: engineTax,
+      currency: undefined,
+    });
+    const { amount, merchant, category, date, tax, currency } = columns;
 
     const receiptId = await ctx.db.insert("receipts", {
       userId,
@@ -271,6 +383,8 @@ export const syncOfflineDraft = mutation({
       clientDraftId: args.clientDraftId,
       engine: "scraper-bot",
       confidence,
+      tax,
+      currency,
       status: args.confirmed ? "confirmed" : "draft",
     });
 

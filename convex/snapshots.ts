@@ -1,16 +1,30 @@
 // convex/snapshots.ts
 import { v, ConvexError } from "convex/values";
-import { mutation, internalMutation, query } from "./_generated/server";
+import { mutation, internalMutation, query, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { Id } from "./_generated/dataModel";
 
 const DELETE_CHUNK_SIZE = 500;
 
+// P1-C8: leave headroom so a chunk never trips Convex's per-transaction write
+// limits. Continuations run in fresh transactions via the scheduler.
+const WRITE_RESERVE_DOCS = 32;
+const WRITE_RESERVE_BYTES = 256 * 1024;
+
+async function hasWriteBudget(ctx: MutationCtx): Promise<boolean> {
+  const metrics = await ctx.meta.getTransactionMetrics();
+  return (
+    metrics.documentsWritten.remaining > WRITE_RESERVE_DOCS &&
+    metrics.bytesWritten.remaining > WRITE_RESERVE_BYTES
+  );
+}
+
 /**
  * Upserts a daily snapshot of the user's budget data.
  * Called daily via Service Worker to backup local data to Convex.
- * Uses insert-then-read pattern with by_user_and_date index for idempotency.
+ * Uses insert-then-read with the by_user_account_date index for idempotency
+ * scoped to (user, account, day).
  * Attempts insert, then reads to detect conflicts. If conflict, updates the winner (first insert).
  */
 export const upsertDailySnapshot = mutation({
@@ -58,15 +72,14 @@ export const upsertDailySnapshot = mutation({
       createdAt,
     });
 
-    // READ: Use the index to find the first (oldest) snapshot for this user+date
-    // The index by_user_and_date includes _creationTime as the last column,
-    // so ordering by "asc" gives us the oldest (winner of the race).
+    // READ: use the per-account key so two boards owned by the same user do
+    // not overwrite each other's snapshot for the same day (P1-C8).
     const firstSnapshot = await ctx.db
       .query("dailySnapshots")
-      .withIndex("by_user_and_date", (q) =>
-        q.eq("userId", userId).eq("date", today)
+      .withIndex("by_user_account_date", (q) =>
+        q.eq("userId", userId).eq("accountId", args.accountId).eq("date", today),
       )
-      .order("asc") // Oldest first (by _creationTime)
+      .order("asc")
       .first();
 
     if (!firstSnapshot) {
@@ -108,11 +121,20 @@ export const upsertDailySnapshot = mutation({
  * Retrieves the latest daily snapshot for the authenticated user.
  */
 export const getLatestSnapshot = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { accountId: v.optional(v.string()) },
+  handler: async (ctx, args) => {
     try {
       const userId = await getAuthUserId(ctx);
       if (!userId) return null;
+      if (args.accountId !== undefined) {
+        return await ctx.db
+          .query("dailySnapshots")
+          .withIndex("by_user_account_date", (q) =>
+            q.eq("userId", userId).eq("accountId", args.accountId),
+          )
+          .order("desc")
+          .first();
+      }
       return await ctx.db
         .query("dailySnapshots")
         .withIndex("by_user_and_date", (q) => q.eq("userId", userId))
@@ -128,6 +150,11 @@ export const getLatestSnapshot = query({
 /**
  * Lists the last 7 snapshots for the user with metadata.
  */
+// Kept zero-argument for backward compatibility: the only existing caller
+// (W2-owned src/components/settings/storage-diagnostics-modal.tsx) calls this
+// with no args, and Convex's generated types require an args object as soon as
+// a validator declares one. Account-scoped listing lives in the companion
+// query below — see the W4 report for the cross-scope rationale.
 export const listCloudSnapshots = query({
   args: {},
   handler: async (ctx) => {
@@ -142,6 +169,22 @@ export const listCloudSnapshots = query({
     return await ctx.db
       .query("dailySnapshots")
       .withIndex("by_user_and_date", (q) => q.eq("userId", userId))
+      .order("desc")
+      .take(7);
+  },
+});
+
+/** Account-scoped variant of `listCloudSnapshots` (P1-C8 / W2 client fix). */
+export const listCloudSnapshotsForAccount = query({
+  args: { accountId: v.string() },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+    return await ctx.db
+      .query("dailySnapshots")
+      .withIndex("by_user_account_date", (q) =>
+        q.eq("userId", userId).eq("accountId", args.accountId),
+      )
       .order("desc")
       .take(7);
   },
@@ -201,46 +244,27 @@ export const deleteAllUserSnapshots = mutation({
       return { success: true, deletedSnapshots, continuation: true };
     }
 
-    // 2. Delete receipts in batches
-    let deletedReceipts = 0;
-    while (true) {
-      const batch = await ctx.db
-        .query("receipts")
-        .withIndex("by_user", (q) => q.eq("userId", userId))
-        .take(500);
-      for (const rec of batch) {
-        if (rec.imageStorageId) {
-          try {
-            await ctx.storage.delete(rec.imageStorageId);
-          } catch {
-            // Non-fatal if storage file already removed
-          }
-        }
-        await ctx.db.delete(rec._id);
-      }
-      deletedReceipts += batch.length;
-      if (batch.length < 500) break;
-    }
-
-    // 3. Delete merchant aliases in batches
-    let deletedAliases = 0;
-    while (true) {
-      const batch = await ctx.db
-        .query("merchantAliases")
-        .withIndex("by_user_and_normalised", (q) => q.eq("userId", userId))
-        .take(500);
-      for (const alias of batch) {
-        await ctx.db.delete(alias._id);
-      }
-      deletedAliases += batch.length;
-      if (batch.length < 500) break;
+    // Phases 2 & 3 (receipts, aliases) are handled by the bounded continuation
+    // chunk. Never run multiple unbounded while(true) delete loops in the same
+    // transaction: each chunk keeps a fixed total-write budget (P1-C8).
+    const receiptsRemaining = await ctx.db
+      .query("receipts")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .take(1);
+    const aliasesRemaining = await ctx.db
+      .query("merchantAliases")
+      .withIndex("by_user_and_normalised", (q) => q.eq("userId", userId))
+      .take(1);
+    if (receiptsRemaining.length > 0 || aliasesRemaining.length > 0) {
+      await ctx.scheduler.runAfter(0, internal.snapshots.deleteSnapshotsChunk, { userId });
+      return { success: true, deletedSnapshots, deletedReceipts: 0, continuation: true };
     }
 
     return {
       success: true,
       deletedSnapshots,
-      deletedReceipts,
-      deletedAliases,
+      deletedReceipts: 0,
+      deletedAliases: 0,
     };
   },
 });
@@ -269,6 +293,9 @@ export const deleteSnapshotsChunk = internalMutation({
     }
 
     // 2. receipts (if capacity in this chunk)
+    if (!hasMore && !(await hasWriteBudget(ctx))) {
+      hasMore = true; // yield; the next transaction continues from receipts
+    }
     if (!hasMore) {
       const remainingLimit = DELETE_CHUNK_SIZE - deleted;
       if (remainingLimit > 0) {
@@ -294,6 +321,9 @@ export const deleteSnapshotsChunk = internalMutation({
     }
 
     // 3. merchantAliases (if capacity in this chunk)
+    if (!hasMore && !(await hasWriteBudget(ctx))) {
+      hasMore = true;
+    }
     if (!hasMore) {
       const remainingLimit = DELETE_CHUNK_SIZE - deleted;
       if (remainingLimit > 0) {

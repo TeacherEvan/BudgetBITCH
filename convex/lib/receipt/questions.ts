@@ -55,8 +55,11 @@ export function applyAnswers(
   for (const [key, val] of Object.entries(answers)) {
     const field = key as FieldName;
     if (FIELD_ORDER.includes(field)) {
+      // `parseFloat(val) || val` kept "0" (and "0.00") as a string. Fall back
+      // only when the parse is genuinely not a finite number.
+      const parsed = parseFloat(val);
       updatedFields[field] = {
-        value: field === 'total' ? parseFloat(val) || val : val,
+        value: field === 'total' ? (Number.isFinite(parsed) ? parsed : val) : val,
         conf: 1.0,
         ruleId: 'user-answer',
       };

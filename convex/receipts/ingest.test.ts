@@ -104,11 +104,11 @@ test("ingestReceipt rejects token signed with raw Bearer secret (domain separati
     payload: ingestPayload(["MERCHANT CAFE", "TOTAL 91000"]),
   });
 
-  // Dual-verify window: accept tokens signed with raw key (legacy) for one deploy cycle
-  // This allows gradual migration of scanner/bot deployments
-  expect(res.status).toBe(200);
+  // The legacy raw-secret HMAC fallback has been removed. A token signed with
+  // the raw Bearer secret is NOT domain-separated and must be rejected.
+  expect(res.status).toBe(401);
   const body = await res.json();
-  expect(body.success).toBe(true);
+  expect(body.error).toMatch(/Invalid or expired app token/);
 });
 
 // ============================================================================
@@ -371,6 +371,9 @@ test("ingestReceipt is idempotent: concurrent duplicate calls create exactly one
   expect(body1.success).toBe(true);
   expect(body2.success).toBe(true);
   expect(body1.draftId).toBe(body2.draftId);
+  // P1-C9: exactly one call created the draft; the loser reports it.
+  const syncFlags = [body1.alreadySynced, body2.alreadySynced].sort();
+  expect(syncFlags).toEqual([false, true]);
 
   // Verify only one draft exists in the database
   const drafts = await t.run(async (ctx: any) =>
@@ -437,4 +440,35 @@ test("saveReceiptIdempotent is idempotent: concurrent calls with same clientDraf
   expect(drafts.length).toBe(1);
   expect(draftId1).toBe(draftId2);
   expect(drafts[0]._id).toBe(draftId1);
+});
+
+// P1-C9: atomic idempotent save reports whether this call created the draft.
+test("saveReceiptIdempotentWithStatus returns draftId and alreadySynced atomically", async () => {
+  const userId = await seedUser(t, "status-user");
+  const args = {
+    userId,
+    amount: 42,
+    merchant: "STATUS SHOP",
+    category: "food",
+    parsedAt: Date.now(),
+    geminiModel: "scraper-bot",
+    imageMimeType: "application/json",
+    imageSizeBytes: 0,
+    clientDraftId: "status-key-1",
+    status: "draft",
+  };
+  const first = await t.mutation(internal.receipts.saveReceiptIdempotentWithStatus, args);
+  expect(first.alreadySynced).toBe(false);
+  const second = await t.mutation(internal.receipts.saveReceiptIdempotentWithStatus, {
+    ...args,
+    amount: 99,
+  });
+  expect(second.draftId).toBe(first.draftId);
+  expect(second.alreadySynced).toBe(true);
+
+  const drafts = await t.run(async (ctx: any) =>
+    ctx.db.query("receipts").withIndex("by_user_and_clientDraftId", (q: any) =>
+      q.eq("userId", userId).eq("clientDraftId", "status-key-1")).collect(),
+  );
+  expect(drafts).toHaveLength(1);
 });

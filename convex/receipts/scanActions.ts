@@ -2,7 +2,13 @@ import { action } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { v, ConvexError } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { GEMINI_MODEL, geminiGenerateUrl } from "../lib/gemini";
+import {
+  GEMINI_MODEL,
+  geminiAuthHeaders,
+  geminiGenerateUrlNoKey,
+  isAllowedReceiptMimeType,
+  sanitizeUpstreamError,
+} from "../lib/gemini";
 import {
   normalizeCategory,
   validateAmount,
@@ -144,6 +150,12 @@ export const parseReceipt = action({
       );
     }
 
+    // P1-C9: enforce the size ceiling BEFORE running the data-URL regex on
+    // client input (a huge hostile string must not be regex-scanned first).
+    if (args.base64Image.length > 8_000_000) {
+      throw new ConvexError("Receipt image payload too large (max 8MB base64)");
+    }
+
     // Parse out MIME type if it's a data URL
     const match = args.base64Image.match(/^data:([^;]+);base64,(.+)$/);
     let mimeType = "image/jpeg";
@@ -151,6 +163,9 @@ export const parseReceipt = action({
     if (match) {
       mimeType = match[1];
       data = match[2];
+    }
+    if (!isAllowedReceiptMimeType(mimeType)) {
+      throw new ConvexError("Unsupported receipt image type");
     }
 
     // Calculate image size in bytes (approximate from base64)
@@ -173,17 +188,14 @@ Return a JSON object matching this schema exactly:
 }
 Do not include any formatting, markdown wrappers, or extra text. Output ONLY the raw JSON string.`;
 
-    if (args.base64Image.length > 8_000_000) {
-      throw new ConvexError("Receipt image payload too large (max 8MB base64)");
-    }
-
     try {
       const response = await fetch(
-        geminiGenerateUrl(apiKey),
+        geminiGenerateUrlNoKey(),
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...geminiAuthHeaders(apiKey),
           },
           signal: AbortSignal.timeout(25_000),
           body: JSON.stringify({
@@ -208,8 +220,10 @@ Do not include any formatting, markdown wrappers, or extra text. Output ONLY the
       );
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Gemini API returned error status ${response.status}: ${errorText}`);
+        // Do not forward the upstream body: it can contain credentials or
+        // internal project details. The status code is enough for triage.
+        await response.body?.cancel();
+        throw new Error(`Gemini API returned error status ${response.status}`);
       }
 
       const result = await response.json();
@@ -267,8 +281,9 @@ Do not include any formatting, markdown wrappers, or extra text. Output ONLY the
       };
     } catch (error) {
       console.error("Error in parseReceipt action:", error);
-      const message = error instanceof Error ? error.message : String(error);
-      throw new ConvexError(`Failed to parse receipt: ${message}`);
+      throw new ConvexError(
+        `Failed to parse receipt: ${sanitizeUpstreamError(error, "Upstream request failed")}`,
+      );
     }
   },
 });
@@ -317,11 +332,12 @@ Do not include any formatting, markdown wrappers, or extra text. Output ONLY the
 
     try {
       const response = await fetch(
-        geminiGenerateUrl(apiKey),
+        geminiGenerateUrlNoKey(),
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...geminiAuthHeaders(apiKey),
           },
           signal: AbortSignal.timeout(25_000),
           body: JSON.stringify({
@@ -338,8 +354,10 @@ Do not include any formatting, markdown wrappers, or extra text. Output ONLY the
       );
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Gemini API returned error status ${response.status}: ${errorText}`);
+        // Do not forward the upstream body: it can contain credentials or
+        // internal project details. The status code is enough for triage.
+        await response.body?.cancel();
+        throw new Error(`Gemini API returned error status ${response.status}`);
       }
 
       const result = await response.json();
@@ -370,8 +388,9 @@ Do not include any formatting, markdown wrappers, or extra text. Output ONLY the
       };
     } catch (error) {
       console.error("Error in parseMessage action:", error);
-      const message = error instanceof Error ? error.message : String(error);
-      throw new ConvexError(`Failed to parse message: ${message}`);
+      throw new ConvexError(
+        `Failed to parse message: ${sanitizeUpstreamError(error, "Upstream request failed")}`,
+      );
     }
   },
 });

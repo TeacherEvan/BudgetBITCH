@@ -59,6 +59,27 @@ export interface PurgeCounts {
   ledgerEntries: number;
 }
 
+// P1-C8: leave headroom before Convex's per-transaction write limits so a
+// purge never dies mid-way. Continuations run in fresh transactions.
+const WRITE_RESERVE_DOCS = 32;
+const WRITE_RESERVE_BYTES = 256 * 1024;
+
+interface PurgeState {
+  exhausted: boolean;
+}
+
+async function outOfBudget(ctx: MutationCtx, state: PurgeState): Promise<boolean> {
+  if (state.exhausted) return true;
+  const metrics = await ctx.meta.getTransactionMetrics();
+  if (
+    metrics.documentsWritten.remaining <= WRITE_RESERVE_DOCS ||
+    metrics.bytesWritten.remaining <= WRITE_RESERVE_BYTES
+  ) {
+    state.exhausted = true;
+  }
+  return state.exhausted;
+}
+
 function emptyCounts(): PurgeCounts {
   return {
     snapshots: 0,
@@ -84,9 +105,10 @@ async function destroyBoard(
   boardId: string,
   ownerId: Id<"users">,
   counts: PurgeCounts,
+  state: PurgeState,
 ): Promise<void> {
   // Batch delete boardMembers
-  while (true) {
+  while (!(await outOfBudget(ctx, state))) {
     const batch = await ctx.db
       .query("boardMembers")
       .withIndex("by_board", (q) => q.eq("boardId", boardId))
@@ -111,9 +133,10 @@ async function destroyBoard(
     }
     if (batch.length < 250) break;
   }
+  if (await outOfBudget(ctx, state)) return;
 
   // Batch delete invites
-  while (true) {
+  while (!(await outOfBudget(ctx, state))) {
     const batch = await ctx.db
       .query("invites")
       .withIndex("by_board", (q) => q.eq("boardId", boardId))
@@ -124,9 +147,10 @@ async function destroyBoard(
     }
     if (batch.length < 250) break;
   }
+  if (await outOfBudget(ctx, state)) return;
 
   // Batch delete pendingDeletes
-  while (true) {
+  while (!(await outOfBudget(ctx, state))) {
     const batch = await ctx.db
       .query("pendingDeletes")
       .withIndex("by_board_status", (q) => q.eq("boardId", boardId))
@@ -137,9 +161,11 @@ async function destroyBoard(
     }
     if (batch.length < 250) break;
   }
+  if (await outOfBudget(ctx, state)) return;
 
   // Batch delete boardShards
   for (let shard = 0; shard < 16; shard++) {
+    if (await outOfBudget(ctx, state)) return;
     const s = await ctx.db
       .query("boardShards")
       .withIndex("by_board_and_shard", (q) =>
@@ -151,9 +177,10 @@ async function destroyBoard(
       counts.boardShards += 1;
     }
   }
+  if (await outOfBudget(ctx, state)) return;
 
   // Batch delete ledgerEntries
-  while (true) {
+  while (!(await outOfBudget(ctx, state))) {
     const batch = await ctx.db
       .query("ledgerEntries")
       .withIndex("by_board", (q) => q.eq("boardId", boardId))
@@ -164,6 +191,7 @@ async function destroyBoard(
     }
     if (batch.length < 250) break;
   }
+  if (await outOfBudget(ctx, state)) return;
 
   const board = await ctx.db
     .query("accountBoards")
@@ -182,6 +210,7 @@ export async function executePurge(
   userId: Id<"users">,
 ): Promise<{ success: boolean; counts: PurgeCounts; continuation?: boolean }> {
   const counts = emptyCounts();
+  const state: PurgeState = { exhausted: false };
   let hasMore = false;
 
   // ---- 1. Per-user financial records (single bounded batch per invocation) -
@@ -238,16 +267,16 @@ export async function executePurge(
 
   // ---- 2. Owned accounts (board data destroyed for all members) ----------
   // Also destroy the user's personal board if one was created
-  await destroyBoard(ctx, `personal_${userId}`, userId, counts);
+  await destroyBoard(ctx, `personal_${userId}`, userId, counts, state);
 
-  while (true) {
+  while (!(await outOfBudget(ctx, state))) {
     const ownedAccounts = await ctx.db
       .query("accounts")
       .withIndex("by_owner", (q) => q.eq("ownerId", userId))
       .take(100);
     for (const acc of ownedAccounts) {
       if (acc.boardId) {
-        await destroyBoard(ctx, acc.boardId, userId, counts);
+        await destroyBoard(ctx, acc.boardId, userId, counts, state);
       }
       await ctx.db.delete(acc._id);
       counts.accounts += 1;
@@ -256,7 +285,7 @@ export async function executePurge(
   }
 
   // ---- 3. Joined boards (leave; other members keep their data) -----------
-  while (true) {
+  while (!(await outOfBudget(ctx, state))) {
     const batch: Doc<"boardMembers">[] = await ctx.db
       .query("boardMembers")
       .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -268,7 +297,7 @@ export async function executePurge(
         .unique();
       if (board) {
         if (board.ownerId === userId) {
-          await destroyBoard(ctx, row.boardId, userId, counts);
+          await destroyBoard(ctx, row.boardId, userId, counts, state);
         } else {
           await ctx.db.patch(board._id, {
             members: board.members.filter((m: Id<"users">) => m !== userId),
@@ -307,7 +336,7 @@ export async function executePurge(
       partnerProfile?.linkedBoardId === board.boardId;
 
     // Batch delete pendingDeletes for this board
-    while (true) {
+    while (!(await outOfBudget(ctx, state))) {
       const batch = await ctx.db
         .query("pendingDeletes")
         .withIndex("by_board_status", (q) => q.eq("boardId", board.boardId))
@@ -334,7 +363,7 @@ export async function executePurge(
         }
       }
 
-      while (true) {
+      while (!(await outOfBudget(ctx, state))) {
         const batch = await ctx.db
           .query("ledgerEntries")
           .withIndex("by_board", (q) => q.eq("boardId", board.boardId))
@@ -352,7 +381,7 @@ export async function executePurge(
   }
 
   // ---- 5. Invites the user sent or received ------------------------------
-  while (true) {
+  while (!(await outOfBudget(ctx, state))) {
     const batch = await ctx.db
       .query("invites")
       .withIndex("by_fromUser", (q) => q.eq("fromUserId", userId))
@@ -364,7 +393,7 @@ export async function executePurge(
     if (batch.length < 250) break;
   }
   for (const status of ["pending", "accepted", "declined", "expired"]) {
-    while (true) {
+    while (!(await outOfBudget(ctx, state))) {
       const batch = await ctx.db
         .query("invites")
         .withIndex("by_toUser_status", (q) =>
@@ -380,7 +409,7 @@ export async function executePurge(
   }
 
   // ---- 6. Delete requests the user raised --------------------------------
-  while (true) {
+  while (!(await outOfBudget(ctx, state))) {
     const batch = await ctx.db
       .query("pendingDeletes")
       .withIndex("by_requestedBy", (q) => q.eq("requestedBy", userId))
@@ -393,7 +422,7 @@ export async function executePurge(
   }
 
   // ---- 7. Device + identity bindings -------------------------------------
-  while (true) {
+  while (!(await outOfBudget(ctx, state))) {
     const batch = await ctx.db
       .query("pushSubscriptions")
       .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -405,7 +434,7 @@ export async function executePurge(
     if (batch.length < 250) break;
   }
 
-  while (true) {
+  while (!(await outOfBudget(ctx, state))) {
     const batch = await ctx.db
       .query("lineUsers")
       .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -420,7 +449,13 @@ export async function executePurge(
   // ---- 8. The private sharing profile itself -----------------------------
   // Deleted last: earlier steps read it to resolve boards. Dropping it also
   // retires the user's shareCode so nobody can link to the purged account.
-  while (true) {
+  // If the write budget ran out in an earlier phase, defer the profile (and
+  // everything after it) so a continuation can finish the purge.
+  if (state.exhausted) {
+    await ctx.scheduler.runAfter(0, internal.purge.continuePurgeUserData, { userId });
+    return { success: true, counts, continuation: true };
+  }
+  while (!(await outOfBudget(ctx, state))) {
     const batch = await ctx.db
       .query("userProfiles")
       .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -432,6 +467,10 @@ export async function executePurge(
     if (batch.length < 250) break;
   }
 
+  if (state.exhausted) {
+    await ctx.scheduler.runAfter(0, internal.purge.continuePurgeUserData, { userId });
+    return { success: true, counts, continuation: true };
+  }
   return { success: true, counts };
 }
 

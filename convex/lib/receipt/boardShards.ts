@@ -106,26 +106,37 @@ export async function insertLedgerEntry(
   });
 }
 
+/**
+ * P3-N3: sum the whole ledger with BigInt accumulation. The old `.take(500)`
+ * truncated boards with more than 500 entries, producing a permanent false
+ * mismatch. Async iteration streams the bounded index range without building
+ * an unbounded array in memory.
+ */
+export async function sumLedgerMinor(
+  ctx: QueryCtx,
+  boardId: string
+): Promise<bigint> {
+  let total = BigInt(0);
+  for await (const entry of ctx.db
+    .query("ledgerEntries")
+    .withIndex("by_board_and_transaction", (q) => q.eq("boardId", boardId))) {
+    total += BigInt(entry.amountMinor);
+  }
+  return total;
+}
+
 /** Verify board total matches ledger entries (for consistency checks). */
 export async function verifyBoardTotal(
   ctx: QueryCtx,
   boardId: string
 ): Promise<{ shardTotal: number; ledgerTotal: number; matches: boolean }> {
   const shardTotal = await getBoardTotal(ctx, boardId);
-  
-  const ledgerEntries = await ctx.db
-    .query("ledgerEntries")
-    .withIndex("by_board_and_transaction", (q) => q.eq("boardId", boardId))
-    .take(500);
-  
-  const ledgerTotal = ledgerEntries.reduce(
-    (sum: number, entry: { amountMinor: bigint }) => sum + Number(entry.amountMinor),
-    0
-  );
-  
+  const ledgerMinor = await sumLedgerMinor(ctx, boardId);
+  const ledgerTotal = Number(ledgerMinor);
+
   return {
     shardTotal,
     ledgerTotal,
-    matches: shardTotal === ledgerTotal,
+    matches: BigInt(shardTotal) === ledgerMinor,
   };
 }
