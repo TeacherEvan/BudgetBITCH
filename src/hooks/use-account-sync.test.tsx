@@ -33,6 +33,31 @@ vi.mock('@convex-dev/auth/react', () => ({
 // tests in the same Vitest worker — a test that left it true poisoned every
 // subsequent test. Fixed by moving it into a useRef inside the hook so it resets
 // on unmount. listMyAccounts takes no args ({}); getAccountBoard takes { boardId }.
+// Instrument the serialization step so a board switch can land mid-await,
+// which is the exact window where a stale boardId used to be pushed.
+const serializeGate = vi.hoisted(() => ({
+  armed: false,
+  started: false,
+  release: null as (() => void) | null,
+}));
+
+vi.mock('@/lib/db/local-db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db/local-db')>();
+  return {
+    ...actual,
+    serializeBoardForSync: async () => {
+      if (serializeGate.armed) {
+        serializeGate.armed = false;
+        serializeGate.started = true;
+        await new Promise<void>((resolve) => {
+          serializeGate.release = resolve;
+        });
+      }
+      return actual.serializeBoardForSync();
+    },
+  };
+});
+
 const myAccountsResult: unknown[] = [];
 vi.mock('convex/react', () => ({
   useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
@@ -121,6 +146,9 @@ beforeEach(async () => {
   queryResults = { getBoard: null };
   myAccountsResult.length = 0;
   pushBoard.mockClear();
+  serializeGate.armed = false;
+  serializeGate.started = false;
+  serializeGate.release = null;
   await clearAllData();
   localStorage.clear();
   // Seed the active account as a shared account with a boardId.
@@ -395,5 +423,43 @@ describe('useAccountSync', () => {
     });
     const call = (pushBoard.mock.calls[0] as unknown[])[0] as { boardId: string };
     expect(call.boardId).toBe('board_family');
+  });
+
+  it('guards regression: does not push board A data when a switch lands mid-serialization', async () => {
+    const result = render(<HookProbe />);
+    await waitForBoard(result, 'board_family');
+    pushBoard.mockClear();
+    serializeGate.armed = true;
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT));
+    });
+    await waitFor(() => expect(serializeGate.started).toBe(true), { timeout: 4000 });
+
+    // A switch resolves a different boardId while the first board's snapshot
+    // is still being serialized.
+    await act(async () => {
+      await saveLocalAccount({
+        accountId: 'another_account',
+        umbrella: 'family',
+        name: 'Another Family',
+        boardId: 'board_another',
+        inviteCode: null,
+        role: 'owner',
+        hasLocalData: true,
+      });
+      await setCurrentAccountId('another_account');
+      window.dispatchEvent(new CustomEvent(BOARD_CHANGED_EVENT, { detail: { source: 'switch' } }));
+    });
+    await waitForBoard(result, 'board_another');
+
+    await act(async () => {
+      serializeGate.release?.();
+    });
+    await sleep(50);
+
+    expect(pushBoard).not.toHaveBeenCalledWith(
+      expect.objectContaining({ boardId: 'board_family' }),
+    );
   });
 });

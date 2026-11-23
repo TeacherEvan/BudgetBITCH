@@ -2,8 +2,8 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, act, waitFor } from '@testing-library/react';
-import { clearAllData } from '@/lib/db/local-db';
-import { getCurrentAccountId } from '@/lib/db/accountStorage';
+import { clearAllData, addExpense, getExpenses, getLocalWrite } from '@/lib/db/local-db';
+import { getCurrentAccountId, saveLocalAccount, switchAccount } from '@/lib/db/accountStorage';
 import type { Id } from '../../convex/_generated/dataModel';
 
 // Convex `api` is an `anyApi` Proxy whose function references can't be
@@ -24,7 +24,7 @@ vi.mock('@convex-dev/auth/react', () => ({
   useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
 }));
 
-const mockConvexQuery = vi.fn(async () => null);
+const mockConvexQuery = vi.fn(async () => null as unknown);
 
 vi.mock('convex/react', () => ({
   useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
@@ -209,5 +209,66 @@ describe('useAccounts', () => {
     await waitFor(() => expect(api?.ready).toBe(true));
     await waitFor(() => expect(api?.accounts.length).toBeGreaterThan(0));
     expect(api.accounts.map((a) => a.accountId)).toContain('personal');
+  });
+
+  it('guards regression: switchTo preserves unsynced local edits and their LWW clocks when a remote board arrives', async () => {
+    await saveLocalAccount({
+      accountId: 'acc-join',
+      umbrella: 'business',
+      name: 'Work',
+      boardId: 'board-join',
+      inviteCode: null,
+      role: 'member',
+      hasLocalData: true,
+    });
+    // Put an offline edit on acc-join, then leave it so the stash captures
+    // both the record and its localWrites timestamp.
+    await switchAccount('acc-join');
+    await addExpense({
+      id: 'local-unsynced',
+      amount: 321,
+      category: 'food',
+      date: '2026-11-23',
+      merchant: 'Offline Cafe',
+      note: '',
+      isRecurring: false,
+      source: 'manual',
+      createdAt: Date.now(),
+    } as never);
+    expect(await getLocalWrite('expenses', 'local-unsynced')).toBeGreaterThan(0);
+    await switchAccount('personal');
+
+    mockConvexQuery.mockResolvedValueOnce({
+      boardId: 'board-join',
+      updatedAt: 2,
+      data: {
+        'expenses:remote-only': {
+          value: {
+            id: 'remote-only',
+            amount: 777,
+            category: 'food',
+            date: '2026-11-23',
+            merchant: 'Remote Cafe',
+            note: '',
+            isRecurring: false,
+            source: 'manual',
+            createdAt: Date.now(),
+          },
+          updatedAt: 1,
+        },
+      },
+    });
+
+    let api!: ReturnType<typeof useAccounts>;
+    render(<HookProbe onReady={(a) => (api = a)} />);
+    await waitFor(() => expect(api?.ready).toBe(true));
+    await act(async () => {
+      await api.switchTo('acc-join');
+    });
+
+    const ids = (await getExpenses()).map((e) => e.id);
+    expect(ids).toContain('local-unsynced');
+    expect(ids).toContain('remote-only');
+    expect(await getLocalWrite('expenses', 'local-unsynced')).toBeGreaterThan(0);
   });
 });

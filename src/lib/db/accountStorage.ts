@@ -55,6 +55,52 @@ function clone<T>(v: T): T {
     : JSON.parse(JSON.stringify(v));
 }
 
+// ── single-flight board swaps ───────────────────────────────────────────────
+// A swap spans several IDB transactions (exact boundary list below). Without
+// serialization, a double-click or a crash-recovery retry interleaves two
+// swaps' stash/clear/restore/pointer writes and mixes boards. Every swap entry
+// point funnels through this chain; the next one starts only after the previous
+// one has settled, successfully or not.
+let swapChain: Promise<unknown> = Promise.resolve();
+function serializeSwap<T>(op: () => Promise<T>): Promise<T> {
+  const run = swapChain.then(op, op);
+  swapChain = run.catch(() => undefined);
+  return run;
+}
+
+/**
+ * Re-verify the active pointer after an await inside a swap. Another tab (or a
+ * direct setCurrentAccountId call) may have moved it while we awaited; writing
+ * the restored board under a different pointer would blend two boards.
+ */
+async function assertPointerStill(expected: string, phase: string): Promise<void> {
+  const actual = await getCurrentAccountId();
+  if (actual !== expected) {
+    throw new Error(
+      `Board swap aborted: active account changed from "${expected}" to "${actual}" during ${phase}`,
+    );
+  }
+}
+
+// REMAINING TRANSACTION BOUNDARY (explicitly out of scope for this workstream):
+// the shared helpers in local-db.ts each open and await their own transaction,
+// so a swap still performs these discrete commits:
+//   1. stashCurrentAccount -> serializeBoard reads (9 get/all reads)
+//   2. stashCurrentAccount -> accountsData put
+//   3. getStashedAccount   -> accountsData get
+//   4. clearAllUserData    -> multi-store clear of the 8 shared stores
+//   5. clearAllLocalWrites -> localWrites clear
+//   6. replaceBoardData    -> multi-store put of the 8 shared stores
+//   7. recordLocalWritesBulk -> localWrites put (when a stash had clocks)
+//   8. setCurrentAccountId -> bbMeta put (the pointer flip)
+// Closing this into ONE transaction requires a new exported
+// `swapBoardAtomically()` inside local-db.ts that stages stash + clear +
+// restore + clocks + pointer against a single
+// db.transaction([...8 stores, 'localWrites', 'accountsData', 'bbMeta'],
+// 'readwrite') and emits BOARD_CHANGED_EVENT only after `tx.done`. local-db.ts
+// is outside this workstream's exclusive edit scope, so this pass closes the
+// interleaving with the single-flight chain plus pointer re-verification.
+
 // ── current account ────────────────────────────────────────────────────────
 
 export async function getCurrentAccountId(): Promise<string> {
@@ -179,7 +225,7 @@ export async function hasStashedAccount(accountId: string): Promise<boolean> {
  * personal 8 stores; we stash them into accountsData[personal] on first switch
  * so returning to personal restores exactly what the user had.
  */
-export async function switchAccount(
+async function switchAccountImpl(
   targetAccountId: string,
 ): Promise<void> {
   const current = await getCurrentAccountId();
@@ -187,6 +233,7 @@ export async function switchAccount(
 
   // Stash the outgoing board (including personal — legacy data migrated here).
   await stashCurrentAccount(current);
+  await assertPointerStill(current, "stashing the outgoing board");
 
   const stashed = await getStashedAccount(targetAccountId);
   if (stashed) {
@@ -194,6 +241,7 @@ export async function switchAccount(
   } else if (targetAccountId === PERSONAL_ACCOUNT_ID) {
     // No personal stash yet (fresh local user): leave the 8 stores as-is.
     // The live personal data is already in them. Mark so we don't re-stash empty.
+    await assertPointerStill(current, "returning to the personal board");
     await setCurrentAccountId(PERSONAL_ACCOUNT_ID);
     return;
   } else {
@@ -216,7 +264,12 @@ export async function switchAccount(
     await restoreAccountToActive(blank);
   }
 
+  await assertPointerStill(current, "restoring the incoming board");
   await setCurrentAccountId(targetAccountId);
+}
+
+export async function switchAccount(targetAccountId: string): Promise<void> {
+  return serializeSwap(() => switchAccountImpl(targetAccountId));
 }
 
 /**
@@ -241,7 +294,7 @@ export async function ensurePersonalAccount(): Promise<void> {
  * Save an account's server-side snapshot into its local stash and meta, then
  * make it the active board. Used after a successful join/sync.
  */
-export async function adoptRemoteAccount(
+async function adoptRemoteAccountImpl(
   meta: LocalAccountMeta,
   snapshot: BoardSnapshot,
 ): Promise<void> {
@@ -249,6 +302,7 @@ export async function adoptRemoteAccount(
   const current = await getCurrentAccountId();
   if (current !== meta.accountId) {
     await stashCurrentAccount(current);
+    await assertPointerStill(current, "stashing before adopting an account");
   }
   const database = await db();
   await database.put(
@@ -262,20 +316,29 @@ export async function adoptRemoteAccount(
   );
   await saveLocalAccount({ ...meta, hasLocalData: true });
   await restoreAccountToActive(snapshot);
+  await assertPointerStill(current, "restoring an adopted account");
   await setCurrentAccountId(meta.accountId);
+}
+
+export async function adoptRemoteAccount(
+  meta: LocalAccountMeta,
+  snapshot: BoardSnapshot,
+): Promise<void> {
+  return serializeSwap(() => adoptRemoteAccountImpl(meta, snapshot));
 }
 
 /**
  * Adopt a remote board returned as a keyed map from Convex (getAccountBoard)
  * into local storage and set it as active.
  */
-export async function adoptRemoteBoardMap(
+async function adoptRemoteBoardMapImpl(
   meta: LocalAccountMeta,
   remoteMap: Record<string, { value: unknown; updatedAt: number }>,
 ): Promise<void> {
   const current = await getCurrentAccountId();
   if (current !== meta.accountId) {
     await stashCurrentAccount(current);
+    await assertPointerStill(current, "stashing before adopting a remote board");
   }
   await clearAllUserData();
   await clearAllLocalWrites();
@@ -300,8 +363,16 @@ export async function adoptRemoteBoardMap(
     meta.accountId,
   );
   await saveLocalAccount({ ...meta, hasLocalData: true });
+  await assertPointerStill(current, "restoring an adopted remote board");
   await setCurrentAccountId(meta.accountId);
   notifyBoardChanged('switch');
+}
+
+export async function adoptRemoteBoardMap(
+  meta: LocalAccountMeta,
+  remoteMap: Record<string, { value: unknown; updatedAt: number }>,
+): Promise<void> {
+  return serializeSwap(() => adoptRemoteBoardMapImpl(meta, remoteMap));
 }
 
 export type { UmbrellaKey };
