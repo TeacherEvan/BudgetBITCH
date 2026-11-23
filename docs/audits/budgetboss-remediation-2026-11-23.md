@@ -74,4 +74,29 @@ Until steps 1–4 are complete, LINE account linking is unavailable by design (W
 
 ## 5. Worktree cleanup
 
-All 9 worker branches were merged with `--no-ff` into `fix/audit-2026-11-23`. Worker worktrees can be removed with `git worktree remove <path>`; the integration branch is the deliverable. No `git push` was performed.
+All 9 worker branches were merged with `--no-ff` into `fix/audit-2026-11-23`. Worker worktrees can be removed with `git worktree remove <path>`; the integration branch is the deliverable.
+
+## 6. Deployment runbook execution (same day)
+
+The release steps in §4 were executed where credentials allowed:
+
+| Step | Outcome |
+| :--- | :--- |
+| Generate `LINE_BOT_LINK_SECRET`, set on Convex **prod `steady-ox-280`** | Done. Secret also set on HF Space; values verified identical by hash. |
+| `npx convex deploy` to prod | Code push succeeded (`✔ Deployed Convex functions`) after fixing the Convex typecheck config (see below). |
+| Update `EvilEvan/TeacherBOY` with `/link` command + bot-authenticated challenge issuer | Done — `34a8f26` on the bot repo, pushed to Space `hf/main`. 1,049 bot tests pass, Ruff clean. `/link` is private-chat only: group/room requests are refused so the single-use code cannot be redeemed by another member. |
+| Set Space secrets | `LINE_BOT_LINK_SECRET` set as a Space secret. `BUDGETBOSS_CONVEX_URL` already existed as a Space **variable** with the correct `.convex.site` value; a duplicate secret caused a `CONFIG_ERROR` collision and was removed. |
+| Space rebuild | Triggered by the `hf/main` push; verified on the Space API. |
+
+### Blocking external issue: Convex prod is runtime-disabled
+
+The Convex CLI reported `Your projects are disabled because the team exceeded Free plan limits.` After the deploy, every HTTP action on `https://steady-ox-280.convex.site` (including unknown routes) returns HTTP 500, and `npx convex run` returns the same free-plan-limit error. The code is deployed; **functions cannot execute until the Convex account is upgraded or usage is reduced** (support@convex.dev). This is outside the repository and blocks live LINE linking and receipt ingest. No paid plan change was made without consent.
+
+### Verification additions made during deployment
+
+- `convex/tsconfig.json` now includes `vitest/globals` in `types` — Convex's deploy-time typecheck previously failed on the 38 `convex/**/*.test.ts` files. `npx tsc -p convex/tsconfig.json` is now clean; typecheck was **not** skipped for the deploy.
+- `convex/_generated/api.d.ts` regenerated (4 previously missing modules).
+- E2E: the project's CI gate runs Chromium only (`--project=chromium`); locally, Chromium is green. Two WebKit-only failures remain (splash-click timing and service-worker access-control page errors) — WebKit is explicitly excluded as flaky in `.github/workflows/ci.yml`. Local E2E requires a syntactically valid `NEXT_PUBLIC_CONVEX_URL`; the in-code `placeholder.convex.cloud` default throws on Convex client construction. A dummy `.convex.cloud` URL was used for local verification (never prod).
+- `/sms-confirm` E2E specs now skip without credentials and the route moved to the authenticated smoke set — it is behind `RequireAuth`.
+
+Branch state: `fix/audit-2026-11-23` was pushed to `origin`; `main` was merged locally. No push of `main` was performed.
