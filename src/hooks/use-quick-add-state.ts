@@ -19,6 +19,10 @@ import type { ExpenseCategory, IncomeCategory, ReceiptLineItem } from '@/lib/typ
 import type { VerifiedSmsData } from '@/components/quick-add/sms-paste-modal';
 import { useTranslations } from 'next-intl';
 import { useHaptic } from '@/hooks/use-haptic';
+import { toISODate } from '@/lib/utils/date';
+import { useResolvedCurrency } from '@/hooks/use-currency';
+import type { CurrencyCode } from '@/lib/utils/currency';
+import { convertReceiptAmount } from '@/components/dashboard/currency-options';
 
 export type ScanStage =
   | 'idle'
@@ -122,8 +126,11 @@ export type QuickAddState = {
   // Receipt verify sheet
   answerQuestion: ReturnType<typeof useReceiptScan>['answerQuestion'];
   confirmDraft: ReturnType<typeof useReceiptScan>['confirmDraft'];
+  cancelDraft: ReturnType<typeof useReceiptScan>['cancelDraft'];
   profile: ReturnType<typeof useWizardProfile>['profile'];
   draft: ReturnType<typeof useReceiptScan>['draft'];
+  /** Board currency used for the scanned-receipt FX badge and saved amount. */
+  boardCurrency: CurrencyCode;
 };
 
 /**
@@ -140,8 +147,14 @@ export function useQuickAddState(): QuickAddState {
   const { add: addIncome } = useIncomes();
   const { profile, save: saveProfile } = useWizardProfile();
 
-  const { draft, scanImage, answerQuestion, confirmDraft } = useReceiptScan();
+  const { draft, scanImage, answerQuestion, confirmDraft, cancelDraft } = useReceiptScan();
   const { status: inboxPermStatus, grantPermission, denyPermission } = useInboxPermission();
+
+  const resolvedBoardCurrency = useResolvedCurrency();
+  const boardCurrency: CurrencyCode =
+    resolvedBoardCurrency ||
+    (profile?.answers?.currency as CurrencyCode | undefined) ||
+    (profile?.locale?.includes('TH') ? 'THB' : profile?.locale?.includes('ZA') ? 'ZAR' : 'USD');
 
   // Convex action references are created unconditionally; offline fallback is
   // handled at the call sites below rather than by conditionally invoking hooks.
@@ -185,6 +198,14 @@ export function useQuickAddState(): QuickAddState {
   // bot-draft effect never clobbers them on realtime ticks.
   const dirtyFields = useRef<Set<string>>(new Set());
   const isSaving = useRef(false);
+
+  // Convex draft created by Tier 1 (proxyReceiptScan) or Tier 2 (parseReceipt).
+  // Previously discarded, so these drafts stayed `draft` forever and the
+  // confirm step was a no-op.
+  const [serverDraftId, setServerDraftId] = useState<string | null>(null);
+  // Monotonic generation token: a slow Scan A must never overwrite Scan B's
+  // review fields after its awaits/onload callbacks resolve.
+  const scanSeqRef = useRef(0);
 
   // Wrapper setters that mark fields as dirty when user edits them
   const setScannedAmountDirty = (v: string) => {
@@ -266,7 +287,7 @@ export function useQuickAddState(): QuickAddState {
       const catMapped = mapCategory(catVal || merchVal);
       const dateVal = draft.fields.date?.value
         ? String(draft.fields.date.value)
-        : new Date().toISOString().split('T')[0];
+        : toISODate(new Date());
 
       setDetectedCategory(catMapped);
       // Receipt engine already returns a valid category; use it directly for the
@@ -376,7 +397,7 @@ export function useQuickAddState(): QuickAddState {
       setScannedDate(
         bot.date
           ? String(bot.date)
-          : new Date(bot._creationTime ?? Date.now()).toISOString().split('T')[0],
+          : toISODate(new Date(bot._creationTime ?? Date.now())),
       );
     }
     if (!isDirty.has('scannedCurrency')) {
@@ -410,8 +431,19 @@ export function useQuickAddState(): QuickAddState {
     
     try {
       setLoading(true);
-      const date = scannedDate || new Date().toISOString().split('T')[0];
+      const date = scannedDate || toISODate(new Date());
       const roundedAmount = Math.round(amtVal * 100) / 100;
+      // The review card renders this same conversion. Persist the converted
+      // value so the badge and the ledger agree instead of showing USD while
+      // saving the raw foreign-currency total.
+      const fx = convertReceiptAmount(amtVal, scannedCurrency, boardCurrency);
+      const savedAmount = fx?.convertedAmount ?? roundedAmount;
+      const currencyMeta = {
+        currency: boardCurrency,
+        ...(fx
+          ? { originalAmount: fx.originalAmount, originalCurrency: fx.scannedCurrency }
+          : {}),
+      };
       // Only persist an itemization that reconciles with the reviewed total —
       // a half-parsed item set would misreport per-category spend downstream.
       const trustedItems = reconcileLineItems(scannedLineItems, roundedAmount);
@@ -425,7 +457,7 @@ export function useQuickAddState(): QuickAddState {
         await confirmBotDraft({
           draftId: botDraftId,
           overrides: {
-            amount: roundedAmount,
+            amount: savedAmount,
             merchant: scannedMerchant.trim() || 'Photo Receipt',
             category: scannedCategory,
             date,
@@ -433,7 +465,7 @@ export function useQuickAddState(): QuickAddState {
         });
         // Only add local expense AFTER successful confirm
         await addExpense({
-          amount: roundedAmount,
+          amount: savedAmount,
           merchant: scannedMerchant.trim() || 'Photo Receipt',
           category: scannedCategory,
           date,
@@ -441,14 +473,20 @@ export function useQuickAddState(): QuickAddState {
           note: 'Scanned receipt photo',
           lineItems: trustedItems,
           tax: scannedTax ? parseFloat(scannedTax) || undefined : undefined,
+          ...currencyMeta,
         });
         setBotDraftId(null);
       } else {
-        // Session scan path: confirm first, then local add (skipLocalAdd
-        // means confirmDraft will not write the local expense itself).
-        await confirmDraft(undefined, { skipLocalAdd: true });
+        // Session / app-camera scan path: confirm first, then local add
+        // (skipLocalAdd means confirmDraft will not write the expense itself).
+        // Tier 1 and Tier 2 both hand back a Convex draft id; pass it through
+        // so the server draft is confirmed instead of orphaned in `draft`.
+        await confirmDraft(undefined, {
+          skipLocalAdd: true,
+          ...(serverDraftId ? { draftId: serverDraftId } : {}),
+        });
         await addExpense({
-          amount: roundedAmount,
+          amount: savedAmount,
           merchant: scannedMerchant.trim() || 'Photo Receipt',
           category: scannedCategory,
           date,
@@ -456,12 +494,14 @@ export function useQuickAddState(): QuickAddState {
           note: 'Scanned receipt photo',
           lineItems: trustedItems,
           tax: scannedTax ? parseFloat(scannedTax) || undefined : undefined,
+          ...currencyMeta,
         });
+        setServerDraftId(null);
       }
       
       setToast({
         show: true,
-        message: `📸 Saved receipt: ${amtVal} @ ${scannedMerchant || 'Photo Receipt'}`,
+        message: `📸 Saved receipt: ${savedAmount} ${boardCurrency} @ ${scannedMerchant || 'Photo Receipt'}`,
         type: 'success',
       });
       setScanStage('idle');
@@ -583,7 +623,7 @@ export function useQuickAddState(): QuickAddState {
           amount: amountVal,
           merchant: noteVal || 'Quick Expense',
           category: detectedCategory,
-          date: new Date().toISOString().split('T')[0],
+          date: toISODate(new Date()),
           source: entrySource,
           note: noteVal || undefined,
           lineItems: entrySource === 'receipt' ? scannedLineItems : undefined,
@@ -598,7 +638,7 @@ export function useQuickAddState(): QuickAddState {
           source: noteVal || 'Quick Income',
           category: incomeCategory,
           frequency: 'one_time',
-          date: new Date().toISOString().split('T')[0],
+          date: toISODate(new Date()),
           note: noteVal || undefined,
           entrySource: entrySource === 'import' ? 'import' : 'manual',
         });
@@ -639,6 +679,9 @@ export function useQuickAddState(): QuickAddState {
 
   // Process raw receipt image blob (shared between file picker and camera frame grab)
   const processReceiptBlob = async (blob: Blob) => {
+    const seq = ++scanSeqRef.current;
+    // Each scan supersedes the previous one's server draft as well as its UI.
+    setServerDraftId(null);
     haptic.trigger('light');
     setScanStage('optimizing');
     setLoading(true);
@@ -661,9 +704,11 @@ export function useQuickAddState(): QuickAddState {
       previewUrl = typeof URL !== 'undefined' && URL.createObjectURL ? URL.createObjectURL(blob) : '';
       setScanPreviewUrl(previewUrl);
     }
+    if (seq !== scanSeqRef.current) return;
 
     const reader = new FileReader();
     reader.onerror = () => {
+      if (seq !== scanSeqRef.current) return;
       setLoading(false);
       setScanStage('idle');
       haptic.trigger('error');
@@ -676,6 +721,7 @@ export function useQuickAddState(): QuickAddState {
     };
 
     reader.onload = async () => {
+      if (seq !== scanSeqRef.current) return;
       const dataUrl = reader.result as string;
 
       // Tier 1: send the photo to the TeacherBOY HuggingFace bot via the
@@ -689,9 +735,12 @@ export function useQuickAddState(): QuickAddState {
             idempotencyKey: `app_${crypto.randomUUID()}`,
             countryHint: profile?.locale?.includes('TH') ? 'TH' : profile?.locale?.includes('ZA') ? 'ZA' : undefined,
           });
+          if (seq !== scanSeqRef.current) return;
 
           const fields = (res as { fields?: Record<string, { value?: unknown } | null> }).fields;
           if (res && fields) {
+            const serverId = (res as { draftId?: string }).draftId;
+            if (serverId) setServerDraftId(serverId);
             setIsExpense(true);
             setEntrySource('receipt');
             const parsedTotal = (fields.total?.value as number) ?? '';
@@ -699,7 +748,7 @@ export function useQuickAddState(): QuickAddState {
             setScannedMerchant(String((fields.merchant?.value as string) ?? ''));
             setScannedCategory(mapCategory(String((fields.category?.value as string) ?? 'other')));
             setScannedDate(
-              fields.date?.value != null ? String(fields.date.value) : new Date().toISOString().split('T')[0],
+              fields.date?.value != null ? String(fields.date.value) : toISODate(new Date()),
             );
             setScannedTax(fields.tax?.value != null ? String(fields.tax.value) : '');
             setScannedCurrency(fields.currency?.value != null ? String(fields.currency.value) : '');
@@ -747,14 +796,17 @@ export function useQuickAddState(): QuickAddState {
         try {
           setScanStage('fallback-gemini');
           const directRes = await parseReceiptAction({ base64Image: dataUrl });
+          if (seq !== scanSeqRef.current) return;
           if (directRes) {
+            const directId = (directRes as { receiptId?: string }).receiptId;
+            if (directId) setServerDraftId(directId);
             setIsExpense(true);
             setEntrySource('receipt');
             const totalAmt = directRes.amount > 0 ? String(directRes.amount) : '';
             setScannedAmount(totalAmt);
             setScannedMerchant(directRes.merchant || '');
             setScannedCategory(mapCategory(directRes.category || 'other'));
-            setScannedDate(directRes.date || new Date().toISOString().split('T')[0]);
+            setScannedDate(directRes.date || toISODate(new Date()));
             setScannedTax('');
             setScannedCurrency((directRes as { currency?: string }).currency || '');
 
@@ -789,9 +841,11 @@ export function useQuickAddState(): QuickAddState {
       const img = new Image();
       const objectUrl = URL.createObjectURL(workingBlob);
       img.onload = async () => {
+        if (seq !== scanSeqRef.current) return;
         try {
           setScanStage('client-ocr');
           await scanImage(img, profile?.locale?.includes('TH') ? 'TH' : profile?.locale?.includes('ZA') ? 'ZA' : undefined);
+          if (seq !== scanSeqRef.current) return;
           setIsExpense(true);
           setEntrySource('receipt');
           setScanStage('complete');
@@ -816,6 +870,7 @@ export function useQuickAddState(): QuickAddState {
         }
       };
       img.onerror = () => {
+        if (seq !== scanSeqRef.current) return;
         setLoading(false);
         setScanStage('idle');
         haptic.trigger('error');
@@ -866,7 +921,7 @@ export function useQuickAddState(): QuickAddState {
     let amt = 0;
     let merch = 'Merchant';
     let cat: ExpenseCategory = 'other';
-    let dateVal = new Date().toISOString().split('T')[0];
+    let dateVal = toISODate(new Date());
     let isExp = true;
 
     // 1. Attempt Gemini 2.5 Flash AI server-side message parsing
@@ -1051,7 +1106,9 @@ export function useQuickAddState(): QuickAddState {
     handleDenyPermission,
     answerQuestion,
     confirmDraft,
+    cancelDraft,
     draft,
     profile,
+    boardCurrency,
   };
 }

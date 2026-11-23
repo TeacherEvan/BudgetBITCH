@@ -1,5 +1,7 @@
 // lib/types/budget.ts
 
+import type { CurrencyCode } from '@/lib/utils/currency';
+
 /** Wizard answers — stored locally, snapshotted to Convex daily */
 export interface WizardProfile {
   completed: true;
@@ -114,6 +116,12 @@ export interface ExpenseEntry {
   lineItems?: ReceiptLineItem[];
   /** Tax/VAT extracted from a scanned receipt. */
   tax?: number;
+  /** Currency the saved `amount` is denominated in (the user's board currency). */
+  currency?: CurrencyCode;
+  /** Receipt total exactly as printed, before FX conversion. Absent when no conversion happened. */
+  originalAmount?: number;
+  /** Currency of `originalAmount`. Present only when `originalAmount` is set. */
+  originalCurrency?: CurrencyCode;
   /** ID of the original expense this was repeated from (Repeat Purchase feature). */
   repeatedFrom?: string;
   /**

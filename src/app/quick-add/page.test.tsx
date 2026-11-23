@@ -1,6 +1,6 @@
 // app/quick-add/page.test.tsx
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import QuickAddPage from './page';
 
 // Mock DB Hooks
@@ -132,6 +132,7 @@ let mockDraft: MockDraft = null;
 const mockScanImage = vi.fn();
 const mockAnswerQuestion = vi.fn();
 const mockConfirmDraft = vi.fn();
+const mockCancelDraft = vi.fn();
 
 vi.mock('@/hooks/use-receipt-scan', () => ({
   useReceiptScan: () => ({
@@ -142,6 +143,7 @@ vi.mock('@/hooks/use-receipt-scan', () => ({
     scanImage: mockScanImage,
     answerQuestion: mockAnswerQuestion,
     confirmDraft: mockConfirmDraft,
+    cancelDraft: mockCancelDraft,
   }),
 }));
 
@@ -829,5 +831,173 @@ describe('QuickAddPage', () => {
     expect(fxBadge).toBeInTheDocument();
     expect(fxBadge.textContent).toContain('EUR');
     expect(fxBadge.textContent).toContain('USD');
+  });
+
+  // ============================================
+  // W1 AUDIT REGRESSION GUARDS
+  // ============================================
+
+  it('routes Cancel in the verification sheet to cancelDraft, never to confirmDraft (no expense written)', async () => {
+    mockDraft = {
+      draftId: 'draft-verify-cancel',
+      fields: {
+        total: { value: 450 },
+        merchant: { value: 'Supermarket' },
+        category: { value: 'food' },
+      },
+      questions: [
+        { kind: 'confirm', field: 'total', prompt: 'Confirm total 450?', value: '450' },
+      ],
+    };
+
+    render(<QuickAddPage />);
+    const cancelBtn = await screen.findByRole('button', { name: /cancel/i });
+    fireEvent.click(cancelBtn);
+
+    expect(mockCancelDraft).toHaveBeenCalledTimes(1);
+    expect(mockConfirmDraft).not.toHaveBeenCalled();
+    expect(mockAddExpense).not.toHaveBeenCalled();
+  });
+
+  it('disables the generic Save button while a receipt is under review (no divergent lossy save)', async () => {
+    mockDraft = {
+      draftId: 'draft-review',
+      fields: {
+        total: { value: 450 },
+        merchant: { value: 'Supermarket' },
+        category: { value: 'food' },
+      },
+      questions: [],
+    };
+
+    render(<QuickAddPage />);
+    await waitFor(() => {
+      expect(screen.getByTestId('scanned-receipt-card')).toBeInTheDocument();
+    });
+
+    // The generic Save uses today's UTC date, drops tax/currency and never
+    // confirms the draft. It must be disabled during receipt review.
+    expect(screen.getByTestId('quick-add-save-btn')).toBeDisabled();
+  });
+
+  it('saves the FX-converted amount with currency metadata so displayed equals saved', async () => {
+    mockBotDraftsValue = {
+      receipts: [
+        {
+          _id: 'bot-draft-fx-save',
+          _creationTime: Date.now(),
+          amount: 200,
+          merchant: 'Duty Free Tokyo',
+          category: 'food',
+          date: '2026-11-08',
+          currency: 'EUR',
+          lineItems: [],
+        },
+      ],
+    };
+
+    render(<QuickAddPage />);
+    fireEvent.click(await screen.findByTestId('save-scanned-receipt-btn'));
+
+    await waitFor(() => {
+      expect(mockAddExpense).toHaveBeenCalledTimes(1);
+    });
+    // 200 EUR at the fallback EUR→USD rate (1.085) == 217 USD.
+    // Previously the raw 200 was saved while the card displayed USD 217.00.
+    expect(mockAddExpense).toHaveBeenCalledWith(
+      expect.objectContaining({
+        amount: 217,
+        currency: 'USD',
+        originalAmount: 200,
+        originalCurrency: 'EUR',
+      }),
+    );
+  });
+
+  it('confirms the Tier-1 server draft id returned by proxyReceiptScan on save', async () => {
+    mockProxyScan.mockResolvedValueOnce({
+      success: true,
+      draftId: 'tier1-draft-abc',
+      fields: {
+        total: { value: 88 },
+        merchant: { value: 'Tier One Shop' },
+        category: { value: 'food' },
+      },
+    });
+
+    render(<QuickAddPage />);
+    const file = new File(['fake-image'], 'tier1.jpg', { type: 'image/jpeg' });
+    fireEvent.change(screen.getByTestId('camera-file-input'), {
+      target: { files: [file] },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('scanned-receipt-card')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByTestId('save-scanned-receipt-btn'));
+
+    await waitFor(() => {
+      expect(mockConfirmDraft).toHaveBeenCalledWith(undefined, {
+        skipLocalAdd: true,
+        draftId: 'tier1-draft-abc',
+      });
+    });
+    expect(mockAddExpense).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not let a slow earlier scan overwrite a newer scan (scan generation guard)', async () => {
+    let resolveSlow: (value: unknown) => void = () => {};
+    mockProxyScan
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveSlow = resolve;
+          }),
+      )
+      .mockResolvedValueOnce({
+        success: true,
+        draftId: 'fast-draft',
+        fields: {
+          total: { value: 999 },
+          merchant: { value: 'Newest Scan' },
+          category: { value: 'food' },
+        },
+      });
+
+    render(<QuickAddPage />);
+    const input = screen.getByTestId('camera-file-input');
+
+    fireEvent.change(input, {
+      target: { files: [new File(['slow'], 'slow.jpg', { type: 'image/jpeg' })] },
+    });
+    await waitFor(() => expect(mockProxyScan).toHaveBeenCalledTimes(1));
+
+    fireEvent.change(input, {
+      target: { files: [new File(['fast'], 'fast.jpg', { type: 'image/jpeg' })] },
+    });
+    await waitFor(() => expect(mockProxyScan).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect((screen.getByTestId('scanned-merchant-input') as HTMLInputElement).value).toBe(
+        'Newest Scan',
+      ),
+    );
+
+    // The first (stale) scan resolves last — its values must be discarded.
+    await act(async () => {
+      resolveSlow({
+        success: true,
+        draftId: 'stale-draft',
+        fields: {
+          total: { value: 111 },
+          merchant: { value: 'Stale Scan' },
+          category: { value: 'food' },
+        },
+      });
+    });
+
+    expect((screen.getByTestId('scanned-merchant-input') as HTMLInputElement).value).toBe(
+      'Newest Scan',
+    );
+    expect((screen.getByTestId('scanned-amount-input') as HTMLInputElement).value).toBe('999');
   });
 });

@@ -53,12 +53,14 @@ vi.mock('next-intl', () => ({
 let mockDraft: { fields: Record<string, { value: unknown }>; questions?: unknown[]; lineItems?: unknown[] } | null = null;
 const mockScanImage = vi.fn();
 const mockConfirmDraft = vi.fn();
+const mockCancelDraft = vi.fn();
 vi.mock('@/hooks/use-receipt-scan', () => ({
   useReceiptScan: () => ({
     draft: mockDraft,
     scanImage: mockScanImage,
     answerQuestion: vi.fn(),
     confirmDraft: mockConfirmDraft,
+    cancelDraft: mockCancelDraft,
   }),
 }));
 
@@ -209,6 +211,25 @@ describe('useQuickAddState', () => {
     await waitFor(() => {
       expect(mockAddExpense).toHaveBeenCalledWith(expect.objectContaining({ amount: 42.5, source: 'import' }));
     });
+  });
+
+  it('uses the local calendar date, not the UTC ISO slice, when saving (UTC off-by-one guard)', async () => {
+    // 20:00 UTC on 2026-11-23 is already 2026-11-24 in UTC+7 (Bangkok).
+    // The old `new Date().toISOString().split('T')[0]` saved the previous day.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-23T20:00:00Z'));
+    try {
+      const { result } = renderHook(() => useQuickAddState());
+      act(() => result.current.setInputText('120 lunch'));
+      await act(async () => {
+        await result.current.handleSave();
+      });
+      expect(mockAddExpense).toHaveBeenCalledWith(
+        expect.objectContaining({ date: '2026-11-24' }),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('rejects a non-image file in the camera handler', async () => {
