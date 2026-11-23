@@ -7,8 +7,16 @@ export type PreprocessResult = {
 export async function preprocessImage(
   source: HTMLCanvasElement | HTMLImageElement
 ): Promise<PreprocessResult> {
-  const origWidth = source.width;
-  const origHeight = source.height;
+  // A detached <img> reports layout width/height 0; OCR then received a 0x0
+  // canvas. Prefer the intrinsic bitmap dimensions when we have an image.
+  const origWidth =
+    source instanceof HTMLImageElement
+      ? source.naturalWidth || source.width || 1
+      : source.width;
+  const origHeight =
+    source instanceof HTMLImageElement
+      ? source.naturalHeight || source.height || 1
+      : source.height;
 
   const maxEdge = 1600;
   let targetWidth = origWidth;

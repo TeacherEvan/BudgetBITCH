@@ -13,6 +13,8 @@ export interface PreprocessOptions {
   contrastThreshold?: number; // local window or cutoff threshold
   mimeType?: string;
   quality?: number;
+  /** Decode deadline in ms. Production default is 10s; tests may shorten it. */
+  decodeTimeoutMs?: number;
 }
 
 export interface PreprocessResult {
@@ -22,24 +24,59 @@ export interface PreprocessResult {
   height: number;
 }
 
-/**
- * Loads a Blob or File into an HTMLImageElement safely.
- */
-function loadImageFromBlob(blob: Blob): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    // In headless / SSR / tests where URL or Image may not exist
-    if (typeof window === 'undefined' || typeof Image === 'undefined') {
-      return reject(new Error('Image loading is only supported in browser/DOM environments'));
-    }
+type DecodableImage = HTMLImageElement | ImageBitmap;
 
+/** Production decode deadline. Real photos can take >150ms to decode on mobile. */
+export const DEFAULT_DECODE_TIMEOUT_MS = 10_000;
+
+/**
+ * jsdom/happy-dom never fire Image.onload, so a 10s deadline there would stall
+ * unit tests that exercise the scan flow. Keep the old short fallback for test
+ * UAs only; real browsers always get the production deadline.
+ */
+function isDomTestEnvironment(): boolean {
+  return (
+    typeof navigator !== 'undefined' &&
+    /jsdom|happy-dom/i.test(navigator.userAgent ?? '')
+  );
+}
+
+/**
+ * Loads a Blob/File into a decodable bitmap, preferring createImageBitmap()
+ * where available (no object URL, no decode-on-attach round trip).
+ */
+async function loadImageFromBlob(
+  blob: Blob,
+  decodeTimeoutMs: number = DEFAULT_DECODE_TIMEOUT_MS
+): Promise<DecodableImage> {
+  if (typeof window === 'undefined') {
+    throw new Error('Image loading is only supported in browser/DOM environments');
+  }
+
+  if (typeof createImageBitmap === 'function') {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error('Image decode timed out')), decodeTimeoutMs);
+    });
+    try {
+      return await Promise.race([createImageBitmap(blob), timeout]);
+    } finally {
+      if (timeoutId !== undefined) clearTimeout(timeoutId);
+    }
+  }
+
+  if (typeof Image === 'undefined') {
+    throw new Error('Image loading is only supported in browser/DOM environments');
+  }
+
+  return new Promise((resolve, reject) => {
     const objectUrl = URL.createObjectURL(blob);
     const img = new Image();
 
-    // Fast-path timeout guard for jsdom or headless environments where Image.onload never triggers
     const timeout = setTimeout(() => {
       URL.revokeObjectURL(objectUrl);
       reject(new Error('Image decode timed out'));
-    }, 150);
+    }, decodeTimeoutMs);
 
     img.onload = () => {
       clearTimeout(timeout);
@@ -55,6 +92,17 @@ function loadImageFromBlob(blob: Blob): Promise<HTMLImageElement> {
 
     img.src = objectUrl;
   });
+}
+
+/** Read intrinsic dimensions from either an HTMLImageElement or an ImageBitmap. */
+function intrinsicSize(img: DecodableImage): { width: number; height: number } {
+  if ('naturalWidth' in img) {
+    return {
+      width: img.naturalWidth || img.width || 1,
+      height: img.naturalHeight || img.height || 1,
+    };
+  }
+  return { width: img.width || 1, height: img.height || 1 };
 }
 
 /**
@@ -116,11 +164,15 @@ export async function preprocessReceiptImage(
     enhanceContrast = true,
     mimeType = 'image/jpeg',
     quality = 0.88,
+    decodeTimeoutMs,
   } = options;
 
-  let img: HTMLImageElement;
+  const effectiveDecodeTimeoutMs =
+    decodeTimeoutMs ?? (isDomTestEnvironment() ? 150 : DEFAULT_DECODE_TIMEOUT_MS);
+
+  let img: DecodableImage;
   try {
-    img = await loadImageFromBlob(fileOrBlob);
+    img = await loadImageFromBlob(fileOrBlob, effectiveDecodeTimeoutMs);
   } catch {
     // If running in test or environment without Image load, return dummy/fallback
     const previewUrl = typeof URL !== 'undefined' && URL.createObjectURL
@@ -134,8 +186,7 @@ export async function preprocessReceiptImage(
     };
   }
 
-  const origWidth = img.naturalWidth || img.width || 1;
-  const origHeight = img.naturalHeight || img.height || 1;
+  const { width: origWidth, height: origHeight } = intrinsicSize(img);
 
   let targetWidth = origWidth;
   let targetHeight = origHeight;
@@ -160,6 +211,11 @@ export async function preprocessReceiptImage(
     if (enhanceContrast) {
       applyContrastEnhancement(ctx, targetWidth, targetHeight);
     }
+  }
+
+  // ImageBitmaps hold decoded pixels; release them once drawn.
+  if ('close' in img) {
+    img.close();
   }
 
   const processedBlob = await new Promise<Blob>((resolve) => {

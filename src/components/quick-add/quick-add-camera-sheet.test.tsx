@@ -3,6 +3,13 @@ import { describe, expect, test, vi, beforeEach, afterEach } from 'vitest';
 import React, { createRef } from 'react';
 import { QuickAddCameraSheet } from './quick-add-camera-sheet';
 
+function markVideoReady(video: HTMLVideoElement, width = 640, height = 480) {
+  Object.defineProperty(video, 'readyState', { value: 2, configurable: true });
+  Object.defineProperty(video, 'videoWidth', { value: width, configurable: true });
+  Object.defineProperty(video, 'videoHeight', { value: height, configurable: true });
+  fireEvent(video, new Event('loadeddata'));
+}
+
 describe('QuickAddCameraSheet component', () => {
   let originalMediaDevices: unknown;
 
@@ -48,7 +55,9 @@ describe('QuickAddCameraSheet component', () => {
     expect(screen.queryByTestId('live-camera-viewfinder')).not.toBeInTheDocument();
   });
 
-  test('falls back to file input click when getUserMedia throws permission error', async () => {
+  // Regression for P1-C6: .click() on the hidden picker after an await loses
+  // user activation, so the fallback must be an explicit user-activated button.
+  test('shows a user-activated library fallback instead of programmatically clicking the picker after getUserMedia fails', async () => {
     const triggerCamera = vi.fn();
     const handleFileChange = vi.fn();
     const fileInputRef = createRef<HTMLInputElement>();
@@ -74,17 +83,28 @@ describe('QuickAddCameraSheet component', () => {
 
     const inputEl = screen.getByTestId('camera-file-input');
     const clickSpy = vi.spyOn(inputEl, 'click');
+    const libraryInput = screen.getByTestId('library-file-input');
+    const libraryClickSpy = vi.spyOn(libraryInput, 'click');
 
     const cameraBtn = screen.getByRole('button', { name: /scan receipt/i });
     fireEvent.click(cameraBtn);
 
     await waitFor(() => {
       expect(getUserMediaMock).toHaveBeenCalled();
-      expect(clickSpy).toHaveBeenCalled();
+      expect(screen.getByTestId('camera-stream-error')).toHaveTextContent(
+        'Camera permission denied or camera unavailable.'
+      );
     });
 
-    // Viewfinder closes upon fallback to file picker
+    // No programmatic .click() after the await — it fails user-activation checks.
+    expect(clickSpy).not.toHaveBeenCalled();
     expect(screen.queryByTestId('live-camera-viewfinder')).not.toBeInTheDocument();
+
+    // The error and fallback button live outside the isLiveActive gate.
+    const libraryBtn = screen.getByRole('button', { name: /choose photo from library/i });
+    expect(libraryBtn).toBeInTheDocument();
+    fireEvent.click(libraryBtn);
+    expect(libraryClickSpy).toHaveBeenCalledTimes(1);
   });
 
   test('initializes live video stream and renders reticle HUD when supported', async () => {
@@ -134,6 +154,7 @@ describe('QuickAddCameraSheet component', () => {
     expect(screen.getByTestId('camera-shutter-btn')).toBeInTheDocument();
     expect(screen.getByTestId('switch-camera-btn')).toBeInTheDocument();
     expect(screen.getByTestId('close-live-camera-btn')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /choose photo from library/i })).toBeInTheDocument();
   });
 
   test('toggles facing mode between environment and user', async () => {
@@ -271,6 +292,48 @@ describe('QuickAddCameraSheet component', () => {
     expect(stopTrackMock).toHaveBeenCalled();
   });
 
+  // Regression for P1-C6: capturing before the video has a real frame produced
+  // a black image. The shutter must stay disabled until loadeddata with a
+  // usable readyState and intrinsic video dimensions.
+  test('keeps the shutter disabled until the live video reports a usable frame', async () => {
+    const mockStream = {
+      getTracks: () => [{ stop: vi.fn() } as unknown as MediaStreamTrack],
+    } as unknown as MediaStream;
+    Object.defineProperty(navigator, 'mediaDevices', {
+      value: { getUserMedia: vi.fn().mockResolvedValue(mockStream) },
+      configurable: true,
+      writable: true,
+    });
+
+    render(
+      <QuickAddCameraSheet
+        loading={false}
+        triggerCamera={vi.fn()}
+        handleFileChange={vi.fn()}
+        fileInputRef={createRef<HTMLInputElement>()}
+        cameraLabel="Scan Receipt"
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /scan receipt/i }));
+    await waitFor(() => {
+      expect(screen.getByTestId('live-camera-video')).toBeInTheDocument();
+    });
+
+    const shutter = screen.getByTestId('camera-shutter-btn') as HTMLButtonElement;
+    const video = screen.getByTestId('live-camera-video') as HTMLVideoElement;
+    expect(shutter).toBeDisabled();
+
+    // readyState alone is insufficient — no intrinsic frame yet.
+    Object.defineProperty(video, 'readyState', { value: 2, configurable: true });
+    Object.defineProperty(video, 'videoWidth', { value: 0, configurable: true });
+    fireEvent(video, new Event('loadeddata'));
+    expect(shutter).toBeDisabled();
+
+    markVideoReady(video);
+    expect(shutter).toBeEnabled();
+  });
+
   test('captures frame when shutter is tapped and invokes handleCapturedFrame', async () => {
     const stopTrackMock = vi.fn();
     const mockTrack = { stop: stopTrackMock } as unknown as MediaStreamTrack;
@@ -287,17 +350,27 @@ describe('QuickAddCameraSheet component', () => {
       writable: true,
     });
 
-    // Mock HTMLCanvasElement.toBlob and getContext
+    // Mock HTMLCanvasElement.toBlob and getContext, recording the geometry so a
+    // 0x0 capture mutant cannot pass with a bare vi.fn().
     const mockBlob = new Blob(['test-frame'], { type: 'image/jpeg' });
     const originalToBlob = HTMLCanvasElement.prototype.toBlob;
     const originalGetContext = HTMLCanvasElement.prototype.getContext;
+    const drawImage = vi.fn();
+    const recordedDimensions: Array<[number, number]> = [];
 
     HTMLCanvasElement.prototype.toBlob = vi.fn(function (callback: (blob: Blob | null) => void) {
       callback(mockBlob);
     }) as unknown as typeof HTMLCanvasElement.prototype.toBlob;
 
-    HTMLCanvasElement.prototype.getContext = vi.fn().mockReturnValue({
-      drawImage: vi.fn(),
+    HTMLCanvasElement.prototype.getContext = vi.fn().mockImplementation(function (
+      this: HTMLCanvasElement
+    ) {
+      return {
+        drawImage: (...args: unknown[]) => {
+          recordedDimensions.push([this.width, this.height]);
+          drawImage(...args);
+        },
+      } as unknown as CanvasRenderingContext2D;
     }) as unknown as typeof HTMLCanvasElement.prototype.getContext;
 
     const triggerCamera = vi.fn();
@@ -319,8 +392,11 @@ describe('QuickAddCameraSheet component', () => {
     fireEvent.click(screen.getByRole('button', { name: /scan receipt/i }));
 
     await waitFor(() => {
-      expect(screen.getByTestId('camera-shutter-btn')).toBeInTheDocument();
+      expect(screen.getByTestId('live-camera-video')).toBeInTheDocument();
     });
+
+    const video = screen.getByTestId('live-camera-video') as HTMLVideoElement;
+    markVideoReady(video, 640, 480);
 
     fireEvent.click(screen.getByTestId('camera-shutter-btn'));
 
@@ -328,6 +404,8 @@ describe('QuickAddCameraSheet component', () => {
       expect(handleCapturedFrame).toHaveBeenCalledWith(mockBlob);
     });
 
+    expect(recordedDimensions).toEqual([[640, 480]]);
+    expect(drawImage).toHaveBeenCalledWith(video, 0, 0, 640, 480);
     expect(stopTrackMock).toHaveBeenCalled();
     expect(screen.queryByTestId('live-camera-viewfinder')).not.toBeInTheDocument();
 

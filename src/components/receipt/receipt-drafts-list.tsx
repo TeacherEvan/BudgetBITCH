@@ -32,7 +32,8 @@ type DraftRow = Doc<'receipts'>;
 type ReceiptItem = {
   title: string;
   type: string;
-  amount: number;
+  /** Kept as text while editing so "12.50" / "12." remain typable; parsed on save. */
+  amount: number | string;
 };
 
 function normalizeCategory(cat: string): string {
@@ -73,7 +74,7 @@ export function ReceiptDraftsList() {
 
   // Local editable overrides keyed by draft id.
   const [overrides, setOverrides] = useState<
-    Record<string, Partial<DraftRow> & { items?: ReceiptItem[] }>
+    Record<string, Omit<Partial<DraftRow>, 'items'> & { items?: ReceiptItem[] }>
   >({});
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -467,7 +468,7 @@ export function ReceiptDraftsList() {
                             placeholder="Amount"
                             aria-label={`Item ${idx + 1} amount`}
                             value={it.amount}
-                            onChange={(e) => updateItem(d, idx, { amount: Number(e.target.value) })}
+                            onChange={(e) => updateItem(d, idx, { amount: e.target.value })}
                             className="min-h-[44px] rounded-lg border border-[var(--border-neutral)] bg-[var(--surface-layer-2)] px-2 py-1.5 text-sm text-[var(--text-1)] outline-none focus:border-[var(--gold-bright)] font-mono tabular-nums"
                           />
                         </div>
