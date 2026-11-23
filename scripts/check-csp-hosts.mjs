@@ -1,20 +1,26 @@
 #!/usr/bin/env node
 // CSP / source-host drift guard.
 //
-// The Content-Security-Policy shipped in vercel.json is the browser's
-// allowlist for outbound network calls. When source code starts talking to a
-// host that connect-src does not list, the browser silently blocks the
-// request and the feature dies in production while every local dev build
-// (no CSP header) looks perfectly healthy.
+// The Content-Security-Policy is built per request in src/proxy.ts (a static
+// CSP in vercel.json would bypass the nonce and was removed). It is the
+// browser's allowlist for outbound network calls. When source code starts
+// talking to a host that connect-src does not list, the browser silently
+// blocks the request and the feature dies in production while every local dev
+// build (no CSP header) looks perfectly healthy.
 //
 // That is exactly how the Currency Converter broke: the component fetches
 // https://api.frankfurter.dev but connect-src only allowed the old
 // api.frankfurter.app host, so every conversion failed in prod.
 //
-// This guard scans src/ for literal network origins handed to fetch(),
-// new WebSocket(), dynamic import() and XMLHttpRequest.open(), then asserts
-// each one is covered by a connect-src entry. Exits 1 on drift so CI catches
-// the class before it ships again.
+// This guard:
+//   1. reads the CSP directive array from src/proxy.ts;
+//   2. asserts script-src is nonce-gated and never allows the production
+//      script escape hatches 'unsafe-inline' / 'unsafe-eval';
+//   3. scans src/ for literal network origins handed to fetch(),
+//      new WebSocket(), dynamic import() and XMLHttpRequest.open(), then
+//      asserts each one is covered by a connect-src entry.
+//
+// Exits 1 on any drift so CI catches the class before it ships again.
 //
 // Run manually: `node scripts/check-csp-hosts.mjs`
 
@@ -25,7 +31,7 @@ import { dirname, resolve, join, relative } from 'node:path';
 const TAG = '[csp-host-guard]';
 const currentDirectory = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(currentDirectory, '..');
-const vercelJsonPath = resolve(repoRoot, 'vercel.json');
+const proxyPath = resolve(repoRoot, 'src', 'proxy.ts');
 const srcRoot = resolve(repoRoot, 'src');
 
 function fail(message) {
@@ -38,35 +44,56 @@ function fail(message) {
 const IGNORED_HOSTS = new Set(['localhost', '127.0.0.1', '0.0.0.0', '[::1]']);
 
 // ---------------------------------------------------------------------------
-// 1. Collect the hosts connect-src allows.
+// 1. Read the CSP from src/proxy.ts and assert a strict script-src.
 // ---------------------------------------------------------------------------
 
-let vercelConfig;
+let proxySource;
 try {
-  vercelConfig = JSON.parse(readFileSync(vercelJsonPath, 'utf8'));
+  proxySource = readFileSync(proxyPath, 'utf8');
 } catch (err) {
-  fail(`cannot read or parse ${vercelJsonPath}: ${err.message}`);
+  fail(`cannot read ${proxyPath}: ${err.message}`);
 }
 
-let cspValue = null;
-for (const entry of vercelConfig.headers ?? []) {
-  for (const header of entry.headers ?? []) {
-    if (String(header.key ?? '').toLowerCase() === 'content-security-policy') {
-      cspValue = String(header.value ?? '');
-    }
-  }
+// buildCsp() returns an array of directive string literals joined by '; '.
+// Pull that array out, then extract each literal (double quote, single quote
+// or backtick) so template interpolation and nested CSP quotes are preserved.
+const cspArrayMatch = proxySource.match(
+  /return\s*\[([\s\S]*?)\]\s*\.join\(\s*['"];\s*['"]\s*\)/,
+);
+if (!cspArrayMatch) {
+  fail(`no CSP directive array (return [ ... ].join('; ')) found in ${proxyPath}`);
 }
-if (!cspValue) fail('no Content-Security-Policy header found in vercel.json');
 
 const directives = new Map();
-for (const rawDirective of cspValue.split(';')) {
-  const parts = rawDirective.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) continue;
-  directives.set(parts[0].toLowerCase(), parts.slice(1));
+for (const line of cspArrayMatch[1].split('\n')) {
+  const literal = line.match(/^\s*(["'`])([\s\S]*?)\1\s*,?\s*$/);
+  if (!literal) continue;
+  const directive = literal[2].match(/^\s*([a-z][a-z0-9-]*)\s+([\s\S]+)$/i);
+  if (directive) directives.set(directive[1].toLowerCase(), directive[2].trim());
+}
+
+const scriptSrcTokens = directives.get('script-src');
+if (!scriptSrcTokens) fail(`the CSP in ${proxyPath} has no script-src directive`);
+if (!/'nonce-\$\{nonce\}'/.test(scriptSrcTokens)) {
+  fail("script-src must be nonce-gated: expected a 'nonce-${nonce}' token");
+}
+if (/['"]unsafe-inline['"]/i.test(scriptSrcTokens)) {
+  fail("script-src must not allow 'unsafe-inline' — use the per-request nonce");
+}
+// Next.js documents 'unsafe-eval' as a DEVELOPMENT-only requirement for React
+// error stacks. Resolve the `isDev ? ... : ...` branch to the production value
+// and assert the escape hatch is absent there. A bare 'unsafe-eval' outside the
+// dev branch also survives this resolution and is rejected.
+const productionScriptSrc = scriptSrcTokens.replace(
+  /\$\{[^}]*?\?\s*(["'])([\s\S]*?)\1\s*:\s*(["'])([\s\S]*?)\3\s*\}/g,
+  (_match, _q1, _dev, _q2, prod) => prod,
+);
+if (/['"]unsafe-eval['"]/i.test(productionScriptSrc)) {
+  fail("production script-src must not allow 'unsafe-eval'");
 }
 
 const connectSrcTokens = directives.get('connect-src');
-if (!connectSrcTokens) fail('the CSP in vercel.json has no connect-src directive');
+if (!connectSrcTokens) fail(`the CSP in ${proxyPath} has no connect-src directive`);
 
 const SCHEME_ONLY = /^[a-z][a-z0-9+.-]*:$/i;
 
@@ -85,7 +112,11 @@ function tokenToHost(token) {
   return host === '' ? null : host;
 }
 
-const allowedHosts = connectSrcTokens.map(tokenToHost).filter(Boolean);
+const allowedHosts = connectSrcTokens
+  .split(/\s+/)
+  .filter(Boolean)
+  .map(tokenToHost)
+  .filter(Boolean);
 if (allowedHosts.length === 0) fail('connect-src parsed to zero hosts — check the CSP format');
 
 /** Exact match, or suffix match against a `*.example.com` wildcard entry. */
@@ -220,7 +251,7 @@ if (violations.length > 0) {
   }
   console.error(
     `${TAG} Fix: add the host to the connect-src directive of the ` +
-      'Content-Security-Policy header in vercel.json, or stop calling it from the browser.',
+      `Content-Security-Policy built in ${proxyPath}, or stop calling it from the browser.`,
   );
   process.exit(1);
 }

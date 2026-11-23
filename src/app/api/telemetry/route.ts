@@ -11,36 +11,91 @@ export const runtime = "nodejs";
 //
 // The re-emitted JSON is queryable in Vercel/Next logs alongside Convex logs,
 // giving one correlated view of a request that crosses both runtimes.
+//
+// This endpoint is unauthenticated, so the body is bounded in bytes, every
+// string field is length-bounded, and a small per-session rate limit prevents
+// a single client from flooding the server logs.
+
+const MAX_BODY_BYTES = 32 * 1024;
+const MAX_ITEMS_PER_BATCH = 100;
+const RATE_WINDOW_MS = 60_000;
+const RATE_MAX_PER_WINDOW = 120;
+
+const boundedString = (max: number) => z.string().max(max);
+const ID_MAX = 128;
 
 const LogEvent = z.object({
-  ts: z.string(),
+  ts: boundedString(64),
   level: z.enum(["debug", "info", "warn", "error"]),
-  event: z.string(),
-  service: z.string(),
-  sessionId: z.string(),
-  traceId: z.string().optional(),
+  event: boundedString(128),
+  service: boundedString(128),
+  sessionId: boundedString(ID_MAX),
+  traceId: boundedString(ID_MAX).optional(),
+  // The client logger spreads arbitrary structured fields into every event
+  // (see src/lib/observability/types.ts's LogEvent index signature), so the
+  // catchall must stay for compatibility. The 32 KB body cap above is what
+  // bounds it; unknown keys are never allowed to reach a hard limit on their
+  // own.
 }).catchall(z.unknown());
 
 const MetricEvent = z.object({
-  ts: z.string(),
-  service: z.string(),
-  sessionId: z.string(),
-  traceId: z.string().optional(),
-  metric: z.string(),
+  ts: boundedString(64),
+  service: boundedString(128),
+  sessionId: boundedString(ID_MAX),
+  traceId: boundedString(ID_MAX).optional(),
+  metric: boundedString(128),
   value: z.number(),
   unit: z.enum(["ms", "count", "ratio", "bytes"]),
-  tags: z.record(z.string(), z.string()).optional(),
-});
+  tags: z.record(boundedString(128), boundedString(256)).optional(),
+}).strict();
 
 const Batch = z.object({
-  logs: z.array(LogEvent).max(500).optional(),
-  metrics: z.array(MetricEvent).max(500).optional(),
-});
+  logs: z.array(LogEvent).max(MAX_ITEMS_PER_BATCH).optional(),
+  metrics: z.array(MetricEvent).max(MAX_ITEMS_PER_BATCH).optional(),
+}).strict();
+
+// Best-effort in-memory limit: serverless instances are ephemeral, but this
+// still stops a single noisy session from flooding one warm instance.
+type RateState = { count: number; resetAt: number };
+const rateState = new Map<string, RateState>();
+
+function rateKey(req: NextRequest, data: z.infer<typeof Batch>): string {
+  const sessionId = data.logs?.[0]?.sessionId ?? data.metrics?.[0]?.sessionId;
+  if (sessionId) return `session:${sessionId}`;
+  const origin = req.headers.get("origin") ?? req.headers.get("x-forwarded-for");
+  return `origin:${origin ?? "anonymous"}`;
+}
+
+function isRateLimited(key: string): boolean {
+  const now = Date.now();
+  const state = rateState.get(key);
+  if (!state || now >= state.resetAt) {
+    // Opportunistic cleanup keeps the map from growing without bound.
+    if (rateState.size > 1000) {
+      for (const [k, v] of rateState) if (now >= v.resetAt) rateState.delete(k);
+    }
+    rateState.set(key, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return false;
+  }
+  if (state.count >= RATE_MAX_PER_WINDOW) return true;
+  state.count += 1;
+  return false;
+}
 
 export async function POST(req: NextRequest) {
+  let rawBody: string;
+  try {
+    rawBody = await req.text();
+  } catch {
+    return NextResponse.json({ error: "Unreadable request body" }, { status: 400 });
+  }
+  if (Buffer.byteLength(rawBody, "utf8") > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: "Telemetry payload too large" }, { status: 413 });
+  }
+
   let json: unknown;
   try {
-    json = await req.json();
+    json = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
@@ -51,6 +106,10 @@ export async function POST(req: NextRequest) {
       { error: "Invalid telemetry payload", issues: parsed.error.flatten() },
       { status: 400 },
     );
+  }
+
+  if (isRateLimited(rateKey(req, parsed.data))) {
+    return NextResponse.json({ error: "Too many telemetry requests" }, { status: 429 });
   }
 
   const { logs, metrics } = parsed.data;
