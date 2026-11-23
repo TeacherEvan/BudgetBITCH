@@ -19,7 +19,6 @@ const UNAUTH_ROUTES = [
   { path: "/forgot-password", expectText: /forgot|reset|ลืม/i },
   { path: "/reset", expectText: /reset|new password|ตั้งรหัสใหม่/i },
   { path: "/join", expectText: /join|invite|เชิญ/i },
-  { path: "/sms-confirm", expectText: /sms|confirm|ยืนยัน/i },
   { path: "/terms", expectText: /terms|ข้อกำหนด/i },
   { path: "/privacy", expectText: /privacy|ความเป็นส่วนตัว/i },
   { path: "/cookie-policy", expectText: /cookie|คุกกี้/i },
@@ -32,6 +31,8 @@ const AUTH_ROUTES = [
   { path: "/security", expectText: /security|ความปลอดภัย/i },
   { path: "/quick-add", expectText: /amount|note|จำนวน/i },
   { path: "/wizard", expectText: /budget|wizard|งบ/i },
+  // Auth-gated (RequireAuth): only smoke-test with real credentials.
+  { path: "/sms-confirm", expectText: /sms|confirm|ยืนยัน/i },
 ];
 
 test.describe("Route smoke — unauthenticated", () => {

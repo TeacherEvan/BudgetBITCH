@@ -1,8 +1,13 @@
 // Feature: SMS confirm page renders parsed candidates and the Add-all / Dismiss
 // actions. No receipt capture involved (it's SMS text parsing only).
-import { test, expect } from "./helpers";
+import { test, expect, HAS_CREDS } from "./helpers";
 
 test.describe("SMS confirm", () => {
+  test.beforeEach(() => {
+    // /sms-confirm is behind RequireAuth — skip when E2E credentials are absent.
+    test.skip(!HAS_CREDS, "E2E_TEST_EMAIL / E2E_TEST_PASSWORD not set");
+  });
+
   test("renders empty state with no SMS text param", async ({ page }) => {
     await page.goto("/sms-confirm");
     await expect(page.getByTestId("sms-confirm")).toBeVisible({ timeout: 8000 });
