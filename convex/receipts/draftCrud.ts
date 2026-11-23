@@ -1,5 +1,6 @@
-import { mutation, query, internalMutation, internalQuery } from "../_generated/server";
-import { v, ConvexError } from "convex/values";
+import { mutation, query, internalMutation, internalQuery, type MutationCtx } from "../_generated/server";
+import type { Doc } from "../_generated/dataModel";
+import { v, ConvexError, type Infer } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
 // Internal mutation to save receipt (called from action)
@@ -33,68 +34,76 @@ export const saveReceipt = internalMutation({
   },
 });
 
-// Internal mutation: idempotent save receipt using insert-then-read pattern
-// Uses the by_user_and_clientDraftId index as the claim.
-// Attempts insert, then reads to detect conflicts. If conflict, returns the winner (first insert).
+// Shared insert validator for the idempotent-save variants.
+const receiptInsertValidator = v.object({
+  userId: v.id("users"),
+  accountId: v.optional(v.string()),
+  amount: v.number(),
+  merchant: v.string(),
+  category: v.string(),
+  date: v.optional(v.string()),
+  rawGeminiResponse: v.optional(v.string()),
+  imageMimeType: v.string(),
+  imageSizeBytes: v.number(),
+  parsedAt: v.number(),
+  geminiModel: v.string(),
+  source: v.optional(v.string()), // "app" (default) | "line"
+  clientDraftId: v.optional(v.string()),
+  engine: v.optional(v.string()),
+  confidence: v.optional(v.any()),
+  evidence: v.optional(v.any()),
+  ocrText: v.optional(v.string()),
+  tax: v.optional(v.number()),
+  currency: v.optional(v.string()),
+  questionsAsked: v.optional(v.any()),
+  status: v.optional(v.string()),
+  lineItems: v.optional(v.any()),
+});
+
+type ReceiptInsertArgs = Infer<typeof receiptInsertValidator>;
+
+// P1-C9: insert-then-read claim returning BOTH the winning id and whether this
+// call created it, atomically inside one mutation (no second query that can
+// race or report a stale `draft._id !== draftId` comparison).
+async function saveIdempotentImpl(
+  ctx: MutationCtx,
+  args: ReceiptInsertArgs,
+): Promise<{ draftId: Doc<"receipts">["_id"]; alreadySynced: boolean }> {
+  const clientDraftId = args.clientDraftId;
+  if (!clientDraftId) {
+    const draftId = await ctx.db.insert("receipts", args);
+    return { draftId, alreadySynced: false };
+  }
+
+  const insertedId = await ctx.db.insert("receipts", args);
+  const firstDraft = await ctx.db
+    .query("receipts")
+    .withIndex("by_user_and_clientDraftId", (q) =>
+      q.eq("userId", args.userId).eq("clientDraftId", clientDraftId),
+    )
+    .order("asc")
+    .first();
+
+  if (!firstDraft || firstDraft._id === insertedId) {
+    return { draftId: insertedId, alreadySynced: false };
+  }
+
+  // Lost the race: remove our insert and report the existing winner.
+  await ctx.db.delete(insertedId);
+  return { draftId: firstDraft._id, alreadySynced: true };
+}
+
+export const saveReceiptIdempotentWithStatus = internalMutation({
+  args: receiptInsertValidator.fields,
+  handler: async (ctx, args) => saveIdempotentImpl(ctx, args),
+});
+
+// Legacy Id-only variant retained for the W3-owned `convex/line.ts` caller,
+// which still expects a bare Id. New callers (receipt ingest) must use
+// `saveReceiptIdempotentWithStatus` so `alreadySynced` is reported correctly.
 export const saveReceiptIdempotent = internalMutation({
-  args: {
-    userId: v.id("users"),
-    accountId: v.optional(v.string()),
-    amount: v.number(),
-    merchant: v.string(),
-    category: v.string(),
-    date: v.optional(v.string()),
-    rawGeminiResponse: v.optional(v.string()),
-    imageMimeType: v.string(),
-    imageSizeBytes: v.number(),
-    parsedAt: v.number(),
-    geminiModel: v.string(),
-    source: v.optional(v.string()), // "app" (default) | "line"
-    clientDraftId: v.optional(v.string()),
-    engine: v.optional(v.string()),
-    confidence: v.optional(v.any()),
-    evidence: v.optional(v.any()),
-    ocrText: v.optional(v.string()),
-    tax: v.optional(v.number()),
-    currency: v.optional(v.string()),
-    questionsAsked: v.optional(v.any()),
-    status: v.optional(v.string()),
-    lineItems: v.optional(v.any()),
-  },
-  handler: async (ctx, args) => {
-    const { clientDraftId, ...rest } = args;
-    
-    // If no clientDraftId provided, just do a regular insert (no idempotency)
-    if (!clientDraftId) {
-      return await ctx.db.insert("receipts", args);
-    }
-
-    // INSERT: Attempt to insert the draft
-    const insertedId = await ctx.db.insert("receipts", args);
-
-    // READ: Use the index to find the first (oldest) draft for this user+clientDraftId
-    const firstDraft = await ctx.db
-      .query("receipts")
-      .withIndex("by_user_and_clientDraftId", (q) =>
-        q.eq("userId", args.userId).eq("clientDraftId", clientDraftId)
-      )
-      .order("asc") // Oldest first (by _creationTime, which is the last index column)
-      .first();
-
-    if (!firstDraft) {
-      // Should not happen since we just inserted, but handle gracefully
-      return insertedId;
-    }
-
-    // If we won the race (our insert is the first/oldest), return our ID
-    if (firstDraft._id === insertedId) {
-      return insertedId;
-    }
-
-    // We lost the race: delete our insert and return the winner's ID
-    await ctx.db.delete(insertedId);
-    return firstDraft._id;
-  },
+  args: receiptInsertValidator.fields,
+  handler: async (ctx, args) => (await saveIdempotentImpl(ctx, args)).draftId,
 });
 
 // Internal query: get receipt by clientDraftId for a specific user (for tenant-safe idempotency)
@@ -132,136 +141,62 @@ export const listReceipts = query({
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) return { receipts: [], nextCursor: null, truncated: false };
+    if (!userId) return { receipts: [], nextCursor: null, scanned: 0, truncated: false };
 
     const limit = Math.min(args.limit || 20, 50);
 
-    // Helper to build the base query
-    const buildBaseQuery = () => {
-      if (args.accountId) {
-        return ctx.db
-          .query("receipts")
-          .withIndex("by_user_and_account", (q) =>
-            q.eq("userId", userId).eq("accountId", args.accountId as string)
-          );
-      } else {
-        return ctx.db
-          .query("receipts")
-          .withIndex("by_user", (q) => q.eq("userId", userId));
-      }
-    };
-
-    // Parse the external cursor (based on parsedAt)
+    // The external cursor is a parsedAt timestamp (ms). The `by_user_parsedAt`
+    // index encodes it in the index key, so a single bounded scan can seek
+    // directly past the previous page instead of re-reading the index head.
     let externalCursorTime: number | undefined;
     if (args.cursor) {
-      const parsed = parseInt(args.cursor);
-      if (!isNaN(parsed)) {
-        externalCursorTime = parsed;
-      }
+      const parsed = Number(args.cursor);
+      if (Number.isFinite(parsed)) externalCursorTime = parsed;
     }
 
-    // Index-safe windowed pagination:
-    // - Use growing take() windows: take(min(scanned + pageSize, maxScan))
-    // - Track seen _creationTime in a JS Set to avoid duplicates
-    // - Apply source/status/parsedAt filters in JS (no .filter() on query)
-    // - Stop when we have enough results OR hit maxScan
-    // - If maxScan hit and more results exist, return truncated=true
-    const pageSize = 50;
-    const maxTotalScan = 1000;
-    const results: any[] = [];
-    const seenCreationTimes = new Set<number>();
-    let totalScanned = 0;
-    let truncated = false;
+    const MAX_SCAN = 1000;
+    const page = await ctx.db
+      .query("receipts")
+      .withIndex("by_user_parsedAt", (q) => {
+        const scoped = q.eq("userId", userId);
+        return externalCursorTime === undefined
+          ? scoped
+          : scoped.lt("parsedAt", externalCursorTime);
+      })
+      .order("desc")
+      .take(MAX_SCAN);
 
-    let iteration = 0;
-    while (results.length < limit && totalScanned < maxTotalScan) {
-      iteration++;
-      // Growing take window: take(scanned + pageSize) but capped at maxTotalScan
-      const takeCount = Math.min(totalScanned + pageSize, maxTotalScan);
-      const pageQuery = buildBaseQuery().order("desc");
-      const page = await pageQuery.take(takeCount);
-      
-      if (page.length === 0) {
-        break; // No more results
-      }
+    const results: Doc<"receipts">[] = [];
+    const seenIds = new Set<string>();
+    let scanned = 0;
+    let matchedBeyondLimit = false;
 
-      // Apply filters in-memory (JS-side predicates only)
-      let newUniqueItems = 0;
-      let newResults = 0;
-      for (const receipt of page) {
-        // Skip duplicates (same _creationTime)
-        if (seenCreationTimes.has(receipt._creationTime)) {
-          continue;
-        }
-        seenCreationTimes.add(receipt._creationTime);
-        newUniqueItems++;
-        totalScanned++;
+    for (const receipt of page) {
+      // P1-C1: dedupe by document id. `_creationTime` is NOT unique and using
+      // it as the dedupe key silently dropped receipts parsed in the same ms.
+      if (seenIds.has(receipt._id)) continue;
+      seenIds.add(receipt._id);
+      scanned++;
 
-        // External cursor filter (parsedAt)
-        if (externalCursorTime !== undefined && receipt.parsedAt >= externalCursorTime) {
-          continue;
-        }
-        // Source filter
-        if (args.source !== undefined && (receipt.source ?? "app") !== args.source) {
-          continue;
-        }
-        // Status filter
-        if (args.status !== undefined && (receipt.status ?? "draft") !== args.status) {
-          continue;
-        }
+      if (args.accountId !== undefined && receipt.accountId !== args.accountId) continue;
+      // Legacy rows without a `source` are app receipts.
+      if (args.source !== undefined && (receipt.source ?? "app") !== args.source) continue;
+      if (args.status !== undefined && (receipt.status ?? "draft") !== args.status) continue;
 
+      if (results.length < limit) {
         results.push(receipt);
-        newResults++;
-        if (results.length >= limit) {
-          break;
-        }
-      }
-
-      // If we got no new unique items (all items in page were already seen), we've reached the end
-      if (newUniqueItems === 0) {
-        break;
-      }
-      
-      // If we scanned the full takeCount and it equals maxTotalScan, we hit the limit
-      if (takeCount >= maxTotalScan) {
-        break;
+      } else {
+        matchedBeyondLimit = true;
       }
     }
 
-    // Check for truncation: if we hit maxScan and there might be more results
-    if (totalScanned >= maxTotalScan && results.length === limit) {
-      truncated = true;
-    }
-
-    // Determine nextCursor (external cursor based on parsedAt)
+    const truncated = scanned >= MAX_SCAN;
     let nextCursor: string | null = null;
-    if (results.length === limit && !truncated) {
-      const lastMatched = results[results.length - 1];
-      // Check if there are more matching results beyond the last one we returned
-      const checkTake = Math.min(pageSize, maxTotalScan - totalScanned);
-      if (checkTake > 0) {
-        const checkQuery = buildBaseQuery().order("desc");
-        const checkPage = await checkQuery.take(checkTake);
-        let hasMore = false;
-        for (const receipt of checkPage) {
-          if (seenCreationTimes.has(receipt._creationTime)) {
-            continue;
-          }
-          const matchesSource = args.source === undefined || (receipt.source ?? "app") === args.source;
-          const matchesStatus = args.status === undefined || (receipt.status ?? "draft") === args.status;
-          const matchesCursor = externalCursorTime === undefined || receipt.parsedAt < externalCursorTime;
-          if (matchesSource && matchesStatus && matchesCursor) {
-            hasMore = true;
-            break;
-          }
-        }
-        if (hasMore) {
-          nextCursor = String(lastMatched.parsedAt);
-        }
-      }
+    if (matchedBeyondLimit && !truncated && results.length === limit) {
+      nextCursor = String(results[results.length - 1].parsedAt);
     }
 
-    return { receipts: results, nextCursor, ...(truncated ? { truncated } : {}) };
+    return { receipts: results, nextCursor, scanned, ...(truncated ? { truncated } : {}) };
   },
 });
 

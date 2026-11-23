@@ -75,8 +75,12 @@ test("parseReceipt handles successful response from Gemini for authenticated use
   });
 
   expect(mockFetch).toHaveBeenCalledTimes(1);
-  const fetchUrl = mockFetch.mock.calls[0][0];
-  expect(fetchUrl).toContain("mock-gemini-key");
+  const fetchUrl = mockFetch.mock.calls[0][0] as string;
+  // P1-C9: the key travels in the x-goog-api-key header, never in the URL.
+  expect(fetchUrl).not.toContain("mock-gemini-key");
+  expect(fetchUrl).not.toContain("?key=");
+  const fetchInit = mockFetch.mock.calls[0][1] as { headers: Record<string, string> };
+  expect(fetchInit.headers["x-goog-api-key"]).toBe("mock-gemini-key");
   
   vi.unstubAllGlobals();
 });

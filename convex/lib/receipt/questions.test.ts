@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { generateQuestions } from './questions';
+import { applyAnswers, generateQuestions } from './questions';
 import type { FieldCandidate, FieldName, OcrLine } from './types';
 
 describe('Verification question generator', () => {
@@ -56,5 +56,22 @@ describe('Verification question generator', () => {
     expect(questions[0].field).toBe('total');
     expect(questions[1].field).toBe('date');
     expect(questions[2].field).toBe('merchant');
+  });
+
+  test('P1-C3: applyAnswers keeps the string "0" as the number 0 for total', () => {
+    const fields: Record<FieldName, FieldCandidate | null> = {
+      total: { value: 12.5, conf: 0.4, ruleId: 'rule' },
+      date: null,
+      merchant: null,
+      category: null,
+      currency: null,
+      tax: null,
+    };
+    const confidence: Record<FieldName, number> = {
+      total: 0.4, date: 0, merchant: 0, category: 0, currency: 0, tax: 0,
+    };
+    const { updatedFields } = applyAnswers(fields, confidence, { total: '0' });
+    expect(updatedFields.total?.value).toBe(0);
+    expect(typeof updatedFields.total?.value).toBe('number');
   });
 });

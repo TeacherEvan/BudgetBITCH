@@ -26,6 +26,17 @@ describe("validateBoardPayload (Task 11)", () => {
     expect(bad).not.toContain("expenses:ok");
   });
 
+  it("P2-C2: mergeRecords clamps timestamps more than 5 minutes in the future", () => {
+    const NOW = 1_750_000_000_000;
+    const { merged, changed } = mergeRecords({}, {
+      "expenses:near": { value: 1, updatedAt: NOW + 30_000 },
+      "expenses:future": { value: 1, updatedAt: NOW + 6 * 60 * 1000 },
+    }, NOW);
+    expect(changed).toBe(true);
+    expect(merged["expenses:near"].updatedAt).toBe(NOW + 30_000);
+    expect(merged["expenses:future"].updatedAt).toBe(NOW + 5 * 60 * 1000);
+  });
+
   it("mergeRecords drops non-finite-timestamp entries but keeps internal meta keys", () => {
     const { merged } = mergeRecords({}, {
       "expenses:ok": { value: { amount: 10 }, updatedAt: 100 },
@@ -83,5 +94,18 @@ describe("mergeRecords (LWW + 30-day tombstone compaction)", () => {
       value: { amount: 500 },
       updatedAt: oldLiveTs,
     });
+  });
+
+  it("P2-C2: equal object values are not a change (canonical comparison)", () => {
+    const existing: Record<string, StoredRecord> = {
+      "expenses:1": { value: { id: "e1", amount: 999, tags: ["a", "b"] }, updatedAt: NOW },
+    };
+    const incoming: Record<string, StoredRecord> = {
+      // Fresh object references with a different key order — same payload.
+      "expenses:1": { value: { tags: ["a", "b"], amount: 999, id: "e1" }, updatedAt: NOW },
+    };
+    const { merged, changed } = mergeRecords(existing, incoming, NOW);
+    expect(changed).toBe(false);
+    expect(merged["expenses:1"].value).toEqual(existing["expenses:1"].value);
   });
 });

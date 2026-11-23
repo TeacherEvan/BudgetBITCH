@@ -28,6 +28,16 @@ export const VALID_BOARD_STORES = [
  * (Infinity/NaN poison comparisons and never evict). Returns the list of
  * invalid entries; an empty list means the payload is clean.
  */
+export const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
+
+/** Stable serialization so object values can be compared by content. */
+function canonicalValue(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "undefined";
+  if (Array.isArray(value)) return `[${value.map(canonicalValue).join(",")}]`;
+  const obj = value as Record<string, unknown>;
+  return `{${Object.keys(obj).sort().map((k) => `${JSON.stringify(k)}:${canonicalValue(obj[k])}`).join(",")}}`;
+}
+
 export function validateBoardPayload(
   incoming: Record<string, StoredRecord>,
 ): string[] {
@@ -44,6 +54,9 @@ export function validateBoardPayload(
       continue;
     }
     const ts = rec?.updatedAt;
+    // Future timestamps are clamped by `mergeRecords` (and by the push
+    // mutations) rather than rejected here: callers legitimately submit a
+    // slightly-ahead clock and clamping preserves the record.
     if (typeof ts !== "number" || !Number.isFinite(ts) || ts < 0) {
       invalid.push(key);
     }
@@ -78,8 +91,16 @@ export function mergeRecords(
   const cleanIncoming: Record<string, StoredRecord> = {};
   for (const [k, v] of Object.entries(incoming)) {
     const ts = v?.updatedAt;
-    if (typeof ts === "number" && Number.isFinite(ts) && ts >= 0) {
-      cleanIncoming[k] = v;
+    if (
+      typeof ts === "number" &&
+      Number.isFinite(ts) &&
+      ts >= 0
+    ) {
+      // P2-C2: clamp beyond now + 5 minutes so a hostile future key cannot
+      // lock LWW comparisons forever.
+      cleanIncoming[k] = ts > now + MAX_FUTURE_SKEW_MS
+        ? { ...v, updatedAt: now + MAX_FUTURE_SKEW_MS }
+        : v;
     }
   }
 
@@ -92,7 +113,7 @@ export function mergeRecords(
       if (
         prev &&
         prev.updatedAt === rec.updatedAt &&
-        prev.value === rec.value &&
+        canonicalValue(prev.value) === canonicalValue(rec.value) &&
         Boolean(prev.deleted) === Boolean(rec.deleted)
       ) {
         continue; // identical — no change

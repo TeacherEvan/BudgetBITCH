@@ -140,7 +140,10 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_user", ["userId"])
-    .index("by_user_and_date", ["userId", "date"]),
+    .index("by_user_and_date", ["userId", "date"])
+    // P1-C8: snapshots are keyed per (user, account, day) so two boards owned
+    // by the same user cannot overwrite each other's daily backup.
+    .index("by_user_account_date", ["userId", "accountId", "date"]),
 
   // Versioned, timestamped acceptance record of Terms + Privacy Policy at sign-up.
   // One record per acceptance event (re-recording on version bump is expected).
@@ -247,6 +250,9 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_user_and_account", ["userId", "accountId"])
+    // P1-C1: supports a single bounded, cursor-keyed scan in listReceipts
+    // (q.lt("parsedAt", externalCursorTime)) instead of growing re-read loops.
+    .index("by_user_parsedAt", ["userId", "parsedAt"])
     .index("by_parsedAt", ["parsedAt"])
     .index("by_clientDraftId", ["clientDraftId"])
     .index("by_user_and_clientDraftId", ["userId", "clientDraftId"]),

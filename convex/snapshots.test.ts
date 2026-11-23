@@ -166,4 +166,39 @@ describe("upsertDailySnapshot idempotency", () => {
     expect(remainingReceipts).toHaveLength(0);
     expect(remainingAliases).toHaveLength(0);
   });
+
+  it("P1-C8: two accounts on the same day keep two separate snapshots", async () => {
+    const base = {
+      wizardProfile: { version: 1 },
+      totals: { income: 100, expenses: 50, savings: 50 },
+    };
+    await asUser(userId).mutation(api.snapshots.upsertDailySnapshot, {
+      ...base,
+      accountId: "account-A",
+    });
+    await asUser(userId).mutation(api.snapshots.upsertDailySnapshot, {
+      ...base,
+      accountId: "account-B",
+    });
+
+    const all = await t.run(async (ctx: any) =>
+      ctx.db.query("dailySnapshots").withIndex("by_user", (q: any) => q.eq("userId", userId)).collect(),
+    );
+    const today = new Date().toISOString().split("T")[0];
+    const todayRows = all.filter((s: any) => s.date === today);
+    expect(todayRows).toHaveLength(2);
+    expect(todayRows.map((s: any) => s.accountId).sort()).toEqual(["account-A", "account-B"]);
+
+    // Server half of W2's client fix: accountId narrows reads.
+    const latestB: any = await asUser(userId).query(api.snapshots.getLatestSnapshot, {
+      accountId: "account-B",
+    });
+    expect(latestB.accountId).toBe("account-B");
+
+    const listB: any[] = await asUser(userId).query(api.snapshots.listCloudSnapshotsForAccount, {
+      accountId: "account-B",
+    });
+    expect(listB).toHaveLength(1);
+    expect(listB[0].accountId).toBe("account-B");
+  });
 });
